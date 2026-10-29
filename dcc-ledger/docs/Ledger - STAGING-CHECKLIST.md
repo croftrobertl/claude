@@ -1,4 +1,4 @@
-# DCC Ledger 0.1.9 — Staging Checklist
+# DCC Ledger 0.2.0 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -445,3 +445,53 @@ under "Upgrading live from 0.1.8 to 0.1.9". For the record, what changed:
   person. Information items are grouped under their own heading.
 - A booking already linked to a stay cannot be linked to a second one, by
   number or by any other path.
+
+## 13. The 0.2.0 upgrade on live — money in cents, and the property clock
+
+0.2.0 changes how money is stored. Back up first, as always, and read this
+section before activating.
+
+**What the upgrade does by itself.** Activating adds a cents column beside
+each money column, copies every decimal cell into a backup table, converts
+it, and then proves the conversion: every table's total, and every month and
+channel within it, must agree to the cent before and after. If one does not,
+the conversion undoes itself in the same request and the ledger goes on
+reading decimals. Nothing is written to MotoPress at any point.
+
+- [ ] Back up live, including the ledger's own tables.
+- [ ] Deactivate, upload `Ledger 0.2.0.zip`, activate.
+- [ ] `wp dcc-ledger money-check` ends with **Success** and reports
+      **Rows still holding a decimal and no cents: 0**.
+- [ ] The four figures are unchanged: assumed_paid 38 / $60,348.22,
+      assumed_paid_pre_exports 15 / $35,333.00, refund_not_recorded
+      3 / −$860.25, and the same grand total as before the upgrade.
+- [ ] Links 136 and reviews 15, unchanged.
+- [ ] MotoPress still 428 bookings and 95 payments.
+
+**Checking it by hand, which is the point of the exercise.** Pick one month
+— September 2026 is a good one, it has all three channels — and compare the
+Ledger's figures for it with the export files themselves:
+
+- [ ] Open the month on the Overview tab and note guest total, platform
+      fees, net payout and room revenue.
+- [ ] Add the same month up in the export spreadsheets.
+- [ ] They agree to the cent. Not to the dollar — to the cent.
+- [ ] Add the twelve months of 2025 and compare with the year. They tie.
+
+**The way back out, if anything looks wrong:**
+
+    wp dcc-ledger money-rollback
+
+That puts every decimal back exactly as it was and stops the ledger reading
+cents. It then refuses to show figures, with a banner saying why, until
+either the conversion is run again (`wp dcc-ledger money-check`) or 0.1.9 is
+reinstalled. That refusal is deliberate: a ledger reading cents that are no
+longer there would report every figure as zero, and a zero that means
+"missing" is the one thing this plugin exists to prevent.
+
+**The clock.** Every date and timestamp the ledger writes is now
+America/New_York, whatever the server or the WordPress site is set to. A
+correction entered at 00:10 on the first of a month lands in the new month;
+a payout at 23:40 on the last day lands in the old one.
+
+- [ ] Enter a manual correction and check its date is today in Tavares.

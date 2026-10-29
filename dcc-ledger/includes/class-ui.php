@@ -10,10 +10,17 @@ if (!defined('ABSPATH')) {
  */
 final class Ui
 {
-    public static function money(float|int|string $amount): string
+    /**
+     * Whole cents, printed for a person.
+     *
+     * Every money figure in this plugin is an integer number of cents, and
+     * this is the only place one becomes a decimal. A float arriving here
+     * is a defect upstream, not something to tolerate quietly.
+     */
+    public static function money(int $cents): string
     {
-        $amount = (float) $amount;
-        $text   = ($amount < 0 ? '-$' : '$') . number_format(abs($amount), 2);
+        $text = ($cents < 0 ? '-$' : '$') . number_format(abs($cents) / 100, 2);
+
         return esc_html($text);
     }
 

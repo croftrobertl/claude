@@ -30,7 +30,10 @@ final class Repo
             'type'       => (string) $line['type'],
             'stay_code'  => (string) ($line['stay_code'] ?? ''),
             'event_date' => (string) ($line['event_date'] ?? ''),
-            'amount'     => number_format((float) $line['amount'], 2, '.', ''),
+            // Formatted as the decimal string it has always been, so every
+            // hash written before 0.2.0 still matches and no import of
+            // Rob's existing files comes back as new.
+            'amount'     => Money::to_decimal((int) $line['amount_cents']),
             'payout_ref' => (string) ($line['payout_ref'] ?? ''),
             'ref_code'   => (string) ($line['ref_code'] ?? ''),
             'source'     => (string) ($meta['source'] ?? ''),
@@ -90,7 +93,7 @@ final class Repo
     {
         global $wpdb;
         $table = Schema::stays();
-        $now   = current_time('mysql');
+        $now   = Dates::now();
 
         $existing = self::find_stay((string) $stay['channel'], (string) $stay['code']);
 
@@ -179,14 +182,18 @@ final class Repo
             'stay_id'      => $stay_id,
             'channel'      => (string) $line['channel'],
             'type'         => (string) $line['type'],
-            'amount'       => number_format((float) $line['amount'], 2, '.', ''),
+            // Cents are the figure. The decimal column beside them is a
+            // mirror, kept so the conversion can be rolled back and so an
+            // older release could read the table.
+            'amount'       => Money::to_decimal((int) $line['amount_cents']),
+            'amount_cents' => (int) $line['amount_cents'],
             'event_date'   => $line['event_date'],
             'payout_ref'   => $line['payout_ref'] ?? null,
             'ref_code'     => $line['ref_code'] ?? null,
             'source_batch' => $batch_id,
             'meta'         => self::encode_meta($line['meta'] ?? []),
             'hash'         => $hash,
-            'created_at'   => current_time('mysql'),
+            'created_at'   => Dates::now(),
         ]);
 
         return $wpdb->insert_id ? 'new' : 'unchanged';
@@ -296,7 +303,7 @@ final class Repo
             'stay_id'         => $stay_id,
             'mphb_booking_id' => $booking_id,
             'method'          => $method,
-            'linked_at'       => current_time('mysql'),
+            'linked_at'       => Dates::now(),
             'linked_by'       => $user_id,
         ]);
         $created = (bool) $wpdb->insert_id;
@@ -338,7 +345,7 @@ final class Repo
 
         $fields = [
             'note'        => $note,
-            'reviewed_at' => current_time('mysql'),
+            'reviewed_at' => Dates::now(),
             'reviewed_by' => $user_id,
         ];
 

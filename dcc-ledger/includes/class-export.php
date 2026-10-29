@@ -211,8 +211,13 @@ final class Export
         return $rows;
     }
 
+    /**
+     * Whole cents as a plain decimal, for a spreadsheet cell.
+     *
+     * No thousands separator: a comma would split the cell.
+     */
     private static function num(float|int|string $value): string
     {
-        return number_format((float) $value, 2, '.', '');
+        return Money::to_decimal((int) $value);
     }
 }

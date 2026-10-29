@@ -159,10 +159,10 @@ final class Mphb_Reader
             // dropped; only the yes/no travels on.
             $is_block = $is_imported && self::is_block_summary(
                 (string) ($m[self::META_ICAL_SUMMARY] ?? ''),
-                (float) ($m[self::META_TOTAL] ?? 0)
+                Money::to_cents($m[self::META_TOTAL] ?? 0)
             );
 
-            $pay = $payments[$id] ?? ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
+            $pay = $payments[$id] ?? ['recorded' => 0, 'refunded' => 0, 'count' => 0, 'events' => []];
 
             // Hashed here, inside the loop. The names themselves go no
             // further than these three local variables.
@@ -186,7 +186,7 @@ final class Mphb_Reader
                 'codes'       => $codes,
                 'note_codes'  => $note_codes,
                 'guest_keys'  => $guest_keys,
-                'total'       => round((float) ($m[self::META_TOTAL] ?? 0), 2),
+                'total'       => Money::to_cents($m[self::META_TOTAL] ?? 0),
                 // Paid means completed only. A refunded payment keeps its
                 // amount in MotoPress, so it is reported apart, never added.
                 'paid_recorded' => $pay['recorded'],
@@ -222,9 +222,9 @@ final class Mphb_Reader
      * put any word in a booking — so a block must also carry no money. That
      * way a real reservation is never quietly demoted to a calendar note.
      */
-    public static function is_block_summary(string $summary, float $total): bool
+    public static function is_block_summary(string $summary, int $total_cents): bool
     {
-        if (abs($total) >= 0.01 || $summary === '') {
+        if ($total_cents !== 0 || $summary === '') {
             return false;
         }
         $haystack = strtolower($summary);
@@ -335,7 +335,9 @@ final class Mphb_Reader
      * post_parent. Only mphb-p-completed counts as paid.
      *
      * @param int[] $ids
-     * @return array<int,array{recorded:float,refunded:float,count:int,events:array<int,array<string,mixed>>}>
+     * Every figure is whole cents.
+     *
+     * @return array<int,array{recorded:int,refunded:int,count:int,events:array<int,array<string,mixed>>}>
      */
     private static function payments_for(array $ids): array
     {
@@ -372,8 +374,9 @@ final class Mphb_Reader
         $out = [];
         foreach ($rows as $row) {
             $id = (int) $row['booking_id'];
-            $out[$id] ??= ['recorded' => 0.0, 'refunded' => 0.0, 'count' => 0, 'events' => []];
-            $amount = round((float) $row['amount'], 2);
+            $out[$id] ??= ['recorded' => 0, 'refunded' => 0, 'count' => 0, 'events' => []];
+            // Parsed from the stored string, never multiplied as a float.
+            $amount = Money::to_cents($row['amount']);
             $status = (string) $row['payment_status'];
 
             if ($status === self::PAYMENT_COMPLETED) {
@@ -389,10 +392,6 @@ final class Mphb_Reader
                 'amount'     => $amount,
                 'status'     => $status,
             ];
-        }
-        foreach ($out as &$entry) {
-            $entry['recorded'] = round($entry['recorded'], 2);
-            $entry['refunded'] = round($entry['refunded'], 2);
         }
         return $out;
     }

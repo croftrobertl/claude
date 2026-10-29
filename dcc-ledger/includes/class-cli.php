@@ -123,18 +123,18 @@ final class Cli
         \WP_CLI::log(sprintf('Payments copied:      %d', $c['payments_new'] + $c['payments_changed']));
         \WP_CLI::log('');
         \WP_CLI::log(sprintf('Assumed payments:     %d bookings', $c['assumed_bookings']));
-        \WP_CLI::log(sprintf('Assumed total:        $%s', number_format((float) $c['assumed_total'], 2)));
+        \WP_CLI::log(sprintf('Assumed total:        $%s', number_format(((int) $c['assumed_total']) / 100, 2)));
         // Rob's two rulings, printed apart from the window rule's figures
         // because they are a list he named, not a rule worked out here.
         \WP_CLI::log(sprintf(
             'Assumed pre-exports:  %d bookings, $%s',
             $c['assumed_pre_exports'],
-            number_format((float) $c['assumed_pre_exports_total'], 2)
+            number_format(((int) $c['assumed_pre_exports_total']) / 100, 2)
         ));
         \WP_CLI::log(sprintf(
             'Refunds recorded:     %d bookings, $%s',
             $c['refunds_recorded'],
-            number_format((float) $c['refunds_total'], 2)
+            number_format(((int) $c['refunds_total']) / 100, 2)
         ));
         \WP_CLI::log(sprintf('Skipped, a copy:      %d', $c['copies_skipped']));
         \WP_CLI::log(sprintf(
@@ -252,6 +252,62 @@ final class Cli
         \WP_CLI::log(sprintf('Hand-typed copies:     %d', $counts['copy']));
         \WP_CLI::log(sprintf('Left for a person:     %d', $counts['skipped']));
         \WP_CLI::success(__('Matching complete.', 'dcc-ledger'));
+    }
+
+    /**
+     * Check that every stored figure is in whole cents, and that the cents
+     * agree with the decimals they were converted from.
+     *
+     * ## OPTIONS
+     *
+     * [--dry-run]
+     * : Report what would be converted and write nothing.
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public function money_check(array $args, array $assoc): void
+    {
+        $result = Money_Migration::run(isset($assoc['dry-run']));
+
+        \WP_CLI::log($result['message']);
+        foreach ($result['checks'] as $check) {
+            \WP_CLI::log(sprintf(
+                '  %s %-18s %s',
+                $check['ok'] ? 'OK  ' : '!!  ',
+                $check['what'],
+                $check['detail']
+            ));
+        }
+
+        $unconverted = Health::money_not_in_cents();
+        \WP_CLI::log(sprintf('Rows still holding a decimal and no cents: %d', $unconverted));
+
+        if (!$result['ok'] || $unconverted > 0) {
+            \WP_CLI::error(__('The money is not in the state the ledger expects.', 'dcc-ledger'));
+        }
+
+        \WP_CLI::success(__('Every stored figure is in whole cents, and every total ties.', 'dcc-ledger'));
+    }
+
+    /**
+     * Put the decimal money columns back exactly as they were before the
+     * conversion to cents, and stop reading cents.
+     *
+     * The one-line way back out of 0.2.0. Afterwards the ledger refuses to
+     * report figures — it says so in a banner — until either this command's
+     * opposite (`wp dcc-ledger money-check`) is run or 0.1.9 is reinstalled.
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public function money_rollback(array $args, array $assoc): void
+    {
+        $result = Money_Migration::rollback();
+
+        \WP_CLI::log(sprintf('Cells restored: %d', $result['restored']));
+        \WP_CLI::log($result['message']);
+        \WP_CLI::warning(__('The ledger will not report figures until the money is converted again or 0.1.9 is reinstalled. This is deliberate: reading cents that are no longer there would report every figure as zero.', 'dcc-ledger'));
     }
 
     /**

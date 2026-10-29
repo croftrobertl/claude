@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
  */
 final class Schema
 {
-    public const DB_VERSION     = '4';
+    public const DB_VERSION     = '5';
     public const VERSION_OPTION = 'dccl_db_version';
 
     public static function table(string $name): string
@@ -53,6 +53,11 @@ final class Schema
     public static function reviews(): string
     {
         return self::table('reviews');
+    }
+
+    public static function money_backup(): string
+    {
+        return self::table('money_backup');
     }
 
     public static function originals(): string
@@ -118,6 +123,7 @@ final class Schema
                     'channel'      => 'varchar(20) NOT NULL',
                     'type'         => 'varchar(32) NOT NULL',
                     'amount'       => 'decimal(12,2) NOT NULL DEFAULT 0.00',
+                    'amount_cents' => 'bigint(20) NOT NULL DEFAULT 0',
                     'event_date'   => 'date DEFAULT NULL',
                     'payout_ref'   => 'varchar(64) DEFAULT NULL',
                     'ref_code'     => 'varchar(64) DEFAULT NULL',
@@ -173,6 +179,27 @@ final class Schema
                 'keys'    => ['KEY batch_kind (kind)'],
             ],
 
+            // The decimal money columns exactly as they stood before 0.2.0
+            // converted them to whole cents. Written once, read only by the
+            // rollback, and never deleted: it is the thing that makes the
+            // conversion reversible.
+            'money_backup' => [
+                'columns' => [
+                    'id'          => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',
+                    'table_name'  => 'varchar(32) NOT NULL',
+                    'row_id'      => 'bigint(20) unsigned NOT NULL',
+                    'column_name' => 'varchar(32) NOT NULL',
+                    'old_value'   => 'varchar(32) DEFAULT NULL',
+                    'new_cents'   => 'bigint(20) DEFAULT NULL',
+                    'created_at'  => 'datetime NOT NULL',
+                ],
+                'primary' => 'id',
+                'keys'    => [
+                    'UNIQUE KEY backup_cell (table_name,row_id,column_name)',
+                    'KEY backup_table (table_name)',
+                ],
+            ],
+
             // Cleanup items are computed on the fly; only the admin's
             // "Reviewed" marks and decisions are stored, keyed by the item.
             'reviews' => [
@@ -205,7 +232,9 @@ final class Schema
                     'booking_status'  => 'varchar(32) DEFAULT NULL',
                     'payment_status'  => 'varchar(32) DEFAULT NULL',
                     'total'           => 'decimal(12,2) DEFAULT NULL',
+                    'total_cents'     => 'bigint(20) DEFAULT NULL',
                     'amount'          => 'decimal(12,2) DEFAULT NULL',
+                    'amount_cents'    => 'bigint(20) DEFAULT NULL',
                     'event_date'      => 'date DEFAULT NULL',
                     'codes'           => 'longtext DEFAULT NULL',
                     'guest_keys'      => 'longtext DEFAULT NULL',
@@ -236,6 +265,7 @@ final class Schema
                     'stay_id'         => 'bigint(20) unsigned DEFAULT NULL',
                     'cottage'         => 'varchar(8) DEFAULT NULL',
                     'amount'          => 'decimal(12,2) NOT NULL DEFAULT 0.00',
+                    'amount_cents'    => 'bigint(20) NOT NULL DEFAULT 0',
                     'event_date'      => 'date DEFAULT NULL',
                     'label'           => 'varchar(190) NOT NULL',
                     'note'            => 'text DEFAULT NULL',

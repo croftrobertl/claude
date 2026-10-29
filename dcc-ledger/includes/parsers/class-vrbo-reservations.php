@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 use DCCL\Names;
 

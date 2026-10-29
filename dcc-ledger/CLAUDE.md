@@ -70,15 +70,17 @@ Titles centered, Title Case, American spelling.
 **Where this plugin does not meet the standard yet** (not a licence to leave
 it; named so no future session mistakes the gap for a decision):
 
-- Money is stored and summed as `decimal`/PHP float, not integer cents. The
-  standard says cents. Changing it touches the schema, every parser, every
-  report and every test, so it is a release of its own — raise it with Rob
-  before anything else is built on top.
-- Times are handled as dates, in `Dates`, with no America/New_York clock
-  applied to a timestamp.
 - The screens show totals but not occupancy, ADR, RevPAR, booking pace or
-  length of stay; channel mix and net-per-channel exist on the Channel tab.
-- Only 390px is checked automatically; 768 and 1440 are not.
+  length of stay. The definitions went to the Director on 2026-10-29 and are
+  in `docs/Ledger - METRIC-DEFINITIONS.md`; nothing is built until he has
+  answered the five questions in it.
+- The Croatia-site UI reference has not been applied to the screens. They
+  use stat tiles and chips already; the segmented controls and the layout
+  itself are still the plugin's own.
+- Lead time for direct bookings is measured from the MotoPress post date,
+  which is when Rob typed the booking in, not necessarily when the guest
+  booked. It is a floor, not a fact, and must be labelled as one wherever
+  it appears.
 
 ## Branch rule
 
@@ -221,6 +223,29 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   these commands, so a figure the snapshot computes and does not print is a
   defect; `tests/test-cli.php` runs the commands against a stubbed `WP_CLI`
   and reads the output.
+- **Money is whole cents, everywhere but the screen.** `Money::to_cents()`
+  parses the digits of a source cell rather than multiplying a float, because
+  (int) (19.99 * 100) is 1998. The `*_cents` columns are the figures; the
+  `decimal(12,2)` columns beside them are a mirror, written from the cents
+  and read by nothing, kept so the conversion can be rolled back. `Ui::money()`
+  is the only place cents become a decimal for a person.
+- **A split always sums to the whole.** `Money::allocate()` gives each part
+  its share and puts the leftover cents on the last part; `Money::share()`
+  rounds one share half away from zero. A stay crossing a month end is split
+  by nights this way, so the months of a year tie to the year exactly.
+- **The conversion to cents is reversible and proves itself.**
+  `Money_Migration` backs every decimal cell up before touching it, converts,
+  and compares every table's total and every month and channel within it. A
+  mismatch rolls the whole thing back in the same request.
+- **Cents that are not there are never reported as zero.**
+  `Health::money_not_in_cents()` counts rows holding a decimal with no cents
+  beside them and shows a banner instead of figures. That is the state a
+  rollback leaves, and it must be loud.
+- **Every timestamp is America/New_York.** `Dates::now()`, never WordPress's
+  own current-time helper, which answers in the site's timezone. A correction
+  at 00:10 on the first of a month belongs to the new month. `DCCL_TEST_NOW`
+  pins the clock so both clock changes and New Year's Eve can be stood on
+  deliberately.
 - **An assumed payment is reversed, never deleted.** A reversal is a second,
   labelled adjustment that cancels the first, so both halves stay on the
   record and the pair nets to zero if the booking ever stops looking like a
@@ -329,10 +354,10 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 889 assertions
-    php dcc-ledger/tests/mutations.php            # 59 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1047 assertions
+    php dcc-ledger/tests/mutations.php            # 65 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
-    node dcc-ledger/tests/layout-check.js         # 390px check + screenshots
+    node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
 The suite runs without WordPress: `tests/bootstrap.php` stubs the core functions
 and `tests/lib/wpdb.php` is a SQLite-backed `$wpdb` that runs the plugin's real
@@ -365,6 +390,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.1.9.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.2.0.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

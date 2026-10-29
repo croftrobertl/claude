@@ -303,8 +303,8 @@ final class Importer
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT s.id, s.code, s.status,
-                        SUM(CASE WHEN l.type = 'payout' THEN l.amount ELSE 0 END)     AS payout_sum,
-                        SUM(CASE WHEN l.type = 'room_sales' THEN l.amount ELSE 0 END) AS room_sales_sum,
+                        SUM(CASE WHEN l.type = 'payout' THEN l.amount_cents ELSE 0 END)     AS payout_sum,
+                        SUM(CASE WHEN l.type = 'room_sales' THEN l.amount_cents ELSE 0 END) AS room_sales_sum,
                         SUM(CASE WHEN l.type = 'room_sales' THEN 1 ELSE 0 END)        AS room_sales_rows,
                         SUM(CASE WHEN l.type = 'payout' THEN 1 ELSE 0 END)            AS payout_rows,
                         MAX(CASE WHEN l.type = 'payout' THEN l.event_date END)        AS payout_date
@@ -328,27 +328,27 @@ final class Importer
             if ((int) $row['room_sales_rows'] === 0 || (int) $row['payout_rows'] === 0) {
                 continue; // Not enough known yet; the other file will complete it.
             }
-            $tax = round((float) $row['payout_sum'] - (float) $row['room_sales_sum'], 2);
-            if (abs($tax) < 0.01) {
+            $tax = (int) $row['payout_sum'] - (int) $row['room_sales_sum'];
+            if ($tax === 0) {
                 continue;
             }
 
             $existing = $wpdb->get_row(
                 $wpdb->prepare(
-                    "SELECT id, amount FROM {$lines_t}
+                    "SELECT id, amount_cents FROM {$lines_t}
                       WHERE stay_id = %d AND type = 'tax_in_payout' LIMIT 1",
                     (int) $row['id']
                 ),
                 ARRAY_A
             );
             if ($existing !== null) {
-                if (abs(round((float) $existing['amount'] - $tax, 2)) >= 0.01) {
+                if ((int) $existing['amount_cents'] !== $tax) {
                     $notes[] = sprintf(
                         /* translators: 1: reservation number, 2: stored amount, 3: newly derived amount */
                         __('Booking.com %1$s already has taxes collected in payout of %2$s, but the figures now give %3$s. The stored line was left as it is.', 'dcc-ledger'),
                         (string) $row['code'],
-                        number_format((float) $existing['amount'], 2),
-                        number_format($tax, 2)
+                        Money::format((int) $existing['amount_cents']),
+                        Money::format($tax)
                     );
                 }
                 continue;
@@ -357,7 +357,7 @@ final class Importer
             $line = [
                 'channel'    => 'bookingcom',
                 'type'       => 'tax_in_payout',
-                'amount'     => $tax,
+                'amount_cents' => $tax,
                 'event_date' => $row['payout_date'],
                 'stay_code'  => (string) $row['code'],
                 'payout_ref' => null,

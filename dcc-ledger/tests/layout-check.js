@@ -1,9 +1,14 @@
 /**
  * Layout check and screenshots.
  *
- * Asserts that nothing scrolls sideways at 390px — tables may scroll inside
- * their own container, the page may not — then captures each tab at 1280px
- * and 390px.
+ * Asserts that nothing scrolls sideways at any of the three widths Rob and
+ * his accountant actually read these screens at — a phone, a tablet, and a
+ * desktop. A table may scroll inside its own container; the page may not.
+ * Each tab is captured at every width.
+ *
+ * 390  iPhone, which is where Rob does most of this
+ * 768  iPad portrait, and the width WordPress switches its admin menu at
+ * 1440 a desktop browser
  */
 const fs = require('fs');
 const path = require('path');
@@ -23,9 +28,11 @@ const shots = path.join(__dirname, 'screenshots');
   const tabs = fs.readdirSync(screens).filter((f) => f.endsWith('.html')).sort();
   let failed = 0;
 
-  for (const widthSpec of [1280, 390]) {
+  const heights = { 390: 844, 768: 1024, 1440: 900 };
+
+  for (const widthSpec of [1440, 768, 390]) {
     const context = await browser.newContext({
-      viewport: { width: widthSpec, height: widthSpec === 390 ? 844 : 900 },
+      viewport: { width: widthSpec, height: heights[widthSpec] },
       deviceScaleFactor: 1,
     });
 
@@ -53,16 +60,14 @@ const shots = path.join(__dirname, 'screenshots');
       const name = file.replace('.html', '');
       const horizontal = metrics.scrollWidth > metrics.clientWidth + 1;
 
-      if (widthSpec === 390) {
-        if (horizontal) {
-          failed++;
-          console.log(
-            `  FAIL  ${name} at 390px scrolls sideways (${metrics.scrollWidth} > ${metrics.clientWidth})` +
-              (metrics.overflowing.length ? ` — ${metrics.overflowing.join(', ')}` : '')
-          );
-        } else {
-          console.log(`  PASS  ${name} at 390px does not scroll sideways`);
-        }
+      if (horizontal) {
+        failed++;
+        console.log(
+          `  FAIL  ${name} at ${widthSpec}px scrolls sideways (${metrics.scrollWidth} > ${metrics.clientWidth})` +
+            (metrics.overflowing.length ? ` — ${metrics.overflowing.join(', ')}` : '')
+        );
+      } else {
+        console.log(`  PASS  ${name} at ${widthSpec}px does not scroll sideways`);
       }
 
       await page.screenshot({
@@ -76,6 +81,10 @@ const shots = path.join(__dirname, 'screenshots');
   }
 
   await browser.close();
-  console.log(failed === 0 ? '\nLayout OK at 390px.' : `\n${failed} screens scroll sideways.`);
+  console.log(
+    failed === 0
+      ? '\nLayout OK at 390, 768 and 1440px.'
+      : `\n${failed} screens scroll sideways.`
+  );
   process.exit(failed === 0 ? 0 : 1);
 })();

@@ -44,12 +44,12 @@ $days    = $summary['days'];
                     <th scope="row"><?php echo esc_html(Cottages::label($cottage)); ?></th>
                     <td><?php echo Ui::number($row['nights'] ?? 0); ?></td>
                     <td><?php echo Ui::number($occ, 1); ?>%</td>
-                    <td><?php echo Ui::money($row['guest_total'] ?? 0); ?></td>
-                    <td><?php echo Ui::money($row['room_revenue'] ?? 0); ?></td>
-                    <td><?php echo Ui::money($row['platform_fees'] ?? 0); ?></td>
-                    <td><?php echo Ui::money($row['tax_in_payout'] ?? 0); ?></td>
-                    <td><?php echo Ui::money($row['net_payout'] ?? 0); ?></td>
-                    <td><?php echo Ui::money($row['adr'] ?? 0); ?></td>
+                    <td><?php echo Ui::money((int) ($row['guest_total'] ?? 0)); ?></td>
+                    <td><?php echo Ui::money((int) ($row['room_revenue'] ?? 0)); ?></td>
+                    <td><?php echo Ui::money((int) ($row['platform_fees'] ?? 0)); ?></td>
+                    <td><?php echo Ui::money((int) ($row['tax_in_payout'] ?? 0)); ?></td>
+                    <td><?php echo Ui::money((int) ($row['net_payout'] ?? 0)); ?></td>
+                    <td><?php echo Ui::money((int) ($row['adr'] ?? 0)); ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

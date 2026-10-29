@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 use DCCL\Names;
 
@@ -44,8 +45,8 @@ final class Airbnb_Payout extends Parser_Base
 
         $payout_ref   = null;
         $payout_date  = null;
-        $payout_total = 0.0;
-        $payout_sum   = 0.0;
+        $payout_total = 0;
+        $payout_sum   = 0;
         $open_payout  = false;
         $payout_partial = false;
 
@@ -66,8 +67,8 @@ final class Airbnb_Payout extends Parser_Base
                 $payout_partial = false;
                 $payout_ref  = trim($row['Reference code'] ?? '');
                 $payout_date = Dates::us($row['Date'] ?? '');
-                $payout_total = $this->money($row['Paid out'] ?? '');
-                $payout_sum  = 0.0;
+                $payout_total = $this->cents($row['Paid out'] ?? '');
+                $payout_sum  = 0;
                 $open_payout = true;
                 continue;
             }
@@ -90,7 +91,7 @@ final class Airbnb_Payout extends Parser_Base
             }
 
             $event_date = Dates::us($row['Date'] ?? '') ?? $payout_date;
-            $amount     = $this->money($row['Amount'] ?? '');
+            $amount     = $this->cents($row['Amount'] ?? '');
 
             if (strcasecmp($type, 'Reservation') === 0) {
                 if ($cottage === '') {
@@ -122,32 +123,32 @@ final class Airbnb_Payout extends Parser_Base
                     Names::keys((string) ($row['Guest'] ?? ''))
                 ));
 
-                $gross     = $this->money($row['Gross earnings'] ?? '');
-                $svc       = abs($this->money($row['Service fee'] ?? ''));
-                $fast_pay  = abs($this->money($row['Fast pay fee'] ?? ''));
-                $tax       = $this->money($row['Airbnb remitted tax'] ?? '');
+                $gross     = $this->cents($row['Gross earnings'] ?? '');
+                $svc       = abs($this->cents($row['Service fee'] ?? ''));
+                $fast_pay  = abs($this->cents($row['Fast pay fee'] ?? ''));
+                $tax       = $this->cents($row['Airbnb remitted tax'] ?? '');
 
-                if ($gross != 0.0) {
+                if ($gross !== 0) {
                     $result['lines'][] = $this->line('guest_total', $gross, $event_date, $code, $payout_ref, null, [
                         // Components of the gross, kept for reference only. They
                         // are NOT separate money lines: that would double-count.
-                        'cleaning_fee' => $this->money($row['Cleaning fee'] ?? ''),
-                        'pet_fee'      => $this->money($row['Pet fee'] ?? ''),
+                        'cleaning_fee' => $this->cents($row['Cleaning fee'] ?? ''),
+                        'pet_fee'      => $this->cents($row['Pet fee'] ?? ''),
                     ]);
                 }
-                if ($svc != 0.0) {
+                if ($svc !== 0) {
                     $result['lines'][] = $this->line('service_fee', $svc, $event_date, $code, $payout_ref);
                 }
-                if ($fast_pay != 0.0) {
+                if ($fast_pay !== 0) {
                     $result['lines'][] = $this->line('service_fee', $fast_pay, $event_date, $code, $payout_ref, null, [
                         'source' => 'fast_pay_fee',
                     ]);
                 }
-                if ($tax != 0.0) {
+                if ($tax !== 0) {
                     // Airbnb collected and remitted this itself. Never revenue.
                     $result['lines'][] = $this->line('tax_platform_remitted', $tax, $event_date, $code, $payout_ref);
                 }
-                if ($amount != 0.0) {
+                if ($amount !== 0) {
                     $result['lines'][] = $this->line('payout', $amount, $event_date, $code, $payout_ref);
                     $payout_sum += $amount;
                 }
@@ -223,8 +224,8 @@ final class Airbnb_Payout extends Parser_Base
         array &$result,
         bool &$open,
         ?string $ref,
-        float $total,
-        float $sum,
+        int $total,
+        int $sum,
         bool $partial
     ): void {
         if (!$open) {
@@ -233,16 +234,17 @@ final class Airbnb_Payout extends Parser_Base
         $open = false;
         // A group that lost rows to the Crofty Bear exclusion, or to an
         // unreadable row, cannot be checked against its stated total.
-        if ($partial || $total == 0.0) {
+        if ($partial || $total === 0) {
             return;
         }
-        if (abs(round($total - $sum, 2)) >= 0.01) {
+        // Cents, so this is an exact comparison rather than a tolerance.
+        if ($total !== $sum) {
             $result['notes'][] = sprintf(
                 /* translators: 1: payout reference code, 2: stated total, 3: sum of the rows */
                 __('Airbnb payout %1$s states %2$s but its rows add up to %3$s.', 'dcc-ledger'),
                 (string) $ref,
-                number_format($total, 2),
-                number_format($sum, 2)
+                Money::format($total),
+                Money::format($sum)
             );
         }
     }

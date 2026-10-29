@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 use DCCL\Names;
 
@@ -93,20 +94,20 @@ final class Vrbo_Payout extends Parser_Base
                 )
             ));
 
-            $gross      = $this->money($row['Gross booking amount'] ?? '');
-            $deductions = $this->money($row['Deductions'] ?? '');
-            $payout     = $this->money($row['Payout'] ?? '');
-            $tax_owner  = $this->money($row['Lodging Tax Owner Remits'] ?? '');
-            $tax_held   = $this->money($row['Tax Withheld'] ?? '');
+            $gross      = $this->cents($row['Gross booking amount'] ?? '');
+            $deductions = $this->cents($row['Deductions'] ?? '');
+            $payout     = $this->cents($row['Payout'] ?? '');
+            $tax_owner  = $this->cents($row['Lodging Tax Owner Remits'] ?? '');
+            $tax_held   = $this->cents($row['Tax Withheld'] ?? '');
 
-            if ($gross != 0.0) {
+            if ($gross !== 0) {
                 $result['lines'][] = $this->line('guest_total', $gross, $payout_on, $code);
             }
-            if ($deductions != 0.0) {
+            if ($deductions !== 0) {
                 // Stored as a positive cost regardless of the file's sign.
                 $result['lines'][] = $this->line('service_fee', abs($deductions), $payout_on, $code);
             }
-            if ($payout != 0.0) {
+            if ($payout !== 0) {
                 $result['lines'][] = $this->line('payout', $payout, $payout_on, $code);
             }
             // Always stored, even at 0.00: their absence is itself a fact the

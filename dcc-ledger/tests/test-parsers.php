@@ -59,15 +59,15 @@ foreach ($parsed['lines'] as $line) {
 }
 
 T::same(5, count($by_type['guest_total'] ?? []), 'Five reservations carry a gross');
-T::same(465.00, $by_type['guest_total'][0]['amount'], 'Gross earnings become the guest total');
-T::same(40.00, $by_type['tax_platform_remitted'][0]['amount'], 'Airbnb remitted tax is its own line');
-T::same(15.00, $by_type['service_fee'][0]['amount'], 'The service fee is stored as a positive cost');
-T::same(450.00, $by_type['payout'][0]['amount'], 'The Amount column is the payout share');
+T::same(46500, $by_type['guest_total'][0]['amount_cents'], 'Gross earnings become the guest total');
+T::same(4000, $by_type['tax_platform_remitted'][0]['amount_cents'], 'Airbnb remitted tax is its own line');
+T::same(1500, $by_type['service_fee'][0]['amount_cents'], 'The service fee is stored as a positive cost');
+T::same(45000, $by_type['payout'][0]['amount_cents'], 'The Amount column is the payout share');
 T::same(1, count($by_type['resolution'] ?? []), 'The resolution adjustment is kept');
-T::same(-339.69, $by_type['resolution'][0]['amount'], 'The resolution adjustment keeps its sign');
-T::same(75.00, $by_type['cancellation_fee'][0]['amount'], 'The cancellation fee is kept');
-T::same(-75.00, $by_type['cancellation_fee_refund'][0]['amount'], 'The cancellation fee refund is kept');
-T::same(25.00, $by_type['adjustment'][0]['amount'], 'The adjustment is kept');
+T::same(-33969, $by_type['resolution'][0]['amount_cents'], 'The resolution adjustment keeps its sign');
+T::same(7500, $by_type['cancellation_fee'][0]['amount_cents'], 'The cancellation fee is kept');
+T::same(-7500, $by_type['cancellation_fee_refund'][0]['amount_cents'], 'The cancellation fee refund is kept');
+T::same(2500, $by_type['adjustment'][0]['amount_cents'], 'The adjustment is kept');
 
 $old = $parsed['stays']['airbnb:HM2022OLD1'];
 T::same('2022-06-01', $old['check_in'], 'A 2022 reservation in a 2025 payout keeps its own dates');
@@ -95,7 +95,7 @@ T::same('22', $parsed['stays']['bookingcom:5111111111']['cottage'], 'Hotel id 14
 
 $commission = array_values(array_filter($parsed['lines'], static fn ($l) => $l['type'] === 'commission'));
 T::same('2025-03-05', $commission[0]['event_date'], 'Commission is dated by departure');
-T::same(90.00, $commission[0]['amount'], 'Commission amount is stored as a positive cost');
+T::same(9000, $commission[0]['amount_cents'], 'Commission amount is stored as a positive cost');
 T::ok(!str_contains((string) json_encode($parsed), 'O&#39;neal'), 'An HTML-entity name does not survive parsing');
 
 T::group('Booking.com payout parser');
@@ -106,10 +106,10 @@ T::ok(isset($parsed['stays']['bookingcom:5722711078']), 'A payout with no reserv
 T::same(null, $parsed['stays']['bookingcom:5722711078']['check_out'], 'That stay has no check-out, so nights stay unknown');
 
 $refunds = array_values(array_filter($parsed['lines'], static fn ($l) => $l['type'] === 'refund'));
-T::same(-100.00, $refunds[0]['amount'], 'A REFUND row is negative');
+T::same(-10000, $refunds[0]['amount_cents'], 'A REFUND row is negative');
 
 $payouts = array_values(array_filter($parsed['lines'], static fn ($l) => $l['type'] === 'payout'));
-T::same(672.00, $payouts[0]['amount'], 'The payout is the gross including tax');
+T::same(67200, $payouts[0]['amount_cents'], 'The payout is the gross including tax');
 
 T::group('Vrbo reservations parser');
 
@@ -129,13 +129,13 @@ T::same(2, count($parsed['stays']), 'Two reservations, the Crofty row excluded')
 
 $payouts = array_values(array_filter($parsed['lines'], static fn ($l) => $l['type'] === 'payout'));
 T::same(3, count($payouts), 'Three payout rows, including the later negative one');
-T::same(855.00, $payouts[0]['amount'], '"Month D, YYYY" dates and amounts are read');
+T::same(85500, $payouts[0]['amount_cents'], '"Month D, YYYY" dates and amounts are read');
 T::same('2025-07-10', $payouts[0]['event_date'], 'Jul 10, 2025 parses to an ISO date');
-T::same(-95.00, $payouts[1]['amount'], 'A split negative payout row is kept');
+T::same(-9500, $payouts[1]['amount_cents'], 'A split negative payout row is kept');
 
 $taxes = array_values(array_filter($parsed['lines'], static fn ($l) => $l['type'] === 'tax_in_payout'));
 T::same(3, count($taxes), 'Vrbo tax lines are stored even at zero');
-T::same(0.00, $taxes[0]['amount'], 'They are zero, as the file states');
+T::same(0, $taxes[0]['amount_cents'], 'They are zero, as the file states');
 
 T::group('Booking.com invoices parser');
 
@@ -143,5 +143,5 @@ $parsed = (new Bookingcom_Invoices())->parse(dccl_fixture('bookingcom-invoices.c
 T::same(3, count($parsed['lines']), 'Three invoices, the Crofty invoice excluded');
 T::same(1, $parsed['counts']['excluded'], 'The Crofty invoice is counted as excluded');
 T::same('invoice', $parsed['lines'][0]['type'], 'Each is stored as an invoice line');
-T::same(90.00, $parsed['lines'][0]['amount'], 'The invoice line carries the commission');
-T::same(600.00, $parsed['lines'][0]['meta']['room_sales'], 'Room sales ride along in the line meta');
+T::same(9000, $parsed['lines'][0]['amount_cents'], 'The invoice line carries the commission');
+T::same(60000, $parsed['lines'][0]['meta']['room_sales'], 'Room sales ride along in the line meta');

@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 
 if (!defined('ABSPATH')) {
@@ -57,8 +58,8 @@ final class Bookingcom_Invoices extends Parser_Base
             }
 
             $invoice_date = Dates::iso($row['Invoice date'] ?? '') ?? Dates::us($row['Invoice date'] ?? '');
-            $commission   = $this->money($row['Commission'] ?? '');
-            $room_sales   = $this->money($row['Room sales'] ?? '');
+            $commission   = $this->cents($row['Commission'] ?? '');
+            $room_sales   = $this->cents($row['Room sales'] ?? '');
 
             $result['lines'][] = $this->line(
                 'invoice',

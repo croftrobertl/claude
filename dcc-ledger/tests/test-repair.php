@@ -80,9 +80,9 @@ T::ok(isset($copies[7278]), 'It is counted as a copy, so its nights and money co
 // October also holds booking #9018, which really did record $300.00. What
 // matters is that 7278's $388.50 is NOT added on top of it.
 $october = DCCL\Reports::summary('2025-10-01', '2025-10-31', 'stay', 'ledger');
-T::same(300.00, $october['totals']['direct_recorded'], 'Only the genuinely direct payment is counted');
+T::same(30000, $october['totals']['direct_recorded'], 'Only the genuinely direct payment is counted');
 T::same(1, $october['direct']['copies_excluded'], '7278 is excluded as a copy');
-T::same(388.50, $october['direct']['copy_payments'], 'And its payment is shown on the copy, not counted');
+T::same(38850, $october['direct']['copy_payments'], 'And its payment is shown on the copy, not counted');
 // October's direct nights are #9018's three and #9025's five. 7278's two are
 // not among them: they belong to the Airbnb stay.
 T::same(8, $october['direct']['nights'], 'Its two nights are not counted as direct nights');
@@ -229,7 +229,7 @@ T::group('Their money is real direct revenue');
 Snapshot::run(false, 1);
 
 $period = DCCL\Reports::summary('2026-01-01', '2026-03-31', 'stay', 'ledger');
-T::same(1171.05, $period['totals']['direct_recorded'], 'Both payments count as direct revenue');
+T::same(117105, $period['totals']['direct_recorded'], 'Both payments count as direct revenue');
 T::same(0.00, $period['direct']['copy_payments'], 'Neither is shown as money sitting on a copy');
 
 $assumed = [];
@@ -257,7 +257,7 @@ T::ok(!isset(Copies::detect(Copies::from_live())[8899]), 'The booking is not rec
 T::same([], Repo::links_for_stay((int) $odd['id']), 'And nothing is linked for it');
 
 $september = DCCL\Reports::summary('2025-09-01', '2025-09-30', 'stay', 'ledger');
-T::same(420.00, $september['totals']['direct_recorded'], 'Its booking goes on counting as a real stay');
+T::same(42000, $september['totals']['direct_recorded'], 'Its booking goes on counting as a real stay');
 
 T::group('Nights are check-out minus check-in, everywhere');
 
@@ -343,4 +343,4 @@ T::ok(
 
 $september_after = DCCL\Reports::summary('2025-09-01', '2025-09-30', 'stay', 'ledger');
 T::same(0.00, $september_after['totals']['direct_recorded'], 'Its money is no longer counted as direct');
-T::same(420.00, $september_after['direct']['copy_payments'], 'It is shown on the copy instead');
+T::same(42000, $september_after['direct']['copy_payments'], 'It is shown on the copy instead');

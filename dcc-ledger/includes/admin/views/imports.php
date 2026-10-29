@@ -119,7 +119,7 @@ $batches = Batches::all();
                 <td><?php echo esc_html((string) $assumed['cottage']); ?></td>
                 <td><?php echo esc_html((string) $assumed['event_date']); ?></td>
                 <td><?php echo esc_html(Adjustments::label_for((string) $assumed['type'])); ?></td>
-                <td class="dccl-right"><?php echo esc_html(Ui::money((float) $assumed['amount'])); ?></td>
+                <td class="dccl-right"><?php echo esc_html(Ui::money((int) $assumed['amount_cents'])); ?></td>
                 <td>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <?php wp_nonce_field(Admin::NONCE); ?>

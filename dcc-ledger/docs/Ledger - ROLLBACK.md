@@ -146,6 +146,38 @@ tab first, then make the new one. Nothing is lost in between: both the
 platform stay and the booking simply count on their own until the new link is
 made, and any cleanup item that the old link cleared comes back while they do.
 
+## If the move to whole cents needs undoing
+
+0.2.0 stores every amount as an integer number of cents. Before it converted
+anything it copied each decimal cell into a backup table, and that copy is
+never overwritten — not even by running the conversion again.
+
+One line puts it all back:
+
+    wp dcc-ledger money-rollback
+
+Every decimal column returns to exactly the value it held, down to a cell
+that was empty staying empty. The ledger then refuses to show figures, with
+a banner saying the money is not in cents, until either
+
+    wp dcc-ledger money-check
+
+converts it again, or 0.1.9 is reinstalled. The refusal is on purpose: with
+the cents gone, a ledger still reading them would report every figure as
+zero, and a zero that means "missing" is worse than no figure at all.
+
+Nothing in MotoPress is touched by any of this, in either direction.
+
+## If a figure looks a cent out
+
+It should not be, and that is testable rather than arguable: the months of a
+year now add up to the year exactly, and so do the channels and the
+cottages. `wp dcc-ledger money-check` re-runs that proof over the live data
+and names any group that does not tie.
+
+If one does not tie, do not adjust anything to make it. Send the output,
+and the month it names, and leave the data as it stands.
+
 ## What a rollback cannot undo
 
 Nothing done by this plugin reaches outside its own tables, so there is nothing

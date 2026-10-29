@@ -154,11 +154,11 @@ foreach ($invoices as $invoice) {
 
 T::same(3, count($invoices), 'Three invoices imported, Crofty excluded');
 T::ok($by_number['7001']['reconciles'], 'Invoice 7001 reconciles');
-T::same(90.00, $by_number['7001']['matched_commission'], 'Its matched commission equals the invoice');
+T::same(9000, $by_number['7001']['matched_commission'], 'Its matched commission equals the invoice');
 T::ok($by_number['7002']['reconciles'], 'Invoice 7002 reconciles');
 T::ok(!$by_number['7003']['reconciles'], 'Invoice 7003 does not');
-T::same(110.00, $by_number['7003']['commission'], 'It charges 110.00');
-T::same(120.00, $by_number['7003']['matched_commission'], 'The reservations matched to it come to 120.00');
+T::same(11000, $by_number['7003']['commission'], 'It charges 110.00');
+T::same(12000, $by_number['7003']['matched_commission'], 'The reservations matched to it come to 120.00');
 
 T::group('Reviewing an item');
 

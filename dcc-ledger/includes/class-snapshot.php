@@ -63,16 +63,16 @@ final class Snapshot
             'payments_changed'   => 0,
             'payments_unchanged' => 0,
             'assumed_bookings'   => 0,
-            'assumed_total'      => 0.0,
+            'assumed_total'      => 0,
             'assumed_existing'   => 0,
             'copies_skipped'     => 0,
             'overpaid_skipped'   => 0,
             'outside_window'     => 0,
             'assumed_withheld'   => 0,
             'assumed_pre_exports'       => 0,
-            'assumed_pre_exports_total' => 0.0,
+            'assumed_pre_exports_total' => 0,
             'refunds_recorded'          => 0,
-            'refunds_total'             => 0.0,
+            'refunds_total'             => 0,
             // Counted over the SAME bookings as copies_skipped, each one once,
             // by the first signal that caught it — so the parts add up to the
             // total. They used to be counted over every copy detected, while
@@ -122,7 +122,7 @@ final class Snapshot
                 'check_in'       => $booking['check_in'],
                 'check_out'      => $booking['check_out'],
                 'booking_status' => (string) $booking['status'],
-                'total'          => (float) $booking['total'],
+                'total_cents'    => (int) $booking['total'],
                 'event_date'     => $booking['check_in'],
                 // Only the extracted codes travel into the ledger; the notes
                 // they came from are not stored anywhere.
@@ -156,7 +156,7 @@ final class Snapshot
                     'mphb_booking_id' => (int) $booking['id'],
                     'cottage'         => (string) $booking['cottage'],
                     'payment_status'  => (string) $payment['status'],
-                    'amount'          => (float) $payment['amount'],
+                    'amount_cents'    => (int) $payment['amount'],
                     'event_date'      => $payment['date'],
                 ];
 
@@ -288,9 +288,9 @@ final class Snapshot
                 continue;
             }
 
-            $gap = round((float) $booking['total'] - (float) $booking['paid_recorded'], 2);
-            if ($gap <= 0.0) {
-                if ($gap < 0.0) {
+            $gap = (int) $booking['total'] - (int) $booking['paid_recorded'];
+            if ($gap <= 0) {
+                if ($gap < 0) {
                     // Recorded as paid more than the total. Shown as it is,
                     // never capped, and never topped up.
                     $counts['overpaid_skipped']++;
@@ -301,20 +301,20 @@ final class Snapshot
             $existing = self::existing_assumed((int) $booking['id']);
             if ($existing !== null) {
                 $counts['assumed_existing']++;
-                if (abs(round((float) $existing['amount'] - $gap, 2)) >= 0.01) {
+                if ((int) $existing['amount_cents'] !== $gap) {
                     $notes[] = sprintf(
                         /* translators: 1: booking id, 2: the stored adjustment, 3: the gap now */
                         __('Booking #%1$d already has an assumed payment of %2$s, but the gap is now %3$s. The stored adjustment was left as it is.', 'dcc-ledger'),
                         (int) $booking['id'],
-                        number_format((float) $existing['amount'], 2),
-                        number_format($gap, 2)
+                        Money::format((int) $existing['amount_cents']),
+                        Money::format($gap)
                     );
                 }
                 continue;
             }
 
             $counts['assumed_bookings']++;
-            $counts['assumed_total'] = round(((float) $counts['assumed_total']) + $gap, 2);
+            $counts['assumed_total'] = ((int) $counts['assumed_total']) + $gap;
 
             if ($dry_run) {
                 continue;
@@ -325,7 +325,7 @@ final class Snapshot
                 'channel'         => 'direct',
                 'mphb_booking_id' => (int) $booking['id'],
                 'cottage'         => (string) $booking['cottage'],
-                'amount'          => $gap,
+                'amount_cents'    => $gap,
                 'event_date'      => $booking['check_in'],
                 'label'           => Adjustments::label_for(Adjustments::ASSUMED_PAID),
                 'note'            => __('Assumed, actual date unknown. Dated at check-in.', 'dcc-ledger'),
@@ -371,16 +371,14 @@ final class Snapshot
                 continue;
             }
 
-            $gap = round((float) $booking['total'] - (float) $booking['paid_recorded'], 2);
-            if ($gap <= 0.0) {
+            $gap = (int) $booking['total'] - (int) $booking['paid_recorded'];
+            if ($gap <= 0) {
                 continue;
             }
 
             $counts['assumed_pre_exports']++;
-            $counts['assumed_pre_exports_total'] = round(
-                ((float) $counts['assumed_pre_exports_total']) + $gap,
-                2
-            );
+            $counts['assumed_pre_exports_total'] =
+                ((int) $counts['assumed_pre_exports_total']) + $gap;
 
             if ($dry_run) {
                 continue;
@@ -391,7 +389,7 @@ final class Snapshot
                 'channel'         => 'direct',
                 'mphb_booking_id' => $booking_id,
                 'cottage'         => (string) $booking['cottage'],
-                'amount'          => $gap,
+                'amount_cents'    => $gap,
                 'event_date'      => $booking['check_in'],
                 'label'           => Adjustments::label_for(Adjustments::ASSUMED_PRE_EXPORTS),
                 'note'            => __('Rob\'s ruling of 2026-10-21. Assumed, actual date unknown; dated at check-in. No platform exports cover this period, so nothing here could be checked against a platform stay.', 'dcc-ledger'),
@@ -432,13 +430,13 @@ final class Snapshot
                 continue;
             }
 
-            $over = round((float) $booking['paid_recorded'] - (float) $booking['total'], 2);
-            if ($over <= 0.0) {
+            $over = (int) $booking['paid_recorded'] - (int) $booking['total'];
+            if ($over <= 0) {
                 continue;
             }
 
             $counts['refunds_recorded']++;
-            $counts['refunds_total'] = round(((float) $counts['refunds_total']) - $over, 2);
+            $counts['refunds_total'] = ((int) $counts['refunds_total']) - $over;
 
             if ($dry_run) {
                 continue;
@@ -449,7 +447,7 @@ final class Snapshot
                 'channel'         => 'direct',
                 'mphb_booking_id' => $booking_id,
                 'cottage'         => (string) $booking['cottage'],
-                'amount'          => -1 * $over,
+                'amount_cents'    => -1 * $over,
                 'event_date'      => $booking['check_out'] ?? $booking['check_in'],
                 'label'           => Adjustments::label_for(Adjustments::REFUND_UNRECORDED),
                 'note'            => __('Rob\'s ruling of 2026-10-21: refunded, and the refund never reached MotoPress. Dated at check-out.', 'dcc-ledger'),

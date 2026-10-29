@@ -50,6 +50,24 @@ final class Adjustments
     }
 
     /**
+     * An adjustment's amount, in whole cents.
+     *
+     * Callers pass `amount_cents`. A plain `amount` is accepted from older
+     * call sites and converted here rather than at each of them, so there
+     * is one place where a dollar figure can become cents.
+     *
+     * @param array<string,mixed> $adjustment
+     */
+    public static function cents_of(array $adjustment): int
+    {
+        if (array_key_exists('amount_cents', $adjustment)) {
+            return (int) $adjustment['amount_cents'];
+        }
+
+        return Money::to_cents($adjustment['amount'] ?? 0);
+    }
+
+    /**
      * @param array<string,mixed> $adjustment
      */
     public static function hash(array $adjustment): string
@@ -58,7 +76,7 @@ final class Adjustments
             'type'            => (string) $adjustment['type'],
             'mphb_booking_id' => (int) ($adjustment['mphb_booking_id'] ?? 0),
             'stay_id'         => (int) ($adjustment['stay_id'] ?? 0),
-            'amount'          => number_format((float) $adjustment['amount'], 2, '.', ''),
+            'amount'          => Money::to_decimal(self::cents_of($adjustment)),
             'event_date'      => (string) ($adjustment['event_date'] ?? ''),
             'label'           => (string) $adjustment['label'],
         ];
@@ -90,13 +108,16 @@ final class Adjustments
             'mphb_booking_id' => $adjustment['mphb_booking_id'] ?? null,
             'stay_id'         => $adjustment['stay_id'] ?? null,
             'cottage'         => $adjustment['cottage'] ?? null,
-            'amount'          => number_format((float) $adjustment['amount'], 2, '.', ''),
+            // Cents are the figure; the decimal beside them is a mirror,
+            // kept so the 0.2.0 conversion can be rolled back.
+            'amount'          => Money::to_decimal(self::cents_of($adjustment)),
+            'amount_cents'    => self::cents_of($adjustment),
             'event_date'      => $adjustment['event_date'] ?? null,
             'label'           => mb_substr((string) $adjustment['label'], 0, 190),
             'note'            => isset($adjustment['note']) ? mb_substr((string) $adjustment['note'], 0, 500) : null,
             'hash'            => $hash,
             'source_batch'    => $batch_id,
-            'created_at'      => current_time('mysql'),
+            'created_at'      => Dates::now(),
             'created_by'      => $user_id,
         ]);
 
@@ -206,15 +227,16 @@ final class Adjustments
         );
     }
 
-    public static function total(?string $type = null): float
+    /** The total of every adjustment, or of one type, in whole cents. */
+    public static function total(?string $type = null): int
     {
         global $wpdb;
         $table = Schema::adjustments();
         if ($type === null) {
-            return round((float) $wpdb->get_var("SELECT COALESCE(SUM(amount), 0) FROM {$table}"), 2);
+            return (int) $wpdb->get_var("SELECT COALESCE(SUM(amount_cents), 0) FROM {$table}");
         }
-        return round((float) $wpdb->get_var(
-            $wpdb->prepare("SELECT COALESCE(SUM(amount), 0) FROM {$table} WHERE type = %s", $type)
-        ), 2);
+        return (int) $wpdb->get_var(
+            $wpdb->prepare("SELECT COALESCE(SUM(amount_cents), 0) FROM {$table} WHERE type = %s", $type)
+        );
     }
 }

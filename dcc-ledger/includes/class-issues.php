@@ -339,7 +339,7 @@ final class Issues
                     sprintf(
                         /* translators: %s: payout amount */
                         __('Payout recorded: %s.', 'dcc-ledger'),
-                        self::money((float) $stay['payout'])
+                        self::money((int) $stay['payout'])
                     ),
                 ] + ($probable === [] ? [] : [
                     sprintf(
@@ -369,9 +369,9 @@ final class Issues
             if ((string) $stay['status'] === 'ok') {
                 continue;
             }
-            $fees  = round((float) $stay['cancellation_fee'] + (float) $stay['cancellation_fee_refund'], 2);
+            $fees  = (int) $stay['cancellation_fee'] + (int) $stay['cancellation_fee_refund'];
             $other = Copies::stay_money($stay);
-            if (abs($other) < 0.01) {
+            if ($other === 0) {
                 continue;
             }
             $items[] = [
@@ -434,7 +434,7 @@ final class Issues
                     continue;
                 }
                 $booking = $copied[(int) $link['mphb_booking_id']] ?? null;
-                if ($booking === null || (float) $booking['paid'] <= 0) {
+                if ($booking === null || (int) $booking['paid'] <= 0) {
                     continue;
                 }
                 $items[] = [
@@ -445,7 +445,7 @@ final class Issues
                             /* translators: 1: booking id, 2: payment amount */
                             __('MotoPress booking #%1$d is a copy of a platform stay and has %2$s in recorded payments.', 'dcc-ledger'),
                             (int) $booking['mphb_id'],
-                            self::money((float) $booking['paid'])
+                            self::money((int) $booking['paid'])
                         ),
                         __('That money is shown on a copy, not counted, so it is in no report figure.', 'dcc-ledger'),
                     ],
@@ -469,12 +469,12 @@ final class Issues
                 continue;
             }
             $net = round(
-                (float) $stay['payout'] + (float) $stay['refund'] + (float) $stay['adjustment']
-                + (float) $stay['resolution'],
+                (int) $stay['payout'] + (int) $stay['refund'] + (int) $stay['adjustment']
+                + (int) $stay['resolution'],
                 2
             );
-            $clawback = round((float) $stay['resolution'] + (float) $stay['refund'], 2);
-            if ($clawback >= -0.01 || $net > 0.01) {
+            $clawback = (int) $stay['resolution'] + (int) $stay['refund'];
+            if ($clawback >= 0 || $net > 0) {
                 continue;
             }
 
@@ -482,10 +482,10 @@ final class Issues
             foreach ($links[(int) $stay['id']] ?? [] as $link) {
                 $booking = $copied[(int) $link['mphb_booking_id']] ?? null;
                 if ($booking !== null) {
-                    $collected += (float) $booking['paid'];
+                    $collected += (int) $booking['paid'];
                 }
             }
-            if ($collected > 0.01) {
+            if ($collected > 0) {
                 continue;
             }
 
@@ -511,16 +511,16 @@ final class Issues
     private static function overpaid_bookings(array &$items, array $copied): void
     {
         foreach ($copied as $booking_id => $booking) {
-            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED || (float) $booking['total'] <= 0) {
+            if ((string) $booking['booking_status'] !== Snapshot::CONFIRMED || (int) $booking['total_cents'] <= 0) {
                 continue;
             }
             // A refund Rob recorded here is money that left again, so it
             // comes off before the booking is called overpaid. Without this
             // the item would stay on the list after it had been answered.
             $refund = Adjustments::refund_for((int) $booking_id);
-            $paid   = round((float) $booking['paid'] + (float) ($refund['amount'] ?? 0), 2);
-            $over   = round($paid - (float) $booking['total'], 2);
-            if ($over < 0.01) {
+            $paid   = (int) $booking['paid'] + (int) ($refund['amount_cents'] ?? 0);
+            $over   = $paid - (int) $booking['total_cents'];
+            if ($over <= 0) {
                 continue;
             }
             $items[] = [
@@ -532,7 +532,7 @@ final class Issues
                         __('MotoPress booking #%1$d is overpaid by %2$s: the total is %3$s and completed payments come to %4$s.', 'dcc-ledger'),
                         (int) $booking_id,
                         self::money($over),
-                        self::money((float) $booking['total']),
+                        self::money((int) $booking['total_cents']),
                         self::money($paid)
                     ),
                     __('The figures show it exactly as recorded. Nothing was capped or altered, and no assumed payment was added to it.', 'dcc-ledger'),
@@ -570,9 +570,9 @@ final class Issues
             // assumed_for() covers both kinds and returns nothing once an
             // assumption has been reversed, which puts the item back.
             $assumed = Adjustments::assumed_for((int) $booking_id);
-            $paid    = round((float) $booking['paid'] + (float) ($assumed['amount'] ?? 0), 2);
-            $short   = round((float) $booking['total'] - $paid, 2);
-            if ($short < 0.01) {
+            $paid    = (int) $booking['paid'] + (int) ($assumed['amount_cents'] ?? 0);
+            $short   = (int) $booking['total_cents'] - $paid;
+            if ($short <= 0) {
                 continue;
             }
             $items[] = [
@@ -585,7 +585,7 @@ final class Issues
                         (int) $booking_id,
                         (string) $booking['check_out'],
                         self::money($short),
-                        self::money((float) $booking['total']),
+                        self::money((int) $booking['total_cents']),
                         self::money($paid)
                     ),
                 ],
@@ -695,7 +695,7 @@ final class Issues
                         /* translators: 1: booking id, 2: the assumed amount */
                         __('Booking #%1$d carries an assumed payment of %2$s, but it is now recognised as a hand-typed copy of a platform stay.', 'dcc-ledger'),
                         $booking_id,
-                        self::money((float) $adjustment['amount'])
+                        self::money((int) $adjustment['amount_cents'])
                     ),
                     __('Its money came through the platform, so the assumption should not stand. Nothing has been deleted: the figures already count this stay once, on the platform stay.', 'dcc-ledger'),
                 ],
@@ -739,7 +739,7 @@ final class Issues
             }
 
             $money = Copies::stay_money($stay);
-            if (abs($money) < 0.01) {
+            if ($money === 0) {
                 continue; // The ordinary case: cancelled, and no money with it.
             }
 
@@ -792,7 +792,7 @@ final class Issues
             }
 
             $money = Copies::stay_money($stay);
-            if (abs($money) < 0.01) {
+            if ($money === 0) {
                 continue;
             }
 
@@ -1040,14 +1040,14 @@ final class Issues
                         /* translators: 1: invoice number, 2: invoiced commission, 3: commission on the matched reservations */
                         __('Invoice %1$s charges %2$s commission; the reservations matched to it come to %3$s.', 'dcc-ledger'),
                         (string) $invoice['number'],
-                        self::money((float) $invoice['commission']),
-                        self::money((float) $invoice['matched_commission'])
+                        self::money((int) $invoice['commission']),
+                        self::money((int) $invoice['matched_commission'])
                     ),
                     sprintf(
                         /* translators: 1: invoiced room sales, 2: room sales on the matched reservations, 3: number of reservations */
                         __('Room sales: %1$s invoiced against %2$s across %3$d matched reservations.', 'dcc-ledger'),
-                        self::money((float) $invoice['room_sales']),
-                        self::money((float) $invoice['matched_room_sales']),
+                        self::money((int) $invoice['room_sales']),
+                        self::money((int) $invoice['matched_room_sales']),
                         (int) $invoice['matched_rows']
                     ),
                 ],
@@ -1068,7 +1068,7 @@ final class Issues
         $lines_t = Schema::lines();
 
         $rows = $wpdb->get_results(
-            "SELECT ref_code, amount, event_date, meta
+            "SELECT ref_code, amount_cents, event_date, meta
                FROM {$lines_t}
               WHERE type = 'invoice'
               ORDER BY event_date, ref_code",
@@ -1081,8 +1081,8 @@ final class Issues
 
         $matched = $wpdb->get_results(
             "SELECT ref_code,
-                    SUM(CASE WHEN type = 'room_sales' THEN amount ELSE 0 END) AS room_sales,
-                    SUM(CASE WHEN type = 'commission' THEN amount ELSE 0 END) AS commission,
+                    SUM(CASE WHEN type = 'room_sales' THEN amount_cents ELSE 0 END) AS room_sales,
+                    SUM(CASE WHEN type = 'commission' THEN amount_cents ELSE 0 END) AS commission,
                     COUNT(DISTINCT stay_id) AS rows_matched
                FROM {$lines_t}
               WHERE type IN ('room_sales','commission') AND ref_code IS NOT NULL AND ref_code <> ''
@@ -1101,8 +1101,8 @@ final class Issues
             $meta   = Repo::decode_meta($row['meta'] ?? null);
             $m      = $by_ref[$number] ?? ['room_sales' => 0, 'commission' => 0, 'rows_matched' => 0];
 
-            $commission = round((float) $row['amount'], 2);
-            $room_sales = round((float) ($meta['room_sales'] ?? 0), 2);
+            $commission = (int) $row['amount_cents'];
+            $room_sales = (int) ($meta['room_sales'] ?? 0);
 
             $out[] = [
                 'number'             => $number,
@@ -1112,11 +1112,12 @@ final class Issues
                 'period_end'         => (string) ($meta['period_end'] ?? ''),
                 'commission'         => $commission,
                 'room_sales'         => $room_sales,
-                'matched_commission' => round((float) $m['commission'], 2),
-                'matched_room_sales' => round((float) $m['room_sales'], 2),
+                'matched_commission' => (int) $m['commission'],
+                'matched_room_sales' => (int) $m['room_sales'],
                 'matched_rows'       => (int) $m['rows_matched'],
-                'reconciles'         => abs(round((float) $m['commission'] - $commission, 2)) < 0.01
-                                        && abs(round((float) $m['room_sales'] - $room_sales, 2)) < 0.01,
+                // Cents, so reconciling means equal, not nearly equal.
+                'reconciles'         => (int) $m['commission'] === $commission
+                                        && (int) $m['room_sales'] === $room_sales,
             ];
         }
 
@@ -1138,7 +1139,7 @@ final class Issues
 
         $sums = [];
         foreach (Reports::MONEY_TYPES as $type) {
-            $sums[] = sprintf("SUM(CASE WHEN l.type = '%s' THEN l.amount ELSE 0 END) AS %s", $type, $type);
+            $sums[] = sprintf("SUM(CASE WHEN l.type = '%s' THEN l.amount_cents ELSE 0 END) AS %s", $type, $type);
         }
         // Copies::stay_money() needs to know whether a payout row exists at
         // all, which a sum of zero cannot tell it.
@@ -1198,8 +1199,9 @@ final class Issues
         );
     }
 
-    private static function money(float $amount): string
+    /** Whole cents, printed in a sentence a person reads. */
+    private static function money(int $cents): string
     {
-        return ($amount < 0 ? '-$' : '$') . number_format(abs($amount), 2);
+        return ($cents < 0 ? '-$' : '$') . number_format(abs($cents) / 100, 2);
     }
 }

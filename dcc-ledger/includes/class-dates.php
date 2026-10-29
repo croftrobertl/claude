@@ -23,7 +23,33 @@ final class Dates
 
     public static function today(): string
     {
-        return (new \DateTimeImmutable('now', self::timezone()))->format('Y-m-d');
+        return self::now_at()->format('Y-m-d');
+    }
+
+    /**
+     * Now, on the property's clock, as a MySQL datetime.
+     *
+     * Used in place of WordPress's own current-time helper, which answers in
+     * whatever timezone the site is set to. The cottages are in Tavares, and
+     * a correction entered at 00:10 on 1 February belongs to February — not
+     * to 31 January because a server is on UTC. Every stored timestamp in
+     * this plugin comes from here, so they are all on one clock.
+     */
+    public static function now(): string
+    {
+        return self::now_at()->format('Y-m-d H:i:s');
+    }
+
+    /** Now, on the property's clock. */
+    public static function now_at(): \DateTimeImmutable
+    {
+        // A fixed instant can be pinned for the tests, so a clock change can
+        // be stood on deliberately rather than waited for.
+        $fixed = defined('DCCL_TEST_NOW') ? (string) constant('DCCL_TEST_NOW') : '';
+
+        return $fixed !== ''
+            ? (new \DateTimeImmutable($fixed, new \DateTimeZone('UTC')))->setTimezone(self::timezone())
+            : new \DateTimeImmutable('now', self::timezone());
     }
 
     /** MM/DD/YYYY or M/D/YYYY (Airbnb, Booking.com payouts, Vrbo reservations). */

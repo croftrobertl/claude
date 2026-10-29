@@ -299,7 +299,8 @@ final class Admin
         self::guard();
 
         $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
-        $amount     = isset($_POST['amount']) ? (float) $_POST['amount'] : 0.0;
+        // Parsed from the posted text, so "19.99" is 1999 cents exactly.
+        $cents      = isset($_POST['amount']) ? Money::to_cents(wp_unslash($_POST['amount'])) : 0;
         $note       = isset($_POST['note']) ? sanitize_text_field(wp_unslash($_POST['note'])) : '';
         $date       = isset($_POST['event_date']) ? sanitize_text_field(wp_unslash($_POST['event_date'])) : '';
 
@@ -316,7 +317,7 @@ final class Admin
             'type'            => Adjustments::MANUAL,
             'mphb_booking_id' => $booking_id,
             'cottage'         => (string) $original['cottage'],
-            'amount'          => $amount,
+            'amount_cents'    => $cents,
             'event_date'      => Dates::is_valid($date) ? $date : (string) $original['check_in'],
             'label'           => Adjustments::label_for(Adjustments::MANUAL),
             'note'            => $note,
@@ -396,7 +397,7 @@ final class Admin
             'type'            => Adjustments::ASSUMED_REVERSAL,
             'mphb_booking_id' => $booking_id,
             'cottage'         => (string) $assumed['cottage'],
-            'amount'          => -1 * (float) $assumed['amount'],
+            'amount_cents'    => -1 * (int) $assumed['amount_cents'],
             'event_date'      => (string) $assumed['event_date'],
             'label'           => Adjustments::label_for(Adjustments::ASSUMED_REVERSAL),
             'note'            => (string) $assumed['type'] === Adjustments::ASSUMED_PRE_EXPORTS
@@ -420,9 +421,9 @@ final class Admin
         self::guard();
 
         $booking_id = isset($_POST['booking_id']) ? (int) $_POST['booking_id'] : 0;
-        $amount     = isset($_POST['amount']) ? round((float) $_POST['amount'], 2) : 0.0;
+        $cents      = isset($_POST['amount']) ? Money::to_cents(wp_unslash($_POST['amount'])) : 0;
 
-        if ($booking_id <= 0 || $amount <= 0) {
+        if ($booking_id <= 0 || $cents <= 0) {
             self::back('cleanup', __('A booking and an amount above zero are both needed.', 'dcc-ledger'), 'error');
         }
         if (Adjustments::refund_for($booking_id) !== null) {
@@ -439,7 +440,7 @@ final class Admin
             'channel'         => 'direct',
             'mphb_booking_id' => $booking_id,
             'cottage'         => (string) ($booking['cottage'] ?? ''),
-            'amount'          => -1 * $amount,
+            'amount_cents'    => -1 * $cents,
             'event_date'      => (string) ($booking['check_out'] ?: $booking['check_in']),
             'label'           => Adjustments::label_for(Adjustments::REFUND_UNRECORDED),
             'note'            => __('Recorded by hand: the card processor refunded this and MotoPress was never told. Dated at check-out.', 'dcc-ledger'),

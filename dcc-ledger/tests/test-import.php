@@ -128,7 +128,7 @@ T::group('Hashes');
 $line = [
     'channel'    => 'airbnb',
     'type'       => 'payout',
-    'amount'     => 100.0,
+    'amount_cents' => 10000,
     'event_date' => '2025-01-01',
     'stay_code'  => 'HMX',
     'payout_ref' => null,
@@ -137,6 +137,6 @@ $line = [
 ];
 T::same(Repo::line_hash($line), Repo::line_hash($line), 'The same line hashes the same way twice');
 $other = $line;
-$other['amount'] = 100.01;
+$other['amount_cents'] = 10001;
 T::ok(Repo::line_hash($line) !== Repo::line_hash($other), 'A different amount hashes differently');
 T::ok(Repo::line_hash($line, 0) !== Repo::line_hash($line, 1), 'A repeated identical row is kept, not swallowed');

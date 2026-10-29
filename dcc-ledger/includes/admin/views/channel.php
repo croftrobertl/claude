@@ -18,11 +18,11 @@ $direct   = $summary['direct'];
 $untaxed  = $summary['ota']['tax_not_reported'];
 
 /** A channel that reports no tax at all has unknown tax, not zero tax. */
-$tax_cell = static function (string $channel, float $amount) use ($untaxed): string {
+$tax_cell = static function (string $channel, int $cents) use ($untaxed): string {
     if (in_array($channel, $untaxed, true)) {
         return '<span class="dccl-muted">' . esc_html__('Not Reported', 'dcc-ledger') . '</span>';
     }
-    return Ui::money($amount);
+    return Ui::money($cents);
 };
 ?>
 <h2 class="dccl-h2"><?php esc_html_e('By Channel', 'dcc-ledger'); ?></h2>
@@ -55,12 +55,12 @@ $tax_cell = static function (string $channel, float $amount) use ($untaxed): str
                     </th>
                     <?php $is_direct = (string) $channel === 'direct'; ?>
                     <td><?php echo Ui::number($row['nights'] ?? 0); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money($row['guest_total'] ?? 0); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money($row['platform_fees'] ?? 0); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : $tax_cell((string) $channel, (float) ($row['tax_platform_remitted'] ?? 0)); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : $tax_cell((string) $channel, (float) ($row['tax_in_payout'] ?? 0)); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money($row['net_payout'] ?? 0); ?></td>
-                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money($row['adr'] ?? 0); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money((int) ($row['guest_total'] ?? 0)); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money((int) ($row['platform_fees'] ?? 0)); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : $tax_cell((string) $channel, (int) ($row['tax_platform_remitted'] ?? 0)); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : $tax_cell((string) $channel, (int) ($row['tax_in_payout'] ?? 0)); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money((int) ($row['net_payout'] ?? 0)); ?></td>
+                    <td><?php echo $is_direct ? Ui::not_applicable() : Ui::money((int) ($row['adr'] ?? 0)); ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

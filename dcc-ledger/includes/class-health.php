@@ -153,6 +153,40 @@ final class Health
     }
 
     /**
+     * Money rows that hold a decimal but no cents figure.
+     *
+     * Since 0.2.0 every figure is read from the cents columns. A row with
+     * money in its old decimal column and nothing in its cents column would
+     * read as zero — the silent wrongness this plugin exists to prevent — so
+     * it is counted here and shown as a banner instead of figures.
+     *
+     * It is zero on a fresh install, where every write fills both, and above
+     * zero only after a rollback or a conversion that did not finish.
+     */
+    public static function money_not_in_cents(): int
+    {
+        global $wpdb;
+
+        $count = 0;
+        foreach (Money_Migration::COLUMNS as $table => $map) {
+            $name = Schema::table($table);
+            foreach ($map as $decimal => $cents) {
+                try {
+                    $count += (int) $wpdb->get_var(
+                        "SELECT COUNT(*) FROM {$name}
+                          WHERE {$decimal} IS NOT NULL AND {$decimal} <> '' AND {$decimal} <> 0
+                            AND ({$cents} IS NULL OR {$cents} = 0)"
+                    );
+                } catch (\Throwable $e) {
+                    continue; // The column is missing; reported separately.
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * @return array{ok:bool,missing:array<int,array{what:string,why:string}>}
      */
     public static function check(): array
@@ -189,6 +223,18 @@ final class Health
             if (!$found) {
                 $missing[] = ['what' => $requirement['what'], 'why' => $requirement['why']];
             }
+        }
+
+        $unconverted = self::money_not_in_cents();
+        if ($unconverted > 0) {
+            $missing[] = [
+                'what' => sprintf(
+                    /* translators: %d: how many money rows have no cents figure */
+                    __('%d money rows are not in cents', 'dcc-ledger'),
+                    $unconverted
+                ),
+                'why'  => __('The ledger reads whole cents. These rows still hold only their old decimal value, so every figure built from them would read as zero. Deactivating and reactivating the plugin runs the conversion again.', 'dcc-ledger'),
+            ];
         }
 
         foreach (self::missing_columns() as $gap) {

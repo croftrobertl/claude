@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 use DCCL\Names;
 
@@ -96,17 +97,17 @@ final class Bookingcom_Reservations extends Parser_Base
                 )
             ));
 
-            $final      = $this->money($row['Final amount'] ?? '');
-            $commission = $this->money($row['Commission amount'] ?? '');
+            $final      = $this->cents($row['Final amount'] ?? '');
+            $commission = $this->cents($row['Commission amount'] ?? '');
             $invoice_no = trim($row['Invoice number'] ?? '');
 
-            if ($final != 0.0) {
+            if ($final !== 0) {
                 $result['lines'][] = $this->line('room_sales', $final, $check_out, $code, null, $invoice_no ?: null, [
                     'hotel_id' => $hotel_id,
                     'status'   => $status,
                 ]);
             }
-            if ($commission != 0.0) {
+            if ($commission !== 0) {
                 // Dated by departure: that is the month Booking.com invoices it in.
                 $result['lines'][] = $this->line('commission', $commission, $check_out, $code, null, $invoice_no ?: null, [
                     'hotel_id' => $hotel_id,

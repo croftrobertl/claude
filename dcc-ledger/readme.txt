@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.9
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,14 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.2.0 =
+* Every amount is now stored and added as a whole number of cents. A float cannot hold 0.1, so a column of them does not add up to what a person adding the same column by hand would get; the months of a year now tie to the year exactly, and so do the channels and the cottages.
+* The upgrade converts the stored decimals in place, after copying every one of them into a backup table and only if every total agrees to the cent before and after. If one does not, it puts them back and says so.
+* `wp dcc-ledger money-rollback` undoes the conversion in one line, restoring every decimal exactly as it was. The ledger then withholds figures, with a banner, rather than reporting the missing cents as zeroes.
+* A stay's money split across a month end is split on whole cents, with the leftover going to the period holding the last night, so the parts always sum to the whole.
+* Every date and timestamp the ledger writes is America/New_York, whatever the server or the site is set to. A correction at 00:10 on the first of a month belongs to the new month; a payout at 23:40 on the last day belongs to the old one. Both clock changes and New Year's Eve are tested.
+* The layout is checked at 768 and 1440 pixels as well as 390.
 
 = 0.1.9 =
 * The fifteen bookings assumed paid before the exports were still being chased as unpaid. The cleanup item counted only the window rule's adjustment; it now counts whatever assumption stands against the booking, and puts the item back if that assumption is reversed.

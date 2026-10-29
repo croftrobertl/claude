@@ -94,36 +94,36 @@ EOT,
         'from' => <<<'EOT'
         if ($view === 'original') {
             $out['paid']                = $out['recorded'];
-            $out['assumed']             = 0.0;
+            $out['assumed']             = 0;
 EOT,
         'to'   => <<<'EOT'
         if ($view === 'original') {
-            $out['recorded']            = round($out['recorded'] + $out['assumed'], 2);
+            $out['recorded']            = $out['recorded'] + $out['assumed'];
             $out['paid']                = $out['recorded'];
-            $out['assumed']             = 0.0;
+            $out['assumed']             = 0;
 EOT,
     ],
     [
         'name' => 'A payment on a copy counted as money received',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
+                    $out['copy_payments'] = $out['copy_payments'] + (int) $booking['paid'];
 EOT,
         'to'   => <<<'EOT'
-                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
-                    $out['recorded']      = round($out['recorded'] + (float) $booking['paid'], 2);
+                    $out['copy_payments'] = $out['copy_payments'] + (int) $booking['paid'];
+                    $out['recorded']      = $out['recorded'] + (int) $booking['paid'];
 EOT,
     ],
     [
         'name' => 'Airbnb-remitted tax added to revenue',
         'file' => 'includes/class-reports.php',
-        'from' => '        $room_revenue = round($ota[\'guest_total\'] - $ota[\'tax_in_payout\'] - $ota[\'tax_platform_remitted\'], 2);',
-        'to'   => '        $room_revenue = round($ota[\'guest_total\'] - $ota[\'tax_in_payout\'], 2);',
+        'from' => '        $room_revenue = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'] - $ota[\'tax_platform_remitted\'];',
+        'to'   => '        $room_revenue = $ota[\'guest_total\'] - $ota[\'tax_in_payout\'];',
     ],
     [
         'name' => "Vrbo's missing tax shown as $0 rather than unknown",
         'file' => 'includes/class-reports.php',
-        'from' => '            if ((int) $row[\'stays\'] > 0 && round((float) $row[\'tax\'], 2) == 0.0) {',
+        'from' => '            if ((int) $row[\'stays\'] > 0 && (int) $row[\'tax\'] === 0) {',
         'to'   => '            if (false) {',
     ],
     [
@@ -194,12 +194,14 @@ EOT,
         'name' => 'Assumed paid applied to an overpaid booking',
         'file' => 'includes/class-snapshot.php',
         'from' => <<<'EOT'
-            $gap = round((float) $booking['total'] - (float) $booking['paid_recorded'], 2);
-            if ($gap <= 0.0) {
+            $gap = (int) $booking['total'] - (int) $booking['paid_recorded'];
+            if ($gap <= 0) {
+                if ($gap < 0) {
 EOT,
         'to'   => <<<'EOT'
-            $gap = abs(round((float) $booking['total'] - (float) $booking['paid_recorded'], 2));
-            if ($gap < 0.0) {
+            $gap = abs((int) $booking['total'] - (int) $booking['paid_recorded']);
+            if ($gap < 0) {
+                if ($gap < 0) {
 EOT,
     ],
     [
@@ -207,12 +209,12 @@ EOT,
         'file' => 'includes/class-originals.php',
         'from' => <<<'EOT'
             if ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_COMPLETED) {
-                $bookings[$booking_id]['paid'] = round($bookings[$booking_id]['paid'] + $amount, 2);
+                $bookings[$booking_id]['paid'] = $bookings[$booking_id]['paid'] + $amount;
             } elseif ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_REFUNDED) {
 EOT,
         'to'   => <<<'EOT'
             if (in_array((string) $payment['payment_status'], [Mphb_Reader::PAYMENT_COMPLETED, Mphb_Reader::PAYMENT_REFUNDED], true)) {
-                $bookings[$booking_id]['paid'] = round($bookings[$booking_id]['paid'] + $amount, 2);
+                $bookings[$booking_id]['paid'] = $bookings[$booking_id]['paid'] + $amount;
             } elseif (false) {
 EOT,
     ],
@@ -618,7 +620,7 @@ EOT,
     [
         'name' => 'An iCal block raised as a booking whose money is missing',
         'file' => 'includes/class-mphb-reader.php',
-        'from' => '        if (abs($total) >= 0.01 || $summary === \'\') {
+        'from' => '        if ($total_cents !== 0 || $summary === \'\') {
             return false;
         }',
         'to'   => '        return false;',
@@ -645,13 +647,13 @@ EOT,
         'file' => 'includes/class-issues.php',
         'from' => <<<'EOT'
             $assumed = Adjustments::assumed_for((int) $booking_id);
-            $paid    = round((float) $booking['paid'] + (float) ($assumed['amount'] ?? 0), 2);
+            $paid    = (int) $booking['paid'] + (int) ($assumed['amount_cents'] ?? 0);
 EOT,
         'to'   => <<<'EOT'
-            $paid = round((float) $booking['paid'], 2);
+            $paid = (int) $booking['paid'];
             foreach (Adjustments::for_booking($booking_id) as $adjustment) {
                 if ((string) $adjustment['type'] === Adjustments::ASSUMED_PAID) {
-                    $paid = round($paid + (float) $adjustment['amount'], 2);
+                    $paid += (int) $adjustment['amount_cents'];
                 }
             }
 EOT,
@@ -663,7 +665,7 @@ EOT,
         \WP_CLI::log(sprintf(
             'Refunds recorded:     %d bookings, $%s',
             $c['refunds_recorded'],
-            number_format((float) $c['refunds_total'], 2)
+            number_format(((int) $c['refunds_total']) / 100, 2)
         ));
 EOT,
         'to'   => '',
@@ -696,6 +698,70 @@ EOT,
                 return false;
             }
         }
+EOT,
+    ],
+    [
+        'name' => 'An amount read as a float instead of as text',
+        'file' => 'includes/class-money.php',
+        'from' => <<<'EOT'
+        $parts   = explode('.', $text, 2);
+EOT,
+        'to'   => <<<'EOT'
+        $cents = (int) (((float) $text) * 100);
+        return $negative ? -$cents : $cents;
+        $parts   = explode('.', $text, 2);
+EOT,
+    ],
+    [
+        'name' => 'A split whose parts no longer sum to the whole',
+        'file' => 'includes/class-money.php',
+        'from' => <<<'EOT'
+        if ($last !== null) {
+            $out[$last] += $cents - $allocated;
+        }
+EOT,
+        'to'   => '',
+    ],
+    [
+        'name' => 'A money cell converted without being backed up first',
+        'file' => 'includes/class-money-migration.php',
+        'from' => <<<'EOT'
+                        if ($already === 0) {
+EOT,
+        'to'   => <<<'EOT'
+                        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'A rollback that writes an empty string over a NULL',
+        'file' => 'includes/class-money-migration.php',
+        'from' => <<<'EOT'
+                    if ($row['old_value'] === null) {
+EOT,
+        'to'   => <<<'EOT'
+                    if (false) {
+EOT,
+    ],
+    [
+        'name' => 'Money left in decimals reported as figures of zero',
+        'file' => 'includes/class-health.php',
+        'from' => <<<'EOT'
+        $unconverted = self::money_not_in_cents();
+        if ($unconverted > 0) {
+EOT,
+        'to'   => <<<'EOT'
+        $unconverted = 0;
+        if ($unconverted > 0) {
+EOT,
+    ],
+    [
+        'name' => 'The site clock used in place of the property clock',
+        'file' => 'includes/class-dates.php',
+        'from' => <<<'EOT'
+            : new \DateTimeImmutable('now', self::timezone());
+EOT,
+        'to'   => <<<'EOT'
+            : new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 EOT,
     ],
 ];

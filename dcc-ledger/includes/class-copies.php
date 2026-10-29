@@ -415,12 +415,12 @@ final class Copies
         return $wpdb->get_results(
             "SELECT s.id, s.code, s.channel, s.cottage, s.check_in, s.check_out,
                     s.status, s.guest_keys,
-                    COALESCE(SUM(CASE WHEN l.type = 'guest_total' THEN l.amount ELSE 0 END), 0) AS guest_total,
-                    COALESCE(SUM(CASE WHEN l.type = 'room_sales' THEN l.amount ELSE 0 END), 0) AS room_sales,
-                    COALESCE(SUM(CASE WHEN l.type = 'payout' THEN l.amount ELSE 0 END), 0) AS payout,
-                    COALESCE(SUM(CASE WHEN l.type = 'refund' THEN l.amount ELSE 0 END), 0) AS refund,
-                    COALESCE(SUM(CASE WHEN l.type = 'adjustment' THEN l.amount ELSE 0 END), 0) AS adjustment,
-                    COALESCE(SUM(CASE WHEN l.type = 'resolution' THEN l.amount ELSE 0 END), 0) AS resolution,
+                    COALESCE(SUM(CASE WHEN l.type = 'guest_total' THEN l.amount_cents ELSE 0 END), 0) AS guest_total,
+                    COALESCE(SUM(CASE WHEN l.type = 'room_sales' THEN l.amount_cents ELSE 0 END), 0) AS room_sales,
+                    COALESCE(SUM(CASE WHEN l.type = 'payout' THEN l.amount_cents ELSE 0 END), 0) AS payout,
+                    COALESCE(SUM(CASE WHEN l.type = 'refund' THEN l.amount_cents ELSE 0 END), 0) AS refund,
+                    COALESCE(SUM(CASE WHEN l.type = 'adjustment' THEN l.amount_cents ELSE 0 END), 0) AS adjustment,
+                    COALESCE(SUM(CASE WHEN l.type = 'resolution' THEN l.amount_cents ELSE 0 END), 0) AS resolution,
                     COALESCE(SUM(CASE WHEN l.type = 'payout' THEN 1 ELSE 0 END), 0) AS payout_rows
                FROM {$stays} s
                LEFT JOIN {$lines} l ON l.stay_id = s.id
@@ -471,20 +471,20 @@ final class Copies
      * @param array<string,mixed> $stay A row from Copies::stays() or
      *                                  Issues::stays_with_money().
      */
-    public static function stay_money(array $stay): float
+    public static function stay_money(array $stay): int
     {
-        $cash = 0.0;
+        $cash = 0;
         foreach (self::STAY_CASH_TYPES as $type) {
-            $cash = round($cash + (float) ($stay[$type] ?? 0), 2);
+            $cash += (int) ($stay[$type] ?? 0);
         }
         if ((int) ($stay['payout_rows'] ?? 0) > 0) {
             return $cash;
         }
-        $billed = 0.0;
+        $billed = 0;
         foreach (self::STAY_BILLED_TYPES as $type) {
-            $billed = round($billed + (float) ($stay[$type] ?? 0), 2);
+            $billed += (int) ($stay[$type] ?? 0);
         }
-        return round($billed + $cash, 2);
+        return $billed + $cash;
     }
 
     /**

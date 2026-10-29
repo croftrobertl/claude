@@ -33,11 +33,11 @@ T::ok(str_contains($dry, 'Refunds recorded:'), 'And the refunds');
 
 $counts = Snapshot::run(true, 1)['counts'];
 T::ok(
-    str_contains($dry, '$' . number_format((float) $counts['assumed_pre_exports_total'], 2)),
+    str_contains($dry, '$' . number_format(((int) $counts['assumed_pre_exports_total']) / 100, 2)),
     'The pre-export total printed is the one the snapshot worked out'
 );
 T::ok(
-    str_contains($dry, '$' . number_format((float) $counts['refunds_total'], 2)),
+    str_contains($dry, '$' . number_format(((int) $counts['refunds_total']) / 100, 2)),
     'And so is the refund total'
 );
 T::ok($counts['assumed_pre_exports'] > 0, 'There is a pre-export figure to print in the first place');
@@ -80,3 +80,21 @@ T::ok(
     str_contains($out, 'An Imported Calendar Block ('),
     'Grouped by what they are'
 );
+
+T::group('The money commands');
+
+WP_CLI::reset();
+$cli->money_check([], []);
+$out = WP_CLI::output();
+T::ok(str_contains($out, 'whole cents'), 'The check reports on the state of the money');
+T::ok(str_contains($out, 'Rows still holding a decimal and no cents: 0'), 'And counts what is left unconverted');
+T::ok(str_contains($out, 'Success:'), 'It passes on a ledger written in cents');
+
+WP_CLI::reset();
+$cli->money_rollback([], []);
+$rolled = WP_CLI::output();
+T::ok(str_contains($rolled, 'Cells restored:'), 'The rollback says how much it put back');
+T::ok(str_contains($rolled, 'Warning:'), 'And warns that figures are withheld until it is converted again');
+
+// Put it back, so the suites that follow read a converted ledger.
+DCCL\Money_Migration::run();

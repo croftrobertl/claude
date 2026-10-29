@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -84,25 +85,20 @@ abstract class Parser_Base
     }
 
     /**
-     * "$1,234.56", "(12.34)", "-12.34", "" → float. Returns 0.0 for an empty cell.
+     * "$1,234.56", "(12.34)", "-12.34", "" → whole cents. 0 for an empty cell.
+     *
+     * The cell is parsed as text, never as a float: 19.99 is not 19.99 in
+     * binary, so multiplying it by 100 gives 1998 cents. Money::to_cents()
+     * reads the digits.
      */
-    protected function money(string $value): float
+    protected function cents(string $value): int
     {
         $value = trim($value);
         if ($value === '' || $value === '-') {
-            return 0.0;
+            return 0;
         }
-        $negative = false;
-        if (str_starts_with($value, '(') && str_ends_with($value, ')')) {
-            $negative = true;
-            $value    = substr($value, 1, -1);
-        }
-        $value = preg_replace('/[^0-9.\-]/', '', $value) ?? '';
-        if ($value === '' || $value === '-' || !is_numeric($value)) {
-            return 0.0;
-        }
-        $amount = round((float) $value, 2);
-        return $negative ? -$amount : $amount;
+
+        return Money::to_cents($value);
     }
 
     protected function int_or_null(string $value): ?int
@@ -151,7 +147,7 @@ abstract class Parser_Base
      */
     protected function line(
         string $type,
-        float $amount,
+        int $cents,
         ?string $event_date,
         ?string $stay_code = null,
         ?string $payout_ref = null,
@@ -161,7 +157,7 @@ abstract class Parser_Base
         return [
             'channel'    => static::CHANNEL,
             'type'       => $type,
-            'amount'     => round($amount, 2),
+            'amount_cents' => $cents,
             'event_date' => $event_date,
             'stay_code'  => $stay_code,
             'payout_ref' => $payout_ref,

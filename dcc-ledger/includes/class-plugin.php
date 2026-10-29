@@ -54,6 +54,10 @@ final class Plugin
         }
 
         Schema::install();
+        // 0.2.0: the stored decimals become whole cents. It backs the old
+        // values up first, proves every total ties before and after, and
+        // puts them back untouched if one does not.
+        Money_Migration::run();
         Repair::on_upgrade(get_current_user_id());
     }
 

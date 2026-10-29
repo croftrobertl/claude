@@ -177,7 +177,7 @@ $reconcile = array_filter($invoices, static fn ($i) => !$i['reconciles']);
                     </label>
                     <input type="number" step="0.01" min="0.01" id="<?php echo esc_attr($refund_id); ?>"
                            name="amount" class="small-text"
-                           value="<?php echo esc_attr(number_format((float) $item['record_refund']['amount'], 2, '.', '')); ?>">
+                           value="<?php echo esc_attr(DCCL\Money::to_decimal((int) $item['record_refund']['amount'])); ?>">
                     <button type="submit" class="button"><?php esc_html_e('Record It', 'dcc-ledger'); ?></button>
                 </form>
             <?php endif; ?>

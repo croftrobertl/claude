@@ -130,8 +130,11 @@ final class Reports
 
         // Room revenue: what the guest paid the platform for the room, before
         // the platform's cut and before any tax that sits inside a payout.
-        $room_revenue = round($ota['guest_total'] - $ota['tax_in_payout'] - $ota['tax_platform_remitted'], 2);
-        $adr_base     = $ota['nights'] > 0 ? round($room_revenue / $ota['nights'], 2) : 0.0;
+        $room_revenue = $ota['guest_total'] - $ota['tax_in_payout'] - $ota['tax_platform_remitted'];
+        // Cents per night, rounded half up once, at the end.
+        $adr_base     = $ota['nights'] > 0
+            ? intdiv((int) $room_revenue * 2 + (int) $ota['nights'], (int) $ota['nights'] * 2)
+            : 0;
 
         $summary = [
             'from'   => $from,
@@ -194,7 +197,7 @@ final class Reports
         $sums = [];
         foreach (self::MONEY_TYPES as $type) {
             $sums[] = sprintf(
-                "SUM(CASE WHEN l.type = '%s' THEN l.amount ELSE 0 END) AS t_%s",
+                "SUM(CASE WHEN l.type = '%s' THEN l.amount_cents ELSE 0 END) AS t_%s",
                 $type,
                 $type
             );
@@ -237,19 +240,23 @@ final class Reports
                 ? Dates::nights_in_period($check_in, $check_out, $from, $to)
                 : 0;
 
+            // How much of this stay belongs to the period, as a fraction
+            // expressed in nights so the split can be done on whole cents.
             // A stay with unknown dates still belongs to the period its
             // check-in falls in; it just contributes no nights.
-            $share = 1.0;
+            $part  = 1;
+            $whole = 1;
             if ($basis === 'stay' && $total_nights > 0) {
-                $share = $in_period / $total_nights;
+                $part  = $in_period;
+                $whole = $total_nights;
             } elseif ($basis === 'stay' && ($check_in < $from || $check_in > $to)) {
-                $share = 0.0;
+                $part = 0;
             }
 
             if ($basis === 'payout') {
                 // Cash basis: the stay's own dates are irrelevant, so this
                 // branch is handled by a separate query below.
-                $share = 0.0;
+                $part = 0;
             }
 
             if ($status === 'ok') {
@@ -269,14 +276,14 @@ final class Reports
                 }
             }
 
-            if ($share > 0.0) {
-                self::add_money($figures, $row, $share, (string) $row['cottage'], (string) $row['channel']);
+            if ($part > 0) {
+                self::add_money($figures, $row, $part, $whole, (string) $row['cottage'], (string) $row['channel']);
             }
 
             // Cancellation fees are money even on a cancelled stay, and they
             // are always reported on the date of the stay's check-in.
             if ($basis === 'stay' && $status !== 'ok' && $check_in >= $from && $check_in <= $to) {
-                self::add_money($figures, $row, 1.0, (string) $row['cottage'], (string) $row['channel'], true);
+                self::add_money($figures, $row, 1, 1, (string) $row['cottage'], (string) $row['channel'], true);
             }
         }
 
@@ -292,13 +299,11 @@ final class Reports
                 ? $lead[intdiv($count, 2)]
                 : (int) round(($lead[$count / 2 - 1] + $lead[$count / 2]) / 2));
 
-        $figures['platform_fees'] = round($figures['commission'] + $figures['service_fee'], 2);
-        $figures['net_payout']    = round(
+        $figures['platform_fees'] = $figures['commission'] + $figures['service_fee'];
+        $figures['net_payout']    =
             $figures['payout'] + $figures['refund'] + $figures['adjustment']
-            + $figures['resolution'] + $figures['cancellation_fee'] + $figures['cancellation_fee_refund'],
-            2
-        );
-        $figures['cancellation_fees'] = round($figures['cancellation_fee'] + $figures['cancellation_fee_refund'], 2);
+            + $figures['resolution'] + $figures['cancellation_fee'] + $figures['cancellation_fee_refund'];
+        $figures['cancellation_fees'] = $figures['cancellation_fee'] + $figures['cancellation_fee_refund'];
 
         // Vrbo reports no tax at all — both of its tax columns are 0 in every
         // row Rob has. That is reported as "not reported", never as $0.
@@ -329,7 +334,7 @@ final class Reports
 
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT l.type, l.channel, COALESCE(s.cottage, '') AS cottage, SUM(l.amount) AS total
+                "SELECT l.type, l.channel, COALESCE(s.cottage, '') AS cottage, SUM(l.amount_cents) AS total
                    FROM {$lines_t} l
                    LEFT JOIN {$stays_t} s ON s.id = l.stay_id
                   WHERE l.event_date BETWEEN %s AND %s
@@ -343,21 +348,21 @@ final class Reports
 
         foreach ($rows as $row) {
             $type    = (string) $row['type'];
-            $amount  = round((float) $row['total'], 2);
+            $amount  = (int) $row['total'];
             $cottage = (string) $row['cottage'];
             $channel = (string) $row['channel'];
 
             if (!isset($figures[$type])) {
                 continue;
             }
-            $figures[$type] = round($figures[$type] + $amount, 2);
+            $figures[$type] = $figures[$type] + $amount;
 
             if ($cottage !== '') {
                 $figures['by_cottage'][$cottage] ??= self::blank_breakdown();
-                $figures['by_cottage'][$cottage][$type] = round(($figures['by_cottage'][$cottage][$type] ?? 0) + $amount, 2);
+                $figures['by_cottage'][$cottage][$type] = ($figures['by_cottage'][$cottage][$type] ?? 0) + $amount;
             }
             $figures['by_channel'][$channel] ??= self::blank_breakdown();
-            $figures['by_channel'][$channel][$type] = round(($figures['by_channel'][$channel][$type] ?? 0) + $amount, 2);
+            $figures['by_channel'][$channel][$type] = ($figures['by_channel'][$channel][$type] ?? 0) + $amount;
         }
     }
 
@@ -368,7 +373,8 @@ final class Reports
     private static function add_money(
         array &$figures,
         array $row,
-        float $share,
+        int $nights_in_period,
+        int $total_nights,
         string $cottage,
         string $channel,
         bool $fees_only = false
@@ -378,17 +384,20 @@ final class Reports
             : self::MONEY_TYPES;
 
         foreach ($types as $type) {
-            $amount = round(((float) ($row['t_' . $type] ?? 0)) * $share, 2);
-            if ($amount == 0.0) {
+            // A stay crossing the edge of the period gives up the nights
+            // outside it. The split is on whole cents, rounded half away
+            // from zero — see Money::share().
+            $amount = Money::share((int) ($row['t_' . $type] ?? 0), $nights_in_period, $total_nights);
+            if ($amount === 0) {
                 continue;
             }
-            $figures[$type] = round($figures[$type] + $amount, 2);
+            $figures[$type] = $figures[$type] + $amount;
 
             $figures['by_cottage'][$cottage] ??= self::blank_breakdown();
-            $figures['by_cottage'][$cottage][$type] = round($figures['by_cottage'][$cottage][$type] + $amount, 2);
+            $figures['by_cottage'][$cottage][$type] = $figures['by_cottage'][$cottage][$type] + $amount;
 
             $figures['by_channel'][$channel] ??= self::blank_breakdown();
-            $figures['by_channel'][$channel][$type] = round($figures['by_channel'][$channel][$type] + $amount, 2);
+            $figures['by_channel'][$channel][$type] = $figures['by_channel'][$channel][$type] + $amount;
         }
     }
 
@@ -407,7 +416,7 @@ final class Reports
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT s.channel,
-                        SUM(CASE WHEN l.type IN ('tax_in_payout','tax_platform_remitted') THEN ABS(l.amount) ELSE 0 END) AS tax,
+                        SUM(CASE WHEN l.type IN ('tax_in_payout','tax_platform_remitted') THEN ABS(l.amount_cents) ELSE 0 END) AS tax,
                         COUNT(DISTINCT s.id) AS stays
                    FROM {$stays_t} s
                    LEFT JOIN {$lines_t} l ON l.stay_id = s.id
@@ -421,7 +430,7 @@ final class Reports
 
         $out = [];
         foreach ($rows as $row) {
-            if ((int) $row['stays'] > 0 && round((float) $row['tax'], 2) == 0.0) {
+            if ((int) $row['stays'] > 0 && (int) $row['tax'] === 0) {
                 $out[] = (string) $row['channel'];
             }
         }
@@ -447,21 +456,21 @@ final class Reports
 
         $out = [
             'nights'     => 0,
-            'due'        => 0.0,
-            'recorded'   => 0.0,
-            'refunded'   => 0.0,
-            'assumed'    => 0.0,
+            'due'        => 0,
+            'recorded'   => 0,
+            'refunded'   => 0,
+            'assumed'    => 0,
             // Rob's ruling on the stays that predate the exports, kept apart
             // from the window rule so the two are never read as one figure.
-            'assumed_pre_exports' => 0.0,
+            'assumed_pre_exports' => 0,
             // Refunds he knows about that never reached MotoPress.
-            'refunds'    => 0.0,
-            'paid'       => 0.0,
+            'refunds'    => 0,
+            'paid'       => 0,
             'bookings'   => 0,
             'by_cottage' => [],
             'by_channel' => [],
             'copies_excluded' => 0,
-            'copy_payments'   => 0.0,
+            'copy_payments'   => 0,
             'snapshot_taken'  => Snapshot::taken(),
             'snapshot_at'     => Originals::last_snapshot_at(),
         ];
@@ -483,7 +492,7 @@ final class Reports
             if (isset($copies[$booking_id])) {
                 if (Dates::nights_in_period($booking['check_in'], $booking['check_out'], $from, $to) > 0) {
                     $out['copies_excluded']++;
-                    $out['copy_payments'] = round($out['copy_payments'] + (float) $booking['paid'], 2);
+                    $out['copy_payments'] = $out['copy_payments'] + (int) $booking['paid'];
                 }
                 continue;
             }
@@ -501,34 +510,41 @@ final class Reports
 
             // A booking carries at most one kind of assumption, so its net
             // belongs wholly to that bucket.
-            $assumed     = 0.0;
-            $refunds     = 0.0;
+            $assumed     = 0;
+            $refunds     = 0;
             $pre_exports = false;
             foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
                 $type = (string) $adjustment['type'];
                 if (in_array($type, Adjustments::ASSUMED_TYPES, true)) {
-                    $assumed = round($assumed + (float) $adjustment['amount'], 2);
+                    $assumed = $assumed + (int) $adjustment['amount_cents'];
                     $pre_exports = $pre_exports || $type === Adjustments::ASSUMED_PRE_EXPORTS;
                 }
                 if ($type === Adjustments::REFUND_UNRECORDED) {
-                    $refunds = round($refunds + (float) $adjustment['amount'], 2);
+                    $refunds = $refunds + (int) $adjustment['amount_cents'];
                 }
             }
 
             if ($basis === 'stay') {
-                $share = $total > 0
-                    ? $nights / $total
-                    : (($booking['check_in'] >= $from && $booking['check_in'] <= $to) ? 1.0 : 0.0);
-                if ($share > 0) {
+                // The same nights-based split the platform stays use, on
+                // whole cents. A booking with no nights in the period still
+                // belongs here whole if it begins inside it.
+                if ($total > 0) {
+                    $part  = $nights;
+                    $whole = $total;
+                } else {
+                    $part  = ($booking['check_in'] >= $from && $booking['check_in'] <= $to) ? 1 : 0;
+                    $whole = 1;
+                }
+                if ($part > 0) {
                     $out['bookings'] += $nights > 0 ? 1 : 0;
-                    $out['due']      = round($out['due'] + (float) $booking['total'] * $share, 2);
-                    $out['recorded'] = round($out['recorded'] + (float) $booking['paid'] * $share, 2);
-                    $out['refunded'] = round($out['refunded'] + (float) $booking['refunded'] * $share, 2);
-                    $out['refunds']  = round($out['refunds'] + $refunds * $share, 2);
+                    $out['due']      += Money::share((int) $booking['total_cents'], $part, $whole);
+                    $out['recorded'] += Money::share((int) $booking['paid'], $part, $whole);
+                    $out['refunded'] += Money::share((int) $booking['refunded'], $part, $whole);
+                    $out['refunds']  += Money::share($refunds, $part, $whole);
                     if ($pre_exports) {
-                        $out['assumed_pre_exports'] = round($out['assumed_pre_exports'] + $assumed * $share, 2);
+                        $out['assumed_pre_exports'] += Money::share($assumed, $part, $whole);
                     } else {
-                        $out['assumed'] = round($out['assumed'] + $assumed * $share, 2);
+                        $out['assumed'] += Money::share($assumed, $part, $whole);
                     }
                 }
                 continue;
@@ -543,11 +559,11 @@ final class Reports
                 if ($date < $from || $date > $to) {
                     continue;
                 }
-                $amount = round((float) $payment['amount'], 2);
+                $amount = (int) $payment['amount_cents'];
                 if ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_COMPLETED) {
-                    $out['recorded'] = round($out['recorded'] + $amount, 2);
+                    $out['recorded'] = $out['recorded'] + $amount;
                 } elseif ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_REFUNDED) {
-                    $out['refunded'] = round($out['refunded'] + $amount, 2);
+                    $out['refunded'] = $out['refunded'] + $amount;
                 }
             }
             foreach ($adjustments[$booking_id] ?? [] as $adjustment) {
@@ -557,27 +573,27 @@ final class Reports
                 }
                 $type = (string) $adjustment['type'];
                 if ($type === Adjustments::ASSUMED_PRE_EXPORTS) {
-                    $out['assumed_pre_exports'] = round($out['assumed_pre_exports'] + (float) $adjustment['amount'], 2);
+                    $out['assumed_pre_exports'] += (int) $adjustment['amount_cents'];
                 } elseif (in_array($type, Adjustments::ASSUMED_TYPES, true)) {
-                    $out['assumed'] = round($out['assumed'] + (float) $adjustment['amount'], 2);
+                    $out['assumed'] += (int) $adjustment['amount_cents'];
                 } elseif ($type === Adjustments::REFUND_UNRECORDED) {
-                    $out['refunds'] = round($out['refunds'] + (float) $adjustment['amount'], 2);
+                    $out['refunds'] += (int) $adjustment['amount_cents'];
                 }
             }
         }
 
         // What this view counts as money received on direct bookings.
-        $corrections = round($out['assumed'] + $out['assumed_pre_exports'] + $out['refunds'], 2);
+        $corrections = $out['assumed'] + $out['assumed_pre_exports'] + $out['refunds'];
 
         if ($view === 'original') {
             $out['paid']                = $out['recorded'];
-            $out['assumed']             = 0.0;
-            $out['assumed_pre_exports'] = 0.0;
-            $out['refunds']             = 0.0;
+            $out['assumed']             = 0;
+            $out['assumed_pre_exports'] = 0;
+            $out['refunds']             = 0;
         } elseif ($view === 'difference') {
             $out['paid'] = $corrections;
         } else {
-            $out['paid'] = round($out['recorded'] + $corrections, 2);
+            $out['paid'] = $out['recorded'] + $corrections;
         }
 
         foreach (array_keys($out['by_cottage']) as $cottage) {
@@ -645,7 +661,7 @@ final class Reports
             'by_channel'        => [],
         ];
         foreach (self::MONEY_TYPES as $type) {
-            $figures[$type] = 0.0;
+            $figures[$type] = 0;
         }
         foreach (Cottages::COTTAGES as $cottage) {
             $figures['by_cottage'][$cottage] = self::blank_breakdown();
@@ -661,7 +677,7 @@ final class Reports
     {
         $row = ['nights' => 0];
         foreach (self::MONEY_TYPES as $type) {
-            $row[$type] = 0.0;
+            $row[$type] = 0;
         }
         return $row;
     }
@@ -672,17 +688,16 @@ final class Reports
      */
     private static function finish_breakdown(array $row): array
     {
-        $row['platform_fees'] = round(($row['commission'] ?? 0) + ($row['service_fee'] ?? 0), 2);
-        $row['net_payout']    = round(
+        $row['platform_fees'] = (int) ($row['commission'] ?? 0) + (int) ($row['service_fee'] ?? 0);
+        $row['net_payout']    =
             ($row['payout'] ?? 0) + ($row['refund'] ?? 0) + ($row['adjustment'] ?? 0)
-            + ($row['resolution'] ?? 0) + ($row['cancellation_fee'] ?? 0) + ($row['cancellation_fee_refund'] ?? 0),
-            2
-        );
-        $row['room_revenue'] = round(
-            ($row['guest_total'] ?? 0) - ($row['tax_in_payout'] ?? 0) - ($row['tax_platform_remitted'] ?? 0),
-            2
-        );
-        $row['adr'] = ($row['nights'] ?? 0) > 0 ? round($row['room_revenue'] / $row['nights'], 2) : 0.0;
+            + ($row['resolution'] ?? 0) + ($row['cancellation_fee'] ?? 0) + ($row['cancellation_fee_refund'] ?? 0);
+        $row['room_revenue'] =
+            ($row['guest_total'] ?? 0) - ($row['tax_in_payout'] ?? 0) - ($row['tax_platform_remitted'] ?? 0);
+        // Cents per night, rounded half up at the last step only.
+        $row['adr'] = ($row['nights'] ?? 0) > 0
+            ? intdiv((int) $row['room_revenue'] * 2 + (int) $row['nights'], (int) $row['nights'] * 2)
+            : 0;
         return $row;
     }
 
@@ -699,10 +714,10 @@ final class Reports
                 continue;
             }
             foreach ($row as $field => $value) {
+                // Every numeric field here is either a count or whole
+                // cents, so they add exactly.
                 if (is_numeric($value) && isset($a[$key][$field]) && is_numeric($a[$key][$field])) {
-                    $a[$key][$field] = is_int($value) && is_int($a[$key][$field])
-                        ? $a[$key][$field] + $value
-                        : round($a[$key][$field] + $value, 2);
+                    $a[$key][$field] = (int) $a[$key][$field] + (int) $value;
                 }
             }
             $a[$key] = self::finish_breakdown($a[$key]);
@@ -725,7 +740,7 @@ final class Reports
 
         $sums = [];
         foreach (self::MONEY_TYPES as $type) {
-            $sums[] = sprintf("SUM(CASE WHEN l.type = '%s' THEN l.amount ELSE 0 END) AS %s", $type, $type);
+            $sums[] = sprintf("SUM(CASE WHEN l.type = '%s' THEN l.amount_cents ELSE 0 END) AS %s", $type, $type);
         }
         $sum_sql = implode(",\n                    ", $sums);
 
@@ -751,12 +766,10 @@ final class Reports
         foreach ($rows as &$row) {
             $row['links']        = $links[(int) $row['id']] ?? [];
             $row['nights_in']    = Dates::nights_in_period($row['check_in'], $row['check_out'], $from, $to);
-            $row['net_payout']   = round(
-                (float) $row['payout'] + (float) $row['refund'] + (float) $row['adjustment']
-                + (float) $row['resolution'] + (float) $row['cancellation_fee'] + (float) $row['cancellation_fee_refund'],
-                2
-            );
-            $row['platform_fees'] = round((float) $row['commission'] + (float) $row['service_fee'], 2);
+            $row['net_payout']   =
+                (int) $row['payout'] + (int) $row['refund'] + (int) $row['adjustment']
+                + (int) $row['resolution'] + (int) $row['cancellation_fee'] + (int) $row['cancellation_fee_refund'];
+            $row['platform_fees'] = (int) $row['commission'] + (int) $row['service_fee'];
         }
         unset($row);
 

@@ -3,6 +3,7 @@ namespace DCCL\Parsers;
 
 use DCCL\Cottages;
 use DCCL\Csv;
+use DCCL\Money;
 use DCCL\Dates;
 
 if (!defined('ABSPATH')) {
@@ -63,7 +64,7 @@ final class Bookingcom_Payout extends Parser_Base
 
             $payout_date = Dates::us($row['Payout date'] ?? '') ?? Dates::iso($row['Payout date'] ?? '');
             $check_in    = Dates::us($row['Check in date'] ?? '') ?? Dates::iso($row['Check in date'] ?? '');
-            $gross       = $this->money($row['Total amount (gross)'] ?? '');
+            $gross       = $this->cents($row['Total amount (gross)'] ?? '');
             $txn         = strtoupper(trim($row['Transaction type'] ?? ''));
 
             // Create the stay from the payout row when the reservations file
@@ -101,7 +102,7 @@ final class Bookingcom_Payout extends Parser_Base
                 continue;
             }
 
-            if ($gross != 0.0) {
+            if ($gross !== 0) {
                 $result['lines'][] = $this->line('payout', $gross, $payout_date, $code, $ref ?: null);
                 // The guest's gross payment for this channel is the payout.
                 $result['lines'][] = $this->line('guest_total', $gross, $payout_date, $code, $ref ?: null, null, [

@@ -21,7 +21,7 @@ final class Batches
             // A label only: never a path, never anything from the file's rows.
             'label'      => mb_substr($label, 0, 190),
             'user_id'    => $user_id,
-            'created_at' => current_time('mysql'),
+            'created_at' => Dates::now(),
         ]);
         return (int) $wpdb->insert_id;
     }
@@ -196,7 +196,7 @@ final class Batches
         }
 
         $wpdb->update(Schema::batches(), [
-            'undo_data' => (string) wp_json_encode(['undone' => true, 'at' => current_time('mysql')]),
+            'undo_data' => (string) wp_json_encode(['undone' => true, 'at' => Dates::now()]),
         ], ['id' => $batch_id]);
 
         Reports::flush_cache();

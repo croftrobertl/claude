@@ -73,19 +73,19 @@ $copied = Originals::bookings_with_payments();
 T::ok(isset($copied[9007]), 'A direct booking is copied');
 T::ok(!isset($copied[9001]), 'An iCal-imported booking is not — it is an OTA stay, not a direct one');
 T::same(500.00, (float) $copied[9007]['total'], 'The booking total is copied');
-T::same(500.00, (float) $copied[9007]['paid'], 'Its completed payment is copied');
+T::same(50000, (float) $copied[9007]['paid'], 'Its completed payment is copied');
 T::same('23', (string) $copied[9007]['cottage'], 'And its cottage');
 T::same('2025-04-01', (string) $copied[9007]['check_in'], 'And its dates');
 
 T::group('A refunded payment is visible, and is not money');
 
 T::same(0.00, (float) $copied[9017]['paid'], 'A refunded payment is not counted as paid');
-T::same(450.00, (float) $copied[9017]['refunded'], 'It is reported on its own');
+T::same(45000, (float) $copied[9017]['refunded'], 'It is reported on its own');
 T::same(1, count($copied[9017]['payments']), 'The payment itself is still copied');
 T::same(Mphb_Reader::PAYMENT_REFUNDED, (string) $copied[9017]['payments'][0]['payment_status'], 'With its real status');
 
-T::same(300.00, (float) $copied[9018]['paid'], 'A part-refunded booking counts only the completed part');
-T::same(200.00, (float) $copied[9018]['refunded'], 'And reports the refunded part apart');
+T::same(30000, (float) $copied[9018]['paid'], 'A part-refunded booking counts only the completed part');
+T::same(20000, (float) $copied[9018]['refunded'], 'And reports the refunded part apart');
 T::same(0.00, (float) $copied[9019]['paid'], 'A failed payment is not money either');
 
 T::group('The snapshot is idempotent');
@@ -136,7 +136,7 @@ T::same(
     'Each qualifying booking gets the gap, and only the gap'
 );
 T::same(10, Adjustments::count(Adjustments::ASSUMED_PAID), 'Ten bookings qualify');
-T::same(3944.75, Adjustments::total(Adjustments::ASSUMED_PAID), 'Totalling 3,944.75');
+T::same(394475, Adjustments::total(Adjustments::ASSUMED_PAID), 'Totalling 3,944.75');
 
 T::group('What the assumed-paid rule must never touch');
 
@@ -327,16 +327,16 @@ $original_view = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'original'
 $ledger_view   = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'ledger');
 $difference    = Reports::summary('2025-05-01', '2025-05-31', 'stay', 'difference');
 
-T::same(250.00, $original_view['totals']['direct_paid'], 'Original: what MotoPress actually recorded');
-T::same(1125.00, $ledger_view['totals']['direct_paid'], 'Ledger: the original plus the corrections');
-T::same(875.00, $difference['totals']['direct_paid'], 'Difference: the corrections alone');
+T::same(25000, $original_view['totals']['direct_paid'], 'Original: what MotoPress actually recorded');
+T::same(112500, $ledger_view['totals']['direct_paid'], 'Ledger: the original plus the corrections');
+T::same(87500, $difference['totals']['direct_paid'], 'Difference: the corrections alone');
 T::same(
     round($original_view['totals']['direct_paid'] + $difference['totals']['direct_paid'], 2),
     $ledger_view['totals']['direct_paid'],
     'Original plus difference equals ledger'
 );
 T::same(0.00, $original_view['totals']['direct_assumed'], 'The Original view shows no assumed money at all');
-T::same(875.00, $ledger_view['totals']['direct_assumed'], 'The Ledger view shows the corrections as assumed');
+T::same(87500, $ledger_view['totals']['direct_assumed'], 'The Ledger view shows the corrections as assumed');
 T::same($original_view['totals']['nights'], $ledger_view['totals']['nights'], 'Nights do not move between views');
 
 T::group('Undoing a snapshot');
