@@ -1580,6 +1580,7 @@
 			el.className = 'dcc-seasons-accent';
 			el.style.cssText = 'position:fixed;pointer-events:none;' + css;
 			el.innerHTML = svgDoc(SVGS[key]);
+			el._dccKey = key;
 			accents.push(el);
 		}
 		if (A.accent && A.accent.svg) { accentEl(A.accent.svg, 'left:14px;bottom:14px;width:26px;opacity:.6;'); }
@@ -5164,13 +5165,108 @@
 		 * dial, the menu button; 4.14.1, where 4.14.0 had its own list),
 		 * measured when the scene starts, in the picture's own px. */
 		function sledClear() { var k = kcRects(); return k.txt.concat(k.box); }
+		/* 4.14.2 — the wreath (Christmas's accent) lives IN the header picture,
+		 * so it scrolls with it and nothing pinned to the window can meet it.
+		 * On the home page it is Rob's option B from the 4.14.0 stills:
+		 * centred across the picture and, ring and bow, centred between the
+		 * bottom of the tagline and the bottom of the picture, 96 px where
+		 * there is room, shrunk to fit with 8 px clear above and below. On
+		 * every other page it stays in the top-right corner, 8 px in, moved
+		 * down (and only then made smaller) until it is 8 px clear of the
+		 * keep-clear set — the menu bar and its button, the dial, the title.
+		 * A SPAN, not a div: the site forces every div directly inside the
+		 * picture to its full height. Measured in idle time, on a resize and
+		 * every 10 s, never in a frame; wrBox (the picture's px) is what the
+		 * team's moon keeps clear of. */
+		var WR_PAGE = 'a', wrEl = null, wrBox = null, wrStat = { placed: 0, mode: '' };
+		function wrPlace() {
+			if (!wrEl || !skyPic || D.hidden) { return; }
+			var pw = skyPic.clientWidth, ph = skyPic.clientHeight, k = null, box = null, mode = '';
+			if (!pw || !ph) { return; }
+			inSky(function () { k = kcRects(); });
+			if (!k) { return; }
+			var obs = k.txt.concat(k.box), tag = null, i;
+			try { tag = D.body.classList.contains('home') ? D.querySelector('#header-page-title p.byline') : null; } catch (e) { tag = null; }
+			if (tag && tag.getClientRects().length) {
+				var pr = skyPic.getBoundingClientRect(), tb = tag.getBoundingClientRect().bottom - pr.top, avail = ph - tb;
+				var s = mn(96 / 44, (avail - 2 * KC) / 52);
+				if (s * 44 >= 40) { box = [pw / 2 - 22 * s, tb + (avail - 52 * s) / 2, 0, 0]; box[2] = box[0] + 44 * s; box[3] = box[1] + 52 * s; mode = 'home'; }
+			}
+			function clear(b) {
+				for (i = 0; i < obs.length; i++) {
+					var o = obs[i];
+					if (b[0] < o[2] + KC && b[2] > o[0] - KC && b[1] < o[3] + KC && b[3] > o[1] - KC) { return false; }
+				}
+				return true;
+			}
+			/* every other page: Rob's pick pending (the 4.14.2 options sheet):
+			 * 'a' the picture's bottom-right corner, 'b' centred under the page
+			 * title as the home page is under its tagline */
+			var wp = DEBUG && CFG.wrPage ? CFG.wrPage : WR_PAGE;
+			if (!box && wp === 'b') {
+				var tt = 0;
+				for (i = 0; i < k.txt.length; i++) { tt = mx2(tt, k.txt[i][3]); }
+				var av2 = ph - tt, s2 = mn(96 / 44, (av2 - 2 * KC) / 52);
+				if (tt && s2 * 44 >= 40) { box = [pw / 2 - 22 * s2, tt + (av2 - 52 * s2) / 2, 0, 0]; box[2] = box[0] + 44 * s2; box[3] = box[1] + 52 * s2; mode = 'title'; if (!clear(box)) { box = null; } }
+			}
+			for (var w = 96; !box && w >= 56; w -= 4) {
+				var hh = w * 52 / 44;
+				for (var y = ph - KC - hh; y >= KC; y -= 4) {
+					var b = [pw - KC - w, y, pw - KC, y + hh];
+					if (clear(b)) { box = b; mode = 'corner'; break; }
+				}
+			}
+			if (!box) { wrEl.style.display = 'none'; wrBox = null; wrStat.mode = 'none'; return; }
+			wrEl.style.left = box[0] + 'px'; wrEl.style.top = box[1] + 'px';
+			wrEl.style.width = (box[2] - box[0]) + 'px'; wrEl.style.height = (box[3] - box[1]) + 'px';
+			wrEl.style.display = 'block';
+			if (wrEl.parentNode !== skyPic) { skyPic.appendChild(wrEl); }
+			wrBox = box; wrStat.placed++; wrStat.mode = mode;
+		}
+		function wrInit() {
+			var i, old = null;
+			for (i = 0; i < accents.length; i++) { if (accents[i]._dccKey === 'wreath') { old = accents[i]; break; } }
+			if (!old || !skyPic) { return; }
+			var sp = D.createElement('span');
+			sp.setAttribute('aria-hidden', 'true');
+			sp.className = 'dcc-seasons-accent';
+			sp.style.cssText = 'display:none;position:absolute;pointer-events:none;z-index:6;opacity:.5;';
+			sp.innerHTML = old.innerHTML;
+			var sv = sp.firstChild;
+			if (sv && sv.setAttribute) { sv.setAttribute('width', '100%'); sv.setAttribute('height', '100%'); sv.style.display = 'block'; }
+			sp._dccKey = 'wreath';
+			if (old.parentNode) { old.parentNode.removeChild(old); }
+			accents[i] = wrEl = sp;
+			var later = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 1000 }); } else { setTimeout(f, 50); } };
+			var keep = function () { later(wrPlace); setTimeout(keep, 10000); };
+			keep();
+			if (D.fonts && D.fonts.ready) { D.fonts.ready.then(function () { later(wrPlace); }); }
+			var rz = 0;
+			W.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { later(wrPlace); }, 200); }, { passive: true });
+		}
 		function sledMoon(dir, MR) {
-			var obs = sledClear(), pad = MR + 8, y0 = MT.round(mx2(vh * 0.24, MR + 12));
+			/* passes (4.14.2): 1 clear of everything; 2 the title's and the
+			 * tagline's letters allowed (they are cut out in front of the
+			 * scene anyway); 3 the wreath alone. The wreath is kept in every
+			 * pass; only when even that fails does the moon take the
+			 * approved place, as 4.14.1 always did on a crowded header. */
+			var kc = kcRects(), all = kc.txt.concat(kc.box), obs = all, pad = MR + 8, y0 = MT.round(mx2(vh * 0.24, MR + 12));
+			/* the team crosses the whole width, so it keeps clear of the
+			 * wreath by height: its band (the far deer above, the sleigh and
+			 * the near deer below, the tilt and the bob) never meets the
+			 * wreath's rows (4.14.2) */
+			var L = sledL(), dl = L * 0.5, kk = dl / 60, sS = L / 100;
+			var bandUp = 0.40 * dl + 76 * kk + 0.12 * L, bandDn = mx2(76 * kk, 40 * sS) + 2 * sS;   /* checked against the frames' own boxes, tools/test-wreath.js */
 			function free(x, y) {
 				if (x < pad || x > vw - pad || y < MR + 6 || y > vh - pad) { return false; }
 				for (var j = 0; j < obs.length; j++) {
 					var o = obs[j];
 					if (x + pad > o[0] && x - pad < o[2] && y + pad > o[1] && y - pad < o[3]) { return false; }
+				}
+				if (wrBox) {
+					if (x + pad > wrBox[0] && x - pad < wrBox[2] && y + pad > wrBox[1] && y - pad < wrBox[3]) { return false; }
+					var t = y + 0.14 * MR - bandUp, bt = y + 0.26 * MR + bandDn;
+					if (bt + KC > wrBox[1] && t - KC < wrBox[3]) { return false; }
 				}
 				return true;
 			}
@@ -5178,12 +5274,15 @@
 			for (y = MR + 6; y <= vh - pad; y += mx2(6, vh * 0.04)) { ys.push(MT.round(y)); }
 			ys.sort(function (p, q) { return abs(p - y0) - abs(q - y0); });
 			ys.unshift(y0);
-			var x0 = vw * (dir > 0 ? 0.66 : 0.34), step = mx2(6, vw * 0.02);
-			for (b = 0; b < ys.length; b++) {
-				for (a = 0; a <= 60; a++) {
-					var xa = x0 + dir * a * step, xb = x0 - dir * a * step;
-					if (free(xa, ys[b])) { return [MT.round(xa), ys[b], 1]; }
-					if (free(xb, ys[b])) { return [MT.round(xb), ys[b], 1]; }
+			var x0 = vw * (dir > 0 ? 0.66 : 0.34), step = mx2(6, vw * 0.02), pass;
+			for (pass = 1; pass <= (wrBox ? 3 : 2); pass++) {
+				obs = pass === 1 ? all : (pass === 2 ? kc.box : []);
+				for (b = 0; b < ys.length; b++) {
+					for (a = 0; a <= 60; a++) {
+						var xa = x0 + dir * a * step, xb = x0 - dir * a * step;
+						if (free(xa, ys[b])) { return [MT.round(xa), ys[b], pass]; }
+						if (free(xb, ys[b])) { return [MT.round(xb), ys[b], pass]; }
+					}
 				}
 			}
 			return [MT.round(x0), y0, 0];   /* nothing clear: the approved place, the letters still cut out in front */
@@ -7125,6 +7224,7 @@
 		/* Santa's team the same way (4.14.0): every pose lit, far and dark,
 		 * the sleigh's four flick heights and the moon, in idle time at the
 		 * header picture's size. */
+		if (themeKey === 'christmas' && !footMode) { wrInit(); }
 		if (vigList.indexOf('sleighmoon') >= 0 && ART.xm) {
 			var sdTodo = [-1], sdI;
 			for (sdI = 0; sdI < SD_HANDS; sdI++) { sdTodo.push('s' + sdI); }
@@ -7678,6 +7778,7 @@
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
+				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },
 				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },
 				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: fullMoonR(), plan: crPlan }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
