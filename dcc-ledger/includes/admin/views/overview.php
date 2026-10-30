@@ -150,6 +150,35 @@ $view_sources = [
     </p>
 <?php endif; ?>
 
+<?php if ((int) $t['tax_unknown_bookings'] > 0 || (int) $t['tax_unknown_money'] > 0) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: 1: number of bookings, 2: the money on them, 3: nights */
+            esc_html__('%1$s direct bookings carrying %2$s over %3$s nights have no readable price breakdown in MotoPress, so how much tax is inside their totals is unknown. On this site a booking total INCLUDES room tax, and room revenue excludes it — so their money is reported here but is in neither room revenue nor any rate. An unknown is never a zero.', 'dcc-ledger'),
+            esc_html(number_format((float) $t['tax_unknown_bookings'])),
+            esc_html(DCCL\Ui::money((int) $t['tax_unknown_money'])),
+            esc_html(number_format((float) $t['tax_unknown_nights']))
+        );
+        ?>
+        <?php if ((int) $t['tax_readings'] === 0) : ?>
+            <strong><?php esc_html_e('No snapshot has read them yet — run a snapshot and this figure will fall to the bookings whose breakdown really cannot be read.', 'dcc-ledger'); ?></strong>
+        <?php endif; ?>
+    </p>
+<?php endif; ?>
+
+<?php if ((int) $t['tax_direct'] > 0) : ?>
+    <p class="dccl-note">
+        <?php
+        printf(
+            /* translators: %s: the tax taken out */
+            esc_html__('%s of room tax was taken out of the direct booking totals to reach room revenue, read from each booking\'s MotoPress price breakdown.', 'dcc-ledger'),
+            esc_html(DCCL\Ui::money((int) $t['tax_direct']))
+        );
+        ?>
+    </p>
+<?php endif; ?>
+
 <?php if ((int) $t['nights_from_link'] > 0) : ?>
     <p class="dccl-note">
         <?php

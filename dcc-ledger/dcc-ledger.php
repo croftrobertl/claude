@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Ledger
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       A separate, permanent money ledger for Dora Canal Court. Imports Airbnb, Booking.com and Vrbo reservation, payout and invoice exports into its own tables, links them read-only to MotoPress bookings, and reports guest totals, platform fees, taxes, payouts, nights and occupancy by month, season or year. Never writes to MotoPress. Stores no guest names or contact details.
- * Version: 0.3.2
+ * Version: 0.3.3
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCCL_VERSION', '0.3.2');
+define('DCCL_VERSION', '0.3.3');
 define('DCCL_FILE', __FILE__);
 define('DCCL_DIR', plugin_dir_path(__FILE__));
 define('DCCL_URL', plugin_dir_url(__FILE__));

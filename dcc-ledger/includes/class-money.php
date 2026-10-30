@@ -113,57 +113,52 @@ final class Money
     }
 
     /**
-     * Split an amount across parts, to the cent.
+     * The part of an amount belonging to a run of weights inside the whole.
      *
-     * Used wherever a stay's money is divided by nights across a period
-     * boundary. Each part gets its proportional share rounded down, and the
-     * cents left over go to the LAST part — so the parts always sum to
-     * exactly the whole, and the remainder lands in one named place rather
-     * than wherever the rounding happened to fall.
+     * Rounding one share at a time does not add up. A stay of 7 nights whose
+     * money is $100 gives October 3 nights and November 4: round each on its
+     * own and the two come to a cent more or less than $100, which is how
+     * the months of 2026 stopped tying to the year by one to three cents.
      *
-     * @param array<int,int> $weights e.g. nights per period
-     * @return array<int,int> cents per part, summing to $cents exactly
+     * So no share is rounded on its own. Every period reads the SAME running
+     * total — the amount earned by the end of its last night, less the amount
+     * earned by the end of the night before its first — and consecutive
+     * periods cancel each other's rounding exactly. Any set of periods that
+     * between them cover a stay's nights once each therefore sums to the
+     * stay's money to the cent, whatever the periods are: the months of a
+     * year, the year itself, or one query spanning both.
+     *
+     * $before is how many of the stay's nights fall before this period.
      */
-    public static function allocate(int $cents, array $weights): array
+    public static function slice(int $cents, int $before, int $within, int $total): int
     {
-        $total = array_sum($weights);
-        if ($total <= 0) {
-            return array_fill_keys(array_keys($weights), 0);
+        if ($total <= 0 || $within <= 0) {
+            return 0;
         }
 
-        $out       = [];
-        $allocated = 0;
-        $last      = null;
-        foreach ($weights as $key => $weight) {
-            $share     = intdiv($cents * (int) $weight, $total);
-            $out[$key] = $share;
-            $allocated += $share;
-            $last = $key;
+        $before = max(0, min($before, $total));
+        $within = min($within, $total - $before);
+        if ($within <= 0) {
+            return 0;
         }
 
-        if ($last !== null) {
-            $out[$last] += $cents - $allocated;
-        }
-
-        return $out;
+        return self::upto($cents, $before + $within, $total)
+            - self::upto($cents, $before, $total);
     }
 
     /**
-     * One part of an amount, split by weight, rounded half away from zero.
-     *
-     * For the common case where only one share is wanted and the rest is not
-     * being reported alongside it. Where the parts must sum exactly, use
-     * allocate().
+     * The amount earned by the end of weight $upto of $total, rounded half
+     * away from zero. upto(c, 0, t) is 0 and upto(c, t, t) is exactly c, so
+     * the slices of a whole always sum to the whole.
      */
-    public static function share(int $cents, int $weight, int $total): int
+    private static function upto(int $cents, int $upto, int $total): int
     {
         if ($total <= 0) {
             return 0;
         }
 
         $sign    = ($cents < 0) ? -1 : 1;
-        $scaled  = abs($cents) * $weight;
-        $rounded = intdiv($scaled * 2 + $total, $total * 2);
+        $rounded = intdiv(abs($cents) * $upto * 2 + $total, $total * 2);
 
         return $sign * $rounded;
     }

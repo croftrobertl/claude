@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
  */
 final class Schema
 {
-    public const DB_VERSION     = '6';
+    public const DB_VERSION     = '7';
     public const VERSION_OPTION = 'dccl_db_version';
 
     public static function table(string $name): string
@@ -68,6 +68,11 @@ final class Schema
     public static function money_backup(): string
     {
         return self::table('money_backup');
+    }
+
+    public static function booking_taxes(): string
+    {
+        return self::table('booking_taxes');
     }
 
     public static function originals(): string
@@ -267,6 +272,36 @@ final class Schema
             // The ledger's own copy of what MotoPress held when it was taken.
             // These rows are frozen: a change in MotoPress is recorded as a
             // NEW version beside the old one, never written over it.
+            // The tax inside a direct booking's total, frozen beside the
+            // Original rather than inside it. MotoPress states it in the
+            // price breakdown; room revenue excludes it. It is kept in its
+            // own table so adding it re-versions no Original — a snapshot
+            // that reported 428 bookings as "changed" would be saying
+            // MotoPress changed when only the ledger did.
+            'booking_taxes' => [
+                'columns' => [
+                    'id'              => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',
+                    'mphb_booking_id' => 'bigint(20) unsigned NOT NULL',
+                    'version'         => 'smallint(5) NOT NULL DEFAULT 1',
+                    'is_current'      => 'tinyint(1) NOT NULL DEFAULT 1',
+                    'total_cents'     => 'bigint(20) DEFAULT NULL',
+                    'tax_cents'       => 'bigint(20) NOT NULL DEFAULT 0',
+                    'is_known'        => 'tinyint(1) NOT NULL DEFAULT 0',
+                    'has_tax_line'    => 'tinyint(1) NOT NULL DEFAULT 0',
+                    'reason'          => 'varchar(64) NOT NULL',
+                    'content_hash'    => 'char(40) NOT NULL',
+                    'source_batch'    => 'bigint(20) unsigned DEFAULT NULL',
+                    'captured_at'     => 'datetime NOT NULL',
+                    'superseded_at'   => 'datetime DEFAULT NULL',
+                ],
+                'primary' => 'id',
+                'keys'    => [
+                    'UNIQUE KEY tax_version (mphb_booking_id,content_hash)',
+                    'KEY tax_current (mphb_booking_id,is_current)',
+                    'KEY tax_batch (source_batch)',
+                ],
+            ],
+
             'originals' => [
                 'columns' => [
                     'id'              => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',

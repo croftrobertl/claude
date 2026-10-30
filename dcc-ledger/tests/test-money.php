@@ -41,18 +41,62 @@ T::same('$1,234.56', Money::format(123456), 'Formatted with its separators');
 
 T::group('Splitting an amount so the parts sum to the whole');
 
-$thirds = Money::allocate(10000, [1, 1, 1]);
+// Every period of a stay reads the same running total, so consecutive
+// periods cancel each other's rounding and any partition ties exactly.
+$thirds = [
+    Money::slice(10000, 0, 1, 3),
+    Money::slice(10000, 1, 1, 3),
+    Money::slice(10000, 2, 1, 3),
+];
 T::same(10000, array_sum($thirds), '$100 split three ways still adds to $100');
-T::same([3333, 3333, 3334], $thirds, 'And the leftover cent lands on the last part');
+// The leftover cent lands where the running total crosses, not on a part
+// chosen in advance: $33.33, $33.34, $33.33.
+T::same([3333, 3334, 3333], $thirds, 'And no part is more than a cent from its share');
 
-$nights = Money::allocate(100, [3, 4]);
-T::same(100, array_sum($nights), 'A dollar split by nights adds to a dollar');
+T::same(100, Money::slice(100, 0, 3, 7) + Money::slice(100, 3, 4, 7), 'A dollar split by nights adds to a dollar');
+T::same(-10000, Money::slice(-10000, 0, 3, 7) + Money::slice(-10000, 3, 4, 7), 'A refund splits exactly too');
 
-$negative = Money::allocate(-10000, [3, 4]);
-T::same(-10000, array_sum($negative), 'A refund splits exactly too');
+T::same(10000, Money::slice(10000, 0, 7, 7), 'A whole range is the whole amount, never rounded');
+T::same(0, Money::slice(10000, 0, 0, 7), 'No nights in the period, no money from it');
+T::same(0, Money::slice(10000, 1, 1, 0), 'Nothing is divided by nothing');
+T::same(3333, Money::slice(10000, 0, 1, 3), 'One third of $100, rounded half up');
 
-T::same(3333, Money::share(10000, 1, 3), 'One third of $100, rounded half up');
-T::same(0, Money::share(10000, 1, 0), 'Nothing is divided by nothing');
+// The defect of 0.3.2: rounding each month on its own. Across every stay
+// length and every split point, the parts must come to the whole.
+$exact = true;
+for ($total = 1; $total <= 14; $total++) {
+    for ($cut = 0; $cut <= $total; $cut++) {
+        foreach ([1, 7, 99, 12345, 549_17, -860_25] as $cents) {
+            $a = Money::slice($cents, 0, $cut, $total);
+            $b = Money::slice($cents, $cut, $total - $cut, $total);
+            if ($a + $b !== $cents) {
+                $exact = false;
+            }
+        }
+    }
+}
+T::ok($exact, 'Every two-way split of every stay length ties to the cent');
+
+// Three periods, the shape a stay crossing two month ends actually takes.
+$ties = true;
+for ($total = 3; $total <= 31; $total++) {
+    for ($a = 1; $a < $total - 1; $a++) {
+        for ($b = $a + 1; $b < $total; $b++) {
+            $sum = Money::slice(999_99, 0, $a, $total)
+                + Money::slice(999_99, $a, $b - $a, $total)
+                + Money::slice(999_99, $b, $total - $b, $total);
+            if ($sum !== 999_99) {
+                $ties = false;
+            }
+        }
+    }
+}
+T::ok($ties, 'And every three-way split does too');
+
+// A stay whose stated nights disagree with its dates cannot take more than
+// it has: the clamp keeps a period from reaching past the end of the stay.
+T::same(10000, Money::slice(10000, 0, 99, 5), 'A period longer than the stay takes the stay, no more');
+T::same(0, Money::slice(10000, 9, 3, 5), 'A period starting past the end takes nothing');
 
 T::group('Upgrading a ledger that holds decimals');
 
@@ -200,3 +244,56 @@ $redo = Money_Migration::run();
 T::ok($redo['ok'], 'It converts cleanly a second time');
 T::same(0, Health::money_not_in_cents(), 'And the banner clears');
 
+
+T::group('The tax inside a MotoPress booking total');
+
+// The reader proves itself rather than trusting its own reading: a tax is
+// KNOWN only when the breakdown's total matches the booking's total and,
+// where the breakdown states a pre-tax base, base plus tax meets it.
+$with_tax = serialize([
+    'rooms'    => [[
+        'room_id'  => 1066,
+        'subtotal' => '450.45',
+        'taxes'    => [['name' => 'Accommodation tax', 'amount' => '49.55']],
+        'total'    => '500.00',
+    ]],
+    'subtotal' => '450.45',
+    'total'    => '500.00',
+]);
+$read = \DCCL\Breakdown::read($with_tax, 50000);
+T::ok($read['known'], 'A breakdown whose parts add up is read');
+T::same(4955, (int) $read['tax_cents'], 'And its tax comes out in whole cents');
+T::ok($read['has_tax'], 'It is counted among the bookings that list a tax');
+
+// 41 of the 117 the Director sampled list no room tax at all. That is a
+// tax of zero that is KNOWN to be zero — not an unknown.
+$no_tax = serialize(['rooms' => [['room_id' => 1066, 'subtotal' => '500.00', 'total' => '500.00']], 'subtotal' => '500.00', 'total' => '500.00']);
+$read   = \DCCL\Breakdown::read($no_tax, 50000);
+T::ok($read['known'], 'A breakdown that lists no tax is still read');
+T::same(0, (int) $read['tax_cents'], 'Its tax is nothing');
+T::ok(!$read['has_tax'], 'And it is counted apart from the ones that list one');
+
+// The one of the 117 whose breakdown disagreed with the booking total.
+$read = \DCCL\Breakdown::read($with_tax, 60000);
+T::ok(!$read['known'], 'A breakdown that disagrees with the booking total is not trusted');
+T::same(0, (int) $read['tax_cents'], 'And states no tax rather than a wrong one');
+T::same(\DCCL\Breakdown::TOTAL_DISAGREES, $read['reason'], 'Saying which way it failed');
+
+// A shape this reader does not understand: the parts it found do not meet
+// the total it found. Half-read is wrong, not partly right.
+$unreadable = serialize([
+    'rooms'    => [['room_id' => 1066, 'subtotal' => '400.00', 'taxes' => [['amount' => '49.55']], 'total' => '500.00']],
+    'subtotal' => '400.00',
+    'total'    => '500.00',
+]);
+$read = \DCCL\Breakdown::read($unreadable, 50000);
+T::ok(!$read['known'], 'A breakdown whose parts do not add up is not trusted either');
+T::same(\DCCL\Breakdown::PARTS_DISAGREE, $read['reason'], 'And says so');
+
+T::same(\DCCL\Breakdown::NO_BREAKDOWN, \DCCL\Breakdown::read('', 50000)['reason'], 'No breakdown is named as none');
+T::same(\DCCL\Breakdown::UNREADABLE, \DCCL\Breakdown::read('not serialized at all', 50000)['reason'], 'And so is one that will not unserialize');
+T::same(\DCCL\Breakdown::NO_TOTAL, \DCCL\Breakdown::read(serialize(['rooms' => []]), 50000)['reason'], 'And one that states no total');
+
+// Stored data must never become an object.
+$object = \DCCL\Breakdown::read('O:8:"stdClass":1:{s:5:"total";s:6:"500.00";}', 50000);
+T::ok(!$object['known'], 'A serialized object in the meta is refused, not instantiated');

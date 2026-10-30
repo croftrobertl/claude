@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,14 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.3 =
+* **The months came to a cent or three more than the year.** Each period rounded its own share of a stay's money. Two nights of an odd number of cents are x.5 each, and rounding both halves away from zero rounds both up. Every period now reads the same running total — the money earned by the end of its last night, less the money earned by the end of the night before its first — so consecutive periods cancel each other's rounding and any set of periods covering a stay sums to it exactly, whatever the periods are.
+* **A direct booking's total includes room tax on this site, and room revenue excludes tax.** Established by reading live on 2026-10-30: the price breakdown is on 281 booking rows, 76 of 117 confirmed bookings sampled list room taxes, and the breakdown's total agrees with the booking total on 116 of the 117. Direct room revenue is now the breakdown's total less its taxes, frozen at snapshot time beside the Original.
+* **A booking with no readable breakdown has an UNKNOWN tax, never a tax of zero.** Its money stays in the money figures, it is named on screen with its count, nights and dollars, and it is out of room revenue and out of every rate. A total that may hold tax is a wrong room-revenue figure rather than a missing one.
+* **Booking.com's gross room revenue was reading $0 wherever its payout had not arrived.** A Booking.com reservation row states its Final amount as room sales and its payout file states the same money again as a guest total; gross read only the guest total, so an unpaid Booking.com stay contributed nothing to gross while its nights went on dividing the rate. Gross now takes whichever of the two each stay actually has, counted once — the choice the copy detector has made since 0.1.0, for the same reason. Found by the audit, not by a person.
+* `wp dcc-ledger money-check` gained a fifth rule: **tax comes out of a total, never into it** — direct room revenue is never above what the guests were billed.
+* New: `wp dcc-ledger direct-tax` reports how many direct bookings the ledger could read a tax for, how many it could not and why, and how much tax was taken out. Counts and money only.
 
 = 0.3.2 =
 * **The months stopped adding up to the year.** A payout-only stay linked to a booking that crosses a month end was selected for the first month and not the second: the query coalesced its missing check-out to its check-in, so October lost three nights and $494.62 that the year still held. Stays are now selected on the dates they will actually use, including dates from a linked booking.

@@ -83,23 +83,34 @@ T::ok((int) $t['revpar_gross'] <= (int) $t['adr_gross'], 'RevPAR never exceeds A
 
 T::group('Gross and net are the same money, seen before and after the cut');
 
-// On the stay basis a direct booking's room revenue is its booking total,
-// paid or not. Dividing receipts by nights instead gave October an ADR of
-// $12.77 on 43 nights that had earned $6,027.30.
+// On the stay basis a direct booking's room revenue is its booking total
+// LESS the room tax inside that total, paid or not. Dividing receipts by
+// nights instead gave October an ADR of $12.77 on 43 nights that had
+// earned $6,027.30; leaving the tax in overstates every direct rate.
 T::same(
-    (int) $t['room_revenue'] + (int) $s['direct']['due'],
+    (int) $t['room_revenue'] + (int) $s['direct']['room_revenue'],
     (int) $t['room_revenue_gross'],
     'Gross is the platforms\' room revenue plus what the direct bookings earned'
+);
+T::ok((int) $s['direct']['tax'] > 0, 'And the tax inside the direct totals was taken out of it');
+T::same(
+    (int) $s['direct']['due'] - (int) $s['direct']['tax'] - (int) $s['direct']['tax_unknown_money'],
+    (int) $s['direct']['room_revenue'],
+    'Room revenue is the totals, less their tax, less the totals whose tax is unknown'
 );
 // Due is not always above paid: an overpaid booking is exactly the case
 // the cleanup list raises, so this is not asserted as an invariant.
 
 $cash = Reports::summary($from, $to, 'payout');
 T::same(
-    (int) $cash['ota']['guest_total'] - (int) $cash['ota']['tax_in_payout'] - (int) $cash['ota']['tax_platform_remitted']
-        + (int) $cash['ota']['refund'] + (int) $cash['direct']['paid'],
+    (int) $cash['ota']['billed'] - (int) $cash['ota']['tax_in_payout'] - (int) $cash['ota']['tax_platform_remitted']
+        + (int) $cash['ota']['refund'] + (int) $cash['direct']['paid_room_revenue'],
     (int) $cash['totals']['room_revenue_gross'],
     'On the cash basis it is money received, not money earned'
+);
+T::ok(
+    (int) $cash['direct']['paid_room_revenue'] < (int) $cash['direct']['paid'],
+    'With the tax inside the receipts taken out of them too'
 );
 // Net is gross less what the platform took, on one definition for every
 // channel. Taking the payout as net was wrong for Booking.com twice over:

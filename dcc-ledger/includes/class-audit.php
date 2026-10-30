@@ -30,6 +30,7 @@ final class Audit
         $net_failures    = [];
         $rate_failures   = [];
         $night_failures  = [];
+        $tax_failures    = [];
         $months_checked  = 0;
 
         // Summed as the months are walked, to compare with the whole range
@@ -39,6 +40,7 @@ final class Audit
             'room_revenue_gross', 'room_revenue_net',
             'tax_platform_remitted', 'tax_in_payout',
             'direct_due', 'direct_recorded', 'direct_paid',
+            'tax_direct', 'tax_unknown_money',
         ];
         $summed = array_fill_keys($tie_fields, 0);
 
@@ -89,6 +91,29 @@ final class Audit
                     __('%1$s: %2$d nights are in the rate with no room revenue under them', 'dcc-ledger'),
                     $start,
                     (int) $month['totals']['rate_nights']
+                );
+            }
+
+            // Room revenue can never be more than the guest was billed.
+            // Tax comes OUT of a total; a reading that added it instead, or
+            // one that took it off twice the wrong way, shows here.
+            $billed  = (int) $month['direct']['due'];
+            $revenue = (int) $month['direct']['room_revenue'];
+            if ($revenue > $billed) {
+                $tax_failures[] = sprintf(
+                    /* translators: 1: month, 2: room revenue, 3: what the guests were billed */
+                    __('%1$s: direct room revenue %2$s is above the %3$s the guests were billed', 'dcc-ledger'),
+                    $start,
+                    Money::format($revenue),
+                    Money::format($billed)
+                );
+            }
+            if ((int) $month['direct']['tax'] < 0) {
+                $tax_failures[] = sprintf(
+                    /* translators: 1: month, 2: the tax */
+                    __('%1$s: the tax inside the direct totals is %2$s, which is not a tax', 'dcc-ledger'),
+                    $start,
+                    Money::format((int) $month['direct']['tax'])
                 );
             }
 
@@ -150,6 +175,17 @@ final class Audit
                         $months_checked
                     )
                     : implode('; ', array_slice($night_failures, 0, 5)),
+            ],
+            [
+                'what'   => __('tax comes out of a total, never into it', 'dcc-ledger'),
+                'ok'     => $tax_failures === [],
+                'detail' => $tax_failures === []
+                    ? sprintf(
+                        /* translators: %d: number of months checked */
+                        __('%d months of direct bookings', 'dcc-ledger'),
+                        $months_checked
+                    )
+                    : implode('; ', array_slice($tax_failures, 0, 5)),
             ],
             [
                 'what'   => __('the months add up to the range', 'dcc-ledger'),

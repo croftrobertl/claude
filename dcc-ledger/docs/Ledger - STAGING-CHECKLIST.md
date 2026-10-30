@@ -1,4 +1,4 @@
-# DCC Ledger 0.3.2 — Staging Checklist
+# DCC Ledger 0.3.3 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -643,3 +643,75 @@ which keys hold plain numbers — key names and counts only, never a value.
       by that much and the definition has to change — tell me and I will
       change it. **If it is not**, the figures are right as they stand.
 - [ ] Either way, say which, so it can be written down rather than assumed.
+
+---
+
+## 17. 0.3.3 — The Cents, The Tax, And One More Found On The Way
+
+Three things, in the order they matter. 0.3.3 writes one new thing — a
+frozen tax reading per direct booking, in its own table — and changes no
+Original, no booking and no payment.
+
+- [ ] Deactivate, upload `Ledger 0.3.3.zip`, activate. The activation
+      creates the `booking_taxes` table; nothing else is touched.
+- [ ] `wp dcc-ledger snapshot` — the tax readings are taken when the
+      snapshot runs, so the figures are unchanged until it has. It reports
+      how many bookings it could read a tax for and how many it could not.
+
+**The cents.**
+
+- [ ] `wp dcc-ledger money-check` ends with **Success** and its **Figures**
+      block now has five lines, all OK — the fifth is *tax comes out of a
+      total, never into it*.
+- [ ] *the months add up to the range* is now **OK**. The five figures that
+      were out by one to three cents should tie exactly: guest_total
+      5,117,967; net_payout 4,915,129; room_revenue_gross; room_revenue_net;
+      tax_platform_remitted 130,586.
+- [ ] Add the twelve months of 2026 by hand again. The guest total should
+      now be the same figure both ways; it was 3,535,565 for the year
+      against 3,535,567 across the months.
+- [ ] **2026 nights: still 835**, both ways. The nights were never the
+      problem and must not have moved.
+
+**The tax.**
+
+- [ ] `wp dcc-ledger direct-tax`. Compare **"Listing a room tax"** with the
+      **76 of 117** you counted on live. If they disagree, the reader is
+      reading the wrong part of the breakdown — tell me the two numbers and
+      do not trust the direct figures until it is fixed. This is the one
+      check I cannot run here.
+- [ ] Read **"Tax unknown"** and the reasons beneath it. Expect roughly the
+      bookings with no breakdown at all.
+- [ ] The Overview now says, in two lines under the figures, how much tax
+      was taken out of the direct totals, and how many bookings, nights and
+      dollars have a tax it could not read. Those are out of room revenue
+      and out of every rate, and their money is still in the money figures.
+- [ ] Direct **ADR and RevPAR fall** by roughly the tax rate against 0.3.2.
+      That is the correction, not a regression: the old figures had tax in
+      them.
+- [ ] Occupancy is **unchanged**. A night is occupied whether or not its tax
+      can be read.
+
+**The one I found on the way.**
+
+The audit turned this up once the direct side stopped masking it, and I
+believe it is true of live. A Booking.com reservation row states its Final
+amount as room sales; its payout file states the same money again as a
+guest total. Gross room revenue read only the guest total — so a
+Booking.com stay whose payout had not arrived contributed **$0** of gross
+while its nights went on dividing the rate.
+
+- [ ] **Booking.com gross room revenue rises** for any month holding a
+      reservation that has not been paid out yet, and its net rises with
+      it. Where a month's Booking.com gross was previously $0 or its net
+      was negative, that was the fault.
+- [ ] Check one such month against the Booking.com reservations file:
+      gross should be the Final amount, and net that less the commission.
+- [ ] A month where the payout HAS arrived should be **unchanged** — the
+      money must not be counted twice.
+
+**Unchanged.**
+
+- [ ] September 2026 nights and occupancy: 14 of 240, **5.8%**. Its direct
+      rates will have moved with the tax; its nights must not.
+- [ ] MotoPress checksums, links and reviews all unchanged. Zero writes.

@@ -79,9 +79,12 @@ it; named so no future session mistakes the gap for a decision):
   aggregates. Report it as "not run", never as passed.
 - Booking pace has no history yet. Recording began with 0.3.0; the first
   month with a complete curve is about six months after that.
-- Whether a direct booking's total includes tax or fees has not been
-  established on this site. `wp dcc-ledger direct-total` is the instrument;
-  the answer has to come from a person looking at a booking.
+- How much of the tax inside the direct booking totals the ledger can read
+  has not been checked against the live count. The Director counted 76 of
+  117 sampled bookings listing room taxes; `wp dcc-ledger direct-tax`
+  prints what the reader found. Until the two are compared, the direct
+  room-revenue figure rests on a reader that has proved itself only
+  against fixtures.
 
 ## Branch rule
 
@@ -230,10 +233,50 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   `decimal(12,2)` columns beside them are a mirror, written from the cents
   and read by nothing, kept so the conversion can be rolled back. `Ui::money()`
   is the only place cents become a decimal for a person.
-- **A split always sums to the whole.** `Money::allocate()` gives each part
-  its share and puts the leftover cents on the last part; `Money::share()`
-  rounds one share half away from zero. A stay crossing a month end is split
-  by nights this way, so the months of a year tie to the year exactly.
+- **A split always sums to the whole, and no share is rounded on its own.**
+  `Money::slice($cents, $before, $within, $total)` is the only splitter.
+  Every period reads the same running total — the money earned by the end
+  of its last night, less the money earned by the end of the night before
+  its first — so consecutive periods cancel each other's rounding and any
+  set of periods covering a stay's nights sums to the stay exactly. Rounding
+  each period's share on its own does NOT add up: two nights of an odd
+  number of cents are x.5 each and both round away from zero, which is how
+  2026's months came to three cents more than the year. `allocate()` and
+  `share()` were removed rather than left lying about; the caller has to
+  know where in the stay its period starts (`Dates::nights_before()`).
+- **What the guest was billed is counted once per stay.** A Booking.com
+  reservation row states its Final amount as `room_sales`; its payout file
+  states the same money again as `guest_total`. `Reports::billed_cents()`
+  takes the stay's own `guest_total` where it has one and its `room_sales`
+  where it does not — never the sum. Reading `guest_total` alone reported
+  $0 of gross room revenue for every Booking.com stay whose payout had not
+  arrived, while its nights went on dividing the rate. `Copies::stay_money()`
+  has made the same choice since 0.1.0; gross room revenue did not, and the
+  audit found it once the direct side stopped masking it.
+- **A direct booking's total INCLUDES room tax on this site, and room
+  revenue excludes tax.** Established by reading live on 2026-10-30, in
+  aggregate: `_mphb_booking_price_breakdown` is present on 281 booking
+  rows; of 117 confirmed bookings sampled with one, 76 list room taxes;
+  the breakdown's total equals `mphb_total_price` on 116 of the 117; and
+  no services appear in any breakdown. Direct room revenue is the
+  breakdown's total less its taxes — never `mphb_total_price` as it stands.
+- **A breakdown that does not prove itself is an unknown tax, never a tax
+  of zero.** `Breakdown::read()` reports a tax as known only when the
+  breakdown's own total equals the booking's total AND, where the
+  breakdown states a pre-tax base, base plus the taxes it found meets that
+  total. Anything else — no breakdown, no total, parts that do not add up
+  — is unknown. A booking whose tax is unknown keeps its money in the
+  money figures and is out of room revenue and out of every rate, named on
+  screen with its count, its nights and its dollars. A total that may hold
+  tax is a WRONG room-revenue figure, not a missing one. The breakdown is
+  unserialized with `allowed_classes => false`: stored data never becomes
+  an object.
+- **The tax reading is frozen, in its own table.** `booking_taxes` versions
+  a reading the way `originals` versions a booking, and for the same
+  reason. It is a separate table rather than two more columns on
+  `originals` because adding them to the content hash would re-version all
+  428 live bookings on the next snapshot — the cleanup list would report
+  that MotoPress had changed when only the ledger had.
 - **The conversion to cents is reversible and proves itself.**
   `Money_Migration` backs every decimal cell up before touching it, converts,
   and compares every table's total and every month and channel within it. A
@@ -432,8 +475,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1648 assertions
-    php dcc-ledger/tests/mutations.php            # 87 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1725 assertions
+    php dcc-ledger/tests/mutations.php            # 91 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -468,6 +511,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.3.2.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.3.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

@@ -30,6 +30,7 @@ final class Cli
         'money-check'    => 'money_check',
         'money-rollback' => 'money_rollback',
         'direct-total'   => 'direct_total',
+        'direct-tax'     => 'direct_tax',
     ];
 
     /**
@@ -396,7 +397,48 @@ final class Cli
             __('The ledger reads %s as a direct booking\'s room revenue on the stay basis.', 'dcc-ledger'),
             Mphb_Reader::META_TOTAL
         ));
-        \WP_CLI::log(__('If a tax or fee key above is NOT already inside that total, room revenue is right as it stands. If it IS inside, the total is above room revenue by that much and the definition has to change. Compare one booking in wp-admin against its total to settle it.', 'dcc-ledger'));
+        \WP_CLI::log(__('Settled on 2026-10-30: the total INCLUDES room tax on this site, so room revenue is the total less the tax in its price breakdown. Run `wp dcc-ledger direct-tax` to see how much of that the ledger can read.', 'dcc-ledger'));
+    }
+
+    /**
+     * How much of the tax inside the direct booking totals the ledger can read.
+     *
+     * The Director established on live on 2026-10-30 that
+     * `mphb_total_price` includes room tax. Room revenue excludes tax, so
+     * the ledger takes the tax out of each booking's price breakdown. This
+     * prints how many bookings it could read and how many it could not,
+     * with the reason — counts and money only, never a booking's contents.
+     *
+     * @subcommand direct-tax
+     *
+     * @param array<int,string>    $args
+     * @param array<string,string> $assoc
+     */
+    public function direct_tax(array $args, array $assoc): void
+    {
+        $coverage = Taxes::coverage();
+
+        if ($coverage['read'] === 0) {
+            \WP_CLI::warning(__('No tax readings are stored. Run `wp dcc-ledger snapshot` first — the readings are frozen when the snapshot runs.', 'dcc-ledger'));
+
+            return;
+        }
+
+        \WP_CLI::log(__('The tax inside each direct booking\'s total, read from its MotoPress price breakdown.', 'dcc-ledger'));
+        \WP_CLI::log('');
+        \WP_CLI::log(sprintf(__('Direct bookings read:          %d', 'dcc-ledger'), $coverage['read']));
+        \WP_CLI::log(sprintf(__('  Tax known:                   %d', 'dcc-ledger'), $coverage['known']));
+        \WP_CLI::log(sprintf(__('  Tax unknown:                 %d', 'dcc-ledger'), $coverage['unknown']));
+        \WP_CLI::log(sprintf(__('  Listing a room tax:          %d', 'dcc-ledger'), $coverage['with_tax_line']));
+        \WP_CLI::log(sprintf(__('  Tax taken out of revenue:    %s', 'dcc-ledger'), Money::format((int) $coverage['tax_cents'])));
+        \WP_CLI::log('');
+        \WP_CLI::log(__('Why a reading was not usable:', 'dcc-ledger'));
+        foreach ($coverage['reasons'] as $reason => $count) {
+            \WP_CLI::log(sprintf('  %-52s %6d', $reason, $count));
+        }
+        \WP_CLI::log('');
+        \WP_CLI::log(__('A booking whose tax is unknown keeps its money in the money figures and stays out of every rate. An unknown is never a zero.', 'dcc-ledger'));
+        \WP_CLI::log(__('Check this against what you counted on live: 117 confirmed bookings sampled with a breakdown, 76 of them listing room taxes. If "listing a room tax" disagrees with your count, the reader is reading the wrong part of the breakdown and the direct figures should not be trusted until it is fixed.', 'dcc-ledger'));
     }
 
     /**

@@ -717,14 +717,161 @@ EOT,
 EOT,
     ],
     [
-        'name' => 'A split whose parts no longer sum to the whole',
+        // 0.3.2's defect: each period rounded its own share, so the months
+        // of a year came to a cent or three more than the year.
+        'name' => 'Each period rounding its own share of a stay',
         'file' => 'includes/class-money.php',
         'from' => <<<'EOT'
-        if ($last !== null) {
-            $out[$last] += $cents - $allocated;
-        }
+        return self::upto($cents, $before + $within, $total)
+            - self::upto($cents, $before, $total);
+EOT,
+        'to'   => <<<'EOT'
+        return self::upto($cents, $within, $total);
+EOT,
+    ],
+    [
+        'name' => 'A split that loses the leftover cents instead of carrying them',
+        'file' => 'includes/class-money.php',
+        'from' => <<<'EOT'
+        $rounded = intdiv(abs($cents) * $upto * 2 + $total, $total * 2);
+EOT,
+        'to'   => <<<'EOT'
+        $rounded = intdiv(abs($cents) * $upto, $total);
+EOT,
+    ],
+    [
+        'name' => 'A period reaching past the end of the stay it splits',
+        'file' => 'includes/class-money.php',
+        'from' => <<<'EOT'
+        $within = min($within, $total - $before);
 EOT,
         'to'   => '',
+    ],
+    [
+        'name' => 'A stay split without regard to where the period starts in it',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                $before = Dates::nights_before($check_in, $check_out, $from);
+EOT,
+        'to'   => <<<'EOT'
+                $before = 0;
+EOT,
+    ],
+    [
+        'name' => 'A direct booking split without regard to where the period starts',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                    $before = Dates::nights_before($booking['check_in'], $booking['check_out'], $from);
+EOT,
+        'to'   => <<<'EOT'
+                    $before = 0;
+EOT,
+    ],
+    [
+        // 0.3.3's finding: a breakdown read half-way is wrong, not partly
+        // right. Accepting one whose parts do not meet its total would
+        // take out a tax that is not the whole tax.
+        'name' => 'A breakdown accepted although its parts do not add up',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+        if ($base !== null && $base + $tax['cents'] !== $total) {
+EOT,
+        'to'   => <<<'EOT'
+        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'A breakdown accepted although it disagrees with the booking total',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+        if ($total !== $total_cents) {
+EOT,
+        'to'   => <<<'EOT'
+        if (false) {
+EOT,
+    ],
+    [
+        'name' => 'A serialized object in the booking meta turned into an object',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+        $data = is_array($raw) ? $raw : @unserialize((string) $raw, ['allowed_classes' => false]);
+EOT,
+        'to'   => <<<'EOT'
+        $data = is_array($raw) ? $raw : @unserialize((string) $raw);
+        $data = is_object($data) ? (array) $data : $data;
+EOT,
+    ],
+    [
+        'name' => 'An unknown tax counted as a tax of zero',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                    if ($tax_known || (int) $booking['total_cents'] <= 0) {
+                        $out['room_revenue'] += Money::slice($net_of_tax, $before, $part, $whole);
+EOT,
+        'to'   => <<<'EOT'
+                    if (true) {
+                        $out['room_revenue'] += Money::slice($net_of_tax, $before, $part, $whole);
+EOT,
+    ],
+    [
+        'name' => 'A direct booking total taken as room revenue, tax and all',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid_room_revenue'] : $direct['room_revenue'];
+EOT,
+        'to'   => <<<'EOT'
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+EOT,
+    ],
+    [
+        'name' => 'A night in the rate although its booking\'s tax is unknown',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+                } elseif ($tax_known) {
+                    $out['nights_with_revenue'] += $nights;
+                } else {
+                    $out['tax_unknown_nights'] += $nights;
+                }
+EOT,
+        'to'   => <<<'EOT'
+                } else {
+                    $out['nights_with_revenue'] += $nights;
+                }
+EOT,
+    ],
+    [
+        // The error the audit found once the direct side stopped masking
+        // it: a Booking.com stay billed as room_sales read as $0 of gross.
+        'name' => 'Gross room revenue reading the guest total alone',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        return $guest_total !== 0 ? $guest_total : (int) ($row['t_room_sales'] ?? 0);
+EOT,
+        'to'   => <<<'EOT'
+        return $guest_total;
+EOT,
+    ],
+    [
+        'name' => 'The same money counted twice, as a guest total and as room sales',
+        'file' => 'includes/class-reports.php',
+        'from' => <<<'EOT'
+        return $guest_total !== 0 ? $guest_total : (int) ($row['t_room_sales'] ?? 0);
+EOT,
+        'to'   => <<<'EOT'
+        return $guest_total + (int) ($row['t_room_sales'] ?? 0);
+EOT,
+    ],
+    [
+        'name' => 'A tax reading overwritten in place instead of versioned',
+        'file' => 'includes/class-taxes.php',
+        'from' => <<<'EOT'
+        if ($current !== null) {
+            $version = (int) $current['version'] + 1;
+EOT,
+        'to'   => <<<'EOT'
+        if ($current !== null) {
+            $version = (int) $current['version'];
+EOT,
     ],
     [
         'name' => 'A money cell converted without being backed up first',
@@ -907,11 +1054,11 @@ EOT,
         'name' => 'Tax left inside gross room revenue',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-        return (int) ($figures['guest_total'] ?? 0)
+        return (int) ($figures['billed'] ?? 0)
             - (int) ($figures['tax_in_payout'] ?? 0)
 EOT,
         'to'   => <<<'EOT'
-        return (int) ($figures['guest_total'] ?? 0)
+        return (int) ($figures['billed'] ?? 0)
             - 0 * (int) ($figures['tax_in_payout'] ?? 0)
 EOT,
     ],
@@ -965,34 +1112,36 @@ EOT,
         'name' => 'Direct receipts taken as revenue on the stay basis',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid_room_revenue'] : $direct['room_revenue'];
 EOT,
         'to'   => <<<'EOT'
-        $direct_room_revenue = $direct['paid'];
+        $direct_room_revenue = $direct['paid_room_revenue'];
 EOT,
     ],
     [
         'name' => 'Direct money earned taken as cash on the payout basis',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid_room_revenue'] : $direct['room_revenue'];
 EOT,
         'to'   => <<<'EOT'
-        $direct_room_revenue = $direct['due'];
+        $direct_room_revenue = $direct['room_revenue'];
 EOT,
     ],
     [
         'name' => 'A direct night with no money dividing the rate',
         'file' => 'includes/class-reports.php',
         'from' => <<<'EOT'
-                if ((int) $booking['total_cents'] > 0) {
-                    $out['nights_with_revenue'] += $nights;
-                } else {
+                if ((int) $booking['total_cents'] <= 0) {
+                    // No money above these nights at all. That is the
+                    // night-with-no-money rule, not an unknown tax.
                     $out['nights_without_revenue'] += $nights;
-                }
+                } elseif ($tax_known) {
 EOT,
         'to'   => <<<'EOT'
-                $out['nights_with_revenue'] += $nights;
+                if (false) {
+                    $out['nights_without_revenue'] += $nights;
+                } elseif (true) {
 EOT,
     ],
     [

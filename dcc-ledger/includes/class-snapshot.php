@@ -84,6 +84,11 @@ final class Snapshot
             'copies_detected'    => 0,
             'probable_moves'     => 0,
             'moves_unnamed'      => 0,
+            // The tax inside each direct booking's total, read from its
+            // MotoPress price breakdown. Unknown is named, never zero.
+            'tax_known'          => 0,
+            'tax_unknown'        => 0,
+            'tax_changed'        => 0,
             // Booking ids only, for --verbose. Never a name, never a note.
             'copy_ids'           => [],
             'move_ids'           => [],
@@ -146,6 +151,28 @@ final class Snapshot
                 $counts['bookings_' . ($out['action'] === 'changed' ? 'changed' : ($out['action'] === 'new' ? 'new' : 'unchanged'))]++;
                 if ($out['superseded'] !== null) {
                     $superseded[] = $out['superseded'];
+                }
+            }
+
+            // The tax inside the total, frozen beside the Original. Only a
+            // direct booking has a MotoPress price; an imported one carries
+            // the platform's figures, which the exports already state.
+            $reading = [
+                'total_cents'  => (int) $booking['total'],
+                'tax_cents'    => (int) ($booking['tax_cents'] ?? 0),
+                'known'        => (bool) ($booking['tax_known'] ?? false),
+                'has_tax_line' => (bool) ($booking['has_tax_line'] ?? false),
+                'reason'       => (string) ($booking['tax_reason'] ?? Breakdown::NO_BREAKDOWN),
+            ];
+            if ((string) $booking['channel'] === 'direct') {
+                if ($dry_run) {
+                    $counts['tax_' . ($reading['known'] ? 'known' : 'unknown')]++;
+                } else {
+                    $action = Taxes::capture((int) $booking['id'], $reading, $batch_id);
+                    $counts['tax_' . ($reading['known'] ? 'known' : 'unknown')]++;
+                    if ($action === 'changed') {
+                        $counts['tax_changed']++;
+                    }
                 }
             }
 

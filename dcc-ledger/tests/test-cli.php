@@ -112,7 +112,7 @@ T::group('Both spellings of the money commands reach the code');
 WP_CLI::$commands = [];
 DCCL\Plugin::instance()->register_cli();
 
-foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback', 'direct-total', 'direct_total'] as $spelling) {
+foreach (['money-check', 'money-rollback', 'money_check', 'money_rollback', 'direct-total', 'direct_total', 'direct-tax', 'direct_tax'] as $spelling) {
     // Each spelling is run against a converted ledger, because money-check
     // fails by design on one that has been rolled back.
     DCCL\Money_Migration::run();
@@ -135,7 +135,18 @@ $shape = WP_CLI::output();
 
 T::ok(str_contains($shape, 'mphb_total_price'), 'It lists the key the ledger reads as room revenue');
 T::ok(str_contains($shape, 'money'), 'Marking the keys whose values are plain numbers');
-T::ok(str_contains($shape, 'Compare one booking in wp-admin'), 'And says how to settle the question it cannot settle itself');
+T::ok(str_contains($shape, 'INCLUDES room tax'), 'And states what the question turned out to be, settled on live on 2026-10-30');
+
+T::group('How much of the tax inside those totals the ledger can read');
+
+WP_CLI::reset();
+T::ok(WP_CLI::run_command('dcc-ledger direct-tax', [], []), 'wp dcc-ledger direct-tax reaches the code');
+$tax = WP_CLI::output();
+
+T::ok(str_contains($tax, 'Tax known:'), 'It says how many bookings it could read');
+T::ok(str_contains($tax, 'Tax unknown:'), 'And how many it could not');
+T::ok(str_contains($tax, 'Listing a room tax:'), 'With the count to check against the one counted on live');
+T::ok(str_contains($tax, 'never a zero'), 'Saying what an unknown tax does to the figures');
 
 // Key names and counts only: a value could be a guest's.
 foreach (dccl_fixture_pii() as $needle) {

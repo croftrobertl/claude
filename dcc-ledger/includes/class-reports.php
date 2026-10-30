@@ -139,16 +139,24 @@ final class Reports
         $room_revenue_net = self::net_room_revenue($ota);
 
         // Direct bookings pay no commission, so their gross and their net
-        // are the same figure. MotoPress reports no tax split for them, so
-        // nothing is deducted and the screen says so.
+        // are the same figure.
         //
         // On the stay basis a direct booking's room revenue is its BOOKING
-        // TOTAL, paid or not — the accrual standard, and Rob's decision of
-        // 2026-10-29. Taking what had been paid instead divided October's
-        // $549.17 of receipts across all 43 of its nights and reported an
-        // ADR of $12.77. On the cash basis only money received counts, so
-        // there the paid figure is the right one.
-        $direct_room_revenue = $basis === 'payout' ? $direct['paid'] : $direct['due'];
+        // TOTAL LESS THE TAX INSIDE IT, paid or not — the accrual standard,
+        // and Rob's decision of 2026-10-29. Taking what had been paid
+        // instead divided October's $549.17 of receipts across all 43 of
+        // its nights and reported an ADR of $12.77. On the cash basis only
+        // money received counts, so there the paid figure is the right one,
+        // split into room revenue and tax in the booking's own proportion.
+        //
+        // The tax is read from MotoPress's price breakdown, which on this
+        // site puts room tax INSIDE mphb_total_price — established on live
+        // on 2026-10-30, not assumed. A booking whose breakdown does not
+        // prove itself has an unknown tax: its money is reported, and it is
+        // in neither room revenue nor any rate, because a total that may
+        // hold tax is a wrong room-revenue figure rather than a missing
+        // one. The screen names how much that is.
+        $direct_room_revenue = $basis === 'payout' ? $direct['paid_room_revenue'] : $direct['room_revenue'];
 
         $gross_revenue = $room_revenue + $direct_room_revenue;
         $net_revenue   = $room_revenue_net + $direct_room_revenue;
@@ -201,6 +209,12 @@ final class Reports
                 'rate_net'           => $rate_net,
                 'rate_nights'        => $rate_nights,
                 'nights_without_revenue' => $ota['nights_without_revenue'] + $direct['nights_without_revenue'],
+                // Direct tax, and what the ledger could not read.
+                'tax_direct'             => $direct['tax'],
+                'tax_unknown_money'      => $direct['tax_unknown_money'],
+                'tax_unknown_nights'     => $direct['tax_unknown_nights'],
+                'tax_unknown_bookings'   => $direct['tax_unknown_bookings'],
+                'tax_readings'           => $direct['tax_readings'],
                 'money_without_nights'   => $no_nights_gross,
                 'stays_without_nights'   => $ota['stays_without_nights'],
                 'nights_from_link'       => $ota['nights_from_link'],
@@ -358,11 +372,16 @@ final class Reports
             // expressed in nights so the split can be done on whole cents.
             // A stay with unknown dates still belongs to the period its
             // check-in falls in; it just contributes no nights.
-            $part  = 1;
-            $whole = 1;
+            $part   = 1;
+            $whole  = 1;
+            $before = 0;
             if ($basis === 'stay' && $total_nights > 0) {
-                $part  = $in_period;
-                $whole = $total_nights;
+                $part   = $in_period;
+                $whole  = $total_nights;
+                // Where this period starts within the stay. Without it each
+                // period rounds its own share and the months stop tying to
+                // the year — see Money::slice().
+                $before = Dates::nights_before($check_in, $check_out, $from);
             } elseif ($basis === 'stay' && ($check_in < $from || $check_in > $to)) {
                 $part = 0;
             }
@@ -409,17 +428,17 @@ final class Reports
             }
 
             if ($part > 0) {
-                self::add_money($figures, $row, $part, $whole, (string) $row['cottage'], (string) $row['channel']);
+                self::add_money($figures, $row, $before, $part, $whole, (string) $row['cottage'], (string) $row['channel']);
                 if (!$nights_known) {
                     // Counted in the money, kept out of the rates.
-                    self::add_no_nights($figures, $row, $part, $whole);
+                    self::add_no_nights($figures, $row, $before, $part, $whole);
                 }
             }
 
             // Cancellation fees are money even on a cancelled stay, and they
             // are always reported on the date of the stay's check-in.
             if ($basis === 'stay' && $status !== 'ok' && $check_in >= $from && $check_in <= $to) {
-                self::add_money($figures, $row, 1, 1, (string) $row['cottage'], (string) $row['channel'], true);
+                self::add_money($figures, $row, 0, 1, 1, (string) $row['cottage'], (string) $row['channel'], true);
             }
         }
 
@@ -496,6 +515,61 @@ final class Reports
             $figures['by_channel'][$channel] ??= self::blank_breakdown();
             $figures['by_channel'][$channel][$type] = ($figures['by_channel'][$channel][$type] ?? 0) + $amount;
         }
+
+        self::add_cash_billed($figures, $from, $to);
+    }
+
+    /**
+     * What the guest was billed, on the cash basis, counted once per stay.
+     *
+     * The same choice the stay basis makes in billed_cents(): a stay's own
+     * guest_total where it has one, its room_sales where it does not. It
+     * cannot be done in the query above, which groups by type — summing
+     * both types would count a Booking.com stay's money twice, and summing
+     * guest_total alone would report $0 for one that has only a
+     * reservation row.
+     *
+     * @param array<string,mixed> $figures
+     */
+    private static function add_cash_billed(array &$figures, string $from, string $to): void
+    {
+        global $wpdb;
+
+        $stays_t = Schema::stays();
+        $lines_t = Schema::lines();
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT l.stay_id, l.channel, COALESCE(s.cottage, '') AS cottage,
+                        SUM(CASE WHEN l.type = 'guest_total' THEN l.amount_cents ELSE 0 END) AS t_guest_total,
+                        SUM(CASE WHEN l.type = 'room_sales'  THEN l.amount_cents ELSE 0 END) AS t_room_sales
+                   FROM {$lines_t} l
+                   LEFT JOIN {$stays_t} s ON s.id = l.stay_id
+                  WHERE l.event_date BETWEEN %s AND %s
+                    AND l.type IN ('guest_total','room_sales')
+                  GROUP BY l.stay_id, l.channel, cottage",
+                $from,
+                $to
+            ),
+            ARRAY_A
+        ) ?: [];
+
+        foreach ($rows as $row) {
+            $billed = self::billed_cents($row);
+            if ($billed === 0) {
+                continue;
+            }
+            $cottage = (string) $row['cottage'];
+            $channel = (string) $row['channel'];
+
+            $figures['billed'] = (int) ($figures['billed'] ?? 0) + $billed;
+            if ($cottage !== '') {
+                $figures['by_cottage'][$cottage] ??= self::blank_breakdown();
+                $figures['by_cottage'][$cottage]['billed'] = (int) ($figures['by_cottage'][$cottage]['billed'] ?? 0) + $billed;
+            }
+            $figures['by_channel'][$channel] ??= self::blank_breakdown();
+            $figures['by_channel'][$channel]['billed'] = (int) ($figures['by_channel'][$channel]['billed'] ?? 0) + $billed;
+        }
     }
 
     /**
@@ -511,16 +585,24 @@ final class Reports
     private static function add_no_nights(
         array &$figures,
         array $row,
+        int $nights_before,
         int $nights_in_period,
         int $total_nights
     ): void {
         foreach (self::MONEY_TYPES as $type) {
-            $figures['no_nights'][$type] += Money::share(
+            $figures['no_nights'][$type] += Money::slice(
                 (int) ($row['t_' . $type] ?? 0),
+                $nights_before,
                 $nights_in_period,
                 $total_nights
             );
         }
+        $figures['no_nights']['billed'] += Money::slice(
+            self::billed_cents($row),
+            $nights_before,
+            $nights_in_period,
+            $total_nights
+        );
     }
 
     /**
@@ -565,6 +647,7 @@ final class Reports
     private static function add_money(
         array &$figures,
         array $row,
+        int $nights_before,
         int $nights_in_period,
         int $total_nights,
         string $cottage,
@@ -575,11 +658,28 @@ final class Reports
             ? ['cancellation_fee', 'cancellation_fee_refund', 'refund', 'adjustment', 'resolution']
             : self::MONEY_TYPES;
 
+        if (!$fees_only) {
+            $billed = Money::slice(self::billed_cents($row), $nights_before, $nights_in_period, $total_nights);
+            if ($billed !== 0) {
+                $figures['billed'] = (int) ($figures['billed'] ?? 0) + $billed;
+                $figures['by_cottage'][$cottage] ??= self::blank_breakdown();
+                $figures['by_cottage'][$cottage]['billed'] = (int) ($figures['by_cottage'][$cottage]['billed'] ?? 0) + $billed;
+                $figures['by_channel'][$channel] ??= self::blank_breakdown();
+                $figures['by_channel'][$channel]['billed'] = (int) ($figures['by_channel'][$channel]['billed'] ?? 0) + $billed;
+            }
+        }
+
         foreach ($types as $type) {
             // A stay crossing the edge of the period gives up the nights
-            // outside it. The split is on whole cents, rounded half away
-            // from zero — see Money::share().
-            $amount = Money::share((int) ($row['t_' . $type] ?? 0), $nights_in_period, $total_nights);
+            // outside it. The split is on whole cents and is computed from
+            // the stay's running total, so the months of a year sum to the
+            // year to the cent — see Money::slice().
+            $amount = Money::slice(
+                (int) ($row['t_' . $type] ?? 0),
+                $nights_before,
+                $nights_in_period,
+                $total_nights
+            );
             if ($amount === 0) {
                 continue;
             }
@@ -591,6 +691,26 @@ final class Reports
             $figures['by_channel'][$channel] ??= self::blank_breakdown();
             $figures['by_channel'][$channel][$type] = $figures['by_channel'][$channel][$type] + $amount;
         }
+    }
+
+    /**
+     * What the guest was billed for this stay, counted once.
+     *
+     * Airbnb and Vrbo state it as guest_total; a Booking.com reservation
+     * row states the same thing as room_sales (its Final amount), and a
+     * Booking.com payout file states it AGAIN as guest_total. Adding the
+     * two would count that money twice, and reading guest_total alone
+     * reports $0 for a Booking.com stay that has not been paid out yet.
+     * So the stay's own guest_total wins where it has one, and its
+     * room_sales stands in where it does not.
+     *
+     * @param array<string,mixed> $row
+     */
+    private static function billed_cents(array $row): int
+    {
+        $guest_total = (int) ($row['t_guest_total'] ?? 0);
+
+        return $guest_total !== 0 ? $guest_total : (int) ($row['t_room_sales'] ?? 0);
     }
 
     /**
@@ -669,6 +789,20 @@ final class Reports
             // and labelled, never blended into one number.
             'nights_with_revenue'    => 0,
             'nights_without_revenue' => 0,
+            // Room revenue is the booking total LESS the room tax inside
+            // it. The tax comes from the MotoPress price breakdown, frozen
+            // at snapshot time; where the breakdown did not prove itself
+            // the tax is unknown, and the booking's money, nights and
+            // bookings are named here and kept out of every rate. An
+            // unknown is never a zero.
+            'room_revenue'    => 0,
+            'paid_room_revenue' => 0,
+            'tax'             => 0,
+            'tax_unknown_money'    => 0,
+            'tax_unknown_nights'   => 0,
+            'tax_unknown_bookings' => 0,
+            'tax_reasons'          => [],
+            'tax_readings'         => 0,
             'lead_times'      => [],
             'lead_time_median' => null,
             'lead_time_mean'  => null,
@@ -678,6 +812,10 @@ final class Reports
         ];
 
         $adjustments = self::adjustments_by_booking();
+        $tax_map     = Taxes::current_map();
+        // Zero readings means no snapshot has read them yet, not that every
+        // booking's tax is a mystery. The screen says which.
+        $out['tax_readings'] = count($tax_map);
 
         // Read live, because the booking date is structure rather than
         // money: it is not copied into the Originals and cannot move a
@@ -723,16 +861,35 @@ final class Reports
                 }
             }
 
+            // What of this booking's total is room revenue. The tax inside
+            // it was read from the MotoPress price breakdown and frozen; a
+            // booking whose breakdown did not prove itself has an unknown
+            // tax, so its room revenue is unknown too — named, and out of
+            // every rate.
+            $reading    = $tax_map[$booking_id] ?? null;
+            $tax_known  = $reading !== null && $reading['known'];
+            $tax_cents  = $tax_known ? (int) $reading['tax_cents'] : 0;
+            $net_of_tax = (int) $booking['total_cents'] - $tax_cents;
+            if (!$tax_known) {
+                $reason = $reading === null ? Breakdown::NO_BREAKDOWN : (string) $reading['reason'];
+                $out['tax_reasons'][$reason] = ($out['tax_reasons'][$reason] ?? 0) + 1;
+            }
+
             if ($nights > 0) {
                 $out['nights'] += $nights;
                 // The same rule the platform side uses, the other way up: a
                 // night only divides a rate when there is room revenue
-                // under it. On the stay basis that is the booking's total,
-                // whether or not it has been paid yet.
-                if ((int) $booking['total_cents'] > 0) {
+                // under it. On the stay basis that is the booking's total
+                // less its tax, whether or not it has been paid yet — and
+                // only where that tax is known.
+                if ((int) $booking['total_cents'] <= 0) {
+                    // No money above these nights at all. That is the
+                    // night-with-no-money rule, not an unknown tax.
+                    $out['nights_without_revenue'] += $nights;
+                } elseif ($tax_known) {
                     $out['nights_with_revenue'] += $nights;
                 } else {
-                    $out['nights_without_revenue'] += $nights;
+                    $out['tax_unknown_nights'] += $nights;
                 }
                 $out['by_cottage'][$cottage] ??= self::blank_breakdown();
                 $out['by_cottage'][$cottage]['nights'] += $nights;
@@ -760,23 +917,34 @@ final class Reports
                 // The same nights-based split the platform stays use, on
                 // whole cents. A booking with no nights in the period still
                 // belongs here whole if it begins inside it.
+                $before = 0;
                 if ($total > 0) {
-                    $part  = $nights;
-                    $whole = $total;
+                    $part   = $nights;
+                    $whole  = $total;
+                    $before = Dates::nights_before($booking['check_in'], $booking['check_out'], $from);
                 } else {
                     $part  = ($booking['check_in'] >= $from && $booking['check_in'] <= $to) ? 1 : 0;
                     $whole = 1;
                 }
                 if ($part > 0) {
                     $out['bookings'] += $nights > 0 ? 1 : 0;
-                    $out['due']      += Money::share((int) $booking['total_cents'], $part, $whole);
-                    $out['recorded'] += Money::share((int) $booking['paid'], $part, $whole);
-                    $out['refunded'] += Money::share((int) $booking['refunded'], $part, $whole);
-                    $out['refunds']  += Money::share($refunds, $part, $whole);
-                    if ($pre_exports) {
-                        $out['assumed_pre_exports'] += Money::share($assumed, $part, $whole);
+                    $out['due']      += Money::slice((int) $booking['total_cents'], $before, $part, $whole);
+                    if ($tax_known || (int) $booking['total_cents'] <= 0) {
+                        $out['room_revenue'] += Money::slice($net_of_tax, $before, $part, $whole);
+                        $out['tax']          += Money::slice($tax_cents, $before, $part, $whole);
                     } else {
-                        $out['assumed'] += Money::share($assumed, $part, $whole);
+                        // Reported as money, kept out of every rate, and
+                        // named on the screen as an unknown tax.
+                        $out['tax_unknown_money'] += Money::slice((int) $booking['total_cents'], $before, $part, $whole);
+                        $out['tax_unknown_bookings'] += $nights > 0 ? 1 : 0;
+                    }
+                    $out['recorded'] += Money::slice((int) $booking['paid'], $before, $part, $whole);
+                    $out['refunded'] += Money::slice((int) $booking['refunded'], $before, $part, $whole);
+                    $out['refunds']  += Money::slice($refunds, $before, $part, $whole);
+                    if ($pre_exports) {
+                        $out['assumed_pre_exports'] += Money::slice($assumed, $before, $part, $whole);
+                    } else {
+                        $out['assumed'] += Money::slice($assumed, $before, $part, $whole);
                     }
                 }
                 continue;
@@ -794,6 +962,21 @@ final class Reports
                 $amount = (int) $payment['amount_cents'];
                 if ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_COMPLETED) {
                     $out['recorded'] = $out['recorded'] + $amount;
+                    // Cash basis: a payment is part room revenue and part
+                    // tax in the same proportion as the booking it settles,
+                    // which is how a part payment is posted in any set of
+                    // books. Where the tax is unknown the whole payment is
+                    // named as unknown rather than counted as room revenue.
+                    if ($tax_known || (int) $booking['total_cents'] <= 0) {
+                        $out['paid_room_revenue'] += Money::slice(
+                            $amount,
+                            0,
+                            $net_of_tax,
+                            (int) $booking['total_cents']
+                        );
+                    } else {
+                        $out['tax_unknown_money'] = $out['tax_unknown_money'] + $amount;
+                    }
                 } elseif ((string) $payment['payment_status'] === Mphb_Reader::PAYMENT_REFUNDED) {
                     $out['refunded'] = $out['refunded'] + $amount;
                 }
@@ -908,6 +1091,8 @@ final class Reports
             'by_cottage'            => [],
             'by_channel'            => [],
         ];
+        $figures['billed'] = 0;
+        $figures['no_nights']['billed'] = 0;
         foreach (self::MONEY_TYPES as $type) {
             $figures[$type] = 0;
             $figures['no_nights'][$type] = 0;
@@ -939,7 +1124,17 @@ final class Reports
      */
     public static function gross_room_revenue(array $figures): int
     {
-        return (int) ($figures['guest_total'] ?? 0)
+        // What the guest was billed, once. A Booking.com reservation row
+        // states its Final amount as room_sales and its payout file states
+        // the SAME money again as guest_total, so the two are never added:
+        // 'billed' is whichever of them the stay actually has, chosen per
+        // stay. Reading guest_total alone reported $0 of gross for every
+        // Booking.com stay whose payout had not arrived, while its nights
+        // went on dividing the rate — the same shape as the errors of
+        // 0.3.1, found by the audit once the direct side stopped masking
+        // it. See Copies::stay_money(), which has made this choice since
+        // 0.1.0 for the same reason.
+        return (int) ($figures['billed'] ?? 0)
             - (int) ($figures['tax_in_payout'] ?? 0)
             - (int) ($figures['tax_platform_remitted'] ?? 0)
             + (int) ($figures['refund'] ?? 0);
@@ -1011,6 +1206,11 @@ final class Reports
                 'label'      => __('Nights Behind The Rate', 'dcc-ledger'),
                 'definition' => __('The stays the average rate divides by: those with a night inside the range AND money attached. A night with nothing above it is left out of both sides of that division.', 'dcc-ledger'),
                 'matches'    => static fn (array $row): bool => (int) $row['nights_in'] > 0 && $has_money($row),
+            ],
+            'room_revenue' => [
+                'label'      => __('Room Revenue, Gross', 'dcc-ledger'),
+                'definition' => __('What the guest was billed, counted once per stay — a Booking.com reservation states it as its Final amount and its payout file states the same money again, so the two are never added — less both kinds of tax, plus refunds. A direct booking contributes its MotoPress total less the room tax inside that total; where the tax cannot be read it contributes nothing and is named apart.', 'dcc-ledger'),
+                'matches'    => $has_money,
             ],
             'tax_platform_remitted' => [
                 'label'      => __('Tax The Platform Remitted', 'dcc-ledger'),
@@ -1087,7 +1287,7 @@ final class Reports
     /** @return array<string,float|int> */
     private static function blank_breakdown(): array
     {
-        $row = ['nights' => 0];
+        $row = ['nights' => 0, 'billed' => 0];
         foreach (self::MONEY_TYPES as $type) {
             $row[$type] = 0;
         }

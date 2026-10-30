@@ -165,6 +165,22 @@ final class Dates
         return $n === null ? 0 : max(0, $n);
     }
 
+    /**
+     * Nights of a stay that fall BEFORE $from — the running position a
+     * period split needs so that consecutive periods tie to the whole.
+     * See Money::slice().
+     */
+    public static function nights_before(?string $check_in, ?string $check_out, string $from): int
+    {
+        if ($check_in === null || $check_out === null) {
+            return 0;
+        }
+        $end = min($check_out, $from);
+        $n   = self::nights($check_in, $end);
+
+        return $n === null ? 0 : max(0, $n);
+    }
+
     public static function add_days(string $date, int $days): string
     {
         $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $date, self::timezone());

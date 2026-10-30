@@ -57,9 +57,24 @@ check-out minus check-in.
 **Room Revenue (Gross)** = what the guest paid for the room, before the
 platform's cut and before any tax.
 
-From it are removed: tax the platform remitted, and tax collected inside a
-payout. Not removed: the platform's commission or service fee — that is what
+From it are removed: tax the platform remitted, tax collected inside a
+payout, and — for a direct booking — the room tax inside its MotoPress
+total. Not removed: the platform's commission or service fee — that is what
 makes it gross.
+
+What the guest was billed is counted **once** per stay. A Booking.com
+reservation row states its Final amount; its payout file states the same
+money again as a guest total. The stay's guest total is used where it has
+one, and the reservation's Final amount where it does not — never the sum,
+and never the guest total alone, which reported $0 for every Booking.com
+stay whose payout had not arrived.
+
+A direct booking's total **includes room tax on this site** — established
+by reading live on 2026-10-30, not assumed. Room revenue is therefore the
+booking's price breakdown total less its taxes. Where the breakdown cannot
+be read and proved, the tax is **unknown, not zero**: the booking's money
+is reported, and the booking is in neither room revenue nor any rate. The
+screen says how many bookings, nights and dollars that is.
 
 **Room Revenue (Net)** = gross less the platform's commission and service
 fees. For a platform stay this is the payout, netted of refunds, resolutions

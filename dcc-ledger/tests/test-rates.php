@@ -133,12 +133,13 @@ T::same([], $wpdb->mphb_writes(), 'Reading a booking\'s dates writes nothing to 
 T::group('The audit runs the same two rules over the stored data');
 
 $audit = Audit::run('2025-01-01', '2026-09-30');
-T::same(4, count($audit), 'Every invariant is checked');
+T::same(5, count($audit), 'Every invariant is checked');
 T::same(
     [
         'net is never above gross',
         'no money in a rate without nights',
         'no nights in a rate without money',
+        'tax comes out of a total, never into it',
         'the months add up to the range',
     ],
     array_column($audit, 'what'),
@@ -146,6 +147,69 @@ T::same(
 );
 foreach ($audit as $check) {
     T::ok($check['ok'], 'Audit: ' . $check['what'] . ' — ' . $check['detail']);
+}
+
+T::group('A stay whose money will not divide evenly still ties across the month end');
+
+// The defect of 0.3.2, in the shape the Director found it: a stay of two
+// nights whose money is an odd number of cents. Half of it is x.5, and
+// rounding each month's half on its own rounds BOTH of them up — so the
+// two months came to a cent more than the year. The fixtures had no stay
+// like it, which is why only the real data showed it.
+global $wpdb;
+$wpdb->insert(Schema::stays(), [
+    'channel'    => 'airbnb',
+    'code'       => 'HMSPLIT001',
+    'cottage'    => '22',
+    'check_in'   => '2025-05-31',
+    'check_out'  => '2025-06-02',
+    'nights'     => 2,
+    'status'     => 'ok',
+    'created_at' => '2025-05-01 00:00:00',
+    'updated_at' => '2025-05-01 00:00:00',
+]);
+$odd = (int) Repo::stay_id('airbnb', 'HMSPLIT001');
+foreach ([['guest_total', 49463], ['payout', 44517], ['commission', 1483]] as [$type, $cents]) {
+    $wpdb->insert(Schema::lines(), [
+        'stay_id'      => $odd,
+        'channel'      => 'airbnb',
+        'type'         => $type,
+        'amount'       => \DCCL\Money::to_decimal($cents),
+        'amount_cents' => $cents,
+        'event_date'   => '2025-05-31',
+        'hash'         => 'split-probe-' . $type,
+        'created_at'   => '2025-05-01 00:00:00',
+    ]);
+}
+Reports::flush_cache();
+
+$pair = Reports::summary('2025-05-01', '2025-06-30', 'stay');
+$may  = Reports::summary('2025-05-01', '2025-05-31', 'stay');
+$june = Reports::summary('2025-06-01', '2025-06-30', 'stay');
+
+T::same(
+    (int) $pair['totals']['guest_total'],
+    (int) $may['totals']['guest_total'] + (int) $june['totals']['guest_total'],
+    'An odd number of cents over two nights: the months come to the pair exactly'
+);
+T::same(
+    (int) $pair['totals']['room_revenue_gross'],
+    (int) $may['totals']['room_revenue_gross'] + (int) $june['totals']['room_revenue_gross'],
+    'And so does gross room revenue'
+);
+
+$year   = Reports::summary('2025-01-01', '2025-12-31', 'stay');
+$months = 0;
+for ($m = 1; $m <= 12; $m++) {
+    $first  = sprintf('2025-%02d-01', $m);
+    $last   = date('Y-m-t', (int) strtotime($first));
+    $months += (int) Reports::summary($first, $last, 'stay')['totals']['guest_total'];
+}
+T::same((int) $year['totals']['guest_total'], $months, 'And the twelve months of 2025 come to the year, to the cent');
+
+$split_audit = Audit::run('2025-01-01', '2025-12-31');
+foreach ($split_audit as $check) {
+    T::ok($check['ok'], 'With the odd stay in it: ' . $check['what'] . ' — ' . $check['detail']);
 }
 
 T::group('The audit names a figure that breaks its own rule');
@@ -202,9 +266,9 @@ T::ok(
     'And divides what those nights earned, not only what has been paid'
 );
 T::same(
-    (int) $october['direct']['due'] + (int) $october['totals']['room_revenue'],
+    (int) $october['direct']['room_revenue'] + (int) $october['totals']['room_revenue'],
     (int) $october['totals']['room_revenue_gross'],
-    'Which is the booking totals plus the platforms\' room revenue'
+    'Which is the booking totals net of tax, plus the platforms\' room revenue'
 );
 
 T::group('A direct night with no money does not divide the rate');
@@ -238,3 +302,172 @@ T::group('The audit holds for a range that starts and ends mid-month');
 foreach (Audit::run('2025-01-15', '2026-09-20') as $check) {
     T::ok($check['ok'], 'Part-month range: ' . $check['what'] . ' — ' . $check['detail']);
 }
+
+T::group('A direct booking\'s room revenue is its total less the tax inside it');
+
+// Established on live on 2026-10-30, read-only and in aggregate:
+// `_mphb_booking_price_breakdown` is present on 281 booking rows; of 117
+// confirmed bookings sampled with one, 76 list room taxes; the breakdown's
+// total equals `mphb_total_price` on 116 of the 117; and no services
+// appear in any breakdown. So the total INCLUDES tax, and room revenue —
+// which excludes tax — cannot be the total.
+$january = Reports::summary('2025-01-01', '2025-01-31', 'stay');
+
+T::ok((int) $january['direct']['tax'] > 0, 'January has direct tax inside its booking totals');
+T::same(
+    (int) $january['direct']['due'] - (int) $january['direct']['tax'],
+    (int) $january['direct']['room_revenue'],
+    'And its room revenue is the totals less that tax, to the cent'
+);
+T::ok(
+    (int) $january['direct']['room_revenue'] < (int) $january['direct']['due'],
+    'Which is below what the guests were billed'
+);
+T::same(0, (int) $january['direct']['tax_unknown_money'], 'Nothing in January has an unknown tax');
+
+T::group('A booking with no breakdown has an unknown tax, never a tax of zero');
+
+// Take the breakdown away from one booking — the shape of the 147 live
+// bookings that have none — and the ledger must stop counting its total as
+// room revenue rather than counting its tax as nothing.
+global $wpdb;
+$wpdb->query(
+    $wpdb->prepare(
+        "DELETE FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s",
+        7983,
+        '_mphb_booking_price_breakdown'
+    )
+);
+Snapshot::run(false, 1);
+Reports::flush_cache();
+
+$after = Reports::summary('2025-01-01', '2025-01-31', 'stay');
+
+T::ok((int) $after['direct']['tax_unknown_bookings'] > 0, 'The booking is named as one whose tax is unknown');
+T::ok((int) $after['direct']['tax_unknown_money'] > 0, 'With its money named beside it');
+T::ok((int) $after['direct']['tax_unknown_nights'] > 0, 'And its nights');
+T::ok(
+    (int) $after['direct']['room_revenue'] < (int) $january['direct']['room_revenue'],
+    'Its total is no longer counted as room revenue'
+);
+T::same(
+    (int) $january['direct']['due'],
+    (int) $after['direct']['due'],
+    'But the money is still reported: an unknown tax hides nothing'
+);
+T::ok(
+    (int) $after['totals']['rate_nights'] < (int) $january['totals']['rate_nights'],
+    'And its nights come out of the rate, because a rate it cannot divide is not a rate'
+);
+T::ok(
+    isset($after['direct']['tax_reasons']['no breakdown']),
+    'The screen is told why: there is no breakdown to read'
+);
+
+foreach (Audit::run('2025-01-01', '2025-12-31') as $check) {
+    T::ok($check['ok'], 'With an unknown tax in it: ' . $check['what'] . ' — ' . $check['detail']);
+}
+
+T::group('Booking.com\'s gross is its Final amount, even before the payout arrives');
+
+// A Booking.com reservation row states its Final amount as room sales; its
+// payout file states the same money again as a guest total. Reading the
+// guest total alone reported $0 of gross for every Booking.com stay whose
+// payout had not arrived, while its nights went on dividing the rate.
+$november = Reports::summary('2025-11-01', '2025-11-30', 'stay');
+$bcom_nov = $november['by_channel']['bookingcom'] ?? [];
+
+T::ok((int) ($bcom_nov['nights'] ?? 0) > 0, 'November has Booking.com nights');
+T::same(0, (int) ($bcom_nov['guest_total'] ?? 0), 'With no payout yet, so no guest total');
+T::ok((int) ($bcom_nov['room_sales'] ?? 0) > 0, 'But a Final amount from the reservations file');
+T::same(
+    (int) ($bcom_nov['room_sales'] ?? 0),
+    (int) ($bcom_nov['room_revenue'] ?? 0),
+    'And its gross room revenue is that Final amount, not $0'
+);
+T::same(
+    (int) ($bcom_nov['room_sales'] ?? 0) - (int) ($bcom_nov['commission'] ?? 0),
+    (int) ($bcom_nov['room_revenue_net'] ?? 0),
+    'Net is that less the commission, so it is not a negative figure'
+);
+
+// March 2025 has both: a reservation row AND a payout. The money must be
+// counted once, not twice.
+$march_bcom = Reports::summary('2025-03-01', '2025-03-31', 'stay')['by_channel']['bookingcom'] ?? [];
+T::ok((int) ($march_bcom['guest_total'] ?? 0) > 0, 'March has a Booking.com payout behind it');
+T::same(
+    (int) ($march_bcom['guest_total'] ?? 0)
+        - (int) ($march_bcom['tax_in_payout'] ?? 0)
+        - (int) ($march_bcom['tax_platform_remitted'] ?? 0)
+        + (int) ($march_bcom['refund'] ?? 0),
+    (int) ($march_bcom['room_revenue'] ?? 0),
+    'And where both are stated the guest total wins: the money is counted once'
+);
+
+T::group('A direct stay crossing two month ends still ties to the cent');
+
+// Three periods is where rounding each share on its own breaks: two
+// periods always tie by accident, because the halves of a stay round in
+// opposite directions. Thirty nights over January, February and March of
+// $100.00 come to $99.99 if each month is rounded without regard to where
+// in the stay it begins.
+$wpdb->insert($wpdb->posts, [
+    'ID' => 9077, 'post_parent' => 0, 'post_type' => 'mphb_booking',
+    'post_status' => 'confirmed', 'post_title' => 'Booking #9077',
+    'post_date' => '2026-01-02 10:00:00',
+]);
+$wpdb->insert($wpdb->posts, [
+    'ID' => 90770, 'post_parent' => 9077, 'post_type' => 'mphb_reserved_room',
+    'post_status' => 'publish', 'post_title' => 'Reserved room',
+    'post_date' => '2026-01-02 10:00:00',
+]);
+foreach ([
+    [90770, '_mphb_room_id', '1066'],
+    [9077, 'mphb_check_in_date', '2026-01-31'],
+    [9077, 'mphb_check_out_date', '2026-03-02'],
+    [9077, 'mphb_total_price', '100.00'],
+    [9077, '_mphb_booking_price_breakdown', dccl_price_breakdown('100.00', 1066)],
+] as [$post, $key, $value]) {
+    $wpdb->insert($wpdb->postmeta, ['post_id' => $post, 'meta_key' => $key, 'meta_value' => $value]);
+}
+Snapshot::run(false, 1);
+Reports::flush_cache();
+
+$quarter = Reports::summary('2026-01-01', '2026-03-31', 'stay');
+$by_month = 0;
+foreach ([['2026-01-01', '2026-01-31'], ['2026-02-01', '2026-02-28'], ['2026-03-01', '2026-03-31']] as [$a, $b]) {
+    $by_month += (int) Reports::summary($a, $b, 'stay')['direct']['room_revenue'];
+}
+T::ok((int) $quarter['direct']['room_revenue'] > 0, 'The quarter has direct room revenue in it');
+T::same(
+    (int) $quarter['direct']['room_revenue'],
+    $by_month,
+    'January, February and March come to the quarter, to the cent'
+);
+
+T::group('A tax reading is versioned, never overwritten');
+
+$first = DCCL\Taxes::current(9077);
+T::ok($first !== null, 'The snapshot froze a reading for the new booking');
+T::same(1, (int) $first['version'], 'As version 1');
+T::ok((int) $first['tax_cents'] > 0, 'With the tax it read out of the breakdown');
+
+// MotoPress is re-priced: a new reading, beside the old one, never over it.
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s", 9077, 'mphb_total_price'));
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s", 9077, '_mphb_booking_price_breakdown'));
+$wpdb->insert($wpdb->postmeta, ['post_id' => 9077, 'meta_key' => 'mphb_total_price', 'meta_value' => '120.00']);
+$wpdb->insert($wpdb->postmeta, ['post_id' => 9077, 'meta_key' => '_mphb_booking_price_breakdown', 'meta_value' => dccl_price_breakdown('120.00', 1066)]);
+Snapshot::run(false, 1);
+Reports::flush_cache();
+
+$second = DCCL\Taxes::current(9077);
+T::same(2, (int) $second['version'], 'The re-priced booking gets a second version');
+T::ok((int) $second['tax_cents'] > (int) $first['tax_cents'], 'Reading the larger tax inside the larger total');
+
+$rows = $wpdb->get_results(
+    $wpdb->prepare("SELECT version, is_current FROM " . Schema::booking_taxes() . " WHERE mphb_booking_id = %d ORDER BY version", 9077),
+    ARRAY_A
+);
+T::same(2, count($rows), 'Both readings are still there');
+T::same(0, (int) $rows[0]['is_current'], 'The first is no longer current');
+T::same(1, (int) $rows[1]['is_current'], 'And the second is');

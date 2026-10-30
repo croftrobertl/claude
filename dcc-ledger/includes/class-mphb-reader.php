@@ -34,6 +34,12 @@ final class Mphb_Reader
     public const META_PAYMENT_AMOUNT = '_mphb_amount';
     public const META_PAYMENT_BOOKING = '_mphb_booking_id';
     public const META_NOTE           = 'mphb_note';
+    /**
+     * What the booking's price is made of. On this site the total INCLUDES
+     * room tax (established on live 2026-10-30), so room revenue has to come
+     * from here. Read for its numbers only — see Breakdown.
+     */
+    public const META_BREAKDOWN      = '_mphb_booking_price_breakdown';
     public const META_INTERNAL_NOTE  = '_mphb_booking_internal_notes';
 
     /**
@@ -127,6 +133,7 @@ final class Mphb_Reader
             self::META_ICAL_SUMMARY,
             self::META_ICAL_DESC,
             self::META_TOTAL,
+            self::META_BREAKDOWN,
             self::META_NOTE,
             self::META_INTERNAL_NOTE,
             self::META_LAST_NAME,
@@ -164,6 +171,11 @@ final class Mphb_Reader
 
             $pay = $payments[$id] ?? ['recorded' => 0, 'refunded' => 0, 'count' => 0, 'events' => []];
 
+            // The tax inside the total, where the breakdown proves itself.
+            // The breakdown is read here and dropped; only the cents travel.
+            $total_cents = Money::to_cents($m[self::META_TOTAL] ?? 0);
+            $tax         = Breakdown::read($m[self::META_BREAKDOWN] ?? null, $total_cents);
+
             // Hashed here, inside the loop. The names themselves go no
             // further than these three local variables.
             $guest_keys = Names::keys_from_parts(
@@ -192,7 +204,14 @@ final class Mphb_Reader
                 'codes'       => $codes,
                 'note_codes'  => $note_codes,
                 'guest_keys'  => $guest_keys,
-                'total'       => Money::to_cents($m[self::META_TOTAL] ?? 0),
+                'total'       => $total_cents,
+                // Room revenue excludes tax. Where the breakdown does not
+                // prove itself the tax is unknown, never zero, and the
+                // booking stays out of every rate.
+                'tax_cents'   => (int) $tax['tax_cents'],
+                'tax_known'   => (bool) $tax['known'],
+                'tax_reason'  => (string) $tax['reason'],
+                'has_tax_line' => (bool) $tax['has_tax'],
                 // Paid means completed only. A refunded payment keeps its
                 // amount in MotoPress, so it is reported apart, never added.
                 'paid_recorded' => $pay['recorded'],

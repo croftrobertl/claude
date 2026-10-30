@@ -39,6 +39,7 @@ const LIVE_FIRST_NAME         = 'mphb_first_name';
 const LIVE_LAST_NAME          = 'mphb_last_name';
 const LIVE_GUEST_NAME         = 'mphb_guest_name';
 const LIVE_INTERNAL_NOTE      = '_mphb_booking_internal_notes';
+const LIVE_BREAKDOWN          = '_mphb_booking_price_breakdown';
 const LIVE_SYNC_ID            = '_mphb_sync_id';
 const LIVE_ICAL_PRODID        = 'mphb_ical_prodid';
 const LIVE_ICAL_SUMMARY       = 'mphb_ical_summary';
@@ -46,6 +47,41 @@ const LIVE_ICAL_DESC          = 'mphb_ical_description';
 const LIVE_PAYMENT_COMPLETED  = 'mphb-p-completed';
 const LIVE_PAYMENT_REFUNDED   = 'mphb-p-refunded';
 const LIVE_PAYMENT_FAILED     = 'mphb-p-failed';
+
+/**
+ * A MotoPress-shaped price breakdown: a room subtotal, the room tax inside
+ * the total, and the total itself. Lake County's tourist and sales tax comes
+ * to 11%%, which is the shape Rob's bookings carry.
+ *
+ * Written as a serialized array with LITERAL key names, the way MotoPress
+ * stores it — never built from the plugin's own constants, for the same
+ * reason the rest of this file is not.
+ */
+function dccl_price_breakdown(string $total, int $room_id, bool $with_tax = true): string
+{
+    $total_cents = (int) round(((float) $total) * 100);
+    $tax_cents   = $with_tax ? $total_cents - intdiv($total_cents * 100, 111) : 0;
+    $base_cents  = $total_cents - $tax_cents;
+    $money       = static fn (int $cents): string => number_format($cents / 100, 2, '.', '');
+
+    $room = [
+        'room_id'  => $room_id,
+        'subtotal' => $money($base_cents),
+        'total'    => $money($total_cents),
+    ];
+    if ($with_tax) {
+        $room['taxes'] = [
+            ['name' => 'Accommodation tax', 'amount' => $money($tax_cents)],
+        ];
+    }
+
+    return serialize([
+        'rooms'    => [$room],
+        'fees'     => [],
+        'subtotal' => $money($base_cents),
+        'total'    => $money($total_cents),
+    ]);
+}
 
 function dccl_seed_mphb(): void
 {
@@ -80,6 +116,20 @@ function dccl_seed_mphb(): void
         $wpdb->insert($wpdb->postmeta, ['post_id' => $id, 'meta_key' => LIVE_CHECK_OUT, 'meta_value' => $check_out]);
         foreach ($meta as $key => $value) {
             $wpdb->insert($wpdb->postmeta, ['post_id' => $id, 'meta_key' => $key, 'meta_value' => (string) $value]);
+        }
+
+        // The price breakdown MotoPress stores beside the total. On this
+        // site the total INCLUDES room tax, so the ledger reads the tax out
+        // of here — see Breakdown. Every priced direct booking gets one
+        // unless the case under test deliberately withholds it.
+        $priced   = isset($meta[LIVE_TOTAL]) && (float) $meta[LIVE_TOTAL] !== 0.0;
+        $imported = isset($meta[LIVE_SYNC_ID]);
+        if ($priced && !$imported && !array_key_exists(LIVE_BREAKDOWN, $meta)) {
+            $wpdb->insert($wpdb->postmeta, [
+                'post_id'    => $id,
+                'meta_key'   => LIVE_BREAKDOWN,
+                'meta_value' => dccl_price_breakdown((string) $meta[LIVE_TOTAL], $room_id),
+            ]);
         }
     };
 
