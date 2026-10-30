@@ -66,11 +66,12 @@ function serve(n) {
 
   /* a page of the real site on a given day, the scene forced and played on
    * the mocked clock */
-  async function page(width, { date = '2026-11-11', vig = 'annivdance', theme, block = [] } = {}) {
+  async function page(width, { date = '2026-11-11', vig = 'annivdance', theme, block = [], head = '', tweak } = {}) {
     const cfg = config(['--placement=content', '--layering=front', '--density=16', '--diag'].concat(theme ? ['--theme=' + theme] : []));
     cfg.date = date; cfg.forceHour = 12; cfg.vigOnly = vig; cfg.vigFirst = 4000; cfg.heroFirst = [9999, 10000];
+    if (tweak) { tweak(cfg); }
     const reqs = [], errs = [];
-    const ses = await open(rt.page({ config: cfg }), {
+    const ses = await open(rt.page({ config: cfg, extraHead: head }), {
       viewport: { width, height: width < 768 ? 844 : 900 }, dsf: 3, ...rt.opts(width),   /* (its extra is replaced below, and called from it) */
       init: 'Math.random = (() => { let a = 7; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();',
       extra: (route, url) => {
@@ -97,8 +98,19 @@ function serve(n) {
   }
 
   console.log('\n  --- the pair on the real home page ---');
-  for (const width of [390, 768, 1440]) {
-    const P = await page(width), pg = P.pg;
+  /* the three widths, then two tight cases where the 8 px rule must do the
+   * work (4.13.5, the Director: taking it out must fail a test). With a
+   * short picture alone the pair's starting size already allows for the
+   * tagline, so a keep-clear element BESIDE the pair is the case that
+   * needs the rule. */
+  const TIGHT = {
+    short: '<style>#header-image-main-inside{height:330px!important}</style>',
+    beside: '<script>document.addEventListener("DOMContentLoaded",function(){var p=document.querySelector("#header-image-main-inside"),d=document.createElement("div");d.setAttribute("data-dcc-keep-clear","");d.style.cssText="position:absolute;left:calc(50% - 95px);bottom:14px;width:30px;height:70px;z-index:5";p.appendChild(d);});</script>',
+  };
+  for (let [width, tight] of [[390], [768], [1440], [390, 'short'], [390, 'beside'], [1440, 'beside']]) {
+    const P = await page(width, { head: tight ? TIGHT[tight] : '' }), pg = P.pg;
+    const width0 = width;
+    if (tight) { width = `${width0} (${tight === 'short' ? 'a short 330 px header picture' : 'a keep-clear box beside the pair'})`; }
     try {
       /* the plan and the pre-draw are idle-time work: let them finish */
       await pg.waitForFunction(() => { const a = window.DCCSeasonsEngine._state.anniv; return a.done && a.plan && !a.plan.none; }, null, { timeout: 30000, polling: 200 });
@@ -106,15 +118,16 @@ function serve(n) {
       const pic = await pg.evaluate(() => { const r = document.querySelector('#header-image-main-inside').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; });
       const P0 = a.plan;
       ok(a.H <= Math.round(a.cap) && a.H >= 24, `${width}: the pair stands ${a.H} px (approved cap ${Math.round(a.cap)})`, JSON.stringify({ H: a.H, cap: a.cap }));
-      const cap = { 390: 60, 768: 76, 1440: 65 }[width];
+      const cap = { 390: 60, 768: 76, 1440: 65 }[width0];
       ok(Math.abs(a.cap - cap) < 0.5, `${width}: the cap is Rob's approved size here (${cap})`, a.cap);
+      if (tight) { ok(a.H < cap, `${width}: the pair is made smaller to stay clear (${a.H} px)`, a.H); }
       ok(Math.abs((P0.xa + P0.xb) / 2 - pic[2] / 2) < 0.5, `${width}: centred in the picture`, JSON.stringify([P0.xa, P0.xb, pic[2]]));
       /* the keep-clear set, measured here: the title's and tagline's
        * letters (a Range per text node) and the boxes */
       const keep = await pg.evaluate(() => {
         const out = [];
         document.querySelectorAll('#header-page-title').forEach(el => { const tw = document.createTreeWalker(el, 4); let n; while ((n = tw.nextNode())) { if (!/\S/.test(n.nodeValue)) continue; const r = document.createRange(); r.selectNodeContents(n); for (const q of r.getClientRects()) if (q.width && q.height) out.push([q.left, q.top, q.right, q.bottom, 'text']); } });
-        document.querySelectorAll('#site-header-main, .site-header-bottom-fixed, .dcc-sun-dial, .menu-burger').forEach(el => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return; const q = el.getBoundingClientRect(); if (q.width && q.height) out.push([q.left, q.top, q.right, q.bottom, el.className || el.id]); });
+        document.querySelectorAll('#site-header-main, .site-header-bottom-fixed, .dcc-sun-dial, .menu-burger, [data-dcc-keep-clear]').forEach(el => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return; const q = el.getBoundingClientRect(); if (q.width && q.height) out.push([q.left, q.top, q.right, q.bottom, el.className || el.id]); });
         return out;
       });
       let worst = 1e9, who = '';
@@ -142,6 +155,25 @@ function serve(n) {
       ok(Math.abs(r.t - 11) < 0.2, `${width}: the scene lasts ${r.t.toFixed(2)} s`, r.t);
       ok(!P.errs.length, `${width}: no page errors`, P.errs.join(' | '));
       ok(P.reqs.includes('art-crane.js') && P.reqs.includes('art-anniversary.js') && !P.reqs.includes('art-thanksgiving.js'), `${width}: the crane and the Anniversary's pieces fetched, not Thanksgiving's`, P.reqs.join(' '));
+    } finally { await P.ses.close(); }
+  }
+
+  console.log('\n  --- the egg ends on a heart that fits the screen (Rob, 2026-10-30) ---');
+  for (const width of [390, 768, 1440]) {
+    const P = await page(width, { vig: null, tweak: c => { c.vigFirst = 1e9; c.themes.anniversary.egg.finaleAt = 2000; } }), pg = P.pg;
+    try {
+      const egg = await pg.evaluate(() => window.DCC_SEASONS.themes.anniversary.egg);
+      ok(egg.finale === '♥' && egg.finaleFit && egg.colors.join() === '#E2C25A,#E8838F', `${width}: the gold-and-blush rain, ending on a heart`, JSON.stringify(egg));
+      for (let i = 0; i < 4; i++) { await pg.click('#header-page-title .entry-title', { delay: 20 }); await pg.waitForTimeout(90); }
+      await pg.waitForFunction(() => window.DCCSeasonsMatrix && window.DCCSeasonsMatrix._finBox, null, { timeout: 15000, polling: 100 });
+      await pg.waitForTimeout(1500);   /* fully formed (0.8 s fade-in) */
+      const b = await pg.evaluate(() => window.DCCSeasonsMatrix._finBox), vw = b[4], vh = b[5];
+      const m = [b[0], vw - b[2], b[1], vh - b[3]], mw = Math.min(m[0], m[1]) / vw, mh = Math.min(m[2], m[3]) / vh;
+      ok(mw >= 0.12 && mh >= 0.12, `${width}: the heart sits inside the screen with ${Math.round(mw * 100)}% / ${Math.round(mh * 100)}% margin (left-right / top-bottom; at least 12%)`, JSON.stringify(b));
+      ok(Math.abs((m[0] - m[1]) / vw) < 0.06 && Math.abs((m[2] - m[3]) / vh) < 0.06, `${width}: centered`, JSON.stringify(m));
+      const big = Math.max((b[2] - b[0]) / vw, (b[3] - b[1]) / vh);
+      ok(big >= 0.5, `${width}: and big enough to read the moment it forms (${Math.round(big * 100)}% of the screen's ${(b[2] - b[0]) / vw > (b[3] - b[1]) / vh ? 'width' : 'height'})`, JSON.stringify(b));
+      if (process.env.DCC_EGG_SHOTS) { await pg.screenshot({ path: path.join(process.env.DCC_EGG_SHOTS, `egg-${width}.png`) }); }
     } finally { await P.ses.close(); }
   }
 

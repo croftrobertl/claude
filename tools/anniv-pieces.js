@@ -52,7 +52,11 @@ function band(id, cx, cy, R, k, t, h) {
 }
 
 /* a heart outline, centred, w wide */
-const HEART = 'M12 21.6 C9 19 2.2 14 2.2 8 C2.2 4.4 4.8 2.2 7.6 2.2 C9.6 2.2 11.1 3.4 12 5 C12.9 3.4 14.4 2.2 16.4 2.2 C19.2 2.2 21.8 4.4 21.8 8 C21.8 14 15 19 12 21.6 Z';
+/* 4.13.5 (Rob, 2026-10-30: "too round, they look like blobs"): a deeper
+ * cleft between the lobes (down to y 7, was 5) and a sharp point at the
+ * bottom (the sides meet at an angle, never a round), so it reads as a
+ * heart at guest size and in the squint test beside a plain circle */
+const HEART = 'M12 22.4 C10.6 19.9 1.6 14.9 1.6 8.3 C1.6 4.6 4.1 1.9 7.2 1.9 C9.4 1.9 11.2 3.4 12 7 C12.8 3.4 14.6 1.9 16.8 1.9 C19.9 1.9 22.4 4.6 22.4 8.3 C22.4 14.9 13.4 19.9 12 22.4 Z';
 const HEART_IN = 'M12 17.4 C10 15.6 5.6 12.4 5.6 8.6 C5.6 6.5 7.1 5.3 8.7 5.3 C10 5.3 11.1 6.1 12 7.6 C12.9 6.1 14 5.3 15.3 5.3 C16.9 5.3 18.4 6.5 18.4 8.6 C18.4 12.4 14 15.6 12 17.4 Z';
 
 const SPARK = (x, y, r) => `<path d="M${x} ${y - r} L${x + r * 0.22} ${y - r * 0.22} L${x + r} ${y} L${x + r * 0.22} ${y + r * 0.22} L${x} ${y + r} L${x - r * 0.22} ${y + r * 0.22} L${x - r} ${y} L${x - r * 0.22} ${y - r * 0.22} Z" fill="#FFFFFF"/>`;

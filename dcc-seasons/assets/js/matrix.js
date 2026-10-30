@@ -184,7 +184,13 @@
 				if (text === 'YEAR') { text = String(targetYear()); }
 				ox.textAlign = 'center';
 				ox.textBaseline = 'middle';
-				ox.font = Math.round(text.length > 2 ? rows * 0.52 : rows * 0.92) + 'px sans-serif';
+				var big = text.length > 2 ? rows * 0.52 : rows * 0.92;
+				/* 4.13.5 (Rob): a finale that must read the moment it forms
+				 * fits INSIDE the screen at every width, centred, with clear
+				 * margin round it — at rows * 0.92 a phone showed only the
+				 * middle of a glyph twice its width. Only a theme that asks. */
+				if (egg.finaleFit) { big = Math.min(rows, nCols * colW / fontSize) * 1.15; }   /* a heart's ink is about half its font size: ~60% of the narrower side */
+				ox.font = Math.round(big) + 'px sans-serif';
 				ox.fillStyle = '#fff';
 				ox.fillText(text, nCols / 2, rows / 2);
 				var d = ox.getImageData(0, 0, nCols, rows).data;
@@ -207,7 +213,13 @@
 					if (t - t0 >= finAt) {
 						finStart = t;
 						buildMask();
-						if (W.DCC_SEASONS && W.DCC_SEASONS.debug) { W.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0; }
+						if (W.DCC_SEASONS && (W.DCC_SEASONS.debug || W.DCC_SEASONS.diag)) {   /* diag: an admin's ?dcc_debug=1, and the suites */
+							W.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0;
+							/* where the shape lies, in px: for the fit check */
+							var bb = [1e9, 1e9, -1e9, -1e9];
+							(finCells || []).forEach(function (q) { var x = q[0] * colW, y = q[1] * fontSize; bb = [Math.min(bb[0], x), Math.min(bb[1], y), Math.max(bb[2], x + colW), Math.max(bb[3], y + fontSize)]; });
+							W.DCCSeasonsMatrix._finBox = bb.concat([vw, vh]);
+						}
 					}
 					return;
 				}

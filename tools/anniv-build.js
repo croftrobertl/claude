@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const { P } = require('./anniv-pieces');
+const { rings } = require('./anniv-rings');   /* 4.13.5: the rings LINKED (Rob, 2026-10-30) */
 const OUT = path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js', 'art-anniversary.js');
 
 const one = s => s.replace(/\n/g, '');
@@ -60,7 +61,7 @@ const src = `/* DCC Seasons — the Anniversary's art (4.13.5): the picks from t
 	function pct(t, n) { t = t + '%'; return ${pctA("dccAnP' + n + '")}; }
 	var S = {
 		anheart: '${one(P.heartA)}',
-		anrings: '${one(P.ringB)}',
+		anrings: '${one(rings('dccAnR'))}',
 		ancrystal: '${one(P.crystalA)}',
 		antoast: '${one(P.toastA)}',
 		andate: '${one(P.dateA)}',
@@ -71,7 +72,7 @@ const src = `/* DCC Seasons — the Anniversary's art (4.13.5): the picks from t
 	(W.DCCSeasonsArt = W.DCCSeasonsArt || {}).anniversary = { svgs: S, annivFigs: figs };
 }(window));
 `;
-if (/'/.test([P.heartA, P.ringB, P.crystalA, P.toastA, P.dateA, yearA].join(''))) { throw new Error('a sprite contains a quote'); }
+if (/'/.test([P.heartA, rings('dccAnR'), P.crystalA, P.toastA, P.dateA, yearA].join(''))) { throw new Error('a sprite contains a quote'); }
 if (process.argv.includes('--check')) {
   const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
   if (cur !== src) { console.error('art-anniversary.js is stale: run node tools/anniv-build.js'); process.exit(1); }

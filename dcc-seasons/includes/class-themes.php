@@ -225,12 +225,18 @@ class Themes {
              * figures half as big again (36). No names anywhere.
              * The date, the year and the two figures drift down UPRIGHT
              * (b 'wobble', the ghost's motion: no spin) so they can be read.
-             * PROVISIONAL until Rob picks the mix and the motion (the
-             * 4.13.5 options sheet): this row is option A. */
+             * Rob's picks on the 4.13.5 choices sheet (2026-10-30): the mix
+             * A, "Hearts Lead"; the motion C, the hearts drift and rock
+             * (b 'leaf') while the rings, crystal and toast fall; nothing
+             * behind the pieces (subtle_defaults); no corner accent; the egg
+             * A's gold-and-blush rain ending on a HEART, not a ring
+             * ("instantly recognizable ... love, not a ring, and not
+             * alcohol"), sized to fit inside the screen at every width
+             * (finaleFit, matrix.js). */
             'anniversary' => [
                 'ambient' => [
                     'particles' => [
-                        ['s' => 'anheart', 'b' => 'fall', 'w' => 3, 'sz' => [22, 30]],
+                        ['s' => 'anheart', 'b' => 'leaf', 'w' => 3, 'sz' => [22, 30]],
                         ['s' => 'anrings', 'b' => 'fall', 'w' => 2, 'sz' => [30, 38]],
                         ['s' => 'ancrystal', 'b' => 'fall', 'w' => 2, 'sz' => [18, 22]],
                         ['s' => 'antoast', 'b' => 'fall', 'sz' => [24, 30]],
@@ -241,9 +247,10 @@ class Themes {
                     ],
                 ],
                 'egg' => [
-                    'colors' => ['#E2C25A', '#E8838F'],
-                    'glyphs' => ['♥', 'ﾊ', 'ｷ', '1', '1', '0'],
-                    'finale' => '💍',
+                    'colors'    => ['#E2C25A', '#E8838F'],
+                    'glyphs'    => ['♥', 'ﾊ', 'ｷ', '1', '1', '0'],
+                    'finale'    => '♥',
+                    'finaleFit' => 1,
                 ],
             ],
 
@@ -765,7 +772,7 @@ class Themes {
              * Patriot Day and Veterans Day keep the leaves effect. */
             'thanksgiving' => '',
             'veterans_day' => 'leaves',
-            'anniversary'  => '',   /* PROVISIONAL until Rob picks (the 4.13.5 options sheet) */
+            'anniversary'  => '',   /* Rob's pick A, 2026-10-30: nothing behind the pieces */
             // Winter — no snow anywhere (4.2.0). Each is Rob's pick.
             'snowbird'     => 'sunglow',
             'mlk'          => 'goldlight',

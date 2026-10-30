@@ -117,6 +117,18 @@ function ambientBack(src) {
     .replace('\t\t\t}, null, !!(art && art.length));', '\t\t\t}, null, !!art);');
 }
 
+/* the egg with its two named 4.13.5 changes put back: the opt-in fit
+ * (finaleFit: only a theme that asks; Rob's Anniversary heart) and the
+ * diag-only measure of where the finale lies */
+function matrixBack(src) {
+  /* exact text, so a change INSIDE either block is not reverted away */
+  const FIT = "\t\t\t\tvar big = text.length > 2 ? rows * 0.52 : rows * 0.92;\n\t\t\t\t/* 4.13.5 (Rob): a finale that must read the moment it forms\n\t\t\t\t * fits INSIDE the screen at every width, centred, with clear\n\t\t\t\t * margin round it \u2014 at rows * 0.92 a phone showed only the\n\t\t\t\t * middle of a glyph twice its width. Only a theme that asks. */\n\t\t\t\tif (egg.finaleFit) { big = Math.min(rows, nCols * colW / fontSize) * 1.15; }   /* a heart's ink is about half its font size: ~60% of the narrower side */\n\t\t\t\tox.font = Math.round(big) + 'px sans-serif';\n";
+  const DBG = "\t\t\t\t\t\tif (W.DCC_SEASONS && (W.DCC_SEASONS.debug || W.DCC_SEASONS.diag)) {   /* diag: an admin's ?dcc_debug=1, and the suites */\n\t\t\t\t\t\t\tW.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0;\n\t\t\t\t\t\t\t/* where the shape lies, in px: for the fit check */\n\t\t\t\t\t\t\tvar bb = [1e9, 1e9, -1e9, -1e9];\n\t\t\t\t\t\t\t(finCells || []).forEach(function (q) { var x = q[0] * colW, y = q[1] * fontSize; bb = [Math.min(bb[0], x), Math.min(bb[1], y), Math.max(bb[2], x + colW), Math.max(bb[3], y + fontSize)]; });\n\t\t\t\t\t\t\tW.DCCSeasonsMatrix._finBox = bb.concat([vw, vh]);\n\t\t\t\t\t\t}\n";
+  return src
+    .replace(FIT, "\t\t\t\tox.font = Math.round(text.length > 2 ? rows * 0.52 : rows * 0.92) + 'px sans-serif';\n")
+    .replace(DBG, "\t\t\t\t\t\tif (W.DCC_SEASONS && W.DCC_SEASONS.debug) { W.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0; }\n");
+}
+
 /* ---- 3. pixels ---- */
 function hashes(assets, themes) {
   const env = { ...process.env }; if (assets) { env.DCC_ASSETS = assets; } else { delete env.DCC_ASSETS; }
@@ -148,7 +160,8 @@ function folder(files, drop) {
   const tx = textSame(engNew, engOld);
   ok(tx.same, `engine.js identical to 4.13.4 line for line (${tx.n} lines compared)`, tx.at);
   ok(ambientBack(ambNew) === ambOld, 'ambient.js (the loader) is 4.13.4 but for the forced date and the list of art files', 'ambient');
-  ok(fs.readFileSync(`${JS}/matrix.js`, 'utf8') === git('dcc-seasons/assets/js/matrix.js'), 'matrix.js (the egg) is byte-identical to 4.13.4', 'matrix');
+  const mxNew = fs.readFileSync(`${JS}/matrix.js`, 'utf8'), mxOld = git('dcc-seasons/assets/js/matrix.js');
+  ok(matrixBack(mxNew) === mxOld, "matrix.js (the egg) is 4.13.4 but for the opt-in fit and the diag measure", 'matrix');
   ok(fs.readFileSync(`${JS}/art-thanksgiving.js`, 'utf8') === git('dcc-seasons/assets/js/art-thanksgiving.js'), "Thanksgiving's art file is byte-identical to 4.13.4", 'art-thanksgiving');
 
   console.log('\n  --- 3. the pixels: every theme but the Anniversary, both builds ---');
@@ -185,6 +198,9 @@ function folder(files, drop) {
     /* the loader: the forced date applied without being asked */
     const m7 = ambNew.replace('var today = CFG.date || ymd(', "var today = CFG.date || '2026-11-11' || ymd(");
     ok(m7 !== ambNew && ambientBack(m7) !== ambOld, 'the loader forcing a date on its own fails proof 2', 'today');
+    /* the egg's fit applied to every theme, not only one that asks */
+    const m8 = mxNew.replace('if (egg.finaleFit) { big =', 'if (1) { big =');
+    ok(m8 !== mxNew && matrixBack(m8) !== mxOld, "the egg's fit applied to every theme fails proof 2", 'finaleFit');
     /* and the pixels see a sprite change on their own */
     const dm = folder(Object.assign({}, now, { 'engine.js': engNew.replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), ['art-crane.js']);
     const hm = hashes(dm, ['halloween']);
