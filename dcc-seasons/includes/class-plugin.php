@@ -913,6 +913,7 @@ final class Plugin {
      * `cranes` scene, so the plugin carries one bird. */
     const ART_PACKS = [
         'thanksgiving' => ['thanksgiving'],
+        'christmas'    => ['christmas'],
         'anniversary'  => ['crane', 'anniversary'],
         'florida_keys' => ['crane'],
     ];

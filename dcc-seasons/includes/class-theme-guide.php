@@ -215,7 +215,9 @@ final class Theme_Guide {
                 'letter0' => __('Love letter', 'dcc-seasons'), 'lilypad' => __('Lily pad', 'dcc-seasons'),
                 'mask' => __('Carnival mask', 'dcc-seasons'), 'medal' => __('Medal', 'dcc-seasons'),
                 'necktie' => __('Necktie', 'dcc-seasons'), 'olive' => __('Olive branch', 'dcc-seasons'),
-                'orange' => __('Orange', 'dcc-seasons'), 'ornament' => __('Ornament', 'dcc-seasons'),
+                'orange' => __('Orange', 'dcc-seasons'), 'ballred' => __('Red glass ball', 'dcc-seasons'), 'ballgold' => __('Gold glass ball', 'dcc-seasons'), 'ballblue' => __('Blue glass ball', 'dcc-seasons'),
+                'candycane' => __('Candy cane', 'dcc-seasons'), 'palmxmas' => __('Sabal palm with lights', 'dcc-seasons'),
+                'flamingoxmas' => __('Flamingo in a Santa hat', 'dcc-seasons'), 'wreath' => __('Wreath', 'dcc-seasons'),
                 'peace' => __('Peace sign', 'dcc-seasons'), 'peacehand' => __('Peace hand', 'dcc-seasons'),
                 'petal' => __('Petal', 'dcc-seasons'), 'pie' => __('Pie', 'dcc-seasons'),
                 'pine' => __('Pine tree', 'dcc-seasons'), 'platemi' => __('Michigan licence plate', 'dcc-seasons'),
@@ -250,7 +252,7 @@ final class Theme_Guide {
             'heroes' => [
                 'heron' => __('Great blue heron', 'dcc-seasons'), 'eagle' => __('Bald eagle', 'dcc-seasons'),
                 'osprey' => __('Osprey carrying a fish', 'dcc-seasons'), 'witch' => __('Witch and her cat', 'dcc-seasons'),
-                'bass' => __('Jumping largemouth bass', 'dcc-seasons'), 'sleigh' => __('Santa’s sleigh', 'dcc-seasons'),
+                'bass' => __('Jumping largemouth bass', 'dcc-seasons'), 'sleigh' => __('Santa’s sleigh', 'dcc-seasons'), 'santa' => __('Santa and his reindeer', 'dcc-seasons'),
                 'manatee' => __('Manatee', 'dcc-seasons'), 'rainbow' => __('Rainbow and pot of gold', 'dcc-seasons'),
             ],
             'scenes' => [
@@ -269,7 +271,7 @@ final class Theme_Guide {
                 'cranes' => __('A sandhill crane pair dances', 'dcc-seasons'),
                 'limpkinsnail' => __('A limpkin pulls up an apple snail', 'dcc-seasons'),
                 'giftdrop' => __('The sleigh drops a gift onto the water', 'dcc-seasons'),
-                'sleighmoon' => __('The sleigh crosses the moon', 'dcc-seasons'),
+                'sleighmoon' => __('Santa’s reindeer cross the moon', 'dcc-seasons'),
                 'corkpop' => __('A champagne cork pops', 'dcc-seasons'),
                 'arrival' => __('Three flamingos fly in and land', 'dcc-seasons'),
                 'flagfly' => __('Flags fly across', 'dcc-seasons'),

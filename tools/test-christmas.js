@@ -1,6 +1,7 @@
 'use strict';
 /**
- * DCC Seasons — 4.14.0, Christmas: that what Rob approved is what ships.
+ * DCC Seasons — Christmas (4.14.0, rebuilt on 4.13.5 as 4.14.1, its art in
+ * art-christmas.js): that what Rob approved is what ships.
  *
  * Every assertion is a pick of his (four rounds of stills), so a mutation
  * that quietly swaps one has something to fail against. The set is pinned
@@ -15,6 +16,9 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 const { config, open, ROOT } = require('./harness');
 const { page: fixture } = require('./fixture');
+const { engineSource } = require('./engine-src');
+/* the release Christmas is built on: 4.13.5, live (2026-10-30) */
+const BASE = 'e8bd38f';
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -31,7 +35,9 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
   ${code}`], { cwd: ROOT, encoding: 'utf8' }));
 
 (async () => {
-  const src = fs.readFileSync(`${ROOT}/dcc-seasons/assets/js/engine.js`, 'utf8');
+  /* the engine with its art packs spliced back in: the pieces and the
+   * painters are art-christmas.js's since 4.14.1 */
+  const src = engineSource(`${ROOT}/dcc-seasons/assets/js/engine.js`);
   const spr = k => (src.match(new RegExp(`\\n\\t\\t${k}: '([^']*)'`)) || [])[1] || '';
 
   console.log('\n  --- the approved pieces, and nothing else ---');
@@ -43,7 +49,7 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
     const balls = t.particles.find(p => [].concat(p.s).includes('ballred'));
     ok(balls && [].concat(balls.s).join() === 'ballred,ballgold,ballblue', 'the glass balls are ONE kind in three colors (Rob\'s A)', JSON.stringify(balls));
     ok(!('hero' in t), 'no flyer: the static sleigh is gone, Santa is the scene (one Santa)', String(t.hero));
-    ok(t.max === 9 && t.phoneMin === 5 && t.water === true, 'the count rules are 4.13.0\'s: cap 9, phone floor 5, the water reserve', JSON.stringify([t.max, t.phoneMin, t.water]));
+    ok(t.max === 9 && t.phoneMin === 5 && t.water === true, 'the count rules are unchanged: cap 9, phone floor 5, the water reserve', JSON.stringify([t.max, t.phoneMin, t.water]));
     ok(!keys.includes('sabalpalm') && !keys.includes('flamingo'), 'the shared Keys palm and Snowbird flamingo are not touched', keys.join(','));
     const sub = php(`echo json_encode(\\DCC_Seasons\\Themes::subtle_defaults()['christmas']);`);
     ok(sub === '', 'the bokeh is off (Rob\'s B) in the plugin\'s defaults', JSON.stringify(sub));
@@ -73,32 +79,33 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
     ok(/christmas: \['wreath', 'right:8px;top:8px;width:96px;opacity:\.5;'\]/.test(src), 'the wreath is the corner accent, in the web\'s size class', 'ACCENTS');
   }
 
-  console.log('\n  --- every other theme exactly as 4.13.0 shipped it ---');
+  console.log('\n  --- every other theme exactly as 4.13.5 shipped it (the pixels: test-untouched.js) ---');
   {
-    const prev = execFileSync('git', ['show', '66faa59:dcc-seasons/includes/class-themes.php'], { cwd: ROOT, encoding: 'utf8' });
-    const tmp = `${require('os').tmpdir()}/dcc-themes-4130.php`;
-    fs.writeFileSync(tmp, prev.replace('namespace DCC_Seasons;', 'namespace DCC_Seasons_4130;'));
+    const prev = execFileSync('git', ['show', `${BASE}:dcc-seasons/includes/class-themes.php`], { cwd: ROOT, encoding: 'utf8' });
+    const tmp = `${require('os').tmpdir()}/dcc-themes-base.php`;
+    fs.writeFileSync(tmp, prev.replace('namespace DCC_Seasons;', 'namespace DCC_Seasons_Base;'));
     const both = JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
       function __($s,$d=null){return $s;} function esc_html__($s,$d=null){return $s;}
       function apply_filters($t,$v){return $v;}
       require '${ROOT}/dcc-seasons/includes/class-schedule.php';
       require '${ROOT}/dcc-seasons/includes/class-themes.php';
       require '${tmp}';
-      echo json_encode([\\DCC_Seasons\\Themes::themes(), \\DCC_Seasons_4130\\Themes::themes(), \\DCC_Seasons\\Themes::subtle_defaults(), \\DCC_Seasons_4130\\Themes::subtle_defaults()]);`],
+      echo json_encode([\\DCC_Seasons\\Themes::themes(), \\DCC_Seasons_Base\\Themes::themes(), \\DCC_Seasons\\Themes::subtle_defaults(), \\DCC_Seasons_Base\\Themes::subtle_defaults()]);`],
       { cwd: ROOT, encoding: 'utf8' }));
     const changed = Object.keys(both[1]).filter(k => k !== 'christmas' && JSON.stringify(both[0][k]) !== JSON.stringify(both[1][k]));
     ok(!changed.length && Object.keys(both[0]).length === Object.keys(both[1]).length,
-      `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.13.0`, changed.join(','));
+      `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.13.5`, changed.join(','));
     const subCh = Object.keys(both[3]).filter(k => k !== 'christmas' && both[2][k] !== both[3][k]);
     ok(!subCh.length, 'and so are their background layers', subCh.join(','));
-    const prevEng = execFileSync('git', ['show', '66faa59:dcc-seasons/assets/js/engine.js'], { cwd: ROOT, encoding: 'utf8' });
+    const gs = f => execFileSync('git', ['show', `${BASE}:dcc-seasons/assets/js/${f}`], { cwd: ROOT, encoding: 'utf8' });
+    const prevEng = ['engine.js', 'art-crane.js', 'art-thanksgiving.js', 'art-anniversary.js'].map(gs).join('\n');
     const body = (t, name) => { const i = t.indexOf(`\t\t\t${name}: { actors`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t\t\t} },', i)); };
     for (const sc of ['witchmoon', 'cranemoon', 'giftdrop']) {
-      ok(body(src, sc) && body(src, sc) === body(prevEng, sc), `the ${sc} scene is unchanged from 4.13.0`, sc);
+      ok(body(src, sc) && body(src, sc) === body(prevEng, sc), `the ${sc} scene is unchanged from 4.13.5`, sc);
     }
     const fnBody = (t, name) => { const i = t.indexOf(`function ${name}(`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t}\n', i)); };
     for (const f of ['witchBody', 'crPaint', 'moonPaint', 'hnFly']) {
-      ok(fnBody(src, f) && fnBody(src, f) === fnBody(prevEng, f), `${f} is unchanged from 4.13.0`, f);
+      ok(fnBody(src, f) && fnBody(src, f) === fnBody(prevEng, f), `${f} is unchanged from 4.13.5`, f);
     }
   }
 

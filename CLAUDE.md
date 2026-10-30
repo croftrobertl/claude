@@ -899,10 +899,14 @@ reached staging only; the folder was set back to 4.13.0 (`66faa59`) and:
   and pie are unchanged. Step B: scene A "high and small" with a PALE full
   moon (see below).
 - **4.13.2 and 4.13.3 = Thanksgiving round 2**; **4.13.4 = the per-season split**, **4.13.5 = the Anniversary** (order set 2026-10-29; see below).
-- **4.14.1 = Christmas**, 4.14.0 rebuilt ON TOP of 4.13.2 once Rob confirms
-  Santa; diff it against 4.13.2 and show Thanksgiving and the Anniversary
-  survive. `tools/test-christmas.js` belongs to that build and fails on
-  4.13.x by design.
+- **4.14.1 = Christmas**, 4.14.0 rebuilt on 4.13.5 plus the upgrade-on-
+  any-request fix (no 4.13.6: the Director, 2026-10-30). Staging by Nov 18,
+  live by Nov 20. Its art is a pack, `art-christmas.js` (the ten pieces and
+  the painters as `ART.xm`: paint, glow, sleigh, sack, reins, santa); the
+  scene, the pre-draw (`sdGet`/`smGet`) and the placement stay in the
+  engine, and without the pack `sleighmoon` is filtered out of the list.
+  `test-untouched.js` proves everything but Christmas against 4.13.5
+  (`e8bd38f`); `test-christmas.js` reads the pack via `engine-src.js`.
 
 **4.13.1 is LIVE (2026-10-26, md5 44bff49b…).** Thanksgiving continues
 until Rob says it is done: round 2 is **4.13.2** (from 4.13.1, live before
@@ -1157,10 +1161,10 @@ Rob sees it (the overlay rows; sources named on the sheets).
     cheekbone, white hair in front of the ear into the beard, red sleeves
     with fur cuffs, the classic hat as one shape. He flicks the reins every
     2.4-3.8 s; the snap travels to the lead pair in 0.9 s.
-- **The moon keeps clear** of the page title (measured by its LETTERS, a
-  Range per text node) and of anything `[data-dcc-keep-clear]`, plus the
-  picture's top-right 230x190 from 768px up, where the dial sits
-  (`sledMoon`; config `clearSel`, filter `dcc_seasons_keep_clear`).
+- **The moon keeps clear** of the keep-clear set since 4.14.1 (`sledMoon`
+  reads `kcRects()`: the title's and tagline's letters, the menu bar, the
+  dial, the menu button, `[data-dcc-keep-clear]`). 4.14.0 had its own list
+  (`clearSel` and a fixed 230x190 corner from 768px); both are gone.
 - **Cost bars (the Director's): worst frame after warm-up < 8 ms** at 390,
   DPR 3, 4x CPU over 10 s, measured on the SHIPPED build
   (`tools/measure-sleigh.js`). The header's letters are measured in IDLE
@@ -1625,7 +1629,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.13.4 for 4.13.5), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.13.5 for 4.14.1), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

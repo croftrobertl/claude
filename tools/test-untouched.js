@@ -1,28 +1,23 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.13.5 (the Anniversary) against
- * 4.13.4, the release that is live when it ships. (Its 4.13.2/4.13.3 form,
- * Thanksgiving against 4.13.1, is in the history at 4de6bb9.) Outside the
- * Anniversary, the shared crane in Florida Keys' `cranes` scene (Rob's row
- * 9, the one exemption) and the check link's forced date, the build is
- * 4.13.4. Three proofs, each mutation-checked at the end of the run:
+ * DCC Seasons — the Untouched test, for 4.14.1 (Christmas) against 4.13.5,
+ * the release that is live when it ships. (Its 4.13.5 form, the Anniversary
+ * against 4.13.4, is in the history at e8bd38f; its 4.13.2/4.13.3 form at
+ * 4de6bb9.) Outside Christmas the build is 4.13.5, plus the upgrade on any
+ * request (PHP; tools/test-upgrade-request.php). Three proofs, each
+ * mutation-checked at the end of the run:
  *
  *  1. THEMES. Themes::themes() and subtle_defaults() for every theme but
- *     the Anniversary are byte-identical to 4.13.4's.
- *  2. TEXT. engine.js with the Anniversary's own code taken out is
- *     4.13.4's engine.js line for line, and so is the Keys scene once the
- *     new bird's branch is taken out (the old sprites' lines must still be
- *     there, character for character). Everything removed is named below,
- *     by marker or as the literal line; nothing is removed by "looks
- *     unimportant". ambient.js is 4.13.4's once its two named changes are
- *     reverted (the forced date; a list of art files), and matrix.js is
- *     byte-identical.
- *  3. PIXELS. Every theme but the Anniversary, played on the mocked clock
- *     with a seeded Math.random and a pinned Date (tools/untouched-hash.js),
- *     draws exactly the same pixels in both builds at seven moments over 24
- *     simulated seconds. Florida Keys is played WITHOUT the crane pack, so
- *     everything but its crane is proven; tools/test-anniversary.js proves
- *     the crane itself.
+ *     Christmas are byte-identical to 4.13.5's.
+ *  2. TEXT. engine.js with Christmas's own code taken out is 4.13.5's
+ *     engine.js line for line. Everything removed is named below, by
+ *     marker or as the literal line; nothing is removed by "looks
+ *     unimportant". ambient.js, matrix.js and the Thanksgiving, crane and
+ *     Anniversary art files are byte-identical.
+ *  3. PIXELS. Every theme but Christmas, played on the mocked clock with a
+ *     seeded Math.random and a pinned Date (tools/untouched-hash.js), draws
+ *     exactly the same pixels in both builds at seven moments over 24
+ *     simulated seconds, with every art pack in place.
  *
  *   node tools/test-untouched.js [--quick]   (--quick: Halloween + 4 themes)
  */
@@ -31,8 +26,8 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'b76051f';   /* 4.13.4, the split (staging 3 Nov, live 4 Nov) */
-const NEW = 'anniversary';
+const BASE = 'e8bd38f';   /* 4.13.5, the Anniversary (live 30 Oct) */
+const NEW = 'christmas';
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -70,34 +65,32 @@ function strip(src) {
     const j = t.indexOf(to, i + from.length); if (j < 0) { throw new Error('end marker missing: ' + to); }
     t = t.slice(0, i) + t.slice(j + to.length);
   };
-  /* the Anniversary's own code (new only): its plan, its scene, its
-   * idle-time preparation (with the Keys poses' one line) */
-  cut("\t\tvar AD = ART.crane || null, AD_T = 11,", '\t\t\treturn pl;\n\t\t}\n', false);
-  cut('\t\t\tannivdance: { actors: 2, run: function (st, dt) {', '\t\t\t\treturn st.t2 >= AD_T;\n\t\t\t} },\n', false);
-  cut("\t\tif (AD && vigList.indexOf('annivdance') >= 0) {", "{ k: 60 * mn(W.devicePixelRatio || 1, 2) });\n\t\t}\n", false);
-  /* the Keys scene's new-bird branch (the exemption), new only */
-  cut('\t\t\t\t\tif (st.nb) {\n', '\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n', false);
+  /* Christmas's own code. New: the guide's picture of the team, the
+   * team's pre-draw and placement, the scene, its idle-time preparation.
+   * Old: the static sleigh flyer and the evening scene they replace. */
+  cut('\t\tsanta: function (g, w, h) {\n', '\t\t\tg.restore();\n\t\t},\n', false);
+  cut('\t\tvar SD_POSES = 24,', '\t\t\tcut.push([minx, miny, maxx - minx, maxy - miny]);\n\t\t}\n', false);
+  cut('\t\t\tsleighmoon: { actors: 2, run: function (st, dt) {', '\t\t\t} },\n', true);
+  cut("\t\tif (vigList.indexOf('sleighmoon') >= 0 && ART.xm) {", '\t\t\tsdLater(sdIdleFn);\n\t\t}\n', false);
+  cut("\t\t\t} else if (kind === 'sleigh') {\n", "\t\t\t\tsprite('sleigh');\n", false);
   return t.split('\n')
     /* comment lines say nothing a guest sees */
     .filter(l => !/^\s*(\/\*|\*)/.test(l))
-    /* its scene list, its background layer, its guide picture: by name */
-    .filter(l => !/^\t\tanniversary: \['annivdance'\]/.test(l))
-    .filter(l => !/^\s*if \(st\.nb == null\) \{ st\.nb = !!\(adK && adK\.done\); \}$/.test(l))
-    .filter(l => !/^\s*var y = dance \? fy - hop : fy - hop \+ abs\(sin\(st\.ph \* 5\)\) \* \(st\.p === 1 \? 1\.5 : 0\);$/.test(l))
+    /* the old pieces (now art-christmas.js), its accent, its scene lists */
+    .filter(l => !/^\t\t(holly|ornament|gift|pine): '/.test(l))
+    .filter(l => !/^\t\tchristmas: \[/.test(l))
+    .filter(l => !/^\tvar EVENING_VIGS = /.test(l))
+    .filter(l => !/^\t\tif \(!ART\.xm\) \{ vigList = vigList\.filter/.test(l))
     /* the debug-only getter (stripped from the shipped build) */
-    .filter(l => !/^\t\t\t\tget anniv\(\) \{ return \{ plan: adPlan,/.test(l))
-    /* exact in-line additions, each removed as the literal text */
+    .filter(l => !/^\t\t\t\tget sleigh\(\) \{/.test(l))
+    /* exact in-line changes, each put back as the literal text */
     .map(l => l
-      .replace("'limpkinsnail', 'hibfloat'],", "'limpkinsnail', 'hibfloat']")
-      .replace("cranes: 'sandhill',", "cranes: 'cranedance',")   /* the Keys scene's guide picture is the bird it now draws */
-      .replace(", annivdance: 'sandhill'", '')
-      .replace(" anniversary: '',", '')
-      .replace(', annivdance: 1 };', ' };')
-      .replace(' tk: TKM, crane: ART.crane || null,', ' tk: TKM,')
-      /* the old sprites' calls, with the y the new branch shares spelt out
-       * again: they must match 4.13.4's lines character for character */
-      .replace("dspr('cranedance', x, y, W2 * 64 / 44, st.dir > 0, 0, a);", "dspr('cranedance', x, fy - hop, W2 * 64 / 44, st.dir > 0, 0, a);")
-      .replace("dspr('crane', x, y, W2, st.dir > 0, st.dir * bow, a);", "dspr('crane', x, fy - hop + abs(sin(st.ph * 5)) * (st.p === 1 ? 1.5 : 0), W2, st.dir > 0, st.dir * bow, a);"))
+      .replace(" bass: 'bassleap', sleigh: 'sleigh', manatee:", " bass: 'bassleap', manatee:")
+      .replace("sleighmoon: 'santa',", "sleighmoon: 'sleigh',")
+      .replace(" christmas: 'bokeh',", " christmas: '',")
+      .replace('witch: 1, sleigh: 1, osprey: 1 };', 'witch: 1, osprey: 1 };')
+      .replace('osprey: 1 };   /* the sleigh flyer is gone since 4.14.0 */', 'osprey: 1 };')
+      .replace("} else if (h.kind === 'sleigh' || h.kind === 'manatee') {", "} else if (h.kind === 'manatee') {"))
     .map(l => l.replace(/\s+$/, ''))
     .filter(l => l !== '');
 }
@@ -108,26 +101,7 @@ function textSame(newSrc, oldSrc) {
   }
   return { same: true, n: b.length };
 }
-/* the loader with its two named 4.13.5 changes put back as they were */
-function ambientBack(src) {
-  return src
-    .replace("\t/* 4.13.5: the check link's forced date (CFG.date, set server-side only\n\t * with the check key or for an administrator), else the visitor's day */\n\tvar today = CFG.date || ymd(", '\tvar today = ymd(')
-    .replace("\t\t\t/* 4.13.4: a season with its own art has it fetched alongside the\n\t\t\t * engine and run first; every other day fetches nothing more.\n\t\t\t * 4.13.5: a list of files (the shared crane, then the season's);\n\t\t\t * a single URL from an older cached config still works. */\n\t\t\tvar art = CFG.art && themeKey ? CFG.art[themeKey] : null, ai;\n\t\t\tif (typeof art === 'string') { art = [art]; }\n\t\t\tfor (ai = 0; art && ai < art.length; ai++) { loadScript(art[ai], null, null, true); }",
-      "\t\t\t/* 4.13.4: a season with its own art file has it fetched alongside\n\t\t\t * the engine and run first; every other day fetches nothing more */\n\t\t\tvar art = CFG.art && themeKey ? CFG.art[themeKey] : null;\n\t\t\tif (art) { loadScript(art, null, null, true); }")
-    .replace('\t\t\t}, null, !!(art && art.length));', '\t\t\t}, null, !!art);');
-}
-
-/* the egg with its two named 4.13.5 changes put back: the opt-in fit
- * (finaleFit: only a theme that asks; Rob's Anniversary heart) and the
- * diag-only measure of where the finale lies */
-function matrixBack(src) {
-  /* exact text, so a change INSIDE either block is not reverted away */
-  const FIT = "\t\t\t\tvar big = text.length > 2 ? rows * 0.52 : rows * 0.92;\n\t\t\t\t/* 4.13.5 (Rob): a finale that must read the moment it forms\n\t\t\t\t * fits INSIDE the screen at every width, centred, with clear\n\t\t\t\t * margin round it \u2014 at rows * 0.92 a phone showed only the\n\t\t\t\t * middle of a glyph twice its width. Only a theme that asks. */\n\t\t\t\tif (egg.finaleFit) { big = Math.min(rows, nCols * colW / fontSize) * 1.15; }   /* a heart's ink is about half its font size: ~60% of the narrower side */\n\t\t\t\tox.font = Math.round(big) + 'px sans-serif';\n";
-  const DBG = "\t\t\t\t\t\tif (W.DCC_SEASONS && (W.DCC_SEASONS.debug || W.DCC_SEASONS.diag)) {   /* diag: an admin's ?dcc_debug=1, and the suites */\n\t\t\t\t\t\t\tW.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0;\n\t\t\t\t\t\t\t/* where the shape lies, in px: for the fit check */\n\t\t\t\t\t\t\tvar bb = [1e9, 1e9, -1e9, -1e9];\n\t\t\t\t\t\t\t(finCells || []).forEach(function (q) { var x = q[0] * colW, y = q[1] * fontSize; bb = [Math.min(bb[0], x), Math.min(bb[1], y), Math.max(bb[2], x + colW), Math.max(bb[3], y + fontSize)]; });\n\t\t\t\t\t\t\tW.DCCSeasonsMatrix._finBox = bb.concat([vw, vh]);\n\t\t\t\t\t\t}\n";
-  return src
-    .replace(FIT, "\t\t\t\tox.font = Math.round(text.length > 2 ? rows * 0.52 : rows * 0.92) + 'px sans-serif';\n")
-    .replace(DBG, "\t\t\t\t\t\tif (W.DCC_SEASONS && W.DCC_SEASONS.debug) { W.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0; }\n");
-}
+const SAME_FILES = ['ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-crane.js', 'art-anniversary.js'];
 
 /* ---- 3. pixels ---- */
 function hashes(assets, themes) {
@@ -149,33 +123,30 @@ function folder(files, drop) {
   const engOld = git('dcc-seasons/assets/js/engine.js');
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
-  const ambNew = fs.readFileSync(`${JS}/ambient.js`, 'utf8'), ambOld = git('dcc-seasons/assets/js/ambient.js');
 
-  console.log(`\n  --- 1. every theme but the Anniversary is 4.13.4's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme but Christmas is 4.13.5's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - 1} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
 
-  console.log('\n  --- 2. the text outside the Anniversary and the Keys crane ---');
+  console.log('\n  --- 2. the text outside Christmas ---');
   const tx = textSame(engNew, engOld);
-  ok(tx.same, `engine.js identical to 4.13.4 line for line (${tx.n} lines compared)`, tx.at);
-  ok(ambientBack(ambNew) === ambOld, 'ambient.js (the loader) is 4.13.4 but for the forced date and the list of art files', 'ambient');
-  const mxNew = fs.readFileSync(`${JS}/matrix.js`, 'utf8'), mxOld = git('dcc-seasons/assets/js/matrix.js');
-  ok(matrixBack(mxNew) === mxOld, "matrix.js (the egg) is 4.13.4 but for the opt-in fit and the diag measure", 'matrix');
-  ok(fs.readFileSync(`${JS}/art-thanksgiving.js`, 'utf8') === git('dcc-seasons/assets/js/art-thanksgiving.js'), "Thanksgiving's art file is byte-identical to 4.13.4", 'art-thanksgiving');
+  ok(tx.same, `engine.js identical to 4.13.5 line for line (${tx.n} lines compared)`, tx.at);
+  const same = {};
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); ok(same[f] === git(`dcc-seasons/assets/js/${f}`), `${f} is byte-identical to 4.13.5`, f); }
 
-  console.log('\n  --- 3. the pixels: every theme but the Anniversary, both builds ---');
+  console.log('\n  --- 3. the pixels: every theme but Christmas, both builds ---');
   const now = {}, was = {};
   for (const f of fs.readdirSync(JS).filter(f => /\.js$/.test(f) && !/\.min\.js$/.test(f))) { now[f] = fs.readFileSync(path.join(JS, f), 'utf8'); }
-  for (const f of ['ambient.js', 'engine.js', 'matrix.js', 'art-thanksgiving.js']) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
-  const dNew = folder(now, ['art-crane.js']), dOld = folder(was, []);
+  for (const f of ['engine.js'].concat(SAME_FILES)) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
+  const dNew = folder(now, []), dOld = folder(was, []);
   const all = JSON.parse(execFileSync('php', [`${ROOT}/tools/gen-config.php`, '--diag'], { cwd: ROOT, encoding: 'utf8' })).themes;
-  const list = (quick ? ['halloween', 'classic', 'florida_keys', 'christmas', 'thanksgiving'] : Object.keys(all)).filter(k => k !== NEW);
+  const list = (quick ? ['halloween', 'classic', 'florida_keys', 'anniversary', 'thanksgiving'] : Object.keys(all)).filter(k => k !== NEW);
   const hn = hashes(dNew, list), ho = hashes(dOld, list);
   for (const k of list) {
     const bad = (hn[k] || []).filter((h, i) => h !== (ho[k] || [])[i]);
     const err = (hn[k] || []).some(h => h.startsWith('ERR'));
-    ok(!bad.length && !err && hn[k] && hn[k].length === 7, `${k}: the same pixels at all 7 moments${k === 'florida_keys' ? ' (without the crane pack)' : ''} (${[...new Set((hn[k] || []).flatMap(h => h.split(' ').slice(2)))].join(', ') || 'sprites only'})`,
+    ok(!bad.length && !err && hn[k] && hn[k].length === 7, `${k}: the same pixels at all 7 moments (${[...new Set((hn[k] || []).flatMap(h => h.split(' ').slice(2)))].join(', ') || 'sprites only'})`,
       JSON.stringify({ now: hn[k], was: ho[k] }));
   }
 
@@ -185,24 +156,23 @@ function folder(files, drop) {
     ok(m1 !== thNew && themesSame(themesOf(m1, thOld)).changed.includes('halloween'), 'a Halloween particle changed in PHP fails proof 1', 'bat w');
     const m2 = engNew.replace(/(\n\t\tbat: '[^']*?)(\d)(")/, (a, p, d, q) => p + ((+d + 1) % 10) + q);
     ok(m2 !== engNew && !textSame(m2, engOld).same, 'a Halloween sprite nudged by one digit fails proof 2', 'bat');
-    /* the Keys scene outside the new bird's branch: its timing, its old sprites */
-    const m3 = engNew.replace("if (st.p === 3 && st.t2 > 3.6) { st.p = 4; st.t2 = 0; }", "if (st.p === 3 && st.t2 > 3.7) { st.p = 4; st.t2 = 0; }");
-    ok(m3 !== engNew && !textSame(m3, engOld).same, "the Keys cranes' dance lengthened fails proof 2", 'cranes p3');
-    const m4 = engNew.replace("dspr('crane', x, y, W2, st.dir > 0, st.dir * bow, a);", "dspr('crane', x, y, W2 + 2, st.dir > 0, st.dir * bow, a);");
-    ok(m4 !== engNew && !textSame(m4, engOld).same, "the Keys cranes' old sprite resized fails proof 2", 'crane W2');
-    /* shared code every scene uses, and the sky list */
-    const m5 = engNew.replace(/(\t\t\twitchmoon: \{ actors: )(\d)/, (a, p, d) => p + (+d + 1));
-    ok(m5 !== engNew && !textSame(m5, engOld).same, 'the witchmoon scene changed fails proof 2', 'witchmoon');
-    const m6 = engNew.replace(', annivdance: 1 };', ', annivdance: 1, giftdrop: 1 };');
-    ok(m6 !== engNew && !textSame(m6, engOld).same, 'another scene slipped into the sky list fails proof 2', 'SKY_VIG');
-    /* the loader: the forced date applied without being asked */
-    const m7 = ambNew.replace('var today = CFG.date || ymd(', "var today = CFG.date || '2026-11-11' || ymd(");
-    ok(m7 !== ambNew && ambientBack(m7) !== ambOld, 'the loader forcing a date on its own fails proof 2', 'today');
-    /* the egg's fit applied to every theme, not only one that asks */
-    const m8 = mxNew.replace('if (egg.finaleFit) { big =', 'if (1) { big =');
-    ok(m8 !== mxNew && matrixBack(m8) !== mxOld, "the egg's fit applied to every theme fails proof 2", 'finaleFit');
+    const m3 = engNew.replace(/(\t\t\twitchmoon: \{ actors: )(\d)/, (a, p, d) => p + (+d + 1));
+    ok(m3 !== engNew && !textSame(m3, engOld).same, 'the witchmoon scene changed fails proof 2', 'witchmoon');
+    const m4 = engNew.replace(', annivdance: 1 };', ', annivdance: 1, giftdrop: 1 };');
+    ok(m4 !== engNew && !textSame(m4, engOld).same, 'another scene slipped into the sky list fails proof 2', 'SKY_VIG');
+    /* what the sleigh flyer's removal touched: the manatee's branch */
+    const m5 = engNew.replace("} else if (h.kind === 'manatee') {", "} else if (h.kind === 'manatee' || h.kind === 'bass') {");
+    ok(m5 !== engNew && !textSame(m5, engOld).same, "the manatee's drawing branch widened fails proof 2", 'manatee');
+    const m6 = engNew.replace("var SKY_HERO = { heron: 1, eagle: 1, witch: 1, osprey: 1 };", "var SKY_HERO = { heron: 1, eagle: 1, osprey: 1 };");
+    ok(m6 !== engNew && !textSame(m6, engOld).same, 'the witch flyer dropped from the sky flyers fails proof 2', 'SKY_HERO');
+    /* the shared keep-clear set the team's moon now reads */
+    const m7 = engNew.replace("if (r.width > 0 && r.height > 0) { list.push([r.left - cvOX,", "if (r.width > 1 && r.height > 0) { list.push([r.left - cvOX,");
+    ok(m7 !== engNew && !textSame(m7, engOld).same, 'the keep-clear set changed fails proof 2', 'kcRects');
+    /* the packs and the loader, byte for byte */
+    const m8 = same['art-thanksgiving.js'].replace('#5E4331', '#5E4332');
+    ok(m8 !== same['art-thanksgiving.js'] && m8 !== git('dcc-seasons/assets/js/art-thanksgiving.js'), "a Thanksgiving colour changed fails proof 2", 'tk');
     /* and the pixels see a sprite change on their own */
-    const dm = folder(Object.assign({}, now, { 'engine.js': engNew.replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), ['art-crane.js']);
+    const dm = folder(Object.assign({}, now, { 'engine.js': engNew.replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);
     ok(JSON.stringify(hm.halloween) !== JSON.stringify(ho.halloween), 'a Halloween sprite resized in the engine fails proof 3 (the pixels)', JSON.stringify(hm.halloween));
   }

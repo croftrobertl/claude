@@ -58,7 +58,7 @@ async function visit(label, { date, preview, reduced, artDelay = 0, art404 = fal
   pg.on('pageerror', e => errs.push(e.message));
   try {
     await pg.waitForTimeout(3500);
-    const st = await pg.evaluate(() => { const E = window.DCCSeasonsEngine; return E ? { engine: 1, tk: (E.guide.tk || []).length, cornucopia: !!E.guide.svgs.cornucopia, crane: !!E.guide.crane, anheart: !!E.guide.svgs.anheart, canvas: !!document.querySelector('canvas.dcc-seasons-canvas') } : { engine: 0 }; });
+    const st = await pg.evaluate(() => { const E = window.DCCSeasonsEngine; return E ? { engine: 1, tk: (E.guide.tk || []).length, cornucopia: !!E.guide.svgs.cornucopia, crane: !!E.guide.crane, anheart: !!E.guide.svgs.anheart, xmas: !!E.guide.svgs.palmxmas, canvas: !!document.querySelector('canvas.dcc-seasons-canvas') } : { engine: 0 }; });
     return { label, reqs: [...new Set(reqs)], errs, st };
   } finally { await ses.close(); }
 }
@@ -81,7 +81,15 @@ async function visit(label, { date, preview, reduced, artDelay = 0, art404 = fal
   const fk = await visit('Florida Keys (12 May)', { date: [2027, 5, 12] });
   ok(fk.reqs.includes('art-crane.min.js') && fk.reqs.filter(r => r.startsWith('art-')).length === 1, `${fk.label}: the loader, the crane and the engine, nothing else`, fk.reqs.join(' '));
   ok(fk.st.engine && fk.st.crane && !fk.errs.length, `${fk.label}: the crane ran before the engine, no page errors`, JSON.stringify(fk.st) + ' ' + fk.errs.join('|'));
-  for (const [lbl, d] of [['Halloween (25 Oct)', [2026, 10, 25]], ['Christmas (15 Dec)', [2026, 12, 15]], ['New Year\'s (1 Jan)', [2027, 1, 1]], ['Thanksgiving\'s 12 Nov (the day after)', [2026, 11, 12]]]) {
+  /* 4.14.1: Christmas fetches its own art (the pieces and Santa's painters) */
+  const xm = await visit('Christmas (15 Dec)', { date: [2026, 12, 15] });
+  ok(xm.reqs.includes('art-christmas.min.js') && xm.reqs.includes('engine.min.js') && xm.reqs.filter(r => r.startsWith('art-')).length === 1, `${xm.label}: the loader, Christmas's art and the engine, nothing else`, xm.reqs.join(' '));
+  ok(xm.st.xmas && !xm.errs.length, `${xm.label}: the art ran before the engine, no page errors`, JSON.stringify(xm.st) + ' ' + xm.errs.join('|'));
+  const late3 = await visit('Christmas, its art arriving 600 ms after the engine', { date: [2026, 12, 15], artDelay: 600 });
+  ok(late3.st.xmas, `${late3.label}: still run first`, JSON.stringify(late3.st));
+  const nf2 = await visit('Christmas with its art file missing (404)', { date: [2026, 12, 15], art404: true });
+  ok(nf2.st.engine && nf2.st.canvas && !nf2.st.xmas && !nf2.errs.length, `${nf2.label}: the engine still runs (no Santa, no pieces), no page errors`, JSON.stringify(nf2.st) + ' ' + nf2.errs.join('|'));
+  for (const [lbl, d] of [['Halloween (25 Oct)', [2026, 10, 25]], ['New Year\'s (1 Jan)', [2027, 1, 1]], ['Thanksgiving\'s 12 Nov (the day after)', [2026, 11, 12]]]) {
     const v = await visit(lbl, { date: d });
     if (/Thanksgiving/.test(lbl)) {
       ok(v.reqs.includes('art-thanksgiving.min.js') && !v.reqs.includes('art-anniversary.min.js') && !v.reqs.includes('art-crane.min.js'), `${lbl}: Thanksgiving's art again, not the Anniversary's`, v.reqs.join(' '));

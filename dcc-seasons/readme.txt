@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.5
+Stable tag: 4.14.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,34 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.14.1 =
+Christmas, as Rob approved it in 4.14.0, rebuilt on 4.13.5 so Thanksgiving
+and the Anniversary are kept. Every other theme draws exactly what it drew
+in 4.13.5, proven pixel for pixel. Rollback: reinstall the 4.13.5 zip.
+
+* Santa's sleigh and four reindeer cross a full moon in the header picture,
+  by day as well as by night. The lead reindeer has a red nose. Santa flicks
+  the reins every few seconds and the snap runs down the line to the team.
+  Each reindeer goes dark exactly where it is over the moon's face and stays
+  lit outside it; the red nose still glows; Santa and the sleigh stay lit.
+* The moon is placed clear of the title, the tagline, the menu bar, the sun
+  dial and the menu button: the same keep-clear set as every other scene.
+* Every reindeer pose and Santa's sleigh is drawn once after the page has
+  loaded, in idle time, so the crossing itself costs almost nothing.
+* The gift-drop scene stays. The old small sleigh that used to fly across
+  the header is gone, so there is one Santa.
+* Christmas's falling pieces go from five kinds to eight: three glass balls
+  (red, gold and blue), a red, white and green candy cane, and a flamingo in
+  a Santa hat standing on one leg, alongside the holly, the gift, the pine
+  and the sabal palm, all redrawn. The number on screen is unchanged.
+* A wreath sits in the top-right corner, the same size as Halloween's web.
+* The soft background discs are gone from Christmas.
+* Christmas's art is its own file, art-christmas.min.js, fetched only on
+  Christmas days. If it fails to load, Christmas runs without its pieces
+  and Santa, and nothing breaks.
+* The upgrade now runs on any request, not only in wp-admin, so an install
+  updated by WP-CLI, an auto-update or FTP gets new schedule rows at once.
 
 = 4.13.5 =
 The Anniversary: a new one-day theme for 11 November, every year. Every

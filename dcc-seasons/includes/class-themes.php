@@ -257,24 +257,29 @@ class Themes {
             'christmas' => [
                 'ambient' => [
                     'water'     => true,
-                    'hero'      => 'sleigh',
-                    /* 4.2.0 — no snow anywhere (Rob: "it doesn't snow in
-                     * Florida"). The snowflakes and the snow piling are gone;
-                     * a Florida sabal palm strung with lights fills their
-                     * share. Cap 9 keeps the ornaments, holly, gifts and pines
-                     * at their old counts; on a phone never fewer than 5. */
+                    /* 4.14.0 — no hero: Santa is the sleighmoon SCENE, his team
+                     * crossing the moon by day as well as by night, and the
+                     * static sleigh flyer is gone (one Santa, the one-character
+                     * rule). No snow anywhere (4.2.0). Cap 9 and the phone
+                     * floor of 5 are unchanged, so the count on screen is too;
+                     * the quota picker spreads it over the eight kinds. */
                     'max'       => 9,
                     'phoneMin'  => 5,
                     'particles' => [
-                        // Longer threads: they hang down through the page
-                        // instead of bunching in the header band.
-                        ['s' => 'ornament', 'b' => 'hang', 'fx' => 'glint', 'w' => 2, 'hl' => [0.08, 0.55]],
+                        // The three glass balls (Rob's pick A), one kind with
+                        // three variations, on the ornaments' long threads.
+                        ['s' => ['ballred', 'ballgold', 'ballblue'], 'b' => 'hang', 'fx' => 'glint', 'w' => 2, 'hl' => [0.08, 0.55]],
                         ['s' => 'holly', 'b' => 'hang', 'hl' => [0.08, 0.55]],
+                        // The candy cane hangs from its own hook, as the balls do.
+                        ['s' => 'candycane', 'b' => 'hang', 'hl' => [0.08, 0.5], 'sz' => [26, 32]],
                         ['s' => 'gift', 'b' => 'fall'],
                         // Pine grows from the bottom, then pops its lights on.
                         ['s' => 'pine', 'b' => 'grow', 'fx' => 'lights', 'sz' => [28, 38]],
                         // ...and so does the palm, string by string.
-                        ['s' => 'sabalpalm', 'b' => 'grow', 'fx' => 'lights', 'sz' => [30, 38]],
+                        ['s' => 'palmxmas', 'b' => 'grow', 'fx' => 'lights', 'sz' => [32, 40]],
+                        // The flamingo in a Santa hat stands up from the bottom
+                        // like a lawn flamingo, on one leg.
+                        ['s' => 'flamingoxmas', 'b' => 'grow', 'sz' => [36, 44]],
                     ],
                 ],
                 'egg' => [
@@ -798,7 +803,9 @@ class Themes {
             'new_years'    => 'confetti',
             'halloween'    => 'embers',
             'july4'        => 'sparks',
-            'christmas'    => 'bokeh',
+            // 4.14.0: Rob removed the bokeh from Christmas, as the
+            // Thanksgiving ovals went in 4.13.0.
+            'christmas'    => '',
             // The "None" option means none of this either.
             'classic'      => '',
         ];

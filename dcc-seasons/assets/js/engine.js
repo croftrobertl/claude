@@ -131,11 +131,8 @@
 		duckhen: '46 30|<path d="M9 19Q11 13 20 13L33 13Q40 13 43 8Q45 15 41 20Q35 27 21 27Q11 27 9 19Z" fill="#8C6A44"/><path d="M18 17l3 2 3-2M25 18l3 2 3-2M20 22l3 2 3-2M28 22l3 2 3-2M14 21l3 2 3-2" stroke="#5E4329" stroke-width="1" fill="none"/><path d="M30 15.6L38 15L37 17.4L30 18Z" fill="#4C6EF5"/><path d="M30 15.6L38 15M30 18L37 17.4" stroke="#F8F9FA" stroke-width=".6"/><path d="M9 13Q8 17 11 19L16 15Q13 13 12 10Z" fill="#9C7B52"/><circle cx="10.4" cy="9.4" r="5.4" fill="#B08C5F"/><path d="M7.4 5.2Q10.6 3.6 13.6 5Q12 5.8 10.2 6Q8.6 6 7.4 5.2Z" fill="#6B4F33"/><path d="M5.8 9.2Q9 8.8 14.6 10" stroke="#6B4F33" stroke-width=".55" fill="none"/><circle cx="8.6" cy="8.9" r=".95" fill="%g"/><path d="M5.6 10L.6 11.2Q.4 13 2 13.2L5.8 12.2Z" fill="#B8A23C"/><circle cx="1.2" cy="12" r=".6" fill="%g"/>',
 		duckling: '20 16|<ellipse cx="11" cy="10.4" rx="7.4" ry="5" fill="#6B4F33"/><path d="M6 12Q11 15.4 16 12Q11 13 6 12Z" fill="#E9C46A"/><path d="M16 8.6L19.4 7.4L18.4 10Z" fill="#6B4F33"/><circle cx="6" cy="6" r="3.8" fill="#E9C46A"/><path d="M2.6 4.6Q5 1.4 8.6 3Q9.6 4.6 9 6Q6 4.4 2.6 4.6Z" fill="#6B4F33"/><path d="M2.8 6.4L9.4 6" stroke="#6B4F33" stroke-width=".7"/><circle cx="4.8" cy="6.2" r=".8" fill="%g"/><path d="M2.6 6.8L.2 7.6L2.6 8.4Z" fill="#495057"/>',
 		witchsil: '92 66|<g fill="#1B1B24" stroke="#9C36B5" stroke-width=".7" paint-order="stroke"><path d="M10 48L74 44" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M72 44L90 36L88 44L91 50L72 47Z"/><path d="M38 30Q52 31 58 45L46 46Z"/><path d="M32 30H44L48 47H30Z"/><path d="M33 47L27 56H20V53H26L29 47Z"/><path d="M36 33L27 46" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M39 21Q50 22 52 32Q46 27 40 28Z"/><circle cx="36" cy="24" r="6"/><path d="M30.5 24L27 26L31 27Z"/><ellipse cx="38" cy="18.5" rx="11" ry="2.4" transform="rotate(-8 38 18.5)"/><path d="M31 18L41 16L50 2L44 3Z"/><ellipse cx="68" cy="40" rx="5.5" ry="3.6"/><circle cx="63.5" cy="36.4" r="3.2"/><path d="M61.4 34.6L61.8 30.8L64 33.4ZM65 33.4L66.6 30.4L67 34.6Z"/><path d="M73 40Q78 34 75.5 29" stroke="#1B1B24" stroke-width="1.6" fill="none"/></g><path d="M32 16.6L41 15L41.8 13.6L33 15Z" fill="#9C36B5"/><circle cx="62.6" cy="36" r=".8" fill="%k"/><circle cx="35" cy="23.5" r=".9" fill="%k"/>',
-		/* — christmas — */
-		holly: '34 22|<path d="M15 10C11 2 4 2 1 6c4 1 4 5 8 7Z" fill="%c"/><path d="M19 10c4-8 11-8 14-4-4 1-4 5-8 7Z" fill="%j"/><circle cx="14" cy="14" r="4" fill="%e"/><circle cx="21" cy="14" r="4" fill="%n"/><circle cx="18" cy="18" r="4" fill="%e"/>',
-		ornament: '24 30|<rect x="9" y="2" width="5" height="5" rx="1" fill="%f"/><circle cx="12" cy="8" r="2" fill="none" stroke="%f" stroke-width="2"/><circle cx="12" cy="19" r="10" fill="%n"/><path d="M3 16a10 10 0 0 1 19 0" fill="%e"/><path d="M2 19q10-4 20 0" stroke="%a" stroke-width="2" fill="none"/><ellipse cx="9" cy="14" rx="3" ry="4" fill="#FFF5F5" opacity=".55"/>',
-		gift: '26 26|<rect x="2" y="9" width="22" height="16" rx="2" fill="%m"/><rect x="1" y="6" width="24" height="5" rx="2" fill="#1C7ED6"/><rect x="11" y="6" width="4" height="19" fill="%a"/><path d="M13 6Q7 6 7 2q4-1 6 4Zm0 0q6 0 6-4-4-1-6 4Z" fill="%a"/>',
-		pine: '30 38|<path d="M15 0 26 14H4Z" fill="%c"/><path d="M15 8 28 24H2Z" fill="%j"/><path d="M15 18 30 34H0Z" fill="#37B24D"/><rect x="12" y="34" width="6" height="4" fill="%i"/><path d="M15 0l1 3h-3Z" fill="%k"/>',
+		/* — christmas — (4.14.1: its pieces are in art-christmas.js; the
+		 * sleigh stays here for the gift drop) */
 		sleigh: '122 46|<path d="M44 24 L62 28" stroke="%i" stroke-width="1.6" fill="none"/><g fill="%p"><path d="M16 18 Q28 13 40 18 Q45 20 45 26 Q45 32 39 32 L20 32 Q14 32 14 26 Q14 20 16 18 Z"/><path d="M16 22 Q9 21 6 15 Q4 10 9 9 Q14 8 16 13 Z"/><path d="M44 20 L50 12 L48 22 Z"/></g><path d="M11 9 L9 2 M9 4 L4 2 M9 6 L3 6 M14 9 L16 1 M16 3 L21 1" stroke="%i" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="6" cy="13" r="1.8" fill="%e"/><circle cx="13" cy="12" r="1" fill="%g"/><path d="M20 32 L17 44 M26 32 L29 44 M36 32 L33 44 M41 32 L45 43" stroke="%i" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M100 8 Q112 12 110 26 L104 26 Q106 16 98 13 Z" fill="%n"/><path d="M62 20 L104 20 Q110 20 110 26 L110 34 L64 34 Q59 30 60 24 Z" fill="%n"/><rect x="72" y="11" width="13" height="10" rx="1" fill="%c"/><path d="M78.5 11 L78.5 21 M72 16 L85 16" stroke="%k" stroke-width="1.4"/><rect x="88" y="14" width="9" height="7" rx="1" fill="%a"/><path d="M58 38 L112 38" stroke="%f" stroke-width="2.4"/><path d="M58 38 Q52 38 53 33 Q55 30 59 32" stroke="%f" stroke-width="2.4" fill="none"/><path d="M64 34 L64 38 M94 34 L94 38" stroke="%f" stroke-width="2"/>',
 		/* — patriotic & winter visitors — */
 		flagcloth: '40 26|<line x1="2" y1="0" x2="2" y2="26" stroke="%i" stroke-width="2"/><path d="M4 2q9 3 17-1 8-4 17 1v16q-9-4-17 0-8 4-17-1Z" fill="%d"/><path d="M4 2q9 3 17-1 8-4 17 1v3q-9-4-17 0-8 4-17-1Zm0 8q9 4 17 0 8-4 17 0v4q-9-4-17 0-8 4-17-1Z" fill="#B22234"/><path d="M4 2q7 2 13 0v9q-6 3-13-1Z" fill="#3C3B6E"/><g fill="%d"><circle cx="8" cy="5" r="1"/><circle cx="13" cy="5" r="1"/><circle cx="10" cy="8" r="1"/></g>',
@@ -558,6 +555,9 @@
 		 * 64): its stroke scales with the viewBox (1 unit of 40 = 2.4px),
 		 * so it is the same drawing bigger, never thinner. */
 		halloween: ['web', 'right:0;top:0;width:96px;opacity:.5;'],
+		/* The wreath (4.14.0, Rob's pick A) in the web's size class: 96px
+		 * at half opacity, in the same corner, inset so the ring is whole. */
+		christmas: ['wreath', 'right:8px;top:8px;width:96px;opacity:.5;'],
 		thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.85;'],
 		snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
 		earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
@@ -574,7 +574,8 @@
 		fall_fishing: ['fullcast', 'dragonlands'],
 		halloween: ['witchmoon'],
 		thanksgiving: ['cranemoon'],
-		christmas: ['giftdrop'],
+		/* 4.14.0: Santa's team across the moon, by day as well as by night */
+		christmas: ['sleighmoon', 'giftdrop'],
 		new_years: ['corkpop'],
 		snowbird: ['arrival'],
 		mardi_gras: ['stilts', 'doubloons'],
@@ -638,17 +639,17 @@
 	 * (Plugin::EVERY sends it). 4.8.0 had the flyer first at 3-5 s. --- */
 	var TIMING = { vigFirst: [6, 10], every: [60, 90], breath: 2, xaTurn: 45 };
 	/* Scenes added only in the evening, and the theme with the midnight countdown. */
-	var EVENING_VIGS = { christmas: ['sleighmoon'] };
+	var EVENING_VIGS = {};   /* 4.14.0: sleighmoon plays by day too, so it is in VIGS */
 	var COUNTDOWN_THEME = 'new_years';
 	/* The drawing that stands for each hero and scene in the admin Theme
 	 * guide — the hero's own sprite, or the scene's main actor. */
 	/* The one emoji a hero draws (Rob's exception): the rainbow's clover strip. */
 	var HERO_GLYPHS = { rainbow: '☘' };
-	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', sleigh: 'sleigh', manatee: 'manatee', rainbow: 'rainbow' };
+	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', manatee: 'manatee', rainbow: 'rainbow' };
 	var SCENE_ART = {
 		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch', cranemoon: 'crane',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
-		ospreycatch: 'ospreyup', cranes: 'sandhill', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'sleigh',
+		ospreycatch: 'ospreyup', cranes: 'sandhill', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'santa',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
 		doubloons: 'doubloon', swans: 'swan', catch1: 'berry', egghunt: 'bunny', hatch: 'chick', bananaslip: 'peel', duckparade: 'duckhen', annivdance: 'sandhill'
 	};
@@ -1465,6 +1466,21 @@
 	/* Art drawn in code for the admin Theme guide: fn(g, width, height)
 	 * paints it into that box (HERO_ART / SCENE_ART name the key). */
 	var ART_DRAW = {
+		/* 4.14.0: the Theme guide paints the real team — the lead with its
+		 * red nose and Santa in his sleigh — with the scene's painters
+		 * (art-christmas.js since 4.14.1). */
+		santa: function (g, w, h) {
+			var X = ART.xm;
+			if (!X) { return; }
+			var L = mn(w / 2.3, h / 0.95), s = L / 100, k = L * 0.5 / 60;
+			g.save();
+			g.translate(w * 0.5 - L * 0.62, h * 0.62);
+			g.save(); g.translate(L * 1.25, -L * 0.04); g.scale(k, k); X.paint(g, 60, 0.3, false, false, true); g.restore();
+			g.strokeStyle = '#3E2A1C'; g.lineWidth = mx2(1, 1.4 * s); g.lineCap = 'round';
+			X.reins(g, [[21 * s, -16.5 * s, 0], [L * 1.25 + 44 * k, -L * 0.04 - 30 * k, 8 * k]], -1, 0);
+			g.scale(s, s); X.sack(g); X.sleigh(g); X.santa(g, 0);
+			g.restore();
+		},
 		/* 4.13.0: the Theme guide paints the REAL crane, the same painter the
 		 * scene uses, so the picture can never drift from what guests see. */
 		crane: function (g, w, h) {
@@ -2699,7 +2715,7 @@
 		 * does too, because it drops real drawn leaves in front instead. */
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
-			halloween: 'embers', thanksgiving: '', anniversary: '', christmas: 'bokeh',
+			halloween: 'embers', thanksgiving: '', anniversary: '', christmas: '',
 			new_years: 'confetti', snowbird: 'sunglow', mlk: 'goldlight',
 			mardi_gras: 'mardiconfetti', valentines: 'hearts', presidents: 'orangeblossom',
 			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
@@ -4099,7 +4115,7 @@
 		var SKY_VIG = { witchmoon: 1, cranemoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1, annivdance: 1 };
 		/* the flyers that cross the sky; the bass and the manatee are on the
 		 * water, the rainbow in a corner */
-		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, sleigh: 1, osprey: 1 };
+		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, osprey: 1 };   /* the sleigh flyer is gone since 4.14.0 */
 		var SKY_SEL = CFG.skySel == null ? '#header-image-main-inside' : CFG.skySel;
 		var skyPic = null;
 		try { skyPic = SKY_SEL ? D.querySelector(SKY_SEL) : null; } catch (e) { skyPic = null; }
@@ -4551,12 +4567,6 @@
 				hero.y = rnd(vh * 0.1, vh * 0.4);
 				hero.vx = dir * rnd(70, 110);
 				if (kind === 'eagle') { sprite('eagleup'); sprite('eagledown'); } else { sprite('witchsil'); }
-			} else if (kind === 'sleigh') {
-				hero.x = dir > 0 ? -140 : vw + 140;
-				hero.y = rnd(vh * 0.08, vh * 0.3);
-				hero.vx = dir * rnd(80, 120);
-				hero.w = 120;
-				sprite('sleigh');
 			} else if (kind === 'manatee') {
 				hero.x = dir > 0 ? -110 : vw + 110;
 				hero.y = vh * 0.955;
@@ -4804,7 +4814,7 @@
 					cx.drawImage(hf.c, hf.x, hf.y, hf.w, hf.h);
 				}
 				heroFrame = h.sa >= 1 ? 's' : h.key;
-			} else if (h.kind === 'sleigh' || h.kind === 'manatee') {
+			} else if (h.kind === 'manatee') {
 				var sim = sprite(h.kind);
 				if (sim.ready) {
 					if (h.dir > 0) { cx.scale(-1, 1); }
@@ -5104,6 +5114,131 @@
 				}
 			}
 			return pl;
+		}
+
+		/* 4.14.0 — Santa's team. Every pose of a reindeer is pre-drawn THREE
+		 * ways in idle time — lit, lit as the far animal of a pair (its own
+		 * darker palette), and dark — plus Santa in his sleigh at four heights
+		 * of the rein flick and the engine's own moon, ungraded, all at
+		 * min(DPR, 2): 24 poses, 76 sprites (measured 7.6 MB at 390 before
+		 * the build; tools/xmas-measure.js). A crossing is drawImage only.
+		 * The painters are art-christmas.js's (ART.xm, 4.14.1).
+		 * Rob's pick for the moon's edge (A) is the reason there are two sets:
+		 * the dark sprite is drawn over the lit one CLIPPED to the disc, so a
+		 * reindeer half over the rim is dark inside it and lit outside. */
+		var SD_POSES = 24, SD_HANDS = 4, SD_BOX = [-53, -75, 64, 53], SL_BOX = [-57, -70, 57, 29];
+		var sdCache = {}, sdStats = { ms: 0, bytes: 0, sprites: 0, live: 0 }, sdIdle = false, smC = null, sledLast = null;
+		function sledK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.45, (vh - 24) / 300)); }
+		function sledL() { return MT.round(78 * sledK()); }   /* the sleigh's length */
+		function sledR() { return MT.round(54 * sledK()); }   /* the moon's radius */
+		function sdGet(kind, i) {
+			var L = sledL(), key = kind + i + '@' + L;
+			if (sdCache[key]) { return sdCache[key]; }
+			var deer = kind !== 's', s = deer ? L * 0.5 / 60 : L / 100, b = deer ? SD_BOX : SL_BOX;
+			var t0 = nowMs(), dp = mn(W.devicePixelRatio || 1, 2), c = D.createElement('canvas'), X = ART.xm;
+			c.width = MT.ceil((b[2] - b[0]) * s * dp); c.height = MT.ceil((b[3] - b[1]) * s * dp);
+			var g = c.getContext('2d');
+			if (g) {
+				g.setTransform(dp * s, 0, 0, dp * s, -b[0] * s * dp, -b[1] * s * dp);
+				if (deer) { X.paint(g, 60, i / SD_POSES, kind === 'd', kind === 'f', false); }
+				else { X.sack(g); X.sleigh(g); X.santa(g, i / (SD_HANDS - 1)); }
+			}
+			sdStats.ms += nowMs() - t0; sdStats.bytes += c.width * c.height * 4; sdStats.sprites++;
+			if (!sdIdle) { sdStats.live++; }   /* drawn outside idle time: the bar says never */
+			return (sdCache[key] = { c: c, ox: b[0] * s, oy: b[1] * s, w: (b[2] - b[0]) * s, h: (b[3] - b[1]) * s });
+		}
+		function smGet() {
+			var r = sledR();
+			if (smC && smC.r === r) { return smC; }
+			var t0 = nowMs(), dc = mn(W.devicePixelRatio || 1, 2), half = MT.ceil(r * 1.3), c = D.createElement('canvas');
+			c.width = c.height = MT.ceil(2 * half * dc);
+			var g = c.getContext('2d');
+			if (g) { g.scale(dc, dc); g.translate(half, half); moonPaint(g, r); }
+			sdStats.ms += nowMs() - t0; sdStats.bytes += c.width * c.height * 4; sdStats.sprites++;
+			if (!sdIdle) { sdStats.live++; }
+			return (smC = { c: c, r: r, half: half });
+		}
+		/* Where the moon goes: on the side the team flies into, as in the
+		 * approved frames, then the nearest place clear of the keep-clear set
+		 * (kcRects: the title's and tagline's letters, the menu bar, the
+		 * dial, the menu button; 4.14.1, where 4.14.0 had its own list),
+		 * measured when the scene starts, in the picture's own px. */
+		function sledClear() { var k = kcRects(); return k.txt.concat(k.box); }
+		function sledMoon(dir, MR) {
+			var obs = sledClear(), pad = MR + 8, y0 = MT.round(mx2(vh * 0.24, MR + 12));
+			function free(x, y) {
+				if (x < pad || x > vw - pad || y < MR + 6 || y > vh - pad) { return false; }
+				for (var j = 0; j < obs.length; j++) {
+					var o = obs[j];
+					if (x + pad > o[0] && x - pad < o[2] && y + pad > o[1] && y - pad < o[3]) { return false; }
+				}
+				return true;
+			}
+			var ys = [], y, a, b;
+			for (y = MR + 6; y <= vh - pad; y += mx2(6, vh * 0.04)) { ys.push(MT.round(y)); }
+			ys.sort(function (p, q) { return abs(p - y0) - abs(q - y0); });
+			ys.unshift(y0);
+			var x0 = vw * (dir > 0 ? 0.66 : 0.34), step = mx2(6, vw * 0.02);
+			for (b = 0; b < ys.length; b++) {
+				for (a = 0; a <= 60; a++) {
+					var xa = x0 + dir * a * step, xb = x0 - dir * a * step;
+					if (free(xa, ys[b])) { return [MT.round(xa), ys[b], 1]; }
+					if (free(xb, ys[b])) { return [MT.round(xb), ys[b], 1]; }
+				}
+			}
+			return [MT.round(x0), y0, 0];   /* nothing clear: the approved place, the letters still cut out in front */
+		}
+		/* The team, the reins and the sleigh at (x, y), flying toward st.dir.
+		 * Four reindeer in two pairs, each a quarter stride from the next;
+		 * the far one of a pair behind, above, 90% and in its darker palette.
+		 * Per animal: the lit sprite, then — when it is anywhere near the
+		 * disc — the dark sprite clipped to the disc, then the lead's red
+		 * nose AFTER the clip. Santa and the sleigh are never dark (Rob). */
+		function sledRig(st, x, y, cut) {
+			var L = st.L, s = L / 100, dl = L * 0.5, k = dl / 60, n = 4, dir = st.dir, i, j;
+			var bob = sin(st.t2 * 2.1) * 1.4 * s, rot = -0.06 + sin(st.t2 * 1.3 + 0.7) * 0.025, ca = cos(rot), sa = sin(rot);
+			var hand = st.fl < 0 ? 0 : clamp(1 - st.fl * 3, 0, 1), leadPair = ((n - 1) / 2) | 0;
+			var parts = [], minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+			function grow(px, py, r) { minx = mn(minx, px - r); maxx = mx2(maxx, px + r); miny = mn(miny, py - r); maxy = mx2(maxy, py + r); }
+			function rigT() { cx.translate(x, y); if (dir < 0) { cx.scale(-1, 1); } cx.rotate(rot); }
+			for (i = 0; i < n; i++) {
+				var pair = (i / 2) | 0, far = i % 2 === 1;
+				parts.push({ x: L * 0.98 + pair * 2.05 * dl + (far ? 0.55 * dl : 0), y: -0.06 * dl * pair - L * 0.02 - (far ? 0.30 * dl : 0),
+					ph: ((st.gt + i * 0.25) % 1 + 1) % 1, far: far, pair: pair });
+			}
+			for (j = n - 1; j >= 0; j--) {
+				var q = parts[j], pi = MT.floor(q.ph * SD_POSES) % SD_POSES, sc = q.far ? 0.9 : 1;
+				var lift = (q.pair === leadPair && st.fl > 0.82) ? (st.fl - 0.82) * 0.5 : 0;
+				var px = x + dir * (q.x * ca - q.y * sa), py = y + q.x * sa + q.y * ca, reach = 76 * k;
+				var lit = sdGet(q.far ? 'f' : 'l', pi);
+				cx.save(); rigT(); cx.translate(q.x, q.y); cx.rotate(-lift); cx.scale(sc, sc);
+				cx.drawImage(lit.c, lit.ox, lit.oy, lit.w, lit.h);
+				cx.restore();
+				if (sqrt((px - st.mx) * (px - st.mx) + (py - st.my) * (py - st.my)) < st.MR + reach) {
+					var dk = sdGet('d', pi);
+					cx.save();
+					cx.beginPath(); cx.arc(st.mx, st.my, st.MR, 0, TAU); cx.clip();
+					rigT(); cx.translate(q.x, q.y); cx.rotate(-lift); cx.scale(sc, sc);
+					cx.drawImage(dk.c, dk.ox, dk.oy, dk.w, dk.h);
+					cx.restore();
+					st.darkN++;
+				}
+				if (q.pair === leadPair && !q.far) {
+					cx.save(); rigT(); cx.translate(q.x, q.y); cx.rotate(-lift); cx.scale(k, k); ART.xm.glow(cx, q.ph); cx.restore();
+				}
+				grow(px, py, reach);
+			}
+			/* the reins: one line from his hand over each pair to the lead; the
+			 * flick travels along it */
+			var P = [[21 * s, (-16.5 - hand * 7) * s + bob, 0]];
+			for (i = 0; i < n; i += 2) { P.push([parts[i].x + 44 * k, parts[i].y - 30 * k, 8 * k + i * k]); }
+			cx.save(); rigT(); cx.strokeStyle = '#3E2A1C'; cx.lineWidth = mx2(1, 1.4 * s); cx.lineCap = 'round';
+			ART.xm.reins(cx, P, st.fl, 10 * s);
+			cx.restore();
+			var sl = sdGet('s', MT.round(hand * (SD_HANDS - 1)));
+			cx.save(); rigT(); cx.translate(0, bob); cx.drawImage(sl.c, sl.ox, sl.oy, sl.w, sl.h); cx.restore();
+			grow(x, y - 20 * s, 60 * s);
+			cut.push([minx, miny, maxx - minx, maxy - miny]);
 		}
 
 		function moonGet() {
@@ -6558,19 +6693,55 @@
 				}
 				return !sleighOn && !st.gd;
 			} },
-			/* evening-only: the sleigh silhouette crosses the moon */
+			/* 4.14.0 — Santa's team crosses the moon, by day as well as by night
+			 * (Rob). The engine's own moon, ungraded, on the side the team flies
+			 * into and clear of the page title and the dial (sledMoon); four
+			 * reindeer at a gallop, the lead with the red nose, Santa flicking
+			 * the reins every few seconds with the snap rippling down to the
+			 * lead. Only the reindeer go dark, and only inside the disc. It
+			 * plays in the header picture (a sky scene) and in the moments
+			 * queue like the others; the letters of the header are cut out of
+			 * it and the picture's foreground stays in front. */
 			sleighmoon: { actors: 2, run: function (st, dt) {
-				if (!st.on) { st.on = 1; st.mx = vw * 0.75; st.my = vh * 0.15; st.t2 = 0; }
-				st.t2 += dt;
-				var a = st.t2 < 1 ? st.t2 : (st.t2 > 5 ? clamp(6 - st.t2, 0, 1) : 1);
-				moonDraw(st.mx, st.my, a);
-				if (st.t2 > 1 && st.t2 < 4.6) {
-					var u = (st.t2 - 1) / 3.6;
-					dspr('sleigh', lerp(st.mx - 150, st.mx + 150, u), st.my + sin(u * 5) * 5, 100, true);
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.dir = sgn(); st.gt = rnd(0, 1); st.darkN = 0;
+					st.L = sledL(); st.MR = sledR();
+					var m = sledMoon(st.dir, st.MR);
+					st.mx = m[0]; st.my = m[1]; st.clear = m[2];
+					st.ahead = st.L * 2.9; st.behind = st.L * 0.62;
+					st.T = clamp((vw + st.ahead + st.behind) / (st.L * 2.2), 3.6, 9.5);
+					st.in = 0.5;                                  /* the moon is up first */
+					st.fl = -1; st.flAt = rnd(0.9, 1.6);
+					/* the header's letters are measured in IDLE time ahead of the
+					 * scene (sdHdr, every 10 s): re-measuring them here cost the
+					 * start frame ~11 ms at 4x CPU */
+					sledLast = st;
 				}
-				/* the moon and the sleigh's track: the foreground cut looks only here */
-				st.fgB = [[st.mx - 90, st.my - 90, 180, 180], [st.mx - 210, st.my - 60, 420, 120]];
-				return st.t2 > 6;
+				st.t2 += dt; st.gt += dt * 1.25;
+				var tc = st.t2 - st.in, gone = st.in + st.T;
+				var a = st.t2 < 0.5 ? st.t2 / 0.5 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 0.8, 0, 1) : 1);
+				var mo = smGet(), dp = mn(W.devicePixelRatio || 1, 2);
+				cx.save();
+				cx.globalAlpha = clamp(a, 0, 1);
+				/* on WHOLE device pixels, as the witch's moon is */
+				cx.drawImage(mo.c, MT.round((st.mx - mo.half) * dp) / dp, MT.round((st.my - mo.half) * dp) / dp, mo.half * 2, mo.half * 2);
+				cx.restore();
+				var cut = [[st.mx - mo.half, st.my - mo.half, mo.half * 2, mo.half * 2]];
+				if (tc > 0 && tc < st.T) {
+					/* the flick: every 2.4-3.8 s, 0.9 s from his hands to the lead */
+					if (st.fl < 0) { st.flAt -= dt; if (st.flAt <= 0) { st.fl = 0; } }
+					else { st.fl += dt / 0.9; if (st.fl >= 1) { st.fl = -1; st.flAt = rnd(2.4, 3.8); } }
+					var u = tc / st.T;
+					var x0 = st.dir > 0 ? -st.ahead : vw + st.ahead, x1 = st.dir > 0 ? vw + st.behind : -st.behind;
+					st.x = x0 + (x1 - x0) * u;
+					st.y = st.my + st.MR * 0.26 - sin(u * MT.PI) * st.MR * 0.12;
+					sledRig(st, st.x, st.y, cut);
+				}
+				/* behind the header's text, and behind the picture's foreground */
+				hdrCut(cut, st.t2);
+				st.fgB = cut;
+				st.moonA = a;
+				return st.t2 > gone + 0.8;
 			} },
 			/* New Year's: the cork goes off in a corner. The cork sprite was
 			 * retired in 3.15.0 (it read as a mushroom); what flies is the
@@ -6881,6 +7052,8 @@
 		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
 		/* no header picture: no sky scene (4.10.7) */
 		if (!skyPic) { vigList = vigList.filter(function (n) { return !SKY_VIG[n]; }); }
+		/* 4.14.1: Santa's painters are art-christmas.js's; without it, no Santa */
+		if (!ART.xm) { vigList = vigList.filter(function (n) { return n !== 'sleighmoon'; }); }
 		/* The witch and her moon are pre-drawn in idle time after load (4.10.0). */
 		if (vigList.indexOf('witchmoon') >= 0) {
 			var wcTodo = [-1], wcI;
@@ -6948,6 +7121,51 @@
 			};
 			var crLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			crLater(crIdle);
+		}
+		/* Santa's team the same way (4.14.0): every pose lit, far and dark,
+		 * the sleigh's four flick heights and the moon, in idle time at the
+		 * header picture's size. */
+		if (vigList.indexOf('sleighmoon') >= 0 && ART.xm) {
+			var sdTodo = [-1], sdI;
+			for (sdI = 0; sdI < SD_HANDS; sdI++) { sdTodo.push('s' + sdI); }
+			for (sdI = 0; sdI < SD_POSES; sdI++) { sdTodo.push('l' + sdI, 'f' + sdI, 'd' + sdI); }
+			sdTodo.push('w', 'h');   /* then warm every sprite once, then the header's letters */
+			/* one throwaway draw of each sprite: the first drawImage from a
+			 * canvas costs more than the rest, and must not land in the
+			 * scene's first frames (measured 8.5 ms at 4x CPU) */
+			var sdWarm = function () {
+				var c = D.createElement('canvas'); c.width = c.height = 2;
+				var g = c.getContext('2d'), k;
+				if (!g) { return; }
+				for (k in sdCache) { if (sdCache[k].c) { g.drawImage(sdCache[k].c, 0, 0, 1, 1); } }
+				if (smC) { g.drawImage(smC.c, 0, 0, 1, 1); }
+			};
+			/* keep the header's letters fresh in idle time while the page is
+			 * open, so the scene never measures them in a frame */
+			var sdHdr = function (dl) {
+				if (!D.hidden && skyPic && (!vig || vig.name !== 'sleighmoon')) { inSky(hdrBuild); }
+				setTimeout(function () { sdLater(sdHdr); }, 10000);
+			};
+			var sdIdleFn = function (dl) {
+				var t0 = nowMs();
+				if (!skyPic) { return; }
+				if (!vw) { sdLater(sdIdleFn); return; }   /* not sized yet */
+				sdIdle = true;
+				try {
+					inSky(function () {
+						do {
+							var k = sdTodo.shift();
+							if (k === -1) { smGet(); }
+							else if (k === 'w') { sdWarm(); }
+							else if (k === 'h') { hdrBuild(); setTimeout(function () { sdLater(sdHdr); }, 10000); }
+							else if (k != null) { sdGet(k.charAt(0), +k.slice(1)); }
+						} while (sdTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
+					});
+				} finally { sdIdle = false; }
+				if (sdTodo.length) { sdLater(sdIdleFn); }
+			};
+			var sdLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
+			sdLater(sdIdleFn);
 		}
 		/* 4.13.5: the Anniversary's pair. The plan is measured in idle time
 		 * (and kept fresh every 10 s while the page is open, as the cranes'
@@ -7460,6 +7678,7 @@
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
+				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },
 				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: fullMoonR(), plan: crPlan }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
