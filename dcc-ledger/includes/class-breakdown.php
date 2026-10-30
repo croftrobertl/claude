@@ -15,59 +15,68 @@ if (!defined('ABSPATH')) {
  * of the 117. No services appear in any breakdown.
  *
  * Room revenue excludes tax. So the direct figures cannot use the total as
- * it stands; they have to take the breakdown's total less its taxes.
+ * it stands; they take the breakdown's total less its taxes.
  *
- * The shape of `_mphb_booking_price_breakdown` is MotoPress's, not ours, and
- * it is not the same on every version. So this reader proves itself rather
- * than trusting its own reading:
+ * `_mphb_booking_price_breakdown` is a **JSON string** on this site — 0.3.3
+ * read it as a serialized PHP array, found nothing, and put all 267 direct
+ * bookings into "tax unknown". Its shape, counted on live on 2026-10-30:
  *
- *  - it finds the taxes wherever they are nested, by container name;
- *  - it finds the breakdown's own total;
- *  - and it reports a tax as KNOWN only when the parts it read add up —
- *    the breakdown's total equals the booking's total, and where the
- *    breakdown states a pre-tax base, base plus the taxes it found equals
- *    that total.
+ *     total                                 the whole booking total
+ *     rooms[n].room.total|discount|…
+ *     rooms[n].services.total|…
+ *     rooms[n].fees.total|…
+ *     rooms[n].taxes.room.total             ← room tax
+ *     rooms[n].taxes.room.list[m].label|price
+ *     rooms[n].taxes.services.total         ← tax on services
+ *     rooms[n].taxes.fees.total             ← tax on fees
+ *     rooms[n].total|discount|discount_total
+ *
+ * The reader walks those paths exactly rather than hunting for anything
+ * tax-shaped, and PROVES ITSELF two ways before a tax counts as known:
+ *
+ *  - the breakdown's own total must equal the booking's total; and
+ *  - every key under a room's `taxes` must be one this reader knows. A tax
+ *    bucket nobody has seen here would otherwise be read as nothing, and a
+ *    tax read short overstates room revenue by the difference.
  *
  * Anything else is an unknown tax, named as unknown. A booking whose tax is
  * unknown keeps its money in the money figures and stays out of every rate:
- * an unknown is never a zero, and a rate computed from a total that may hold
- * tax is the wrong figure, not a missing one.
+ * an unknown is never a zero, and a rate computed from a total that may
+ * hold tax is a wrong figure rather than a missing one.
  */
 final class Breakdown
 {
-    /** Containers whose entries are taxes, wherever they are nested. */
-    public const TAX_KEYS = ['taxes', 'tax', 'room_taxes', 'fee_taxes', 'service_taxes'];
+    /** The tax buckets this site has, and the only ones accepted. */
+    public const TAX_BUCKETS = ['room', 'services', 'fees'];
 
-    /** Where an entry keeps its money, in the order they are tried. */
-    public const AMOUNT_KEYS = ['amount', 'price', 'total', 'value', 'tax'];
+    /** Where a bucket keeps its money, in the order they are tried. */
+    public const AMOUNT_KEYS = ['total', 'amount', 'price', 'value'];
 
     /** Where the breakdown keeps its own total. */
     public const TOTAL_KEYS = ['total', 'grand_total', 'total_price'];
-
-    /** A pre-tax base, where the breakdown states one. */
-    public const BASE_KEYS = ['subtotal', 'sub_total', 'total_before_tax', 'net_total'];
 
     public const NO_BREAKDOWN    = 'no breakdown';
     public const UNREADABLE      = 'breakdown unreadable';
     public const NO_TOTAL        = 'breakdown states no total';
     public const TOTAL_DISAGREES = 'breakdown total disagrees with the booking total';
-    public const PARTS_DISAGREE  = 'breakdown parts do not add up to its total';
+    public const NO_ROOMS        = 'breakdown lists no rooms';
+    public const UNKNOWN_BUCKET  = 'breakdown holds a tax bucket this reader does not know';
     public const KNOWN           = 'read from the breakdown';
 
     /**
      * The tax inside a booking's total.
      *
-     * @param mixed $raw         the stored meta value, serialized or not
+     * @param mixed $raw         the stored meta value: JSON on this site
      * @param int   $total_cents the booking's own mphb_total_price, in cents
      * @return array{known:bool,tax_cents:int,total_cents:?int,has_tax:bool,reason:string}
      */
     public static function read($raw, int $total_cents): array
     {
-        $miss = static fn (string $reason): array => [
+        $miss = static fn (string $reason, ?int $total = null, bool $has_tax = false): array => [
             'known'       => false,
             'tax_cents'   => 0,
-            'total_cents' => null,
-            'has_tax'     => false,
+            'total_cents' => $total,
+            'has_tax'     => $has_tax,
             'reason'      => $reason,
         ];
 
@@ -75,37 +84,57 @@ final class Breakdown
             return $miss(self::NO_BREAKDOWN);
         }
 
-        // Unserialized with every class forbidden: this is stored data,
-        // and a serialized object in it must never become an object here.
-        // WordPress's own helper would allow one.
-        $data = is_array($raw) ? $raw : @unserialize((string) $raw, ['allowed_classes' => false]);
+        $data = self::decode($raw);
         if (!is_array($data) || $data === []) {
             return $miss(self::UNREADABLE);
         }
 
-        $tax     = self::sum_taxes($data);
-        $total   = self::first_amount($data, self::TOTAL_KEYS);
-        $base    = self::first_amount($data, self::BASE_KEYS);
-        $has_tax = $tax['found'];
-
+        $total = self::amount($data, self::TOTAL_KEYS);
         if ($total === null) {
-            return ['known' => false, 'tax_cents' => 0, 'total_cents' => null, 'has_tax' => $has_tax, 'reason' => self::NO_TOTAL];
+            return $miss(self::NO_TOTAL);
         }
-
         if ($total !== $total_cents) {
-            return ['known' => false, 'tax_cents' => 0, 'total_cents' => $total, 'has_tax' => $has_tax, 'reason' => self::TOTAL_DISAGREES];
+            return $miss(self::TOTAL_DISAGREES, $total);
         }
 
-        // Where the breakdown states what the price was before tax, the two
-        // readings must meet. If they do not, something in this breakdown is
-        // not being read — and a tax read wrongly moves every direct rate.
-        if ($base !== null && $base + $tax['cents'] !== $total) {
-            return ['known' => false, 'tax_cents' => 0, 'total_cents' => $total, 'has_tax' => $has_tax, 'reason' => self::PARTS_DISAGREE];
+        $rooms = $data['rooms'] ?? null;
+        if (!is_array($rooms) || $rooms === []) {
+            return $miss(self::NO_ROOMS, $total);
+        }
+
+        $tax     = 0;
+        $has_tax = false;
+        foreach ($rooms as $room) {
+            if (!is_array($room)) {
+                continue;
+            }
+            $taxes = $room['taxes'] ?? [];
+            if (!is_array($taxes)) {
+                return $miss(self::UNKNOWN_BUCKET, $total);
+            }
+
+            foreach ($taxes as $bucket => $node) {
+                if (!is_string($bucket) || !in_array($bucket, self::TAX_BUCKETS, true)) {
+                    // A tax this reader has never seen. Reading it as
+                    // nothing would overstate room revenue by its value.
+                    return $miss(self::UNKNOWN_BUCKET, $total);
+                }
+
+                $cents = self::bucket_cents($node);
+                if ($cents === null) {
+                    return $miss(self::UNKNOWN_BUCKET, $total);
+                }
+
+                $tax += $cents;
+                if ($bucket === 'room' && $cents !== 0) {
+                    $has_tax = true;
+                }
+            }
         }
 
         return [
             'known'       => true,
-            'tax_cents'   => $tax['cents'],
+            'tax_cents'   => $tax,
             'total_cents' => $total,
             'has_tax'     => $has_tax,
             'reason'      => self::KNOWN,
@@ -113,48 +142,75 @@ final class Breakdown
     }
 
     /**
-     * Every tax in the breakdown, however deeply it is nested.
+     * The stored value as an array.
      *
-     * @param array<mixed> $data
-     * @return array{cents:int,found:bool}
+     * JSON on this site. A serialized PHP array is still read, for a site or
+     * a MotoPress version that stores one — with every class forbidden,
+     * because this is stored data and a serialized object in it must never
+     * become an object here. WordPress's own helper would allow one.
+     *
+     * @param mixed $raw
+     * @return array<mixed>|null
      */
-    private static function sum_taxes(array $data): array
+    private static function decode($raw): ?array
     {
+        if (is_array($raw)) {
+            return $raw;
+        }
+
+        $text = trim((string) $raw);
+        if ($text === '') {
+            return null;
+        }
+
+        if ($text[0] === '{' || $text[0] === '[') {
+            $json = json_decode($text, true);
+
+            return is_array($json) ? $json : null;
+        }
+
+        $data = @unserialize($text, ['allowed_classes' => false]);
+
+        return is_array($data) ? $data : null;
+    }
+
+    /**
+     * One tax bucket, in cents, or null if it cannot be read.
+     *
+     * A bucket states its own total. Where it does not but lists its parts,
+     * the parts are added — `taxes.room.list[m].price`.
+     *
+     * @param mixed $node
+     */
+    private static function bucket_cents($node): ?int
+    {
+        if (is_numeric($node)) {
+            return Money::to_cents($node);
+        }
+        if (!is_array($node)) {
+            return null;
+        }
+
+        $total = self::amount($node, self::AMOUNT_KEYS);
+        if ($total !== null) {
+            return $total;
+        }
+
+        $list = $node['list'] ?? null;
+        if (!is_array($list)) {
+            return null;
+        }
+
         $cents = 0;
-        $found = false;
-
-        $walk = static function ($node, bool $inside_tax) use (&$walk, &$cents, &$found): void {
-            if (!is_array($node)) {
-                return;
+        foreach ($list as $line) {
+            $amount = is_numeric($line) ? Money::to_cents($line) : self::amount(is_array($line) ? $line : [], ['price', 'amount', 'total', 'value']);
+            if ($amount === null) {
+                return null;
             }
-            foreach ($node as $key => $value) {
-                $is_tax = $inside_tax
-                    || (is_string($key) && in_array(strtolower($key), self::TAX_KEYS, true));
+            $cents += $amount;
+        }
 
-                if ($is_tax && !is_array($value) && is_numeric($value)) {
-                    $cents += Money::to_cents($value);
-                    $found  = true;
-                    continue;
-                }
-
-                if ($is_tax && is_array($value)) {
-                    $amount = self::first_amount($value, self::AMOUNT_KEYS);
-                    if ($amount !== null) {
-                        $cents += $amount;
-                        $found  = true;
-                        continue;
-                    }
-                }
-
-                if (is_array($value)) {
-                    $walk($value, $is_tax);
-                }
-            }
-        };
-
-        $walk($data, false);
-
-        return ['cents' => $cents, 'found' => $found];
+        return $cents;
     }
 
     /**
@@ -163,19 +219,18 @@ final class Breakdown
      * @param array<mixed> $node
      * @param string[]     $keys
      */
-    private static function first_amount(array $node, array $keys): ?int
+    private static function amount(array $node, array $keys): ?int
     {
         foreach ($keys as $key) {
-            foreach ($node as $k => $v) {
-                if (!is_string($k) || strtolower($k) !== $key) {
-                    continue;
-                }
-                if (is_array($v) || !is_numeric($v)) {
-                    continue;
-                }
-
-                return Money::to_cents($v);
+            if (!array_key_exists($key, $node)) {
+                continue;
             }
+            $value = $node[$key];
+            if (is_array($value) || !is_numeric($value)) {
+                continue;
+            }
+
+            return Money::to_cents($value);
         }
 
         return null;

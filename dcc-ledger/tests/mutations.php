@@ -768,16 +768,69 @@ EOT,
 EOT,
     ],
     [
-        // 0.3.3's finding: a breakdown read half-way is wrong, not partly
-        // right. Accepting one whose parts do not meet its total would
-        // take out a tax that is not the whole tax.
-        'name' => 'A breakdown accepted although its parts do not add up',
+        // 0.3.4's blocker: live stores the breakdown as JSON, and 0.3.3
+        // read it as a serialized PHP array. It found nothing in all 267
+        // direct bookings and reported every one of them as "tax unknown".
+        'name' => 'The breakdown read as serialized PHP instead of as JSON',
         'file' => 'includes/class-breakdown.php',
         'from' => <<<'EOT'
-        if ($base !== null && $base + $tax['cents'] !== $total) {
+        if ($text[0] === '{' || $text[0] === '[') {
 EOT,
         'to'   => <<<'EOT'
         if (false) {
+EOT,
+    ],
+    [
+        'name' => 'JSON decoded to objects instead of arrays',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+            $json = json_decode($text, true);
+EOT,
+        'to'   => <<<'EOT'
+            $json = json_decode($text);
+EOT,
+    ],
+    [
+        // A tax bucket read as nothing overstates room revenue by its
+        // value, which is the wrong figure rather than a missing one.
+        'name' => 'A tax bucket this reader does not know read as nothing',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+                if (!is_string($bucket) || !in_array($bucket, self::TAX_BUCKETS, true)) {
+EOT,
+        'to'   => <<<'EOT'
+                if (false) {
+EOT,
+    ],
+    [
+        'name' => 'Only the room tax taken out, leaving service and fee tax in revenue',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+    public const TAX_BUCKETS = ['room', 'services', 'fees'];
+EOT,
+        'to'   => <<<'EOT'
+    public const TAX_BUCKETS = ['room'];
+EOT,
+    ],
+    [
+        'name' => 'A tax bucket that lists its parts read as nothing',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+        $list = $node['list'] ?? null;
+EOT,
+        'to'   => <<<'EOT'
+        return 0;
+        $list = $node['list'] ?? null;
+EOT,
+    ],
+    [
+        'name' => 'Only the first room on a booking counted for tax',
+        'file' => 'includes/class-breakdown.php',
+        'from' => <<<'EOT'
+        foreach ($rooms as $room) {
+EOT,
+        'to'   => <<<'EOT'
+        foreach (array_slice($rooms, 0, 1) as $room) {
 EOT,
     ],
     [
@@ -794,10 +847,10 @@ EOT,
         'name' => 'A serialized object in the booking meta turned into an object',
         'file' => 'includes/class-breakdown.php',
         'from' => <<<'EOT'
-        $data = is_array($raw) ? $raw : @unserialize((string) $raw, ['allowed_classes' => false]);
+        $data = @unserialize($text, ['allowed_classes' => false]);
 EOT,
         'to'   => <<<'EOT'
-        $data = is_array($raw) ? $raw : @unserialize((string) $raw);
+        $data = @unserialize($text);
         $data = is_object($data) ? (array) $data : $data;
 EOT,
     ],

@@ -1,4 +1,4 @@
-# DCC Ledger 0.3.3 — Staging Checklist
+# DCC Ledger 0.3.4 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -714,4 +714,45 @@ while its nights went on dividing the rate.
 
 - [ ] September 2026 nights and occupancy: 14 of 240, **5.8%**. Its direct
       rates will have moved with the tax; its nights must not.
+- [ ] MotoPress checksums, links and reviews all unchanged. Zero writes.
+
+---
+
+## 18. 0.3.4 — The Breakdown Is JSON
+
+0.3.3's reader expected a serialized PHP array. Live stores JSON, so it
+found nothing in any of the 267 direct bookings, called every tax unknown,
+and took every direct night out of every rate. Nothing on a screen would
+have said so — only `direct-tax` did, which is why that command exists.
+
+0.3.4 changes the reader and nothing else. It writes a fresh tax reading
+per booking; no Original, booking or payment is touched.
+
+- [ ] Deactivate, upload `Ledger 0.3.4.zip`, activate.
+- [ ] `wp dcc-ledger snapshot`. The readings are retaken here. Each one is
+      a NEW version beside the old "unreadable" one — nothing is
+      overwritten, so the record of what 0.3.3 read is still there.
+- [ ] `wp dcc-ledger direct-tax`:
+      - **Tax known** should be most of the 267, and **Tax unknown** should
+        fall to roughly the bookings with no breakdown at all.
+      - **Listing a room tax** should land near **76** of the 117 confirmed
+        bookings with a breakdown. If it does not, tell me both numbers and
+        do not trust the direct figures — that is the check I cannot run
+        here.
+      - Read the reasons beneath it. *breakdown holds a tax bucket this
+        reader does not know* means live has a fourth tax bucket I have not
+        been told about: send me its key name and I will add it. It is
+        refused rather than read short on purpose.
+- [ ] `wp dcc-ledger money-check` ends with **Success**, all five Figures
+      lines OK, and *the months add up to the range* still ties across
+      every month.
+- [ ] Direct **ADR and RevPAR now exist** where 0.3.3 showed them computed
+      from almost nothing, and they sit about 11% below the figures 0.3.2
+      showed — that is the tax coming out, and it is the correction.
+- [ ] Occupancy is **unchanged** from 0.3.3, on every month. A night is
+      occupied whether or not its tax can be read.
+- [ ] September 2026 is still 14 nights of 240, **5.8%**.
+- [ ] Pick one direct booking with a tax, open it in wp-admin, and check by
+      hand: its room revenue in the ledger should be its displayed total
+      less the tax the breakdown lists. One booking is enough.
 - [ ] MotoPress checksums, links and reviews all unchanged. Zero writes.

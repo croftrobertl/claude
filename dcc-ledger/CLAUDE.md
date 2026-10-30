@@ -80,11 +80,11 @@ it; named so no future session mistakes the gap for a decision):
 - Booking pace has no history yet. Recording began with 0.3.0; the first
   month with a complete curve is about six months after that.
 - How much of the tax inside the direct booking totals the ledger can read
-  has not been checked against the live count. The Director counted 76 of
-  117 sampled bookings listing room taxes; `wp dcc-ledger direct-tax`
-  prints what the reader found. Until the two are compared, the direct
-  room-revenue figure rests on a reader that has proved itself only
-  against fixtures.
+  has not been checked against the live count since the reader was
+  rewritten for JSON in 0.3.4. The Director counted 76 of 117 sampled
+  bookings listing room taxes; `wp dcc-ledger direct-tax` prints what the
+  reader found. On 0.3.3 it read 0 of 267 and nobody would have known from
+  a figure — only from that command.
 
 ## Branch rule
 
@@ -260,17 +260,33 @@ held. Reports show Original, Ledger (Original + adjustments), or the Difference.
   the breakdown's total equals `mphb_total_price` on 116 of the 117; and
   no services appear in any breakdown. Direct room revenue is the
   breakdown's total less its taxes — never `mphb_total_price` as it stands.
+- **The price breakdown is a JSON string on this site**, not a serialized
+  PHP array. `Breakdown::decode()` reads JSON first and a serialized array
+  second (with `allowed_classes => false`, so stored data never becomes an
+  object). 0.3.3 read it as serialized only, found nothing in any of the
+  267 direct bookings, and reported every one of them as an unknown tax —
+  which took every direct night out of every rate. The key paths, counted
+  on live on 2026-10-30: `total`; `rooms[n].room.total`;
+  `rooms[n].services.total`; `rooms[n].fees.total`;
+  `rooms[n].taxes.room.total` and `.taxes.room.list[m].price`;
+  `rooms[n].taxes.services.total`; `rooms[n].taxes.fees.total`;
+  `rooms[n].total`. Room revenue takes out all three tax buckets.
+  `tests/fixtures/mphb-dataset.php` writes that exact JSON, and a mutation
+  feeds the reader a JSON string — the case that slipped through.
+- **A tax bucket this reader does not know refuses the whole reading.**
+  `Breakdown::TAX_BUCKETS` is the allow-list. A bucket read as nothing
+  would overstate room revenue by its value, which is a wrong figure
+  rather than a missing one — so an unfamiliar bucket makes the booking's
+  tax unknown instead.
 - **A breakdown that does not prove itself is an unknown tax, never a tax
   of zero.** `Breakdown::read()` reports a tax as known only when the
-  breakdown's own total equals the booking's total AND, where the
-  breakdown states a pre-tax base, base plus the taxes it found meets that
-  total. Anything else — no breakdown, no total, parts that do not add up
-  — is unknown. A booking whose tax is unknown keeps its money in the
-  money figures and is out of room revenue and out of every rate, named on
-  screen with its count, its nights and its dollars. A total that may hold
-  tax is a WRONG room-revenue figure, not a missing one. The breakdown is
-  unserialized with `allowed_classes => false`: stored data never becomes
-  an object.
+  breakdown's own total equals the booking's total and every tax bucket in
+  it is one the reader knows. Anything else — no breakdown, no JSON, no
+  total, no rooms, a bucket nobody has seen — is unknown. A booking whose
+  tax is unknown keeps its money in the money figures and is out of room
+  revenue and out of every rate, named on screen with its count, its
+  nights and its dollars. A total that may hold tax is a WRONG
+  room-revenue figure, not a missing one.
 - **The tax reading is frozen, in its own table.** `booking_taxes` versions
   a reading the way `originals` versions a booking, and for the same
   reason. It is a separate table rather than two more columns on
@@ -475,8 +491,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1725 assertions
-    php dcc-ledger/tests/mutations.php            # 91 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1751 assertions
+    php dcc-ledger/tests/mutations.php            # 105 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -511,6 +527,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.3.3.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.4.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

@@ -49,13 +49,24 @@ const LIVE_PAYMENT_REFUNDED   = 'mphb-p-refunded';
 const LIVE_PAYMENT_FAILED     = 'mphb-p-failed';
 
 /**
- * A MotoPress-shaped price breakdown: a room subtotal, the room tax inside
- * the total, and the total itself. Lake County's tourist and sales tax comes
- * to 11%%, which is the shape Rob's bookings carry.
+ * A MotoPress price breakdown in the shape live actually stores it: a JSON
+ * string, with the key paths counted on live on 2026-10-30 —
  *
- * Written as a serialized array with LITERAL key names, the way MotoPress
- * stores it — never built from the plugin's own constants, for the same
- * reason the rest of this file is not.
+ *     total
+ *     rooms[n].room.total / .discount / .discount_total / .list
+ *     rooms[n].services.total / .fees.total
+ *     rooms[n].taxes.room.total and .taxes.room.list[m].label / .price
+ *     rooms[n].taxes.services.total / .taxes.fees.total
+ *     rooms[n].total / .discount / .discount_total
+ *
+ * 0.3.3 read this as a serialized PHP array, found nothing in it, and put
+ * every direct booking into "tax unknown". Written here with LITERAL key
+ * names, never built from the plugin's own constants, for the same reason
+ * the rest of this file is not: a fixture built from the code follows the
+ * code into its mistakes.
+ *
+ * Lake County's tourist and sales tax comes to 11%%, which is the shape
+ * Rob's bookings carry.
  */
 function dccl_price_breakdown(string $total, int $room_id, bool $with_tax = true): string
 {
@@ -64,22 +75,33 @@ function dccl_price_breakdown(string $total, int $room_id, bool $with_tax = true
     $base_cents  = $total_cents - $tax_cents;
     $money       = static fn (int $cents): string => number_format($cents / 100, 2, '.', '');
 
-    $room = [
-        'room_id'  => $room_id,
-        'subtotal' => $money($base_cents),
-        'total'    => $money($total_cents),
-    ];
-    if ($with_tax) {
-        $room['taxes'] = [
-            ['name' => 'Accommodation tax', 'amount' => $money($tax_cents)],
-        ];
-    }
-
-    return serialize([
-        'rooms'    => [$room],
-        'fees'     => [],
-        'subtotal' => $money($base_cents),
-        'total'    => $money($total_cents),
+    return (string) json_encode([
+        'total' => $money($total_cents),
+        'rooms' => [
+            [
+                'room' => [
+                    'total'          => $money($base_cents),
+                    'discount'       => '0.00',
+                    'discount_total' => $money($base_cents),
+                    'list'           => ['2026-01-01' => $money($base_cents)],
+                ],
+                'services' => ['total' => '0.00', 'discount' => '0.00', 'discount_total' => '0.00'],
+                'fees'     => ['total' => '0.00', 'discount' => '0.00', 'discount_total' => '0.00'],
+                'taxes'    => [
+                    'room' => [
+                        'total' => $money($tax_cents),
+                        'list'  => $with_tax
+                            ? [['label' => 'Accommodation tax', 'price' => $money($tax_cents)]]
+                            : [],
+                    ],
+                    'services' => ['total' => '0.00'],
+                    'fees'     => ['total' => '0.00'],
+                ],
+                'total'          => $money($total_cents),
+                'discount'       => '0.00',
+                'discount_total' => $money($total_cents),
+            ],
+        ],
     ]);
 }
 

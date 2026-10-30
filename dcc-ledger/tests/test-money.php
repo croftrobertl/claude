@@ -247,53 +247,96 @@ T::same(0, Health::money_not_in_cents(), 'And the banner clears');
 
 T::group('The tax inside a MotoPress booking total');
 
-// The reader proves itself rather than trusting its own reading: a tax is
-// KNOWN only when the breakdown's total matches the booking's total and,
-// where the breakdown states a pre-tax base, base plus tax meets it.
-$with_tax = serialize([
-    'rooms'    => [[
-        'room_id'  => 1066,
-        'subtotal' => '450.45',
-        'taxes'    => [['name' => 'Accommodation tax', 'amount' => '49.55']],
-        'total'    => '500.00',
-    ]],
-    'subtotal' => '450.45',
-    'total'    => '500.00',
-]);
-$read = \DCCL\Breakdown::read($with_tax, 50000);
-T::ok($read['known'], 'A breakdown whose parts add up is read');
-T::same(4955, (int) $read['tax_cents'], 'And its tax comes out in whole cents');
-T::ok($read['has_tax'], 'It is counted among the bookings that list a tax');
+// The real shape, counted on live on 2026-10-30: a JSON string, not a
+// serialized PHP array. 0.3.3 read it as serialized, found nothing, and
+// put all 267 direct bookings into "tax unknown".
+$json = dccl_price_breakdown('500.00', 1066);
+T::ok($json[0] === '{', 'The fixture is JSON, the way live stores it');
+
+$read = \DCCL\Breakdown::read($json, 50000);
+T::ok($read['known'], 'A JSON breakdown whose total matches the booking is read');
+T::same(4955, (int) $read['tax_cents'], 'And its room tax comes out in whole cents');
+T::ok($read['has_tax'], 'It is counted among the bookings that list a room tax');
 
 // 41 of the 117 the Director sampled list no room tax at all. That is a
 // tax of zero that is KNOWN to be zero — not an unknown.
-$no_tax = serialize(['rooms' => [['room_id' => 1066, 'subtotal' => '500.00', 'total' => '500.00']], 'subtotal' => '500.00', 'total' => '500.00']);
-$read   = \DCCL\Breakdown::read($no_tax, 50000);
-T::ok($read['known'], 'A breakdown that lists no tax is still read');
+$read = \DCCL\Breakdown::read(dccl_price_breakdown('500.00', 1066, false), 50000);
+T::ok($read['known'], 'A breakdown that lists no room tax is still read');
 T::same(0, (int) $read['tax_cents'], 'Its tax is nothing');
 T::ok(!$read['has_tax'], 'And it is counted apart from the ones that list one');
 
+// Tax on services and on fees comes out too, where either is non-zero.
+$with_extras = json_encode([
+    'total' => '600.00',
+    'rooms' => [[
+        'room'     => ['total' => '450.45'],
+        'services' => ['total' => '50.00'],
+        'fees'     => ['total' => '25.00'],
+        'taxes'    => [
+            'room'     => ['total' => '49.55', 'list' => [['label' => 'Accommodation tax', 'price' => '49.55']]],
+            'services' => ['total' => '15.00'],
+            'fees'     => ['total' => '10.00'],
+        ],
+        'total' => '600.00',
+    ]],
+]);
+$read = \DCCL\Breakdown::read($with_extras, 60000);
+T::ok($read['known'], 'A breakdown with service and fee tax is read');
+T::same(7455, (int) $read['tax_cents'], 'All three tax buckets are taken out of the total');
+
+// Two rooms on one booking: both rooms' taxes count.
+$two_rooms = json_encode([
+    'total' => '1000.00',
+    'rooms' => [
+        ['room' => ['total' => '450.45'], 'taxes' => ['room' => ['total' => '49.55']], 'total' => '500.00'],
+        ['room' => ['total' => '450.45'], 'taxes' => ['room' => ['total' => '49.55']], 'total' => '500.00'],
+    ],
+]);
+T::same(9910, (int) \DCCL\Breakdown::read($two_rooms, 100000)['tax_cents'], 'Every room on the booking is counted');
+
+// A bucket that states no total but lists its parts.
+$listed = json_encode([
+    'total' => '500.00',
+    'rooms' => [['room' => ['total' => '450.45'], 'taxes' => ['room' => ['list' => [['label' => 'State', 'price' => '30.00'], ['label' => 'County', 'price' => '19.55']]]], 'total' => '500.00']],
+]);
+$read = \DCCL\Breakdown::read($listed, 50000);
+T::ok($read['known'], 'A tax bucket that lists its parts instead of a total is read');
+T::same(4955, (int) $read['tax_cents'], 'By adding the parts');
+
 // The one of the 117 whose breakdown disagreed with the booking total.
-$read = \DCCL\Breakdown::read($with_tax, 60000);
+$read = \DCCL\Breakdown::read($json, 60000);
 T::ok(!$read['known'], 'A breakdown that disagrees with the booking total is not trusted');
 T::same(0, (int) $read['tax_cents'], 'And states no tax rather than a wrong one');
 T::same(\DCCL\Breakdown::TOTAL_DISAGREES, $read['reason'], 'Saying which way it failed');
 
-// A shape this reader does not understand: the parts it found do not meet
-// the total it found. Half-read is wrong, not partly right.
-$unreadable = serialize([
-    'rooms'    => [['room_id' => 1066, 'subtotal' => '400.00', 'taxes' => [['amount' => '49.55']], 'total' => '500.00']],
-    'subtotal' => '400.00',
-    'total'    => '500.00',
+// A tax bucket nobody has seen on this site. Reading it as nothing would
+// overstate room revenue by its value, so the whole reading is refused.
+$strange = json_encode([
+    'total' => '500.00',
+    'rooms' => [['room' => ['total' => '420.45'], 'taxes' => ['room' => ['total' => '49.55'], 'resort_levy' => ['total' => '30.00']], 'total' => '500.00']],
 ]);
-$read = \DCCL\Breakdown::read($unreadable, 50000);
-T::ok(!$read['known'], 'A breakdown whose parts do not add up is not trusted either');
-T::same(\DCCL\Breakdown::PARTS_DISAGREE, $read['reason'], 'And says so');
+$read = \DCCL\Breakdown::read($strange, 50000);
+T::ok(!$read['known'], 'A tax bucket this reader does not know refuses the whole reading');
+T::same(\DCCL\Breakdown::UNKNOWN_BUCKET, $read['reason'], 'And says so, rather than reading the tax short');
 
 T::same(\DCCL\Breakdown::NO_BREAKDOWN, \DCCL\Breakdown::read('', 50000)['reason'], 'No breakdown is named as none');
-T::same(\DCCL\Breakdown::UNREADABLE, \DCCL\Breakdown::read('not serialized at all', 50000)['reason'], 'And so is one that will not unserialize');
-T::same(\DCCL\Breakdown::NO_TOTAL, \DCCL\Breakdown::read(serialize(['rooms' => []]), 50000)['reason'], 'And one that states no total');
+T::same(\DCCL\Breakdown::UNREADABLE, \DCCL\Breakdown::read('not json at all', 50000)['reason'], 'And so is one that will not decode');
+T::same(\DCCL\Breakdown::UNREADABLE, \DCCL\Breakdown::read('{"total": broken', 50000)['reason'], 'And so is JSON that will not parse');
+T::same(\DCCL\Breakdown::NO_TOTAL, \DCCL\Breakdown::read('{"rooms": []}', 50000)['reason'], 'And one that states no total');
+T::same(\DCCL\Breakdown::NO_ROOMS, \DCCL\Breakdown::read('{"total": "500.00"}', 50000)['reason'], 'And one that lists no rooms');
 
-// Stored data must never become an object.
-$object = \DCCL\Breakdown::read('O:8:"stdClass":1:{s:5:"total";s:6:"500.00";}', 50000);
+// A serialized PHP array is still read, for a site that stores one.
+$serialized = serialize(['total' => '500.00', 'rooms' => [['taxes' => ['room' => ['total' => '49.55']]]]]);
+T::same(4955, (int) \DCCL\Breakdown::read($serialized, 50000)['tax_cents'], 'A serialized array is still read');
+
+// Stored data must never become an object. This payload is a complete,
+// readable breakdown in every respect but one: it is an object. Cast to an
+// array it would be accepted and its tax read, so refusing it has to
+// happen at the decode, not by falling over further in.
+$object = \DCCL\Breakdown::read(
+    'O:8:"stdClass":2:{s:5:"total";s:6:"500.00";s:5:"rooms";a:1:{i:0;a:1:{s:5:"taxes";a:1:{s:4:"room";a:1:{s:5:"total";s:5:"49.55";}}}}}',
+    50000
+);
 T::ok(!$object['known'], 'A serialized object in the meta is refused, not instantiated');
+T::same(\DCCL\Breakdown::UNREADABLE, $object['reason'], 'Refused at the decode, before anything in it is read');
+T::same(0, (int) $object['tax_cents'], 'And nothing is read out of it');

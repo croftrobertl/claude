@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,12 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.4 =
+* **The price breakdown is a JSON string on this site, and 0.3.3 read it as a serialized PHP array.** It found nothing in any of them, so all 267 direct bookings were reported as having an unknown tax and every one of them was out of every rate. The reader now decodes JSON — `rooms[].taxes.room.total`, plus the service and fee tax where either is non-zero — and still reads a serialized array for a site that stores one, with every class forbidden so stored data can never become an object.
+* **A tax bucket this reader does not know now refuses the whole reading.** Reading an unfamiliar bucket as nothing would overstate room revenue by its value, which is a wrong figure rather than a missing one. The three buckets live has are the room, its services and its fees.
+* A tax bucket that lists its parts instead of stating a total is read by adding the parts, and every room on a multi-room booking is counted.
+* The fixtures now carry the breakdown in the exact JSON shape counted on live, and a mutation feeds the reader a JSON string — the case that slipped through 0.3.3.
 
 = 0.3.3 =
 * **The months came to a cent or three more than the year.** Each period rounded its own share of a stay's money. Two nights of an odd number of cents are x.5 each, and rounding both halves away from zero rounds both up. Every period now reads the same running total — the money earned by the end of its last night, less the money earned by the end of the night before its first — so consecutive periods cancel each other's rounding and any set of periods covering a stay sums to it exactly, whatever the periods are.
