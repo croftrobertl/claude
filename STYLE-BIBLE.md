@@ -11,8 +11,13 @@ step quieter than life so it sits in the photograph instead of on top of it.
 
 <h2 align="center">1. Light Direction</h2>
 
-- **One key light, from the upper left**, about 45° above the horizon,
-  for every subject and every pose. The tom's code says it in words ("all lit
+- **The key light comes from the scene photo the piece sits on** (Rob's
+  rule in the Art Standards), so the piece sits in the scene. Read the
+  photo's light direction and quality before drawing: the Anniversary crane
+  takes the home-page hero's soft overcast light from the upper right.
+- **Upper left is the default only where there is no photo behind the
+  piece**: falling pieces, and sky scenes with no clear light source. It is
+  about 45° above the horizon. The tom's code states it outright ("all lit
   from ONE side (upper left)"). The witch's body gradients run from her upper
   left (light) to her lower right (dark). The heron's body runs light at the
   back to dark at the belly.
@@ -24,9 +29,10 @@ step quieter than life so it sits in the photograph instead of on top of it.
 - **Far parts are the same form, darker, never a different color.** The far
   wing is the near wing's colors × 0.72 (`HN.farTint`). The witch's far leg is
   her near-black `#0E0C12`.
-- **The light does not move when the animal does.** A mirrored bird keeps its
-  pre-drawn light (the Anniversary crane: Rob accepted the flipped light), but
-  a new piece is drawn lit from the upper left in its main facing.
+- **One light per piece, and it does not move when the animal does.** A
+  mirrored bird keeps its pre-drawn light (the Anniversary crane: Rob accepted
+  the flipped light). A new piece is drawn in its main facing, lit from its
+  scene's direction.
 - **Night scenes:** the moon is the key light, and the figure goes to
   silhouette while it crosses the disc. A colored rim keeps it readable
   (see 3).
@@ -72,12 +78,15 @@ step quieter than life so it sits in the photograph instead of on top of it.
 - **The lightest value is never pure white.**
   - Lightest values in use: `#F6F4EE` (heron face), `#F1F0F3` (tom crown),
     `#E6CDA4` (fan tips).
-- **Contact shadow: required for new art.** None of the three approved pieces
-  draws one (the heron's flights never touch the ground; the tom's feet have
-  none). They are not reopened. Every new piece that stands on ground or
-  water must have one:
-  - a soft ellipse under the feet, the ground's color darkened, 35-50% alpha;
-  - on water, a short broken reflection in its place.
+- **Contact shadow: required for new art on ground.** None of the three
+  approved pieces draws one (the heron's flights never touch the ground; the
+  tom's feet have none). They are not reopened. Every new piece that stands
+  on ground has a soft ellipse under its feet, in the ground's color made
+  darker, at 35-50% alpha.
+- **On water: nothing, or the same soft darkened ellipse, kept subtle.**
+  Never a reflection or a ripple. Rob's standing rule is no imitation water
+  effects on the canal or any site photo. Art that is clearly drawn on top
+  is fine.
 
 <h2 align="center">4. Edge Softness</h2>
 

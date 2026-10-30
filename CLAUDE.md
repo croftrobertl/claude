@@ -334,11 +334,13 @@ scores.
 
 **The style bible is `STYLE-BIBLE.md`** (written 2026-10-30, after the
 Anniversary shipped, before any Christmas art), drawn from the heron, the
-witch and the tom: light from the upper left, no outline round the figure,
+witch and the tom: the key light from the scene photo the piece sits on
+(upper left only where there is none), no outline round the figure,
 shadows in the object's own color, lost-and-found edges, muted sampled
 palettes, detail by size. The style test checks against it, one line per
 section. It records that none of the three approved pieces draws a contact
-shadow; new art that stands on ground or water must.
+shadow; new art that stands on ground must, and on water it is nothing or
+the same subtle ellipse, never a reflection or ripple (Rob's standing rule).
 
 Sheets: titles centered, American spelling.
 
