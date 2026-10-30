@@ -79,12 +79,43 @@ it; named so no future session mistakes the gap for a decision):
   aggregates. Report it as "not run", never as passed.
 - Booking pace has no history yet. Recording began with 0.3.0; the first
   month with a complete curve is about six months after that.
-- How much of the tax inside the direct booking totals the ledger can read
-  has not been checked against the live count since the reader was
-  rewritten for JSON in 0.3.4. The Director counted 76 of 117 sampled
-  bookings listing room taxes; `wp dcc-ledger direct-tax` prints what the
-  reader found. On 0.3.3 it read 0 of 267 and nobody would have known from
-  a figure — only from that command.
+- Nothing here is an open gap against the standard today, beyond the
+  three above. The tax reader was checked against the Director's own
+  count on 2026-10-30 and agreed exactly on confirmed bookings — see
+  below.
+
+## What the tax reader was checked against
+
+On 2026-10-30 the Director counted the price breakdowns on live by hand,
+by booking status, and compared them with `wp dcc-ledger direct-tax`:
+
+| Status | With a breakdown | Listing a room tax | Tax |
+| --- | --- | --- | --- |
+| confirmed | 117 | 76 | $8,306.59 |
+| cancelled | 148 | 81 | $12,127.19 |
+| abandoned | 16 | 0 | — |
+
+The reader agreed exactly on confirmed bookings, which are the only ones
+that reach a figure. Its first report counted every status together and
+answered 156, which looked like a disagreement and was not — hence the
+split by status in 0.3.5. Keep the confirmed line first: it is the one a
+hand count is compared against.
+
+## A checksum that moves during an install is probably MotoPress
+
+On the live 0.3.4 install (2026-10-30) the MotoPress checksum changed
+mid-install. It was not the plugin: MotoPress's own iCal sync ran at
+11:54:36, which the sync queue and the `mphb_ical_sync` requests in the
+access log both show. The ledger writes nothing to MotoPress, and the
+suite proves it at runtime and by scanning the source — but a sync runs
+every fifteen minutes, so a checksum taken before an install and compared
+after one can straddle a sync and look alarming.
+
+How it was established, and how to establish it again: take a checksum, do
+the work, take another, then take a third after a quiet interval with
+nothing running. If the second and third agree, nothing in the install
+moved it. On staging a snapshot between two checksums left them identical,
+and live held steady across the 45 seconds afterward.
 
 ## Branch rule
 
@@ -491,8 +522,8 @@ it, and so does the test harness between suites.
 
 ## Running the tests
 
-    php dcc-ledger/tests/run-tests.php            # 1751 assertions
-    php dcc-ledger/tests/mutations.php            # 105 deliberate breakages
+    php dcc-ledger/tests/run-tests.php            # 1766 assertions
+    php dcc-ledger/tests/mutations.php            # 108 deliberate breakages
     php dcc-ledger/tests/render-screens.php       # renders each tab to HTML
     node dcc-ledger/tests/layout-check.js         # 390/768/1440 + screenshots
 
@@ -527,6 +558,6 @@ file Rob receives are the same file.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ledger "*.zip
-    zip -rq "Ledger 0.3.4.zip" dcc-ledger -x 'dcc-ledger/tests/*'
+    zip -rq "Ledger 0.3.5.zip" dcc-ledger -x 'dcc-ledger/tests/*'
 
 The version in the file name must match `DCCL_VERSION` in `dcc-ledger.php`.

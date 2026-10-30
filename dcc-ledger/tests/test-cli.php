@@ -148,6 +148,52 @@ T::ok(str_contains($tax, 'Tax unknown:'), 'And how many it could not');
 T::ok(str_contains($tax, 'Listing a room tax:'), 'With the count to check against the one counted on live');
 T::ok(str_contains($tax, 'never a zero'), 'Saying what an unknown tax does to the figures');
 
+// Split by status, because only a confirmed booking reaches a figure. The
+// Director's hand count of 76 of 117 was over confirmed bookings while
+// the first version of this report answered 156 over every status; the
+// two agreed, and the report made that hard to see.
+// Matched as whole section headings — the sentence above them names both
+// statuses, so a looser search would pass on the prose alone.
+T::ok(str_contains($tax, "\nconfirmed "), 'It names the confirmed bookings in a section of their own');
+T::ok(str_contains($tax, "\ncancelled\n"), 'And the cancelled ones in theirs');
+T::ok(
+    strpos($tax, "\nconfirmed ") < strpos($tax, "\ncancelled\n"),
+    'Confirmed comes first, because it is the line that feeds revenue'
+);
+T::ok(
+    str_contains($tax, 'the line that feeds revenue'),
+    'And is marked as the one to compare a hand count against'
+);
+T::ok(str_contains($tax, 'Every status together'), 'With every status added up at the end');
+T::ok(str_contains($tax, '117 bookings with a breakdown, 76'), 'Naming the count it was checked against on live');
+
+$coverage = DCCL\Taxes::coverage();
+T::ok(isset($coverage['by_status']['confirmed']), 'The coverage is keyed by the frozen booking status');
+T::same(
+    array_sum(array_column($coverage['by_status'], 'read')),
+    (int) $coverage['total']['read'],
+    'The statuses add up to the total'
+);
+T::same(
+    array_sum(array_column($coverage['by_status'], 'tax_cents')),
+    (int) $coverage['total']['tax_cents'],
+    'And so does their tax, to the cent'
+);
+T::ok(
+    (int) $coverage['by_status']['confirmed']['tax_cents'] > 0,
+    'The confirmed bookings carry the tax that reaches the figures'
+);
+T::ok(
+    (int) ($coverage['by_status']['cancelled']['read'] ?? 0) > 0,
+    'The cancelled bookings are counted apart, not folded in with the confirmed ones'
+);
+T::same(
+    0,
+    (int) ($coverage['by_status']['cancelled']['tax_cents'] ?? 0),
+    'And a cancelled booking\'s tax reaches nothing'
+);
+T::same('confirmed', (string) array_key_first($coverage['by_status']), 'Confirmed is first in the data too, not only in the printing');
+
 // Key names and counts only: a value could be a guest's.
 foreach (dccl_fixture_pii() as $needle) {
     T::ok(!dccl_has_pii($shape, $needle), 'No "' . $needle . '" is printed by the probe');

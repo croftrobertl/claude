@@ -915,6 +915,43 @@ EOT,
 EOT,
     ],
     [
+        // The Director's hand count was over CONFIRMED bookings; the first
+        // version of this report counted every status together and
+        // answered 156 against his 76. The two agreed — the report made
+        // that impossible to see.
+        'name' => 'Tax coverage reported without the confirmed line first',
+        'file' => 'includes/class-taxes.php',
+        'from' => <<<'EOT'
+            $rank = static fn (string $s): int => $s === Snapshot::CONFIRMED
+                ? 0
+                : (in_array($s, Mphb_Reader::LIVE_STATUSES, true) ? 1 : 2);
+EOT,
+        'to'   => <<<'EOT'
+            $rank = static fn (string $s): int => 0;
+EOT,
+    ],
+    [
+        'name' => 'Tax coverage reported without splitting the statuses at all',
+        'file' => 'includes/class-taxes.php',
+        'from' => <<<'EOT'
+            $status = (string) $row['booking_status'];
+EOT,
+        'to'   => <<<'EOT'
+            $status = 'confirmed';
+EOT,
+    ],
+    [
+        'name' => 'The statuses no longer adding up to the total',
+        'file' => 'includes/class-taxes.php',
+        'from' => <<<'EOT'
+            self::add_reading($by_status[$status], $row);
+            self::add_reading($total, $row);
+EOT,
+        'to'   => <<<'EOT'
+            self::add_reading($by_status[$status], $row);
+EOT,
+    ],
+    [
         'name' => 'A tax reading overwritten in place instead of versioned',
         'file' => 'includes/class-taxes.php',
         'from' => <<<'EOT'

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.4
+Stable tag: 0.3.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,10 @@ Because it is the guest's gross including the taxes Rob remits, and the commissi
 Both of Vrbo's tax columns are 0 in every row in the exports. Whether Vrbo collects tax at all is unverified, so the reports say "not reported by Vrbo" rather than claiming the tax was zero.
 
 == Changelog ==
+
+= 0.3.5 =
+* **`wp dcc-ledger direct-tax` is split by booking status, confirmed first.** Only a confirmed booking reaches a figure; a cancelled one is a dock block or a scrapped reservation and its tax is in nothing. Counting every status together answered 156 bookings listing a room tax against a hand count of 76 over confirmed bookings — the two agreed, and the report made that impossible to see. The confirmed line is now marked as the one to compare a hand count against, with every status added up at the end.
+* The status comes from the frozen Original, so it is the status the figures were computed against rather than whatever MotoPress holds at the moment the command runs.
 
 = 0.3.4 =
 * **The price breakdown is a JSON string on this site, and 0.3.3 read it as a serialized PHP array.** It found nothing in any of them, so all 267 direct bookings were reported as having an unknown tax and every one of them was out of every rate. The reader now decodes JSON — `rooms[].taxes.room.total`, plus the service and fee tax where either is non-zero — and still reads a serialized array for a site that stores one, with every class forbidden so stored data can never become an object.

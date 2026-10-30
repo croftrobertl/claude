@@ -126,28 +126,90 @@ final class Taxes
     }
 
     /**
-     * What the ledger knows about direct tax, for the screen and the CLI.
+     * What the ledger knows about direct tax, split by booking status.
      *
-     * @return array{read:int,known:int,unknown:int,with_tax_line:int,tax_cents:int,reasons:array<string,int>}
+     * Split because only a confirmed booking reaches the figures. The
+     * Director's hand count on 2026-10-30 was over confirmed bookings —
+     * 117 with a breakdown, 76 of them listing a room tax — while the
+     * first version of this report counted every status together and
+     * answered 156. The two agreed; the report made it hard to see.
+     * Cancelled bookings are dock blocks and scrapped reservations, and
+     * their tax is in no figure anywhere.
+     *
+     * The status comes from the frozen Original, not from a live read, so
+     * it is the status the figures themselves were computed against.
+     *
+     * @return array{by_status:array<string,array<string,mixed>>,total:array<string,mixed>}
      */
     public static function coverage(): array
     {
-        $out = ['read' => 0, 'known' => 0, 'unknown' => 0, 'with_tax_line' => 0, 'tax_cents' => 0, 'reasons' => []];
+        global $wpdb;
+        $taxes_t     = Schema::booking_taxes();
+        $originals_t = Schema::originals();
 
-        foreach (self::current_map() as $reading) {
-            $out['read']++;
-            if ($reading['known']) {
-                $out['known']++;
-                $out['tax_cents'] += $reading['tax_cents'];
-            } else {
-                $out['unknown']++;
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT t.tax_cents, t.is_known, t.has_tax_line,
+                        t.reason, COALESCE(o.booking_status, '') AS booking_status
+                   FROM {$taxes_t} t
+                   LEFT JOIN {$originals_t} o
+                     ON o.mphb_id = t.mphb_booking_id
+                    AND o.kind = %s
+                    AND o.is_current = 1
+                  WHERE t.is_current = 1",
+                Originals::KIND_BOOKING
+            ),
+            ARRAY_A
+        ) ?: [];
+
+        $by_status = [];
+        $total     = self::blank_coverage();
+
+        foreach ($rows as $row) {
+            $status = (string) $row['booking_status'];
+            if ($status === '') {
+                $status = __('status unknown', 'dcc-ledger');
             }
-            if ($reading['has_tax_line']) {
-                $out['with_tax_line']++;
-            }
-            $out['reasons'][$reading['reason']] = ($out['reasons'][$reading['reason']] ?? 0) + 1;
+            $by_status[$status] ??= self::blank_coverage();
+            self::add_reading($by_status[$status], $row);
+            self::add_reading($total, $row);
         }
 
-        return $out;
+        // Confirmed first: it is the only line that feeds a figure.
+        uksort($by_status, static function (string $a, string $b): int {
+            $rank = static fn (string $s): int => $s === Snapshot::CONFIRMED
+                ? 0
+                : (in_array($s, Mphb_Reader::LIVE_STATUSES, true) ? 1 : 2);
+
+            return [$rank($a), $a] <=> [$rank($b), $b];
+        });
+
+        return ['by_status' => $by_status, 'total' => $total];
+    }
+
+    /** @return array{read:int,known:int,unknown:int,with_tax_line:int,tax_cents:int,reasons:array<string,int>} */
+    private static function blank_coverage(): array
+    {
+        return ['read' => 0, 'known' => 0, 'unknown' => 0, 'with_tax_line' => 0, 'tax_cents' => 0, 'reasons' => []];
+    }
+
+    /**
+     * @param array<string,mixed> $into
+     * @param array<string,mixed> $row
+     */
+    private static function add_reading(array &$into, array $row): void
+    {
+        $into['read']++;
+        if ((int) $row['is_known'] === 1) {
+            $into['known']++;
+            $into['tax_cents'] += (int) $row['tax_cents'];
+        } else {
+            $into['unknown']++;
+            $reason = (string) $row['reason'];
+            $into['reasons'][$reason] = ($into['reasons'][$reason] ?? 0) + 1;
+        }
+        if ((int) $row['has_tax_line'] === 1) {
+            $into['with_tax_line']++;
+        }
     }
 }

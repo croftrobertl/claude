@@ -1,4 +1,4 @@
-# DCC Ledger 0.3.4 — Staging Checklist
+# DCC Ledger 0.3.5 — Staging Checklist
 
 > **Order matters, and it changed in 0.1.2.** Import the platform exports
 > BEFORE taking the snapshot. Until the platform stays exist, nothing can tell
@@ -756,3 +756,28 @@ per booking; no Original, booking or payment is touched.
       hand: its room revenue in the ledger should be its displayed total
       less the tax the breakdown lists. One booking is enough.
 - [ ] MotoPress checksums, links and reviews all unchanged. Zero writes.
+
+---
+
+## 19. 0.3.5 — The Tax Report, Split By Status
+
+A reporting change only. No figure moves, nothing new is written, and the
+tax readings already frozen are read exactly as they are.
+
+- [ ] Deactivate, upload `Ledger 0.3.5.zip`, activate. No snapshot is
+      needed: this reads the readings 0.3.4 already took.
+- [ ] `wp dcc-ledger direct-tax` now prints a section per booking status,
+      **confirmed first**, marked as the line that feeds revenue, with
+      every status added up at the end.
+- [ ] The **confirmed** line should match your hand count: 117 with a
+      breakdown, **76** listing a room tax, **$8,306.59** on staging.
+- [ ] **cancelled** and **abandoned** appear under their own headings.
+      Their tax reaches no figure anywhere; they are here so the confirmed
+      line can be compared without arithmetic.
+- [ ] The statuses add up to **Every status together**, which should be
+      the 156 and $20,083.36 the single line used to report.
+- [ ] `wp dcc-ledger money-check` is **unchanged** — all five Figures
+      lines OK, the months tying to the cent.
+- [ ] Every figure on every screen is **unchanged** from 0.3.4. October's
+      ADR gross is still $128.80 and September is still 14 nights, 5.8%.
+      If any figure moves, this release did something it should not have.

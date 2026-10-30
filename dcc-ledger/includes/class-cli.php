@@ -418,27 +418,50 @@ final class Cli
     {
         $coverage = Taxes::coverage();
 
-        if ($coverage['read'] === 0) {
+        if ($coverage['total']['read'] === 0) {
             \WP_CLI::warning(__('No tax readings are stored. Run `wp dcc-ledger snapshot` first — the readings are frozen when the snapshot runs.', 'dcc-ledger'));
 
             return;
         }
 
         \WP_CLI::log(__('The tax inside each direct booking\'s total, read from its MotoPress price breakdown.', 'dcc-ledger'));
-        \WP_CLI::log('');
-        \WP_CLI::log(sprintf(__('Direct bookings read:          %d', 'dcc-ledger'), $coverage['read']));
-        \WP_CLI::log(sprintf(__('  Tax known:                   %d', 'dcc-ledger'), $coverage['known']));
-        \WP_CLI::log(sprintf(__('  Tax unknown:                 %d', 'dcc-ledger'), $coverage['unknown']));
-        \WP_CLI::log(sprintf(__('  Listing a room tax:          %d', 'dcc-ledger'), $coverage['with_tax_line']));
-        \WP_CLI::log(sprintf(__('  Tax taken out of revenue:    %s', 'dcc-ledger'), Money::format((int) $coverage['tax_cents'])));
-        \WP_CLI::log('');
-        \WP_CLI::log(__('Why a reading was not usable:', 'dcc-ledger'));
-        foreach ($coverage['reasons'] as $reason => $count) {
-            \WP_CLI::log(sprintf('  %-52s %6d', $reason, $count));
+        \WP_CLI::log(__('Split by booking status, because only a confirmed booking reaches a figure. A cancelled one is a dock block or a scrapped reservation and its tax is in nothing.', 'dcc-ledger'));
+
+        foreach ($coverage['by_status'] as $status => $row) {
+            \WP_CLI::log('');
+            \WP_CLI::log(sprintf(
+                '%s%s',
+                $status,
+                $status === Snapshot::CONFIRMED ? __('  — the line that feeds revenue', 'dcc-ledger') : ''
+            ));
+            self::log_tax_rows($row);
         }
+
+        \WP_CLI::log('');
+        \WP_CLI::log(__('Every status together', 'dcc-ledger'));
+        self::log_tax_rows($coverage['total']);
+
         \WP_CLI::log('');
         \WP_CLI::log(__('A booking whose tax is unknown keeps its money in the money figures and stays out of every rate. An unknown is never a zero.', 'dcc-ledger'));
-        \WP_CLI::log(__('Check this against what you counted on live: 117 confirmed bookings sampled with a breakdown, 76 of them listing room taxes. If "listing a room tax" disagrees with your count, the reader is reading the wrong part of the breakdown and the direct figures should not be trusted until it is fixed.', 'dcc-ledger'));
+        \WP_CLI::log(__('To check the reader by hand, count the breakdowns yourself and compare the CONFIRMED line. On 2026-10-30 that was 117 bookings with a breakdown, 76 of them listing a room tax.', 'dcc-ledger'));
+    }
+
+    /**
+     * One status's tax coverage.
+     *
+     * @param array<string,mixed> $row
+     */
+    private static function log_tax_rows(array $row): void
+    {
+        \WP_CLI::log(sprintf(__('  Direct bookings read:        %d', 'dcc-ledger'), (int) $row['read']));
+        \WP_CLI::log(sprintf(__('    Tax known:                 %d', 'dcc-ledger'), (int) $row['known']));
+        \WP_CLI::log(sprintf(__('    Tax unknown:               %d', 'dcc-ledger'), (int) $row['unknown']));
+        \WP_CLI::log(sprintf(__('    Listing a room tax:        %d', 'dcc-ledger'), (int) $row['with_tax_line']));
+        \WP_CLI::log(sprintf(__('    Tax read out of the total: %s', 'dcc-ledger'), Money::format((int) $row['tax_cents'])));
+
+        foreach ($row['reasons'] as $reason => $count) {
+            \WP_CLI::log(sprintf('    %-50s %6d', $reason, $count));
+        }
     }
 
     /**
