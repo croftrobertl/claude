@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.13.4
+Stable tag: 4.13.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,30 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.13.5 =
+The Anniversary: a new one-day theme for 11 November, every year. Every
+other theme draws exactly what it drew in 4.13.4 (Florida Keys apart from
+its cranes), proven pixel for pixel. Rollback: reinstall the 4.13.4 zip.
+
+* 11 November is the Anniversary; the 10th and the 12th stay Thanksgiving.
+  New installs and upgrades get its schedule row.
+* The pieces: blush hearts that drift and rock, two linked gold rings, a
+  cut crystal drop, two champagne flutes clinking, all falling; the date
+  (11·11·11) on a gold band, the year count on a crystal, and two gold
+  percentages, drifting down upright so they can be read. The year count
+  and the percentages are worked out on the day.
+* The scene: a pair of sandhill cranes, drawn in code, dances under the
+  homepage title, kept clear of the title, the tagline and the menu.
+* The easter egg rains gold and blush and ends on a heart that fits the
+  screen at every width.
+* Florida Keys' crane-dance scene now draws the same new crane. If its file
+  fails to load, the scene keeps its old cranes.
+* The art lives in two new files, fetched only on the days that use them:
+  art-crane.min.js (the Anniversary and Florida Keys) and
+  art-anniversary.min.js (the Anniversary).
+* For staging checks: ?dcc_date=YYYY-MM-DD with the check key (or as an
+  administrator) shows the site as on that date. Never cached.
 
 = 4.13.4 =
 The per-season split. No visible change: every theme draws exactly what it
