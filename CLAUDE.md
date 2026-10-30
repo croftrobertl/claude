@@ -332,11 +332,13 @@ If any check fails, fix it and run the checks again. Send the sheet only when
 all of them pass, and say in one line per check that it passed, with the fit
 scores.
 
-**After the Anniversary ships, before any Christmas art:** write a one-page
-Seasons style bible from the heron, the witch and the tom — light direction,
-outline policy, shadow and occlusion color, edge softness, palette range, and
-how detail scales with size. Save it to the repo and send it to the Director.
-From then on the style test checks against it.
+**The style bible is `STYLE-BIBLE.md`** (written 2026-10-30, after the
+Anniversary shipped, before any Christmas art), drawn from the heron, the
+witch and the tom: light from the upper left, no outline round the figure,
+shadows in the object's own color, lost-and-found edges, muted sampled
+palettes, detail by size. The style test checks against it, one line per
+section. It records that none of the three approved pieces draws a contact
+shadow; new art that stands on ground or water must.
 
 Sheets: titles centered, American spelling.
 
