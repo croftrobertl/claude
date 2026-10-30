@@ -44,9 +44,18 @@ final class Plugin {
         // Runs even when nothing else does — see print_diag_stub().
         add_action('wp_footer', [$this, 'print_diag_stub'], 99);
         Preview::init();
+        /* The upgrade runs on ANY request after the version changes — the
+         * front end, cron, AJAX, REST and WP-CLI as well as wp-admin
+         * (4.13.6). Until 4.13.5 it ran only on admin_init, so an install
+         * that never visited wp-admin (WP-CLI on staging, an auto-update, an
+         * FTP drop) kept its old stored schedule: on staging 11 Nov resolved
+         * to Thanksgiving until the Director ran it by hand. 'init' at 20 is
+         * after every plugin has loaded (the cache purge needs theirs) and
+         * before admin_init. Running twice is harmless: apply_new_themes()
+         * adds only themes that have no row, and the rest only fills. */
+        add_action('init', [$this, 'maybe_purge_after_upgrade'], 20);
 
         if (is_admin()) {
-            add_action('admin_init', [$this, 'maybe_purge_after_upgrade'], 1);
             Settings::init();
             add_filter(
                 'plugin_action_links_' . plugin_basename(DCC_SEASONS_FILE),
@@ -73,7 +82,9 @@ final class Plugin {
         if ($seen === DCC_SEASONS_VERSION) {
             return;
         }
-        update_option(self::VERSION_OPTION, DCC_SEASONS_VERSION, false);
+        /* autoloaded: it is now read on every request, and an autoloaded
+         * option costs no query */
+        update_option(self::VERSION_OPTION, DCC_SEASONS_VERSION, true);
 
         /*
          * No stored version means one of two very different things, and

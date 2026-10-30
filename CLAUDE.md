@@ -1371,6 +1371,16 @@ Rob sees it (the overlay rows; sources named on the sheets).
   summer_canal; Rob confirmed Summer on the Canal for Jun–Jul on
   2026-09-27.) `Settings::unscheduled_themes()` reports the rest
   passively on the settings page.
+  **The upgrade runs on `init`, on ANY request (since 4.13.6).** Until
+  4.13.5 `maybe_purge_after_upgrade()` was hooked to `admin_init`, so an
+  install that never visited wp-admin after the files changed (WP-CLI on
+  staging, an auto-update, an FTP drop) kept its old stored schedule: the
+  Director's staging resolved 11 Nov to Thanksgiving until he ran it by
+  hand. It is idempotent (`apply_new_themes()` adds only themes with no
+  row; the rest only fills), and the version option is autoloaded so the
+  check costs no query. `tools/test-upgrade-request.php` loads the real
+  bootstrap, starts from 4.13.1's stored options (schedule from git) and
+  fires a front-end request; `DCC_UPG_MUT=admin` (4.13.5's wiring) fails it.
 - **`florida_keys` is the year-round BASE theme, and it is a full-year schedule
   row, not a code path.** `Schedule::defaults()` ends with a Jan 1 - Dec 31
   row; because `active()` takes the NARROWEST containing range, the widest
@@ -1613,7 +1623,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
   `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.13.4 for 4.13.5), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js` (4.14.x only),
   `node tools/test-sprite-rate.js`,
-  `php tools/test-upgrade.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
+  `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
   the mocked clock to a WebM + frame strip + path trace (Playwright's
   ffmpeg: VP8 only, input `pipe:0` — `-` is not supported and the process
