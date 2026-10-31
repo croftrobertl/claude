@@ -17,8 +17,8 @@ const { execFileSync } = require('child_process');
 const { config, open, ROOT } = require('./harness');
 const { page: fixture } = require('./fixture');
 const { engineSource } = require('./engine-src');
-/* the release Christmas is built on: 4.13.5, live (2026-10-30) */
-const BASE = 'e8bd38f';
+/* the release this build follows: 4.14.1, live (2026-10-31) */
+const BASE = 'e8db5eb';   /* 4.14.1, live */
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -79,7 +79,23 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
     ok(/christmas: \['wreath', 'right:8px;top:8px;width:96px;opacity:\.5;'\]/.test(src), 'the wreath is the corner accent, in the web\'s size class', 'ACCENTS');
   }
 
-  console.log('\n  --- every other theme exactly as 4.13.5 shipped it (the pixels: test-untouched.js) ---');
+  console.log('\n  --- 4.14.2: the style test\'s colors (Rob) ---');
+  {
+    const W = {}; new Function('window', fs.readFileSync(`${ROOT}/dcc-seasons/assets/js/art-christmas.js`, 'utf8'))(W);
+    const P = W.DCCSeasonsArt.christmas, sv = k => (typeof P.svgs[k] === 'function' ? P.svgs[k]() : P.svgs[k]);
+    const all = Object.keys(P.svgs).map(sv).join('');
+    ok(!/#000\b|#000000|"black"/i.test(all), 'no black anywhere in the pieces', (all.match(/.{30}#000\b.{10}/) || [''])[0]);
+    ok(/fill="#0E3A2A" opacity="\.08"/.test(sv('pine')) && /fill="#0E3A2A" opacity="\.16"/.test(sv('pine')), "the pine's shading is its own dark cool green", 'pine');
+    ok(/fill="#F6F4EE"/.test(sv('candycane')) && !/#FFFFFF/i.test(sv('candycane')), "the candy cane's white stripes are #F6F4EE", 'candycane');
+    ok(/stroke="#F6F4EE" stroke-width="2"/.test(sv('flamingoxmas')), "the flamingo's hat brim is #F6F4EE", 'flamingoxmas');
+    for (const [b, c] of [['ballred', '#7A0F0F'], ['ballgold', '#8C6410'], ['ballblue', '#0F3F7A']]) {
+      ok(new RegExp(`stroke="${c}" stroke-width="\\.6"`).test(sv(b)), `the ${b.slice(4)} ball's rim is its own darkest shade (${c})`, b);
+    }
+    const ps = fs.readFileSync(`${ROOT}/dcc-seasons/assets/js/art-christmas.js`, 'utf8');
+    ok(/beard: '#F6F4EE'/.test(ps) && !/rgba\(0,\s*0,\s*0/.test(ps), "Santa's beard is #F6F4EE; his hat and the sleigh band shade with the red's own tone, never black", 'santa');
+  }
+
+  console.log('\n  --- every other theme exactly as 4.14.1 shipped it (the pixels: test-untouched.js) ---');
   {
     const prev = execFileSync('git', ['show', `${BASE}:dcc-seasons/includes/class-themes.php`], { cwd: ROOT, encoding: 'utf8' });
     const tmp = `${require('os').tmpdir()}/dcc-themes-base.php`;
@@ -94,18 +110,18 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
       { cwd: ROOT, encoding: 'utf8' }));
     const changed = Object.keys(both[1]).filter(k => k !== 'christmas' && JSON.stringify(both[0][k]) !== JSON.stringify(both[1][k]));
     ok(!changed.length && Object.keys(both[0]).length === Object.keys(both[1]).length,
-      `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.13.5`, changed.join(','));
+      `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.14.1`, changed.join(','));
     const subCh = Object.keys(both[3]).filter(k => k !== 'christmas' && both[2][k] !== both[3][k]);
     ok(!subCh.length, 'and so are their background layers', subCh.join(','));
     const gs = f => execFileSync('git', ['show', `${BASE}:dcc-seasons/assets/js/${f}`], { cwd: ROOT, encoding: 'utf8' });
     const prevEng = ['engine.js', 'art-crane.js', 'art-thanksgiving.js', 'art-anniversary.js'].map(gs).join('\n');
     const body = (t, name) => { const i = t.indexOf(`\t\t\t${name}: { actors`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t\t\t} },', i)); };
     for (const sc of ['witchmoon', 'cranemoon', 'giftdrop']) {
-      ok(body(src, sc) && body(src, sc) === body(prevEng, sc), `the ${sc} scene is unchanged from 4.13.5`, sc);
+      ok(body(src, sc) && body(src, sc) === body(prevEng, sc), `the ${sc} scene is unchanged from 4.14.1`, sc);
     }
     const fnBody = (t, name) => { const i = t.indexOf(`function ${name}(`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t}\n', i)); };
     for (const f of ['witchBody', 'crPaint', 'moonPaint', 'hnFly']) {
-      ok(fnBody(src, f) && fnBody(src, f) === fnBody(prevEng, f), `${f} is unchanged from 4.13.5`, f);
+      ok(fnBody(src, f) && fnBody(src, f) === fnBody(prevEng, f), `${f} is unchanged from 4.14.1`, f);
     }
   }
 
@@ -174,7 +190,7 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
         const ar = acc && acc.getBoundingClientRect(), cs = acc && getComputedStyle(acc);
         return { hdrPre: HB, sky: s.sky.vigSky, pic: s.sky.pic, sl: { stats: sl.stats, sprites: sl.sprites, moon: sl.moon, scene: sl.scene },
           obs: sl.obstacles(), w: s.sky.w, heroes: s.heroLog.map(h => h.kind || h.k || h.hero || JSON.stringify(h)), subtle: s.subtle,
-          acc: acc ? { w: Math.round(ar.width), op: cs.opacity, pe: cs.pointerEvents, svg: !!acc.querySelector('svg') } : null };
+          acc: acc ? { w: Math.round(ar.width), op: cs.opacity, pe: cs.pointerEvents, svg: !!acc.querySelector('svg'), pic: acc.parentNode.id, mode: s.wreath.stat.mode } : null };
       }, hb);
       ok(r.sky === true && r.pic === true, 'it plays in the header picture, on the sky canvas', JSON.stringify([r.sky, r.pic]));
       if (!flyers) { ok(r.hdrPre === true, 'the header\'s letters were measured in idle time before the scene, not in its first frame', JSON.stringify(r.hdrPre)); }
@@ -185,7 +201,10 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
       ok(MB < (w < 768 ? 9 : 14), `sprite memory ${MB.toFixed(2)} MB at min(DPR, 2), 24 poses (planned 7.6 MB at 390)`, String(MB));
       if (flyers) { ok(!r.heroes.some(h => /sleigh|santa/i.test(String(h))), `no sleigh flyer, though flyers were invited early (the heron, every theme's, may come: ${r.heroes.join(',') || 'none'})`, r.heroes.join(',')); }
       ok(r.subtle && r.subtle.on === false, 'no background layer (the bokeh is off)', JSON.stringify(r.subtle && r.subtle.key));
-      ok(r.acc && r.acc.w === 96 && r.acc.op === '0.5' && r.acc.pe === 'none' && r.acc.svg, 'the wreath: 96px, half opacity, never takes a click', JSON.stringify(r.acc));
+      /* 4.14.2: in the header picture, under the tagline or the title (Rob's
+       * B; where exactly, on the real theme: tools/test-wreath.js) */
+      ok(r.acc && r.acc.w <= 96 && r.acc.w >= 40 && r.acc.op === '0.5' && r.acc.pe === 'none' && r.acc.svg && r.acc.pic === 'header-image-main-inside' && /home|title/.test(r.acc.mode),
+        `the wreath: in the header picture (${r.acc && r.acc.mode}), ${r.acc && r.acc.w}px, half opacity, never takes a click`, JSON.stringify(r.acc));
       const sc = r.sl.scene, pad = 0;
       const hit = r.obs.filter(o => sc.mx + sc.MR > o[0] - pad && sc.mx - sc.MR < o[2] + pad && sc.my + sc.MR > o[1] - pad && sc.my - sc.MR < o[3] + pad);
       ok(sc.clear === 1 && !hit.length, `the moon (${sc.mx},${sc.my} r${sc.MR}) is clear of the title's letters${w >= 768 ? ' and the dial\'s corner' : ''}`, JSON.stringify(hit));

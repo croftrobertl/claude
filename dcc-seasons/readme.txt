@@ -188,6 +188,27 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 == Changelog ==
 
+= 4.14.2 =
+Christmas's wreath in its place, and five colors from the style test. Every
+other theme draws exactly what it drew in 4.14.1, proven pixel for pixel.
+Rollback: reinstall the 4.14.1 zip.
+
+* The wreath lives in the header picture and scrolls away with it. On the
+  home page it is centered under "Family Owned & Run Since 1971", halfway
+  between the tagline and the foot of the picture. On every other page it
+  is centered under the page title in the same way. It is 96 px where there
+  is room and smaller under a long cottage title, always 8 px clear of the
+  title, the tagline, the menu bar, the dial and the menu button. It no
+  longer sits on the menu button.
+* Santa's team and the moon keep clear of the wreath. Where the header has
+  no fully clear place for the moon, it sits partly behind the title's
+  letters (which stay in front) rather than under the menu bar.
+* Colors: the pine's shading is its own dark green, Santa's hat and the
+  sleigh's lower band shade with the red's own darker tone, each glass
+  ball's rim is its own darkest shade (no black anywhere); the candy cane's
+  white stripes, the flamingo's hat brim and Santa's beard are a soft white
+  (#F6F4EE). Nothing else in the drawings changes.
+
 = 4.14.1 =
 Christmas, as Rob approved it in 4.14.0, rebuilt on 4.13.5 so Thanksgiving
 and the Anniversary are kept. Every other theme draws exactly what it drew

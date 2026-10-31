@@ -5178,7 +5178,7 @@
 		 * picture to its full height. Measured in idle time, on a resize and
 		 * every 10 s, never in a frame; wrBox (the picture's px) is what the
 		 * team's moon keeps clear of. */
-		var WR_PAGE = 'a', wrEl = null, wrBox = null, wrStat = { placed: 0, mode: '' };
+		var WR_PAGE = 'b', wrEl = null, wrBox = null, wrStat = { placed: 0, mode: '' };
 		function wrPlace() {
 			if (!wrEl || !skyPic || D.hidden) { return; }
 			var pw = skyPic.clientWidth, ph = skyPic.clientHeight, k = null, box = null, mode = '';
@@ -5199,9 +5199,12 @@
 				}
 				return true;
 			}
-			/* every other page: Rob's pick pending (the 4.14.2 options sheet):
-			 * 'a' the picture's bottom-right corner, 'b' centred under the page
-			 * title as the home page is under its tagline */
+			/* every other page: Rob's B (2026-10-31), centred under the page
+			 * title as the home page's is under its tagline, shrunk to fit a
+			 * long title (a cottage's runs to three lines at 390). 'a', the
+			 * picture's bottom-right corner, was the option he declined; the
+			 * corner search stays only as the fallback for a title that leaves
+			 * no room under it. */
 			var wp = DEBUG && CFG.wrPage ? CFG.wrPage : WR_PAGE;
 			if (!box && wp === 'b') {
 				var tt = 0;

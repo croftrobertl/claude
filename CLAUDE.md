@@ -1197,6 +1197,27 @@ Rob sees it (the overlay rows; sources named on the sheets).
   --kind=submitbooking`). `tools/shots-christmas.js` is the THREE-WIDTH
   check, a standing rule for every release (390, 768, 1440).
 
+- **4.14.2 (the Director, 2026-10-30/31): the wreath and the colors.**
+  The live 4.14.1 corner wreath sat on the menu button at 390. Now
+  (`wrPlace`/`wrInit`, measured in idle time, on resize and every 10 s) it
+  is a SPAN inside the header picture (the site forces divs there to full
+  height): on the home page Rob's B from the 4.14.0 stills, centred under
+  the tagline; on every other page Rob's B again (2026-10-31), centred
+  under the page title's letters, shrunk to fit with 8 px clear (the
+  tightest, a two-line cottage title at 1440, leaves 113 px: 82 px). The
+  corner search is only a fallback. `sledMoon` keeps the moon AND the
+  team's band (it crosses the whole width) clear of `wrBox`, in passes:
+  everything; then the title's letters allowed (cut out in front); then
+  the wreath alone. Rob accepted the moon partly behind the letters at 390
+  and 768 (better than under the menu bar). `tools/test-wreath.js` runs
+  the home page and ten others (eight cottages, Contact, Browse Cottages)
+  on the real theme at 390/768/1440, every frame of a crossing against the
+  wreath; mutation-checked (`DCC_WREATH_MUT=corner|title|noband|nobelow`).
+  Colors (Rob, from the style test): no black in any Christmas piece (the
+  pine #0E3A2A, the balls' rims their own `c2`, Santa's hat and the sleigh
+  band rgba(74,14,36)), and #F6F4EE for the candy cane, the hat brim and
+  Santa's beard. `tools/xmas-colors-sheet.js` renders before and after.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1629,7 +1650,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.13.5 for 4.14.1), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.14.1 for 4.14.2), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

@@ -20,7 +20,7 @@
 	function xBall(c0, c1, c2) {
 		return '24 32|<defs><radialGradient id="g" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="' + c0 + '"/><stop offset=".55" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></radialGradient><linearGradient id="cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F3D27A"/><stop offset=".5" stop-color="#C9A227"/><stop offset="1" stop-color="#8C6E12"/></linearGradient></defs>' +
 			'<circle cx="12" cy="3.2" r="2.2" fill="none" stroke="#B8860B" stroke-width="1.3"/><rect x="9.4" y="5" width="5.2" height="4.4" rx=".9" fill="url(#cap)"/><path d="M10.6 5.4 V9 M12 5.4 V9 M13.4 5.4 V9" stroke="#8C6E12" stroke-width=".5" opacity=".7"/>' +
-			'<circle cx="12" cy="20" r="10.4" fill="url(#g)"/><ellipse cx="8.2" cy="15" rx="2.4" ry="3.8" fill="#FFFFFF" opacity=".55" transform="rotate(-28 8.2 15)"/><path d="M5.2 25.6 A10.4 10.4 0 0 0 18.6 27.4" stroke="#FFFFFF" stroke-width="1" fill="none" opacity=".28"/><circle cx="12" cy="20" r="10.4" fill="none" stroke="#000" stroke-width=".6" opacity=".12"/>';
+			'<circle cx="12" cy="20" r="10.4" fill="url(#g)"/><ellipse cx="8.2" cy="15" rx="2.4" ry="3.8" fill="#FFFFFF" opacity=".55" transform="rotate(-28 8.2 15)"/><path d="M5.2 25.6 A10.4 10.4 0 0 0 18.6 27.4" stroke="#FFFFFF" stroke-width="1" fill="none" opacity=".28"/><circle cx="12" cy="20" r="10.4" fill="none" stroke="' + c2 + '" stroke-width=".6" opacity=".12"/>';
 	}
 	/* The wreath (Rob's pick A), the corner accent: pine sprigs with their
 	 * needles in two greens, five berries and the bow at the bottom, both
@@ -319,7 +319,7 @@
 	 * are NEVER dark (Rob): only the team goes to silhouette on the moon. */
 	var SNC = {
 		red: '#C8262B', red2: '#9E1B20', red3: '#E04A4A', fur: '#FFFDF8', fur2: '#E6DFD2',
-		skin: '#F6CDB0', cheek: '#F0908A', nose: '#E8766F', beard: '#FFFFFF', beard2: '#E4E1DA',
+		skin: '#F6CDB0', cheek: '#F0908A', nose: '#E8766F', beard: '#F6F4EE', beard2: '#E4E1DA',
 		belt: '#2B2420', buckle: '#E6B422', mitt: '#2E7D3F', mitt2: '#1E5A2B',
 		gold: '#D9A62B', gold2: '#9E7718', wood: '#7A4E2C', snSack: '#8A6238', sack2: '#6A4826',
 	};
@@ -496,7 +496,9 @@
 		 * and the heron, and approved by Rob piece by piece (four rounds). */
 		/* 4.14.2 (Rob, from the style test): the pine's shading is its own
 		 * dark cool green (#0E3A2A), not black; the candy cane's and the
-		 * flamingo's hat-brim whites are #F6F4EE, not pure white. */
+		 * flamingo's hat-brim whites are #F6F4EE, not pure white; and (the
+		 * two the style test missed) each glass ball's rim is its own darkest
+		 * shade, not black, and Santa's beard is #F6F4EE. */
 		/* holly: a closed sprig — a third leaf behind the berries */
 		holly: '36 28|<defs><linearGradient id="l1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3E9E4F"/><stop offset="1" stop-color="#1E6B33"/></linearGradient><linearGradient id="l2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46A857"/><stop offset="1" stop-color="#1F6E35"/></linearGradient><linearGradient id="l3" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2E8A42"/><stop offset="1" stop-color="#1B5F2D"/></linearGradient><radialGradient id="b1" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#FF6B6B"/><stop offset=".6" stop-color="#D62828"/><stop offset="1" stop-color="#8E1414"/></radialGradient></defs><path d="M18 14 C15 9 12 6 8 5.5 L9 8.2 C6.4 7.4 3.8 8 1.8 9.8 L4.6 10.8 C2.8 12.2 2 14 2.2 16.2 L5 15.4 C5 17.4 6.2 19.2 8 20.2 L8.8 17.8 C11 19 14 19.2 18 18 Z" fill="url(#l1)"/><path d="M18 14 C21 9 24 6 28 5.5 L27 8.2 C29.6 7.4 32.2 8 34.2 9.8 L31.4 10.8 C33.2 12.2 34 14 33.8 16.2 L31 15.4 C31 17.4 29.8 19.2 28 20.2 L27.2 17.8 C25 19 22 19.2 18 18 Z" fill="url(#l2)"/><path d="M18 15 C14.5 17 12 20 11.4 24 L14 22.8 C14.2 25 15.6 26.6 18 27.4 C20.4 26.6 21.8 25 22 22.8 L24.6 24 C24 20 21.5 17 18 15 Z" fill="url(#l3)"/><path d="M17 14.2 Q10 12.4 4.6 13.6 M19 14.2 Q26 12.4 31.4 13.6 M18 16 Q18 21 18 26" stroke="#BFE8C3" stroke-width=".8" fill="none" opacity=".75"/><circle cx="14.2" cy="14.4" r="4" fill="url(#b1)"/><circle cx="22" cy="14.4" r="4" fill="url(#b1)"/><circle cx="18" cy="18.6" r="4.2" fill="url(#b1)"/><g fill="#5A0E0E"><circle cx="15" cy="15.6" r=".6"/><circle cx="22.8" cy="15.6" r=".6"/><circle cx="18.8" cy="19.8" r=".6"/></g>',
 		/* the three glass balls replace the single ornament */

@@ -24,35 +24,39 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { config, open, ROOT } = require('./harness');
-const rt = require('./real-theme');
-
 const MUT = process.env.DCC_WREATH_MUT || '';
-let pass = 0, fail = 0; const problems = [];
-function ok(c, label, detail) {
-  if (c) { pass++; console.log(`    PASS  ${label}`); }
-  else { fail++; problems.push(`${label} — ${detail}`); console.log(`    FAIL  ${label} — ${detail}`); }
-}
-/* a mutated copy of the js folder, served instead of the real one */
+/* a mutated copy of the js folder, served instead of the real one — set
+ * BEFORE the harness is required: it reads DCC_ASSETS once, at load */
 if (MUT) {
-  const JS = path.join(ROOT, 'dcc-seasons', 'assets', 'js'), d = fs.mkdtempSync(path.join(os.tmpdir(), 'dcc-wr-'));
+  const JS = path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js'), d = fs.mkdtempSync(path.join(os.tmpdir(), 'dcc-wr-'));
   for (const f of fs.readdirSync(JS)) { fs.copyFileSync(path.join(JS, f), path.join(d, f)); }
   let e = fs.readFileSync(path.join(d, 'engine.js'), 'utf8'); const was = e;
   if (MUT === 'corner') { e = e.replace("tag = D.body.classList.contains('home') ?", "tag = false ?"); }
-  if (MUT === 'nokc') { e = e.replace('var obs = k.txt.concat(k.box), tag = null, i;', 'var obs = [], tag = null, i;'); }
+  if (MUT === 'title') { e = e.replace('for (i = 0; i < k.txt.length; i++) { tt = mx2(tt, k.txt[i][3]); }', 'for (i = 0; i < k.txt.length; i++) { tt = mx2(tt, k.txt[i][1]); }'); }
+  if (MUT === 'nobelow') { e = e.replace('var av2 = ph - tt,', 'var av2 = ph - tt + 40,'); }
   if (MUT === 'noband') { e = e.replace('if (bt + KC > wrBox[1] && t - KC < wrBox[3]) { return false; }', ''); }
   if (e === was) { console.error('mutation did not apply'); process.exit(2); }
   fs.writeFileSync(path.join(d, 'engine.js'), e);
   process.env.DCC_ASSETS = d;
 }
+const { config, open, ROOT } = require('./harness');
+const rt = require('./real-theme');
+
+let pass = 0, fail = 0; const problems = [];
+function ok(c, label, detail) {
+  if (c) { pass++; console.log(`    PASS  ${label}`); }
+  else { fail++; problems.push(`${label} — ${detail}`); console.log(`    FAIL  ${label} — ${detail}`); }
+}
+const ROOM = [];
 const gap = (a, b) => Math.max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1] - b[3]);
 
-async function visit(w, home) {
+async function visit(w, title, crossing) {
+  const home = !title;
   const cfg = config(['--placement=content', '--layering=front', '--density=16', '--diag']);
   cfg.date = '2026-12-15'; cfg.forceHour = 12;
   cfg.vigOnly = 'sleighmoon'; cfg.vigFirst = 4000; cfg.vigGap = 1e9; cfg.heroFirst = [1e9, 1e9 + 1]; cfg.heroEvery = [1e9, 1e9 + 1];
   let html = rt.page({ config: cfg });
-  if (!home) { html = html.replace(/<body([^>]*) class="home /, '<body$1 class="').replace(/<p class="byline"[\s\S]*?<\/p>/, '').replace('itemprop="headline">DORA CANAL COURT<', 'itemprop="headline">Contact Us<'); }
+  if (!home) { html = html.replace(/<body([^>]*) class="home /, '<body$1 class="').replace(/<p class="byline"[\s\S]*?<\/p>/, '').replace('itemprop="headline">DORA CANAL COURT<', 'itemprop="headline">' + title.replace(/&/g, '&amp;') + '<'); }
   const ses = await open(html, { viewport: { width: w, height: w < 768 ? 844 : 900 }, dsf: 2, ...rt.opts(w),
     init: 'Math.random = (() => { let a = ' + (w + (home ? 1 : 2)) + '; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();' });
   const pg = ses.page, errs = [];
@@ -60,13 +64,16 @@ async function visit(w, home) {
   try {
     await pg.addStyleTag({ content: '.dcc-wx-banner{display:none!important} #dcc-seasons-diag,.dcc-seasons-diag{display:none!important}' });
     await pg.waitForFunction(() => { const s = window.DCCSeasonsEngine && window.DCCSeasonsEngine._state; return s && s.wreath.stat.placed > 0; }, null, { timeout: 30000, polling: 200 });
-    const lbl = `${w}px ${home ? 'home page' : 'another page'}`;
+    const lbl = `${w}px ${home ? 'home page' : '"' + title + '"'}`;
     const k = await rt.keepClear(pg);
     const r = await pg.evaluate(() => {
       const s = window.DCCSeasonsEngine._state, a = document.querySelector('.dcc-seasons-accent'), b = a.getBoundingClientRect(), cs = getComputedStyle(a);
       const p = document.querySelector('#header-image-main-inside').getBoundingClientRect();
       const t = document.querySelector('#header-page-title p.byline');
-      return { st: s.wreath, box: [b.left, b.top, b.right, b.bottom], pic: [p.left, p.top, p.right, p.bottom], tag: t ? t.getBoundingClientRect().bottom : null,
+      /* the title's LETTERS: a range per text node */
+      let tb = 0, lines = 0; const tw = document.createTreeWalker(document.querySelector('#header-page-title .entry-title'), NodeFilter.SHOW_TEXT); let n;
+      while ((n = tw.nextNode())) { const rg = document.createRange(); rg.selectNodeContents(n); for (const q of rg.getClientRects()) { if (q.height) { tb = Math.max(tb, q.bottom); lines++; } } }
+      return { tb, lines, st: s.wreath, box: [b.left, b.top, b.right, b.bottom], pic: [p.left, p.top, p.right, p.bottom], tag: t ? t.getBoundingClientRect().bottom : null,
         op: cs.opacity, pe: cs.pointerEvents, svg: !!a.querySelector('svg'), inPic: a.parentNode && a.parentNode.id === 'header-image-main-inside', n: document.querySelectorAll('.dcc-seasons-accent').length };
     });
     const bw = r.box[2] - r.box[0], bh = r.box[3] - r.box[1];
@@ -81,7 +88,11 @@ async function visit(w, home) {
       ok(Math.abs(above - below) <= 1 && above >= 7.5, `${lbl}: centred between the tagline and the picture's foot (${above.toFixed(1)} above, ${below.toFixed(1)} below)`, JSON.stringify([above, below]));
       ok(bw <= 96.5 && Math.abs(bh / bw - 52 / 44) < 0.01, `${lbl}: ${bw.toFixed(1)} px wide, never over 96, the drawing's own proportions`, JSON.stringify([bw, bh]));
     } else {
-      ok(r.st.stat.mode === 'corner' && Math.abs(r.pic[2] - r.box[2] - 8) <= 1, `${lbl}: in the top-right corner, 8 px in (${Math.round(bw)} px, ${Math.round(r.box[1] - r.pic[1])} px down)`, JSON.stringify([r.st.stat, r.box]));
+      const cxp = (r.pic[0] + r.pic[2]) / 2, cxw = (r.box[0] + r.box[2]) / 2, above = r.box[1] - r.tb, below = r.pic[3] - r.box[3];
+      ROOM.push({ lbl, room: Math.round(r.pic[3] - r.tb), lines: r.lines, px: Math.round(bw), above: Math.round(above), below: Math.round(below) });
+      ok(r.st.stat.mode === 'title' && Math.abs(cxw - cxp) <= 1, `${lbl}: Rob's B — centred across the picture, under the title (${r.lines} line${r.lines > 1 ? 's' : ''})`, JSON.stringify([r.st.stat, cxw, cxp]));
+      ok(Math.abs(above - below) <= 1 && above >= 7.5, `${lbl}: centred between the title's letters and the picture's foot (${above.toFixed(1)} above, ${below.toFixed(1)} below, ${Math.round(r.pic[3] - r.tb)} px of room)`, JSON.stringify([above, below]));
+      ok(bw <= 96.5 && Math.abs(bh / bw - 52 / 44) < 0.01, `${lbl}: ${bw.toFixed(1)} px wide, never over 96, the drawing's own proportions`, JSON.stringify([bw, bh]));
     }
     /* it scrolls with the picture */
     const y0 = r.box[1];
@@ -90,6 +101,7 @@ async function visit(w, home) {
     ok(sy > 50 && Math.abs((y0 - y1) - sy) < 1.5, `${lbl}: scrolls away with the picture (moved ${(y0 - y1).toFixed(1)} px for a ${sy} px scroll)`, String([y0 - y1, sy]));
     await pg.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' })); await pg.waitForTimeout(250);
 
+    if (!crossing) { ok(!errs.length, `${lbl}: no page errors`, errs.join(' | ')); return; }
     /* the sleigh: a whole crossing, every frame, on the mocked clock */
     const sl = await pg.evaluate(async () => {
       const s = window.DCCSeasonsEngine._state;
@@ -122,7 +134,16 @@ async function visit(w, home) {
 
 (async () => {
   console.log(`\n  --- the wreath and the sleigh, on the real theme${MUT ? ' (MUTATION: ' + MUT + ')' : ''} ---`);
-  for (const home of [true, false]) { for (const w of [390, 768, 1440]) { await visit(w, home); } }
+  const PAGES = ['Contact Us', 'Browse Cottages', 'Cottage 22: The Boathouse', 'Cottage 23: The Lighthouse', 'Cottage 31: Hibiscus Hut',
+    'Cottage 32: Flamingo Bungalow', 'Cottage 33: Pineapple Place', 'Cottage 34: Coconut Cottage', 'Cottage 35: Blue Heron Hideaway', 'Cottage 36: Sunshine Suite'];
+  for (const w of [390, 768, 1440]) {
+    await visit(w, null, true);
+    for (const t of PAGES) { await visit(w, t, t === 'Contact Us' || t === 'Cottage 35: Blue Heron Hideaway'); }
+  }
+  ROOM.sort((a, b) => a.room - b.room);
+  console.log('\n  --- the room under each title, tightest first ---');
+  ROOM.forEach(q => console.log(`    ${q.lbl}: ${q.room} px under the title (${q.lines} line${q.lines > 1 ? 's' : ''}), the wreath ${q.px} px, ${q.above} px above it and ${q.below} below`));
+  if (!MUT) { fs.writeFileSync(path.join(ROOT, 'build', 'Seasons - 4.14.2 wreath room.json'), JSON.stringify(ROOM, null, 1)); }
   console.log(`\n${pass} passed · ${fail} failed`);
   problems.forEach(p => console.log('  - ' + p));
   process.exit(fail ? 1 : 0);

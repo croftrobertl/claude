@@ -1,15 +1,15 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.14.1 (Christmas) against 4.13.5,
- * the release that is live when it ships. (Its 4.13.5 form, the Anniversary
- * against 4.13.4, is in the history at e8bd38f; its 4.13.2/4.13.3 form at
- * 4de6bb9.) Outside Christmas the build is 4.13.5, plus the upgrade on any
- * request (PHP; tools/test-upgrade-request.php). Three proofs, each
+ * DCC Seasons — the Untouched test, for 4.14.2 (Christmas's wreath and
+ * colors) against 4.14.1, the release that is live when it ships. (Its
+ * 4.14.1 form, Christmas against 4.13.5, is at e8db5eb; the Anniversary
+ * against 4.13.4 at e8bd38f; 4.13.2/4.13.3 at 4de6bb9.) Outside Christmas
+ * the build is 4.14.1. Three proofs, each
  * mutation-checked at the end of the run:
  *
  *  1. THEMES. Themes::themes() and subtle_defaults() for every theme but
- *     Christmas are byte-identical to 4.13.5's.
- *  2. TEXT. engine.js with Christmas's own code taken out is 4.13.5's
+ *     Christmas are byte-identical to 4.14.1's.
+ *  2. TEXT. engine.js with Christmas's own code taken out is 4.14.1's
  *     engine.js line for line. Everything removed is named below, by
  *     marker or as the literal line; nothing is removed by "looks
  *     unimportant". ambient.js, matrix.js and the Thanksgiving, crane and
@@ -26,7 +26,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'e8bd38f';   /* 4.13.5, the Anniversary (live 30 Oct) */
+const BASE = 'e8db5eb';   /* 4.14.1, Christmas on 4.13.5 (live 31 Oct) */
 const NEW = 'christmas';
 
 let pass = 0, fail = 0; const problems = [];
@@ -81,6 +81,11 @@ function strip(src) {
     .filter(l => !/^\t\tchristmas: \[/.test(l))
     .filter(l => !/^\tvar EVENING_VIGS = /.test(l))
     .filter(l => !/^\t\tif \(!ART\.xm\) \{ vigList = vigList\.filter/.test(l))
+    /* 4.14.2: the wreath's placement is called for Christmas only, and
+     * finds its accent by the key every accent now carries */
+    .filter(l => l !== "\t\tif (themeKey === 'christmas' && !footMode) { wrInit(); }")
+    .filter(l => l !== '\t\t\tel._dccKey = key;')
+    .filter(l => !/^\t\t\t\tget wreath\(\) \{/.test(l))
     /* the debug-only getter (stripped from the shipped build) */
     .filter(l => !/^\t\t\t\tget sleigh\(\) \{/.test(l))
     /* exact in-line changes, each put back as the literal text */
@@ -124,16 +129,16 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme but Christmas is 4.13.5's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme but Christmas is 4.14.1's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - 1} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
 
   console.log('\n  --- 2. the text outside Christmas ---');
   const tx = textSame(engNew, engOld);
-  ok(tx.same, `engine.js identical to 4.13.5 line for line (${tx.n} lines compared)`, tx.at);
+  ok(tx.same, `engine.js identical to 4.14.1 line for line (${tx.n} lines compared)`, tx.at);
   const same = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); ok(same[f] === git(`dcc-seasons/assets/js/${f}`), `${f} is byte-identical to 4.13.5`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); ok(same[f] === git(`dcc-seasons/assets/js/${f}`), `${f} is byte-identical to 4.14.1`, f); }
 
   console.log('\n  --- 3. the pixels: every theme but Christmas, both builds ---');
   const now = {}, was = {};
