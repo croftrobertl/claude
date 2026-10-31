@@ -1387,7 +1387,7 @@ html:not(.dcc-matrix-on) .dcc-tour-history { --dcc-tour-muted: #6d6964; }
 .tl-stat .tl-l { display: block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--dcc-tour-muted); margin-top: 1px; }
 .tl-scrub { width: 100%; accent-color: var(--dcc-tour-primary); margin: 2px 0 0; }
 .tl-axis { display: flex; }
-.tl-axis .tl-tick { flex: 1; min-width: 0; text-align: center; font-size: 0.58rem; color: var(--dcc-tour-muted); overflow: hidden; white-space: nowrap; }
+.tl-axis .tl-tick { flex: 1; min-width: 0; text-align: center; font-size: 0.58rem; color: var(--dcc-tour-muted); overflow: visible; white-space: nowrap; }
 .tl-axis .tl-tick:first-child { text-align: left; }
 .tl-axis .tl-tick:last-child { text-align: right; }
 
@@ -1878,3 +1878,172 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
 .dcc-then-pop .dcc-chron-srcs { margin-top: 4px; font-size: 0.72rem; }
 /* the heatmap is a picture only: taps go through it to the borders and pins underneath */
 .leaflet-heatmap-layer { pointer-events: none; }
+/* drawn icons (in place of emoji): sit on the text baseline, take the text's colour */
+.dcc-di { width: 1.1em; height: 1.1em; vertical-align: -0.2em; flex: none; display: inline-block; }
+.wx-ic .dcc-di, .tv-there-ic .dcc-di { width: 1.4em; height: 1.4em; }
+.tv-ic .dcc-di { width: 1.25em; height: 1.25em; color: var(--dcc-tour-secondary); }
+.dcc-tour-maplink .dcc-di { width: 1.15em; height: 1.15em; color: var(--dcc-tour-secondary); }
+.wx-x .dcc-di { width: 0.95em; height: 0.95em; margin-right: 1px; }
+
+/* ===== phones: the approved Zeljko UI picks =====
+   (desktop is unchanged; every rule below sits inside the phone breakpoint) */
+.dcc-tour-daycover, .dcc-tour-railtime, .dcc-tour-railstrip, .dcc-tour-dockmore, .dcc-tour-dockpop { display: none; }
+@media (max-width: 800px) {
+  /* no header: the masthead and the sticky day bar give way to the content */
+  .dcc-tour-root > .dcc-tour-header, .dcc-tour-root .dcc-tour-topbar { display: none; }
+  .dcc-tour-root.dcc-tour-root { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+
+  /* the tab bar floats as a dock; only the active tab shows its name */
+  .dcc-tour-tabbar { left: 50%; right: auto; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 6px; gap: 2px; border: 0; border-radius: 22px; background: rgba(32, 31, 29, 0.9);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 28px rgba(0,0,0,0.28); max-width: calc(100vw - 20px); }
+  .dcc-tour-tabbtn { flex: none; min-height: 46px; min-width: 46px; padding: 0 11px; flex-direction: row; gap: 7px;
+    border-radius: 16px; color: #d8d2c6; font-size: 0.8rem; font-weight: 600; }
+  .dcc-tour-tabbtn > span:last-child { display: none; }
+  .dcc-tour-tabbtn .ti { font-size: 1.25rem; }
+  .dcc-tour-tabbtn.active { background: var(--dcc-tour-card-bg); color: var(--dcc-tour-accent-deep); }
+  .dcc-tour-tabbtn.active > span:last-child { display: inline; }
+  .dcc-tour-tabbtn.active .ti { transform: none; }
+  .dcc-tour-tabbtn:focus-visible, .dcc-tour-dockmore:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 2px; }
+  .dcc-tour-dockmore { display: grid; place-items: center; min-width: 40px; min-height: 46px; border: 0; border-left: 1px solid rgba(255,255,255,0.14);
+    margin-left: 2px; background: none; color: #d8d2c6; border-radius: 0 16px 16px 0; cursor: pointer; }
+  .dcc-tour-dockmore.active { color: var(--dcc-tour-primary); }
+  .dcc-tour-dockpop { display: grid; gap: 10px; position: fixed; z-index: 41; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 14px; padding: 12px 14px; box-shadow: 0 10px 28px rgba(0,0,0,0.2); }
+  .dcc-tour-dockpop[hidden] { display: none; }
+  .dcc-tour-dockpop .dp-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 0.85rem; color: var(--dcc-tour-muted); }
+
+  /* the day's cover: its best photo, the date (tap to pick a day) and arrows to the next and previous */
+  .dcc-tour-daycover { display: block; position: relative; margin: 0 -1.35rem 1rem; height: min(62vh, 480px); min-height: 320px; overflow: hidden; background: #2b2926; }
+  .dcc-tour-daycover .dc-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .dcc-tour-daycover .dc-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0) 22%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.66)); }
+  .dcc-tour-daycover .dc-arrow { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); width: 44px; height: 44px; border-radius: 50%;
+    border: 0; background: rgba(0,0,0,0.32); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .dcc-tour-daycover .dc-prev { left: 12px; } .dcc-tour-daycover .dc-next { right: 12px; }
+  .dcc-tour-daycover .dc-arrow:disabled { opacity: 0.3; }
+  .dcc-tour-daycover .dc-text { position: absolute; left: 1.35rem; right: 1.35rem; bottom: 16px; color: #fff; display: grid; gap: 6px; justify-items: start; text-shadow: 0 1px 10px rgba(0,0,0,0.35); }
+  .dcc-tour-daycover .dc-area { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.92; }
+  .dcc-tour-daycover .dc-date { border: 0; background: none; color: inherit; padding: 0; text-align: left; cursor: pointer; display: grid; font: inherit; }
+  .dcc-tour-root.dcc-tour-root .dcc-tour-daycover .dc-wd { font-family: var(--dcc-tour-font-head); font-size: 2.1rem; line-height: 1; color: #fff; }
+  .dcc-tour-root.dcc-tour-root .dcc-tour-daycover .dc-dd { font-family: var(--dcc-tour-font-head); font-size: 2.1rem; line-height: 1.05; color: #fff; }
+  .dcc-tour-daycover .dc-caret { font-size: 1rem; opacity: 0.8; }
+  .dcc-tour-daycover .dc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .dcc-tour-daycover .dc-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; padding: 5px 9px; border-radius: 8px; background: rgba(0,0,0,0.36); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); text-shadow: none; }
+  /* the numbers card follows the cover; its own date would repeat the cover's */
+  .dcc-tour-dayhead > .dcc-tour-daynum, .dcc-tour-dayhead > h2 { display: none; }
+  /* the stops down a time rail */
+  .dcc-tour-places-index .dcc-tour-idx-chips { display: none; }
+  .dcc-tour-places-index { padding-left: 58px; }
+  .dcc-tour-place { position: relative; padding-left: 58px; margin-bottom: 1.1rem; }
+  .dcc-tour-place::before { content: ""; position: absolute; left: 47px; top: 0; bottom: -1.1rem; width: 2px; background: var(--dcc-tour-border); }
+  .dcc-tour-place:last-of-type::before { bottom: 0; }
+  .dcc-tour-place::after { content: ""; position: absolute; left: 42px; top: 0.45rem; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--dcc-tour-bg); border: 2px solid var(--dcc-tour-primary); box-sizing: border-box; }
+  .dcc-tour-place[data-open="1"]::after { background: var(--dcc-tour-primary); }
+  .dcc-tour-railtime { display: block; position: absolute; left: 0; top: 0.35rem; width: 36px; text-align: right; font-size: 0.72rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+  .dcc-tour-place-head { position: static; }
+  .dcc-tour-railstrip { display: flex; gap: 4px; margin: 6px 0 2px; cursor: pointer; min-width: 0; max-width: 100%; }
+  .dcc-tour-railstrip img { flex: 0 1 64px; min-width: 0; width: 64px; height: 48px; object-fit: cover; border-radius: 6px; background: var(--dcc-tour-border); }
+  .dcc-tour-railstrip .rs-more { flex: none; display: grid; place-items: center; min-width: 40px; height: 48px; padding: 0 6px; border-radius: 6px; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); font-size: 0.72rem; color: var(--dcc-tour-muted); }
+  .dcc-tour-place[data-open="1"] .dcc-tour-railstrip { display: none; }
+}
+/* Media on phones: a title row with one Filter button, three across with a date header
+   per day, and a strip of dates down the right edge */
+.dcc-tour-galtop, .dcc-gal-scrub, .dcc-gal-dayh { display: none; }
+@media (max-width: 800px) {
+  .dcc-tour-gallery { padding: 0 0 2rem; }
+  .dcc-tour-galtop { display: flex; align-items: center; gap: 10px; padding: calc(12px + env(safe-area-inset-top, 0px)) 1rem 8px; }
+  .dcc-tour-root.dcc-tour-root .dcc-tour-galtop .gt-title { font-family: var(--dcc-tour-font-head); font-size: 1.5rem; color: var(--dcc-tour-primary); }
+  .dcc-tour-galtop .gt-count { color: var(--dcc-tour-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; flex: 1; }
+  .dcc-tour-galfilterbtn { min-height: 40px; padding: 0 14px; border: 1px solid var(--dcc-tour-border); border-radius: 10px; background: var(--dcc-tour-card-bg);
+    color: var(--dcc-tour-accent-deep); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+  .dcc-tour-gallery.filters-open .dcc-tour-galfilterbtn { border-color: var(--dcc-tour-primary); background: var(--dcc-tour-accent-tint); }
+  .dcc-tour-gallery .dcc-tour-gal-bar { display: none; padding: 4px 1rem 10px; position: static; }
+  .dcc-tour-gallery.filters-open .dcc-tour-gal-bar { display: flex; }
+  .dcc-tour-gallery .dcc-tour-gal-count { display: none; }
+  /* three square tiles across; the time and map pin stay off the small tiles */
+  .dcc-tour-gallery .dcc-tour-gal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding-right: 30px; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-cell { aspect-ratio: 1; margin: 0; border-radius: 0; overflow: hidden; position: relative; min-height: 0; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-cell-time,
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-maplink { display: none; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-play { inset: auto 4px 4px auto; width: auto; height: auto; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-pbtn { width: 26px; height: 26px; }
+  .dcc-tour-gallery .dcc-tour-gal-grid .dcc-tour-badge { top: 4px; left: 4px; font-size: 0.62rem; padding: 2px 5px; }
+  .dcc-tour-gallery.gal-bytime .dcc-gal-dayh { display: flex; grid-column: 1 / -1; align-items: baseline; gap: 8px; position: sticky; top: 0; z-index: 5;
+    padding: 10px 1rem 6px; background: color-mix(in srgb, var(--dcc-tour-bg) 94%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); scroll-margin-top: 0; }
+  .dcc-gal-dayh b { font-size: 0.92rem; color: var(--dcc-tour-text); }
+  .dcc-gal-dayh span { font-size: 0.78rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+  .dcc-tour-gallery.gal-bytime .dcc-gal-scrub { display: flex; flex-direction: column; justify-content: space-between; position: fixed; z-index: 20; right: 2px;
+    top: calc(64px + env(safe-area-inset-top, 0px)); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); width: 28px; }
+  .dcc-gal-scrub button { flex: 1; min-height: 0; border: 0; background: none; padding: 0; font: 600 8.5px/1 var(--dcc-tour-font); color: var(--dcc-tour-muted); cursor: pointer;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .dcc-gal-scrub button:hover, .dcc-gal-scrub button:focus-visible { color: var(--dcc-tour-primary); outline: none; }
+}
+/* Map on phones: one screen tall. The controls keep every option but tighten into three short rows;
+   the map takes the rest of the screen above the dock */
+@media (max-width: 800px) {
+  .dcc-tour-root[data-view="map"] .dcc-tour-mapmode { display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;
+    height: calc(100vh - 92px - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 92px - env(safe-area-inset-bottom, 0px));
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 0; }
+  .dcc-tour-mapmode > * { flex: none; }
+  .dcc-tour-mm-bar { gap: 6px; margin-bottom: 6px; }
+  .dcc-tour-mm-colorby .mm-cb-lab { display: none; }
+  .dcc-tour-mm-colorby .mm-cb:first-of-type { border-left: 0; }
+  .mm-cb { padding: 6px 9px; font-size: 0.78rem; min-height: 34px; }
+  .dcc-tour-mm-layers .facet-btn { min-height: 34px; padding: 4px 12px; font-size: 0.82rem; }
+  .dcc-tour-mm-stats { display: none; }
+  .dcc-tour-mm-play { margin: 0 0 6px; gap: 8px; }
+  .mm-spd { padding: 5px 8px; min-height: 30px; }
+  .dcc-tour-mm-legend { margin-bottom: 4px; }
+  .dcc-tour-mapmode > .dcc-tour-mm-wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .dcc-tour-mm-wrap > .dcc-tour-mm-map { flex: 1 1 auto; height: auto; min-height: 0; }
+}
+/* Stats on phones: the totals as an entry ticket */
+.dcc-tour-ticket { display: none; }
+@media (max-width: 800px) {
+  .dcc-tour-root[data-view="stats"] .dcc-tour-tripstats-wrap { padding: calc(14px + env(safe-area-inset-top, 0px)) 1rem 0; }
+  .dcc-tour-tripstats-wrap .dcc-tour-tripstats, .dcc-tour-tripstats-wrap .dcc-tour-superlatives { display: none; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-ticket { display: block; }
+  .dcc-tour-ticket { position: relative; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border);
+    border-radius: 16px; box-shadow: 0 8px 22px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+  .dcc-tour-ticket .tk-head { display: grid; gap: 4px; padding: 18px 18px 14px; }
+  .dcc-tour-ticket .tk-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-secondary); }
+  .dcc-tour-root.dcc-tour-root .dcc-tour-ticket .tk-title { font-family: var(--dcc-tour-font-head); font-size: 2rem; line-height: 1.05; color: var(--dcc-tour-primary); }
+  .dcc-tour-ticket .tk-dates { font-size: 0.84rem; color: var(--dcc-tour-muted); }
+  /* the tear line: a dashed rule with a notch cut into each edge */
+  .dcc-tour-ticket .tk-perf { position: relative; height: 0; border-top: 2px dashed var(--dcc-tour-border); margin: 0 14px; }
+  .dcc-tour-ticket .tk-perf::before, .dcc-tour-ticket .tk-perf::after { content: ""; position: absolute; top: -11px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--dcc-tour-bg); border: 1px solid var(--dcc-tour-border); }
+  .dcc-tour-ticket .tk-perf::before { left: -26px; clip-path: inset(0 0 0 50%); }
+  .dcc-tour-ticket .tk-perf::after { right: -26px; clip-path: inset(0 50% 0 0); }
+  .dcc-tour-ticket .tk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; padding: 16px 18px; }
+  .dcc-tour-ticket .tk-cell { display: grid; gap: 2px; min-width: 0; }
+  .dcc-tour-ticket .tk-k { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dcc-tour-muted); }
+  .dcc-tour-ticket .tk-v { font-size: 1.25rem; font-weight: 700; color: var(--dcc-tour-text); font-variant-numeric: tabular-nums; }
+  .dcc-tour-ticket .tk-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px 16px; }
+  .dcc-tour-ticket .tk-best { display: grid; gap: 4px; font-size: 0.82rem; color: var(--dcc-tour-muted); min-width: 0; }
+  .dcc-tour-ticket .tk-best b { color: var(--dcc-tour-text); }
+  .dcc-tour-ticket .tk-crest { width: 40px; height: auto; flex: none; }
+}
+/* History on phones: a three-part switch at the top; the film and today's streets on the map */
+.dcc-hist-seg, .dcc-hist-mapacts { display: none; }
+@media (max-width: 800px) {
+  .dcc-tour-root[data-view="history"] .dcc-tour-history { padding-top: env(safe-area-inset-top, 0px); }
+  .dcc-hist-seg { display: flex; position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 30; margin: 10px 0 12px; padding: 3px; gap: 2px;
+    background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+  .dcc-tour-root.dcc-tour-root .dcc-hist-seg button { flex: 1; min-height: 40px; padding: 0 6px; border: 0; border-radius: 9px; background: none; cursor: pointer;
+    font-family: var(--dcc-tour-font); font-size: 0.86rem; font-weight: 600; color: var(--dcc-tour-muted); }
+  .dcc-tour-root.dcc-tour-root .dcc-hist-seg button[aria-current] { background: var(--dcc-tour-text); color: var(--dcc-tour-bg); }
+  .dcc-hist-top .dcc-hist-bar { display: none; }
+  .dcc-hist-trip, .dcc-chron { scroll-margin-top: 66px; }
+  .dcc-hist-mapacts { display: flex; align-items: center; gap: 8px; position: absolute; right: 10px; bottom: 10px; z-index: 3; }
+  .dcc-tour-root.dcc-tour-root .dcc-hist-streets { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; cursor: pointer;
+    border: 1px solid var(--dcc-tour-border); border-radius: 999px; background: color-mix(in srgb, var(--dcc-tour-card-bg) 92%, transparent);
+    font-family: var(--dcc-tour-font); font-size: 0.8rem; font-weight: 600; color: var(--dcc-tour-text); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  .dcc-tour-root.dcc-tour-root .dcc-hist-filmfab { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+  .dcc-hist-filmfab .dcc-pbtn { width: 46px; height: 46px; }
+  .dcc-hist-filmfab .dcc-pbtn svg { width: 17px; height: 17px; }
+}
+/* phones: anything scrolled into view (keyboard focus, links) clears the floating dock */
+@media (max-width: 800px) { html:has(.dcc-tour-root) { scroll-padding-bottom: 104px; } }

@@ -127,6 +127,7 @@
   function _ymd(d) { const a = (d.date || '').split('-').map(Number); return { y: a[0], m: a[1], dd: a[2] }; }
   function dDate(d) { const { m, dd } = _ymd(d); return (_MON[m - 1] || '') + ' ' + dd; }          // "Sep 10"
   function dWeekday(d) { const { y, m, dd } = _ymd(d); return _DOW[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()] || ''; }
+  function dShort(d) { const { m, dd } = _ymd(d); return String(m).padStart(2, '0') + '/' + String(dd).padStart(2, '0'); }   // "09/10", where space is tight
 
   // ---- horizontal-scroll affordance (task 9): an ALWAYS-VISIBLE custom
   //      scrollbar (a real track + draggable thumb rendered under each strip),
@@ -244,7 +245,7 @@
     ovd.className = 'dcc-tour-ovcollapse';
     ovd.open = true;   // task 15: the overview only appears in Stats view (summary hidden there),
                        // so keep it open — a collapsed <details> was hiding the climb chart on mobile
-    ovd.innerHTML = '<summary>📈 Trip overview · climbs &amp; elevation</summary>' +
+    ovd.innerHTML = '<summary>' + dIcon('chart') + ' Trip overview · climbs &amp; elevation</summary>' +
       '<div class="ov-body">' + overviewHTML() + '</div>';
     overview.appendChild(ovd);
     const controls = buildControls();
@@ -304,6 +305,44 @@
     return '<svg class="dcc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + s + '</svg>';
   }
 
+  // ---- drawn icons in place of emoji (emoji render differently on every phone). Same monoline
+  //      style as the tab icons; where there is a Dubrovnik form for the thing, it is drawn:
+  //      Srđ with its cross, Lovrijenac on its rock, Minčeta, the Jesuit Stairs, the Bell Tower,
+  //      a Ragusan carrack, the Elaphiti, Cavtat's anchor. ----
+  const DICONS = {
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+    cloud: '<path d="M7.2 18.5h9.6a3.9 3.9 0 0 0 .5-7.8 5.4 5.4 0 0 0-10.4 1.1 3.4 3.4 0 0 0 .3 6.7z"/>',
+    partly: '<path d="M8.4 4.2v1.4M3.6 9H5M4.8 5.4l1 1M12 5.4l-1 1"/><path d="M5.9 11.2a3 3 0 0 1 5.2-3"/><path d="M9.4 20h8.4a3.4 3.4 0 0 0 .4-6.8 4.7 4.7 0 0 0-9 1 3 3 0 0 0 .2 5.8z"/>',
+    rain: '<path d="M7.2 14.5h9.6a3.9 3.9 0 0 0 .5-7.8 5.4 5.4 0 0 0-10.4 1.1 3.4 3.4 0 0 0 .3 6.7z"/><path d="M8.5 17.5l-1 3M12.5 17.5l-1 3M16.5 17.5l-1 3"/>',
+    showers: '<path d="M7.8 3.6v1.3M3.3 8.1h1.3M4.6 4.9l.9.9M11 4.9l-.9.9"/><path d="M5.4 10a2.7 2.7 0 0 1 4.8-2.6"/><path d="M9 15.5h8.6a3.4 3.4 0 0 0 .4-6.8 4.7 4.7 0 0 0-9 1 3 3 0 0 0 0 5.8z"/><path d="M11 18l-.8 2.5M15 18l-.8 2.5"/>',
+    temp: '<path d="M10 13.8V5a2 2 0 0 1 4 0v8.8a4 4 0 1 1-4 0z"/><path d="M12 9v7.2"/>',
+    wind: '<path d="M3 8.5h10.5a2.6 2.6 0 1 0-2.6-2.6"/><path d="M3 12.5h15a3 3 0 1 1-3 3"/><path d="M3 16.5h6"/>',
+    drop: '<path d="M12 3.2c2.9 3.9 5.6 6.9 5.6 10.1a5.6 5.6 0 0 1-11.2 0c0-3.2 2.7-6.2 5.6-10.1z"/>',
+    srd: '<path d="M2 20.5l5.5-6.8 2.6 2.1 4-6.3 7.9 11"/><path d="M14.1 9.5V3.6M12.4 5.1h3.4"/>',
+    anchor: '<circle cx="12" cy="5" r="2"/><path d="M12 7v13.5M8.5 10.5h7"/><path d="M4.5 13.5a7.5 7.5 0 0 0 15 0"/><path d="M4.5 13.5l-1.3 1.6M19.5 13.5l1.3 1.6"/>',
+    lovrijenac: '<path d="M2 21c1.8-3.4 3.6-5.2 6.4-5.2h7.2c2.8 0 4.6 1.8 6.4 5.2"/><path d="M7 15.8V8.5h10v7.3"/><path d="M7 8.5V6.2h2v2.3M11 8.5V6.2h2v2.3M15 8.5V6.2h2v2.3"/><path d="M11 15.8v-2.2a1 1 0 0 1 2 0v2.2"/>',
+    walls: '<path d="M2 21v-6.5h5"/><path d="M7 21V9.2c0-.7 2.2-1.2 5-1.2s5 .5 5 1.2V21"/><path d="M7 9.2V6.5h2v1.6M11 8V5.6h2V8M15 8.1V6.5h2v2.7"/><path d="M17 14.5h5V21"/><path d="M11 21v-3a1 1 0 0 1 2 0v3M11.2 12.5h1.6"/>',
+    stairs: '<path d="M3 20.5h4v-3.2h4v-3.2h4v-3.2h4V7.7h2"/><path d="M4 15.5L19 4.5"/><path d="M7.5 12.9v2.5M11.5 10v2.5M15.5 7.1v2.5"/>',
+    islands: '<path d="M2 18.5c2.2-2.6 5.6-2.8 8 0"/><path d="M9 18.5c2.8-4.1 9-4.1 12.5 0"/><path d="M16 14.6V9M13.6 11.2L16 8.6l2.4 2.6M14.3 13l1.7-1.7 1.7 1.7"/><path d="M2 21.2h20"/>',
+    pin: '<path d="M12 21.5s-6.5-6-6.5-11.6a6.5 6.5 0 0 1 13 0c0 5.6-6.5 11.6-6.5 11.6z"/><path d="M9.8 11.6V8.4h4.4v3.2M9.8 8.4V7.2h1.1v1.2M13.1 8.4V7.2h1.1v1.2"/>',
+    belltower: '<path d="M9 21V9h6v12"/><path d="M8 9h8M10 9V6.2h4V9M12 6.2V2.5"/><path d="M10.6 15.5v-2.3a1.4 1.4 0 0 1 2.8 0v2.3"/><path d="M4.5 10.5l2.2.9M19.5 10.5l-2.2.9M4.5 14.5h2.2M19.5 14.5h-2.2"/>',
+    chart: '<path d="M3 20.5h18"/><path d="M3 17.5l5-5.2 3 2.2 4.2-7.2 5.8 10.2"/><path d="M15.2 7.3V3.8M13.8 5h2.8"/>',
+    walk: '<path d="M8.4 3.5c1.5 0 2.3 1.7 2.3 3.8S9.8 12 8.3 12 6.1 10.1 6.1 7.8 6.9 3.5 8.4 3.5z"/><path d="M6.9 13.6h3l-.3 2.3a1.25 1.25 0 0 1-2.4 0z"/><path d="M15.6 8.5c1.5 0 2.3 1.7 2.3 3.8s-.9 4.7-2.4 4.7-2.2-1.9-2.2-4.2.8-4.3 2.3-4.3z"/><path d="M14.1 18.6h3l-.3 2.3a1.25 1.25 0 0 1-2.4 0z"/>',
+    road: '<rect x="4" y="3.5" width="16" height="14" rx="2"/><path d="M4 11h16M8 14.6h.01M16 14.6h.01"/><path d="M7 17.5v2.5M17 17.5v2.5"/>',
+    ship: '<path d="M3.5 15.5h17l-2.6 4.5H6.4z"/><path d="M12 15.5V2.8"/><path d="M12 4.4c2.6.6 4.4 2.3 4.9 4.6H12"/><path d="M12 10c3.2.6 5.4 2.6 5.9 5.5"/><path d="M12 6.2c-2.3.7-3.9 2.9-4.3 6.3H12"/><path d="M12 2.8l2.2 1-2.2 1"/>',
+    plane: '<path d="M10.6 21.2l1.6-5.7 6.8 1.1v-2l-6.8-4.2V4.6a1.4 1.4 0 0 0-2.8 0v5.8L2.6 14.6v2l6.8-1.1 1.2 5.7z"/>'
+  };
+  function dIcon(name, extra) {
+    return '<svg class="dcc-di' + (extra ? ' ' + extra : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (DICONS[name] || '') + '</svg>';
+  }
+  // the weather file names the sky in words; draw it rather than show its emoji
+  function wxIcon(w) {
+    const d = String(w && w.desc || '').toLowerCase();
+    return dIcon(/shower|drizzle|light rain/.test(d) ? 'showers' : /rain|storm/.test(d) ? 'rain' : /partly|few cloud/.test(d) ? 'partly' : /cloud|overcast/.test(d) ? 'cloud' : /clear|sun/.test(d) ? 'sun' : 'partly', 'dcc-wx');
+  }
+  // the trip's signature climbs, by name
+  const climbIcon = name => dIcon(/Srđ/.test(name) ? 'srd' : /Cavtat|Rat/.test(name) ? 'anchor' : /Lovrijenac/.test(name) ? 'lovrijenac' : /Walls/.test(name) ? 'walls' : /Stairs|Skalini/.test(name) ? 'stairs' : /Elaphiti|Šipan|Lopud/.test(name) ? 'islands' : 'srd');
+
   // ---- Option B: native app shell (mobile) — bottom tabs, day top-bar, sheet, swipe ----
   function tabBtn(v, label) {
     return '<button class="dcc-tour-tabbtn" role="tab" aria-selected="' + (v === 'story') + '" data-view="' + v + '"><span class="ti">' + svgIcon(v) +
@@ -328,8 +367,19 @@
     bar.setAttribute('aria-label', 'Sections');
     bar.setAttribute('role', 'tablist');
     bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Media') +
-      tabBtn('map', 'Map') + tabBtn('stats', 'Stats') + tabBtn('history', 'History');
+      tabBtn('map', 'Map') + tabBtn('stats', 'Stats') + tabBtn('history', 'History') +
+      // phones: the units switch and the music live behind "⋯" on the dock, since the header is gone
+      '<button type="button" class="dcc-tour-dockmore" aria-label="Units and music" aria-expanded="false" aria-controls="dcc-dockpop">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></svg></button>';
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => goTab(b.dataset.view)));
+    const pop = el('div', 'dcc-tour-dockpop'); pop.id = 'dcc-dockpop'; pop.hidden = true;
+    pop.innerHTML = '<div class="dp-row"><span>Units</span></div><div class="dp-row"><span>Music</span></div>';
+    pop.children[0].appendChild(tb.querySelector('.dcc-unit-toggle'));
+    pop.children[1].appendChild(tb.querySelector('.dcc-music-toggle'));
+    const more = bar.querySelector('.dcc-tour-dockmore');
+    const popOpen = on => { pop.hidden = !on; more.setAttribute('aria-expanded', on ? 'true' : 'false'); more.classList.toggle('active', on); };
+    more.addEventListener('click', e => { e.stopPropagation(); popOpen(pop.hidden); });
+    document.addEventListener('pointerdown', e => { if (!pop.hidden && !e.target.closest('.dcc-tour-dockpop, .dcc-tour-dockmore')) popOpen(false); });
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
     sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day"><div class="sheet-handle"></div>' +
@@ -345,7 +395,7 @@
     // place the sticky day-selector just BELOW the header (not above it), so the
     // site header leads the Timeline tab like it does on Photos/Map/Stats
     const hdr = root.querySelector('.dcc-tour-header');
-    root.insertBefore(tb, hdr ? hdr.nextSibling : root.firstChild); root.appendChild(bar); root.appendChild(sheet);
+    root.insertBefore(tb, hdr ? hdr.nextSibling : root.firstChild); root.appendChild(bar); root.appendChild(pop); root.appendChild(sheet);
     root._topbar = tb; root._sheet = sheet;
     root.dataset.view = 'story';
     root.querySelector('.dcc-tour-tabbtn[data-view="story"]').classList.add('active');
@@ -452,6 +502,8 @@
   // ---- History tab: BalkansHistory (history/history.js), 35 eras of Balkan borders.
   //      Its script + stylesheet load on the first visit through the bundle URL (so the
   //      Elementor embed works too), and the component mounts once. ----
+  let histMapActs = null, histSegT = 0;
+  const histSegOn = m => histEl && histEl.querySelectorAll('.dcc-hist-seg [data-jump]').forEach(b => b.toggleAttribute('aria-current', b.dataset.jump === m));
   let histEl = null, histHandle = null, histLoading = false, histWant = null, histSlug = null, histLink = null;
   const histSlugOf = l => String(l).toLowerCase().replace(/\s+/g, '');
   const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -460,6 +512,9 @@
     if (!histEl) {
       histEl = el('section', 'dcc-tour-history');
       histEl.innerHTML =
+        // phones: the three parts of the page in one switch that stays at the top (the word menu is hidden there)
+        '<nav class="dcc-hist-seg" aria-label="On this page"><button type="button" data-jump="map" aria-current="true">Map</button>' +
+          '<button type="button" data-jump="chron">Chronicle</button><button type="button" data-jump="trip">Your trip</button></nav>' +
         '<div class="dcc-hist-top"><div class="dcc-hist-bar">' +
           '<button class="dcc-hist-film" type="button"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span><span class="dcc-jl">Watch the 60-second film</span><span class="dcc-js">Film</span></button>' +
           '<nav class="dcc-hist-jump" aria-label="On this page">' +
@@ -470,6 +525,29 @@
         '<div class="dcc-hist-mount"><p class="dcc-hist-msg">Loading the history map…</p></div>' +
         '<section class="dcc-chron" aria-labelledby="dcc-chron-h"></section>';
       histEl.querySelector('.dcc-hist-film').addEventListener('click', playHistoryFilm);
+      // phones: the film and today's streets as buttons on the map itself
+      histMapActs = el('div', 'dcc-hist-mapacts',
+        '<button type="button" class="dcc-hist-streets" data-jump="street">' + dIcon('road') + 'Today’s streets</button>' +
+        '<button type="button" class="dcc-hist-filmfab" aria-label="Watch the 60-second film"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></button>');
+      histMapActs.querySelector('.dcc-hist-filmfab').addEventListener('click', playHistoryFilm);
+      histMapActs.querySelector('.dcc-hist-streets').addEventListener('click', () => { thenWant = histSlug || '1453'; setView('map'); });
+      histEl.querySelector('.dcc-hist-seg').addEventListener('click', e => {
+        const b = e.target.closest('[data-jump]');
+        if (!b) return;
+        const t = histEl.querySelector({ trip: '.dcc-hist-trip', chron: '.dcc-chron' }[b.dataset.jump]);
+        storyLock(1600);
+        if (t) t.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); else window.scrollTo({ top: 0, behavior: scrollBehavior() });
+        histSegOn(b.dataset.jump);
+      });
+      // the switch follows the page as you scroll
+      window.addEventListener('scroll', () => {
+        if (!histEl || root.dataset.view !== 'history' || histSegT) return;
+        histSegT = requestAnimationFrame(() => {
+          histSegT = 0;
+          const mid = innerHeight * 0.4, at = s => { const n = histEl.querySelector(s); return n && n.getBoundingClientRect().top < mid; };
+          histSegOn(at('.dcc-chron') ? 'chron' : at('.dcc-hist-trip') ? 'trip' : 'map');
+        });
+      }, { passive: true });
       histEl.querySelector('.dcc-hist-jump').addEventListener('click', e => {
         const b = e.target.closest('[data-jump]');
         if (!b) return;
@@ -498,7 +576,7 @@
         dataUrl: resolveUrl('history/history-data.json'), data: thenData && thenData.view ? thenData : undefined,   // already loaded by the Map tab
         fix: histFix,   // the Zeljko Test corrections
         pins: histPins,   // Layers › Your photos & videos
-        hash: false, start: histWant || undefined,
+        hash: false, start: histWant || undefined, plateExtra: histMapActs,
         onChange: (f, slug) => { histSlug = slug; if (root.dataset.view === 'history') updateHash(); histQueue(f); }
       });
       histWant = null;
@@ -1372,7 +1450,7 @@
     wrapText(g, ev.text, W - 2 * M, Math.max(2, Math.floor((H - 90 - y) / 42))).forEach(l => { g.fillText(l, M, y); y += 42; });
     g.fillStyle = '#6d6964'; g.font = '400 23px Lora, Georgia, serif';
     const d = DATA.days[x.di];
-    g.fillText(x.p.name.split(',')[0] + ' · Day ' + (x.di + 1) + (d ? ' · ' + dDate(d) + ', 2025' : ''), M, H - 46);
+    g.fillText(x.p.name.split(',')[0] + (d ? ' · ' + dDate(d) + ', 2025' : ''), M, H - 46);
     return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('no image')), 'image/jpeg', 0.9));
   }
   let pcBlob = null;
@@ -1622,11 +1700,17 @@
     }).filter(Boolean);
     return tripStops;
   }
-  // "Day 4" · "Days 6–7, 13–16"
+  // the days a place was visited, as dates: "Sep 25" · "Sep 15–16, 22–25" (no "Day N" anywhere)
   function dayRanges(days) {
-    const n = days.map(d => d + 1).sort((a, b) => a - b), out = [];
+    const n = days.slice().sort((a, b) => a - b), out = [];
     n.forEach((v, i) => { if (i && v === n[i - 1] + 1) out[out.length - 1][1] = v; else out.push([v, v]); });
-    return (n.length === 1 ? 'Day ' : 'Days ') + out.map(r => r[0] === r[1] ? r[0] : r[0] + '–' + r[1]).join(', ');
+    let lastMon = '';
+    return out.map(([a, b]) => {
+      const A = DATA.days[a], B = DATA.days[b], ma = _MON[_ymd(A).m - 1], mb = _MON[_ymd(B).m - 1];
+      const head = ma === lastMon ? String(_ymd(A).dd) : dDate(A);
+      lastMon = mb;
+      return a === b ? head : head + '–' + (mb === ma ? _ymd(B).dd : dDate(B));
+    }).join(', ');
   }
   // What a stop belonged to in each era. Whether it lay inside Ragusa comes from the era's
   // territory list in history-data.json, and Ragusa's own status before 1358 is the map's
@@ -1944,7 +2028,7 @@
       sec.innerHTML = closeBtn +
         '<div class="dcc-hist-trip-k">' + svgIcon('history') + '<span>This place in history</span></div>' +
         '<h2 class="dcc-hp-h">' + escapeHtml(shortName(name)) + '</h2>' +
-        '<p class="dcc-hp-sub">' + (pp.sea ? 'Off the coast of ' : 'In ') + escapeHtml(area) + ' · you were here on ' + escapeHtml(dayRanges(g.days).replace(/^D/, 'd')) + '</p>' +
+        '<p class="dcc-hp-sub">' + (pp.sea ? 'Off the coast of ' : 'In ') + escapeHtml(area) + ' · you were here on ' + escapeHtml(dayRanges(g.days)) + '</p>' +
         (noteText ? '<aside class="dcc-hist-note"><div class="dcc-hist-note-k">' + svgIcon('history') + '<span>On this spot</span></div><p>' + escapeHtml(noteText) + '</p>' +
           (noteEra ? '<button type="button" class="dcc-hist-note-a" data-vt="' + escapeAttr(histSlugOf(noteEra)) + '">See the map of ' + escapeHtml(noteEra) + ' ›</button>' : '') +
           (noteSrc ? chronSrcHtml(noteSrc) : '') + '</aside>' : '') +
@@ -2079,7 +2163,7 @@
     }
     g.fillStyle = '#6d6964'; g.font = '400 23px Lora, Georgia, serif';
     const d = DATA.days[x.di];
-    g.fillText('Day ' + (x.di + 1) + (d ? ' · ' + dDate(d) + ', 2025' : ''), M, H - 46);
+    g.fillText(d ? dWeekday(d) + ', ' + dDate(d) + ', 2025' : '', M, H - 46);
     return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('no image')), 'image/jpeg', 0.9));
   }
   async function placePostcard(name, k) {
@@ -2910,11 +2994,11 @@
     thenCrossings().forEach(x => {
       const a = crossStatus(x.from, f), b = crossStatus(x.to, f), d = DATA.days[x.di];
       const same = a.t === b.t;
-      const html = '<div class="dcc-then-pop"><small>Day ' + (x.di + 1) + (d ? ' · ' + escapeHtml(dDate(d)) : '') + '</small>' +
+      const html = '<div class="dcc-then-pop"><small>' + (d ? escapeHtml(dWeekday(d) + ', ' + dDate(d)) : '') + '</small>' +
         '<b>You crossed into ' + escapeHtml(crossName(x.to)) + '</b>' +
         '<p>From ' + escapeHtml(crossName(x.from)) + '. In ' + escapeHtml(f.label) + ': ' + escapeHtml(crossName(x.from)) + ' — ' + escapeHtml(a.t) + '; ' +
           escapeHtml(crossName(x.to)) + ' — ' + escapeHtml(b.t) + '. ' + (same ? 'Then, one ruler on both sides.' : 'Then, a real border.') + '</p></div>';
-      thenNear.addLayer(L.marker(x.ll, { pane: 'dccThenTop', keyboard: true, title: 'Day ' + (x.di + 1) + ': crossed into ' + crossName(x.to),
+      thenNear.addLayer(L.marker(x.ll, { pane: 'dccThenTop', keyboard: true, title: (DATA.days[x.di] ? dDate(DATA.days[x.di]) + ': ' : '') + 'crossed into ' + crossName(x.to),
         icon: L.divIcon({ className: 'dcc-then-cross' + (same ? '' : ' dcc-then-cross-real'), html: '<i aria-hidden="true">⇄</i>', iconSize: null }) })
         .bindPopup(html, { className: 'dcc-then-popup', maxWidth: 260, autoPanPaddingTopLeft: L.point(60, 60), autoPanPaddingBottomRight: L.point(20, 210) }));
     });
@@ -2986,7 +3070,7 @@
     const fig = root._mapmode.querySelector('#mm-moment');
     fig.addEventListener('click', wallFigStop); fig.classList.add('dcc-walk-card'); fig.title = 'Tap to stop the walk';
     const show = s => {
-      fig.innerHTML = '<img alt="" src="' + escapeAttr(resolveUrl(s.it.src || s.it.full)) + '"><figcaption><b>' + escapeHtml(shortName(s.name)) + '</b><span>Day ' + (s.di + 1) + ' · on the walls</span></figcaption>';
+      fig.innerHTML = '<img alt="" src="' + escapeAttr(resolveUrl(s.it.src || s.it.full)) + '"><figcaption><b>' + escapeHtml(shortName(s.name)) + '</b><span>' + escapeHtml(DATA.days[s.di] ? dDate(DATA.days[s.di]) : '') + ' · on the walls</span></figcaption>';
       fig.hidden = false;
     };
     let m = 0, next = 0, tPrev = performance.now();
@@ -3369,7 +3453,7 @@
       el.className = 'dcc-tour-mm-legend';
       el.innerHTML = showAll + DATA.days.map((d, i) =>
         '<button class="dcc-tour-legseg" data-day="' + i + '" title="' + escapeAttr(d.short + (d.area ? ' · ' + shortName(d.area) : '')) + '">' +
-        '<span class="seg-sw" style="background:' + dayColor(i) + '"></span><span class="seg-n">' + d.index + '</span></button>').join('');
+        '<span class="seg-sw" style="background:' + dayColor(i) + '"></span><span class="seg-n">' + escapeHtml(dShort(d)) + '</span></button>').join('');
       el.querySelectorAll('.dcc-tour-legseg[data-day]').forEach(c => c.addEventListener('click', () => {
         const di = +c.dataset.day;
         mmIsolateDay = (mmIsolateDay === di) ? null : di;   // tap again to un-isolate
@@ -3670,7 +3754,7 @@
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
-  let galItems = null, galCur = null, galRendered = 0, galEl = null;
+  let galItems = null, galCur = null, galRendered = 0, galEl = null, galDayN = {};
   let galPlaceOpts = [], galCityOpts = [];   // [segment, count] facet options
   const galFilter = { kinds: new Set(), cities: new Set(), places: new Set() };   // kinds empty = all
   const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // direction folded into the Sort menu
@@ -3769,7 +3853,13 @@
       const personOpts = PERSONS.map(pn => ({ v: pn, n: personCount[pn] || 0, dot: PERSON_COLORS[pn] }));
 
       const g = el('section', 'dcc-tour-gallery'); galEl = g;
-      g.innerHTML = '<div class="dcc-tour-gal-bar">' +
+      // phones: a title row with one Filter button (the filter bar opens beneath it), and a
+      // strip of dates down the right edge for jumping through the trip
+      g.innerHTML = '<div class="dcc-tour-galtop"><span class="gt-title">Media</span><span class="gt-count" id="dcc-galcount2"></span>' +
+        '<button type="button" class="dcc-tour-galfilterbtn" aria-expanded="false" aria-controls="dcc-galbar">Filter</button></div>' +
+        '<nav class="dcc-gal-scrub" aria-label="Jump to a date">' + DATA.days.map((d, i) =>
+          '<button type="button" data-sdi="' + i + '" aria-label="' + escapeAttr(dWeekday(d) + ', ' + dDate(d)) + '">' + escapeHtml(dShort(d)) + '</button>').join('') + '</nav>' +
+        '<div class="dcc-tour-gal-bar" id="dcc-galbar">' +
         facetHTML('type', 'Type', typeOpts, { search: false }) +
         facetHTML('person', 'Photographer', personOpts, { search: false, optClass: 'dcc-personopt', badgeId: 'dcc-person-badge' }) +
         '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
@@ -3783,6 +3873,16 @@
         '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
         '<div id="dcc-galmore" class="dcc-tour-galmore">loading more…</div>';
       root.appendChild(g);
+      const fbtn = g.querySelector('.dcc-tour-galfilterbtn');
+      fbtn.addEventListener('click', () => { const on = !g.classList.contains('filters-open'); g.classList.toggle('filters-open', on); fbtn.setAttribute('aria-expanded', on ? 'true' : 'false'); });
+      g.querySelector('.dcc-gal-scrub').addEventListener('click', e => {
+        const b = e.target.closest('[data-sdi]'); if (!b) return;
+        const di = +b.dataset.sdi, at = galCur ? galCur.findIndex(x => x.di === di) : -1;
+        if (at < 0) { toast('Nothing from ' + dDate(DATA.days[di]) + ' in this view'); return; }
+        while (galRendered <= at && galRendered < galCur.length) renderGalleryChunk();
+        const h = document.getElementById('gal-day-' + di);
+        if (h) h.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+      });
       // Type / Photographer / City / Place — all facet dropdowns (scroll list + multi-select)
       g.querySelectorAll('.dcc-tour-facet').forEach(fac => {
         const kind = fac.dataset.facet;
@@ -3855,6 +3955,9 @@
     // the viewer spans the whole filtered+sorted set — all photos, videos AND clips
     viewerItems = galCur.map((x, i) => { x._vi = i; return viewerMeta(x.it); });
     document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
+    document.getElementById('dcc-galcount2').textContent = galCur.length.toLocaleString();
+    galDayN = {}; galCur.forEach(x => { galDayN[x.di] = (galDayN[x.di] || 0) + 1; });
+    galEl.classList.toggle('gal-bytime', galSort.key === 'time');
     const grid = document.getElementById('dcc-galgrid'), more = document.getElementById('dcc-galmore');
     const exp = document.getElementById('dcc-galexpand');
     if (GAL_GROUPED[galSort.key]) { more.style.display = 'none'; exp.hidden = false; exp.textContent = 'Expand all'; renderGalleryGrouped(grid); }
@@ -3865,7 +3968,16 @@
     const grid = document.getElementById('dcc-galgrid');
     const end = Math.min(galRendered + 200, galCur.length);
     let html = '';
-    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it, i);
+    for (let i = galRendered; i < end; i++) {
+      // a date header wherever the day changes (shown on phones, where the grid is three across)
+      const x = galCur[i];
+      if (galSort.key === 'time' && (i === 0 || galCur[i - 1].di !== x.di)) {
+        const d = DATA.days[x.di];
+        html += '<div class="dcc-gal-dayh" id="gal-day-' + x.di + '"><b>' + escapeHtml(dWeekday(d) + ', ' + dDate(d)) + '</b>' +
+          '<span>' + (d.area ? escapeHtml(shortName(d.area)) + ' · ' : '') + (galDayN[x.di] || 0) + '</span></div>';
+      }
+      html += renderItem(x.it, i);
+    }
     grid.insertAdjacentHTML('beforeend', html);
     galRendered = end;
     document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
@@ -3973,12 +4085,20 @@
     if (lat == null || lng == null) return '';
     return '<a class="' + (cls || 'dcc-tour-maplink') + '" href="https://www.google.com/maps?q=' +
       lat + ',' + lng + '" target="_blank" rel="noopener" title="Open in Google Maps" ' +
-      'onclick="event.stopPropagation()">📍</a>';
+      'onclick="event.stopPropagation()">' + dIcon('pin') + '</a>';
   }
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
   function shortName(s) { return String(s || '').split(/[,(]/)[0].trim(); }
   // a representative "cover" thumbnail for a day (middle shot of its biggest place)
+  // the picture a day's cover shows on a phone: the middle photo of its most-photographed place
+  function coverFull(day) {
+    let best = null, bestN = -1;
+    (day.places || []).forEach(p => { const imgs = p.items.filter(it => it.kind !== 'video' && it.kind !== 'clip' && (it.full || it.src)); if (imgs.length > bestN) { bestN = imgs.length; best = imgs; } });
+    if (!best || !best.length) return coverSrc(day);
+    const it = best[Math.floor(best.length / 2)];
+    return resolveUrl(it.full || it.src);
+  }
   function coverSrc(day) {
     let best = null, bestN = -1;
     (day.places || []).forEach(p => {
@@ -4022,15 +4142,42 @@
     let sup = '';
     if (busiest && busiest.count > 0) {
       sup = '<div class="dcc-tour-superlatives">' +
-        '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The single day with the most photos, videos and clips taken.') + '">🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots<span class="t-info" aria-hidden="true">ⓘ</span></span>' +
-        (captured ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The place with the most photos and videos across the whole trip.') + '">📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
-        (!personOn() && s.longest_walk_day ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The day we covered the most ground between photo spots: straight-line distances between consecutive geotagged shots, counting only hops under 3 km (so drives, boats and flights are skipped). A rough “how far we roamed” estimate from photo GPS — not on-foot miles. For actual walking, see the “walked” tile.') + '">🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + distFromKm(s.longest_walk_day.km) + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
+        '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The single day with the most photos, videos and clips taken.') + '">' + dIcon('belltower') + ' Busiest day <b>' + escapeHtml((busiest.index && DATA.days[busiest.index - 1]) ? dWeekday(DATA.days[busiest.index - 1]).slice(0, 3) + ' ' + dDate(DATA.days[busiest.index - 1]) : busiest.label) + '</b> · ' + busiest.count + ' shots<span class="t-info" aria-hidden="true">ⓘ</span></span>' +
+        (captured ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The place with the most photos and videos across the whole trip.') + '">' + dIcon('pin') + ' Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
+        (!personOn() && s.longest_walk_day ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The day we covered the most ground between photo spots: straight-line distances between consecutive geotagged shots, counting only hops under 3 km (so drives, boats and flights are skipped). A rough “how far we roamed” estimate from photo GPS — not on-foot miles. For actual walking, see the “walked” tile.') + '">' + dIcon('walk') + ' Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + distFromKm(s.longest_walk_day.km) + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
         '</div>';
     }
     const note = personOn() ?
       '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personLabel()) +
         '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
-    return '<div class="dcc-tour-tripstats">' +
+    // phones: the totals printed as an entry ticket (the tiles below stay on desktop)
+    const t = DATA.trip || {};
+    // the busiest day as a date ("Wed Sep 24"), never a day number
+    const bDay = busiest && busiest.index && DATA.days[busiest.index - 1], bLab = bDay ? dWeekday(bDay).slice(0, 3) + ' ' + dDate(bDay) : busiest && busiest.label;
+    const fromTo = t.start_date && t.end_date ? (() => { const a = t.start_date.split('-').map(Number), b = t.end_date.split('-').map(Number);
+      return _MON[a[1] - 1] + ' ' + a[2] + ' – ' + (a[1] === b[1] ? '' : _MON[b[1] - 1] + ' ') + b[2] + ', ' + b[0]; })() : '';
+    const nDays = t.start_date && t.end_date ? Math.round((Date.parse(t.end_date) - Date.parse(t.start_date)) / 864e5) + 1 : DATA.day_count;
+    const tk = (k, v) => '<div class="tk-cell"><span class="tk-k">' + k + '</span><span class="tk-v">' + v + '</span></div>';
+    const ticket = '<div class="dcc-tour-ticket" role="group" aria-label="The trip in numbers">' +
+      '<div class="tk-head"><span class="tk-eyebrow">' + escapeHtml(t.name || 'Our trip') + '</span>' +
+        '<span class="tk-title">Dubrovnik</span>' +
+        '<span class="tk-dates">' + escapeHtml(fromTo) + (fromTo ? ' · ' : '') + nDays + ' days</span></div>' +
+      '<div class="tk-perf" aria-hidden="true"></div>' +
+      '<div class="tk-grid">' +
+        tk('Steps', fmt(h.steps)) +
+        tk('Walked', escapeHtml(distNumFromMi(h.dist, 1) + ' ' + distUnit())) +
+        tk('Stairs', fmt(h.flights) + ' flights') +
+        (totalLoc ? tk('Places', fmt(totalLoc)) : '') +
+        (photos != null ? tk('Shots', fmt(photos + videos + clips)) : '') +
+        tk('Mount Srđ climbed', srd + '×') +
+      '</div>' +
+      '<div class="tk-perf" aria-hidden="true"></div>' +
+      '<div class="tk-foot"><div class="tk-best">' +
+        (busiest && busiest.count > 0 ? '<span>' + dIcon('belltower') + ' Busiest day <b>' + escapeHtml(bLab) + '</b> · ' + busiest.count + '</span>' : '') +
+        (captured ? '<span>' + dIcon('pin') + ' Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '</span>' : '') +
+      '</div><img class="tk-crest" src="' + escapeAttr(resolveUrl('icons/favicon-96.png')) + '" alt=""></div>' +
+    '</div>';
+    return ticket + '<div class="dcc-tour-tripstats">' +
       statTile(h.steps, '', 'steps', '', 0,
         'Total steps recorded on ' + h.watch + ' across the whole trip (Apple Health).') +
       statTile(distNumFromMi(h.dist, 1), ' ' + distUnit(), 'walked', '', 1,
@@ -4041,7 +4188,7 @@
         'How many distinct places we named across the trip — every geotagged photo and video was assigned to a location.') : '') +
       (!personOn() ? (() => { const tm = travelModes(), g = tm.ground || 1;
         return statTile(distNumFromKm(tm.ground, 0), ' ' + distUnit(), 'traveled on the ground',
-          '🚌 ' + Math.round(tm.road / g * 100) + '% · 🥾 ' + Math.round(tm.walk / g * 100) + '% · ⛵ ' + Math.round(tm.boat / g * 100) + '%', 0,
+          { html: dIcon('road') + ' ' + Math.round(tm.road / g * 100) + '% · ' + dIcon('walk') + ' ' + Math.round(tm.walk / g * 100) + '% · ' + dIcon('ship') + ' ' + Math.round(tm.boat / g * 100) + '%' }, 0,
           'Estimated total distance on the ground (flights excluded), split into bus/car vs walking vs boat. Inferred from place names, geography and the watch — only the walking share is sensor-measured.'); })() : '') +
       (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
         photos + ' photos · ' + videos + ' videos · ' + clips + ' clips', 0,
@@ -4056,7 +4203,7 @@
       '<span class="t-big" data-count="' + num + '" data-dec="' + dec +
       '" data-suffix="' + escapeAttr(suffix || '') + '">' + escapeHtml(shown) + escapeHtml(suffix || '') + '</span>' +
       '<span class="t-lab">' + escapeHtml(label) + (tip ? '<span class="t-info" aria-hidden="true">ⓘ</span>' : '') + '</span>' +
-      (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
+      (sub ? '<span class="t-sub">' + (sub.html != null ? sub.html : escapeHtml(sub)) + '</span>' : '') + '</div>';
   }
   // Shared, JS-positioned tooltip popover (lives on <body> so the stats row's
   // horizontal scroll can't clip it). Shows on hover and on tap/click.
@@ -4086,7 +4233,7 @@
   function tile(big, label, sub) {
     return '<div class="dcc-tour-tile"><span class="t-big">' + escapeHtml(big) + '</span>' +
       '<span class="t-lab">' + escapeHtml(label) + '</span>' +
-      (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
+      (sub ? '<span class="t-sub">' + (sub.html != null ? sub.html : escapeHtml(sub)) + '</span>' : '') + '</div>';
   }
   // count-up animation for the hero numbers
   function animateCounts(scope) {
@@ -4124,17 +4271,17 @@
       const tale = srd >= 0.25
         ? 'That\'s like climbing <b>Mount Srđ ×' + srd.toFixed(srd < 1 ? 2 : 1) + '</b> — on foot.'
         : 'About <b>' + Math.round(h.climb_m / 3) + ' flights</b> of stairs.';
-      out += '<p class="dcc-tour-stairtale">🪜 ' + tale + '</p>';
+      out += '<p class="dcc-tour-stairtale">' + dIcon('stairs') + ' ' + tale + '</p>';
     }
     return out;
   }
   function weatherHTML(w) {
     if (!w) return '';
     const bits = [];
-    if (w.icon || w.desc) bits.push((w.icon || '') + ' ' + escapeHtml(w.desc || ''));
-    if (w.tmax != null) bits.push('🌡 ' + tempFromC(w.tmax) + (w.tmin != null ? ' / ' + tempFromC(w.tmin) : ''));
-    if (w.wind != null) bits.push('💨 ' + (imp() ? Math.round(w.wind * 0.621371) + ' mph' : Math.round(w.wind) + ' km/h'));
-    if (w.precip >= 0.1) bits.push('💧 ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm'));
+    if (w.icon || w.desc) bits.push(wxIcon(w) + ' ' + escapeHtml(w.desc || ''));
+    if (w.tmax != null) bits.push(dIcon('temp') + ' ' + tempFromC(w.tmax) + (w.tmin != null ? ' / ' + tempFromC(w.tmin) : ''));
+    if (w.wind != null)  bits.push(dIcon('wind') + ' ' + (imp() ? Math.round(w.wind * 0.621371) + ' mph' : Math.round(w.wind) + ' km/h'));
+    if (w.precip >= 0.1) bits.push(dIcon('drop') + ' ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm'));
     return bits.length ? '<p class="dcc-tour-weather">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
@@ -4146,7 +4293,7 @@
     const sc = DATA.signature_climbs || [];
     if (sc.length) {
       html += '<div class="dcc-tour-climbs"><span class="lab">Compare to</span>' +
-        sc.map(c => '<span class="climb">' + escapeHtml(c.emoji) + ' ' + escapeHtml(c.name) +
+        sc.map(c => '<span class="climb">' + climbIcon(c.name) + ' ' + escapeHtml(c.name) +
           ' <b>' + elevFromM(c.max_alt) + '</b></span>').join('') + '</div>';
     }
     html += staircaseHTML();
@@ -4245,7 +4392,7 @@
       return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: seenPlaces.size, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
     });
     const n = days.length, step = Math.max(1, Math.ceil(n / 4));
-    const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? 'Day ' + d.index : '') + '</span>').join('');
+    const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? escapeHtml(dShort(d)) : '') + '</span>').join('');
     return '<div class="viz-card viz-timeline">' +
       '<div class="viz-h"><h4>The trip, adding up</h4>' +
         '<span class="viz-sub">Drag across the days — every number is the running total up to that point.</span></div>' +
@@ -4351,14 +4498,14 @@
         ? '<div class="wx-range" style="top:' + (100 - top).toFixed(1) + '%;bottom:' + ((w.tmin - lo) / span * 100).toFixed(1) + '%"></div>'
         : '<div class="wx-fill" style="height:' + Math.max(6, top).toFixed(1) + '%"></div>';
       const extras =
-        (w.precip >= 0.1 ? '<span class="wx-x">💧' + (imp() ? (w.precip / 25.4).toFixed(2) : w.precip) + '</span>' : '') +
-        (w.wind != null ? '<span class="wx-x">💨' + (imp() ? Math.round(w.wind * 0.621371) : Math.round(w.wind)) + '</span>' : '');
+        (w.precip >= 0.1 ? '<span class="wx-x">' + dIcon('drop') + (imp() ? (w.precip / 25.4).toFixed(2) : w.precip) + '</span>' : '') +
+        (w.wind != null ? '<span class="wx-x">' + dIcon('wind') + (imp() ? Math.round(w.wind * 0.621371) : Math.round(w.wind)) + '</span>' : '');
       const detail = dWeekday(d).slice(0, 3) + ' · ' + dDate(d) + ' · ' + (w.desc || '') +
         ' · H ' + tempFromC(w.tmax) + (w.tmin != null ? ' / L ' + tempFromC(w.tmin) : '') +
-        (w.wind != null ? ' · 💨 ' + windFromKmh(w.wind) + (w.winddir != null ? ' ' + windDirName(w.winddir) : '') : '') +
-        (w.precip >= 0.1 ? ' · 💧 ' + precipFromMm(w.precip) : '');
+        (w.wind != null ? ' · wind ' + windFromKmh(w.wind) + (w.winddir != null ? ' ' + windDirName(w.winddir) : '') : '') +
+        (w.precip >= 0.1 ? ' · rain ' + precipFromMm(w.precip) : '');
       return '<div class="wx-cell" title="' + escapeAttr(detail) + '">' +
-        '<span class="wx-ic">' + (w.icon || '') + '</span>' +
+        '<span class="wx-ic">' + wxIcon(w) + '</span>' +
         '<span class="wx-hi">' + tempFromC(w.tmax) + '</span>' +
         (w.tmin != null ? '<span class="wx-lo">' + tempFromC(w.tmin) + '</span>' : '') +
         '<div class="wx-track">' + bar + '</div>' +
@@ -4366,8 +4513,8 @@
         '<span class="wx-d">' + escapeHtml(dDate(d)) + '</span></div>';
     }).join('');
     const bits = ['daily high' + (hasLow ? ' / low' : '') + (imp() ? ' (°F)' : ' (°C)')];
-    if (hasRain) bits.push('💧 ' + (imp() ? 'in' : 'mm') + ' rain');
-    if (hasWind) bits.push('💨 ' + (imp() ? 'mph' : 'km/h') + ' wind');
+    if (hasRain) bits.push(dIcon('drop') + ' ' + (imp() ? 'in' : 'mm') + ' rain');
+    if (hasWind) bits.push(dIcon('wind') + ' ' + (imp() ? 'mph' : 'km/h') + ' wind');
     return '<div class="viz-card viz-weather">' +
       '<div class="viz-h"><h4>Weather across the trip</h4><span class="viz-sub">' + bits.join(' · ') + '</span></div>' +
       '<div class="wx-ribbon">' + cells + '</div></div>';
@@ -4433,9 +4580,9 @@
     return _travel;
   }
   const TRAVEL_META = {
-    walk: { c: '#7a9e5e', ic: '🥾', label: 'Walking' },
-    road: { c: '#c98a3a', ic: '🚌', label: 'Road (bus / car)' },
-    boat: { c: '#3a7ca5', ic: '⛵', label: 'Boat' },
+    walk: { c: '#7a9e5e', ic: 'walk', label: 'Walking' },
+    road: { c: '#c98a3a', ic: 'road', label: 'Road (bus / car)' },
+    boat: { c: '#3a7ca5', ic: 'ship', label: 'Boat' },
   };
   function vizTravelHTML() {
     const tm = travelModes(), g = tm.ground || 1;
@@ -4443,12 +4590,12 @@
     const bar = order.map(k => '<span class="tv-seg" style="flex:' + tm[k].toFixed(2) + ';background:' + TRAVEL_META[k].c + '" title="' + escapeAttr(TRAVEL_META[k].label + ' · ' + distFromKm(tm[k])) + '"></span>').join('');
     const legend = order.map(k =>
       '<div class="tv-leg"><span class="tv-sw" style="background:' + TRAVEL_META[k].c + '"></span>' +
-      '<span class="tv-ic">' + TRAVEL_META[k].ic + '</span>' +
+      '<span class="tv-ic">' + dIcon(TRAVEL_META[k].ic) + '</span>' +
       '<span class="tv-nm">' + TRAVEL_META[k].label + '</span>' +
       '<span class="tv-val"><b>' + distFromKm(tm[k]) + '</b> · ' + Math.round(tm[k] / g * 100) + '%</span></div>').join('');
     return '<div class="viz-card viz-travel">' +
       '<div class="viz-h"><h4>How we got around</h4><span class="viz-sub">estimated distance by mode</span></div>' +
-      '<div class="tv-there"><span class="tv-there-ic">✈️</span>' +
+      '<div class="tv-there"><span class="tv-there-ic">' + dIcon('plane') + '</span>' +
         '<div class="tv-there-tx"><b>Getting there</b>' +
         '<span>Orlando → London → Dubrovnik &amp; back · ~<b>' + distFromKm(tm.plane, 0) + '</b> round trip</span></div></div>' +
       '<div class="tv-around-lab">Getting around · <b>' + distFromKm(tm.ground, 0) + '</b> on the ground</div>' +
@@ -4508,7 +4655,25 @@
     viewerItems = []; viewerIdx = -1;
     for (const k in markersByPlace) delete markersByPlace[k];
 
-    let html = '<div class="dcc-tour-dayhead">' +
+    // phones: the day opens on its cover photo, with the date and the way to change day on it;
+    // then the day's numbers; then its stops down a time rail (desktop is unchanged)
+    const cvr = coverFull(day), w0 = day.weather || {};
+    const chips = [];
+    if (w0.tmax != null) chips.push(wxIcon(w0) + ' ' + tempFromC(w0.tmax) + (w0.tmin != null ? ' / ' + tempFromC(w0.tmin) : ''));
+    if (day.health && day.health.steps) chips.push(dIcon('walk') + ' ' + fmt(day.health.steps) + ' steps');
+    chips.push(escapeHtml(personOn() ? plur(dayVisibleCount(day), 'shot') : plur(day.count || 0, 'shot')));
+    let html = '<div class="dcc-tour-daycover">' +
+      (cvr ? '<img class="dc-img" src="' + escapeAttr(cvr) + '" alt="" decoding="async">' : '') +
+      '<div class="dc-shade" aria-hidden="true"></div>' +
+      '<button type="button" class="dc-arrow dc-prev" aria-label="Previous day"' + (curDay <= 0 ? ' disabled' : '') + '>‹</button>' +
+      '<button type="button" class="dc-arrow dc-next" aria-label="Next day"' + (curDay >= DATA.day_count - 1 ? ' disabled' : '') + '>›</button>' +
+      '<div class="dc-text">' +
+        (day.area ? '<span class="dc-area">' + escapeHtml(day.area) + '</span>' : '') +
+        '<button type="button" class="dc-date" aria-haspopup="dialog" aria-label="Pick a day: ' + escapeAttr(dWeekday(day) + ' ' + dDate(day)) + '">' +
+          '<span class="dc-wd">' + escapeHtml(dWeekday(day)) + '</span><span class="dc-dd">' + escapeHtml(dDate(day)) + ' <span class="dc-caret" aria-hidden="true">▾</span></span></button>' +
+        '<div class="dc-chips">' + chips.map(c => '<span class="dc-chip">' + c + '</span>').join('') + '</div>' +
+      '</div></div>';
+    html += '<div class="dcc-tour-dayhead">' +
       '<div class="dcc-tour-daynum">' + escapeHtml(dWeekday(day)) + '</div>' +
       '<h2>' + escapeHtml(dDate(day)) + '</h2>' +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
@@ -4558,12 +4723,18 @@
       const openAttr = placesOpenDefault ? '1' : '0';
       html += '<section class="dcc-tour-place" id="' + anchor + '" data-open="' + openAttr + '">' +
         '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
+          '<span class="dcc-tour-railtime" aria-hidden="true">' + escapeHtml(p.from || '') + '</span>' +
           '<div class="dcc-tour-place-htext">' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
             '<span class="dcc-tour-place-meta">' + [escapeHtml(time) + spent.replace(/^ · /, escapeHtml(time) ? ' · ' : ''), plur(its.length, 'shot')].filter(Boolean).join(' · ') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + histPlaceLink(p.name, true) + '</span>' +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
+        // phones: a closed stop shows a strip of its first pictures (tap it to open the stop)
+        (its.length >= 3 ? '<div class="dcc-tour-railstrip" aria-hidden="true">' + its.slice(0, 4).map(it => {
+          const th = it.src || it.poster || (it.type === 'drive' && it.id ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(it.id) + '&sz=w200' : '');
+          return th ? '<img loading="lazy" decoding="async" alt="" src="' + escapeAttr(resolveUrl(th)) + '">' : '';
+        }).join('') + (its.length > 4 ? '<span class="rs-more">+' + (its.length - 4) + '</span>' : '') + '</div>' : '') +
         '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(it => renderItem(it)).join('') + '</div>' +
         '</section>';
     });
@@ -4582,6 +4753,15 @@
     if (next) next.addEventListener('click', () => selectDay(curDay + 1));
     const rb = story.querySelector('#dcc-replay');
     if (rb) rb.addEventListener('click', () => startReplay(day));
+    const cv = story.querySelector('.dcc-tour-daycover');
+    if (cv) {
+      cv.querySelector('.dc-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
+      cv.querySelector('.dc-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
+      cv.querySelector('.dc-date').addEventListener('click', openDaySheet);
+    }
+    story.querySelectorAll('.dcc-tour-railstrip').forEach(r => r.addEventListener('click', () => {
+      const sec = r.closest('.dcc-tour-place'), h = sec && sec.querySelector('.dcc-tour-place-head'); if (h) h.click();
+    }));
   }
 
   // ---- #10 replay the day ----

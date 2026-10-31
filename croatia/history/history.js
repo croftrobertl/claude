@@ -117,6 +117,7 @@
     const pop = el('div', 'bh-pop'); pop.id = 'bh-pop'; pop.hidden = true;
     pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'Map layers and key');
     plate.append(vp, head, zoomUI, attrib, info, pop);
+    if (opts.plateExtra) plate.appendChild(opts.plateExtra);   // the host's own buttons on the map
 
     const tl = el('div', 'bh-timeline');
     const track = el('div', 'bh-track');
@@ -157,7 +158,20 @@
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-trails" checked><span>Earlier capitals</span></label>' +
       '<label class="bh-toggle"><input type="checkbox" id="bh-t-borders" checked><span>Today\'s borders</span></label>' +
       (opts.pins ? '<label class="bh-toggle bh-toggle-pins"><input type="checkbox" id="bh-t-pins"><span><i class="bh-pin-key" aria-hidden="true"></i>' + esc(opts.pins.label) + '</span></label>' : '');
-    tl.append(track, transport, caption);
+    // Phones: a ruler of years dragged under a fixed needle replaces the 35 dots (the CSS shows one
+    // or the other). Each era is a 64 px mark, a thumb-sized target; Ragusa's own eras are in gold.
+    const ruler = el('div', 'bh-ruler');
+    ruler.innerHTML = '<div class="bh-ruler-year" aria-hidden="true"></div>' +
+      '<div class="bh-ruler-win"><div class="bh-ruler-strip" role="group" aria-label="Era"></div><i class="bh-ruler-needle" aria-hidden="true"></i></div>' +
+      '<p class="bh-ruler-hint">Drag the ruler. Ragusa’s years are in gold.</p>';
+    const rStrip = ruler.querySelector('.bh-ruler-strip'), rYear = ruler.querySelector('.bh-ruler-year');
+    F.forEach((f, i) => {
+      const r = f.ragusa, isRag = r && r.founded && !r.former && r.parts && r.parts.length;
+      const b = el('button', 'bh-rmark' + (isRag ? ' bh-rag' : ''), '<i aria-hidden="true"></i><span>' + esc(f.label) + '</span>');
+      b.type = 'button'; b.dataset.i = i; b.setAttribute('aria-label', f.label + ': ' + f.title);
+      rStrip.appendChild(b);
+    });
+    tl.append(ruler, track, transport, caption);
     main.append(plate, tl);
 
     const side = el('aside', 'bh-side');
@@ -440,6 +454,7 @@
       drawMap(i, animate && prev !== i);
       dots.forEach((d, k) => { d.classList.toggle('bh-past', k < i); d.classList.toggle('bh-cur', k === i); });
       prog.style.width = at(i) + '%';
+      rulerTo(i);
       track.setAttribute('aria-valuenow', String(i)); track.setAttribute('aria-valuetext', f.label + ': ' + f.title);
       if (bubble.classList.contains('bh-show')) placeBubble();
       clearTimeout(settleT);
@@ -466,6 +481,14 @@
       renderInfo();
       if (opts.hash !== false) { try { history.replaceState(null, '', '#' + slug(f.label)); } catch (e) { /* sandboxed or rate-limited */ } }
       if (opts.onChange) opts.onChange(f, slug(f.label));
+    }
+    function rulerTo(i, jump) {
+      rYear.textContent = F[i].label;
+      rYear.classList.toggle('bh-rag', rStrip.children[i].classList.contains('bh-rag'));
+      [...rStrip.children].forEach((m, k) => m.classList.toggle('bh-on', k === i));
+      if (!rStrip.offsetWidth || rAt() === i && Math.abs(rStrip.scrollLeft - i * rW()) < rW() / 2) return;
+      rLock = Date.now() + 700;
+      rStrip.scrollTo({ left: i * rW(), behavior: jump || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }
     // the bubble over the handle names the era; it stays inside the ribbon at both ends, its arrow
     // still pointing at the handle
@@ -533,6 +556,17 @@
       if (k == null) return;
       e.preventDefault(); stop(); show(k);
     });
+    // the ruler: scrolling it swaps eras instantly (the slow parts settle once it stops, as with
+    // the ribbon); a tap on a year goes there; show() keeps it centred on the current era
+    let rLock = 0;
+    const rW = () => (rStrip.firstElementChild && rStrip.firstElementChild.offsetWidth) || 64;
+    const rAt = () => Math.max(0, Math.min(N - 1, Math.round(rStrip.scrollLeft / rW())));
+    rStrip.addEventListener('scroll', () => {
+      if (Date.now() < rLock) return;
+      const k = rAt(); if (k !== cur) { stop(); show(k, false, true); }
+    }, { passive: true });
+    rStrip.addEventListener('click', e => { const b = e.target.closest('.bh-rmark'); if (b && +b.dataset.i !== cur) { stop(); show(+b.dataset.i); } });
+    if (window.ResizeObserver) new ResizeObserver(() => rulerTo(cur, true)).observe(rStrip);
     root.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !pop.hidden) { layersOpen(false); zoomUI.querySelector('[data-z=layers]').focus(); return; }
       if (e.target.closest('.bh-pop')) return;

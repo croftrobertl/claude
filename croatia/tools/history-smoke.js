@@ -26,7 +26,7 @@ const check = (ok, what) => { console.log((ok ? '  ok   ' : '  FAIL ') + what); 
     await sleep(800);
     check(await p.evaluate(() => document.documentElement.scrollWidth <= (window.visualViewport ? visualViewport.width : innerWidth) + 1), 'no sideways scroll');
     check((await p.$eval('.bh-year', x => x.textContent)) === '1453', 'deep link opens 1453');
-    await p.click('.bh-transport [data-a=next]'); await sleep(400);
+    await p.click('.bh-transport [data-a=next]:visible, .bh-rmark.bh-on + .bh-rmark:visible'); await sleep(400);   // phones step on the year ruler
     check((await p.$eval('.bh-year', x => x.textContent)) === '1526', 'step to the next era');
     await p.evaluate(() => document.querySelector('li[data-id="the-great-earthquake"]').scrollIntoView({ block: 'center' }));
     await sleep(1300);
@@ -36,7 +36,7 @@ const check = (ok, what) => { console.log((ok ? '  ok   ' : '  FAIL ') + what); 
     await p.fill('.dcc-village-pick input', 'Čilipi'); await sleep(300);
     check(await p.$$eval('.dcc-vt li', x => x.length) > 5, 'village lookup lists eras');
     const era = await p.$eval('.bh-year', x => x.textContent);
-    await p.click('[data-jump=street]');
+    await p.click('[data-jump=street] >> visible=true');   // phones: the button on the map
     await p.waitForSelector('.dcc-then-bar', { state: 'visible', timeout: 20000 }); await sleep(1500);
     check((await p.$eval('.dcc-then-yr', x => x.textContent)) === era, 'the street map opens at the same era (' + era + ')');
     check(await p.$$eval('.leaflet-dccThen-pane path', x => x.length) > 8, 'old borders drawn over the street map');
