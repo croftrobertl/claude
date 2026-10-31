@@ -79,6 +79,8 @@ final class Plugin
         add_action('admin_init', [$this, 'register_settings_fields']);
         add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
         add_action('wp_ajax_nopriv_dccgg_ai_query', [$this, 'handle_ai_query']);
+        add_action('wp_ajax_dccgg_stay',            [$this, 'handle_stay']);
+        add_action('wp_ajax_nopriv_dccgg_stay',     [$this, 'handle_stay']);
         add_action('wp_ajax_dccgg_weather',         [$this, 'handle_weather']);
         add_action('wp_ajax_nopriv_dccgg_weather',  [$this, 'handle_weather']);
         add_action('wp_ajax_dccgg_report_problem',        [$this, 'handle_report_problem']);
@@ -1324,8 +1326,76 @@ final class Plugin
                 </table>
                 <?php submit_button(); ?>
             </form>
+            <?php $this->render_guest_links_panel(); ?>
             <?php $this->render_search_misses_panel(); ?>
         </div>
+        <?php
+    }
+
+    /**
+     * Guest links for the app shell's Postcard Hero.
+     *
+     * The hero greets a guest by cottage and shows their dates only when the
+     * link they followed proves which booking it is (see Stay). This panel is
+     * where that proof is minted: one signed token per upcoming confirmed
+     * booking, to be appended to whichever guide link the host already sends.
+     *
+     * It prints the query string rather than a whole URL on purpose — the
+     * guide lives on a page this plugin does not own, and a URL guessed here
+     * would be a URL a guest cannot open.
+     */
+    private function render_guest_links_panel(): void
+    {
+        if (!current_user_can('manage_options')) { return; }
+        ?>
+        <h2 style="margin-top:28px"><?php echo esc_html__('Guest Links (App Layout)', 'dcc-guest-guide'); ?></h2>
+        <?php
+        if (!post_type_exists('mphb_booking')) {
+            echo '<p class="description">' . esc_html__('MotoPress Hotel Booking is not active, so there are no bookings to link to.', 'dcc-guest-guide') . '</p>';
+            return;
+        }
+        $today = current_time('Y-m-d');
+        $bookings = get_posts([
+            'post_type'      => 'mphb_booking',
+            'post_status'    => 'confirmed',
+            'posts_per_page' => 40,
+            'orderby'        => 'meta_value',
+            'meta_key'       => 'mphb_check_in_date',
+            'order'          => 'ASC',
+            'meta_query'     => [[
+                'key'     => 'mphb_check_out_date',
+                'value'   => $today,
+                'compare' => '>=',
+                'type'    => 'DATE',
+            ]],
+        ]);
+        if (!$bookings) {
+            echo '<p class="description">' . esc_html__('No confirmed bookings are current or upcoming.', 'dcc-guest-guide') . '</p>';
+            return;
+        }
+        ?>
+        <p class="description">
+            <?php echo esc_html__('Add the suffix below to the end of the guest guide link you already send. Without it the guide still works — the hero simply shows the plain welcome instead of the stay details. Each suffix is signed for one booking and reveals only the cottage and the two dates.', 'dcc-guest-guide'); ?>
+        </p>
+        <table class="widefat striped" style="max-width:880px">
+            <thead><tr>
+                <th><?php echo esc_html__('Cottage', 'dcc-guest-guide'); ?></th>
+                <th><?php echo esc_html__('Check-In', 'dcc-guest-guide'); ?></th>
+                <th><?php echo esc_html__('Check-Out', 'dcc-guest-guide'); ?></th>
+                <th><?php echo esc_html__('Link Suffix', 'dcc-guest-guide'); ?></th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($bookings as $b) :
+                $suffix = '?t=' . Stay::token((int) $b->ID); ?>
+                <tr>
+                    <td><?php echo esc_html(Stay::cottage_label((int) $b->ID)); ?></td>
+                    <td><?php echo esc_html((string) get_post_meta($b->ID, 'mphb_check_in_date', true)); ?></td>
+                    <td><?php echo esc_html((string) get_post_meta($b->ID, 'mphb_check_out_date', true)); ?></td>
+                    <td><input type="text" readonly class="large-text code" value="<?php echo esc_attr($suffix); ?>" onclick="this.select()"></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
         <?php
     }
 
@@ -1509,13 +1579,46 @@ final class Plugin
     }
 
     /**
+     * AJAX: resolve the guest's own stay from a signed token. GET-only.
+     *
+     * The hero cannot be rendered server-side with this: /guest/ is page-cached
+     * on this host and the whole point is that the answer differs per guest.
+     * So the shell paints the plain welcome first and asks for the stay after,
+     * which is also why a missing or bad token is a plain SUCCESS with
+     * `stay: null` rather than an error — nothing went wrong, there is simply
+     * nobody to greet by name.
+     *
+     * Rate-limited per IP. An 80-bit signature is already far out of guessing
+     * range; the budget is there so trying anyway costs something.
+     */
+    public function handle_stay(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_stay_rl_' . $ip_hash;
+        $count   = (int) get_transient($rl_key);
+        if ($count >= 30) {
+            wp_send_json_error(['message' => 'Too many requests — please try again shortly.'], 429);
+        }
+        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
+
+        $token = isset($_GET['t']) ? sanitize_text_field(wp_unslash((string) $_GET['t'])) : '';
+        $stay  = Stay::resolve(Stay::verify($token));
+        wp_send_json_success(['stay' => $stay ?: null]);
+    }
+
+    /**
      * AJAX: Open-Meteo proxy with 30-min transient cache so widgets share
      * a single upstream call per lat/lng pair instead of one per visitor.
      */
     public function handle_weather(): void
     {
         [$lat, $lng] = $this->proxy_coords();
-        $key = 'dccgg_wx_' . md5($lat . ':' . $lng);
+        // The suffix is the shape of the request, not the plugin version: a
+        // cached payload from before sunset was asked for would have no sunset
+        // in it, and the strip would stay a row short for half an hour.
+        $key = 'dccgg_wx2_' . md5($lat . ':' . $lng);
         $cached = get_transient($key);
         if (is_array($cached)) {
             wp_send_json_success($cached);
@@ -1526,7 +1629,10 @@ final class Plugin
             'https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s'
             . '&current=temperature_2m,apparent_temperature,weather_code,is_day,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
             . '&hourly=surface_pressure'
-            . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max'
+            // v0.26.0: sunset, for the app shell's "Tavares Now" strip. It is
+            // the authoritative figure for this lat/lng rather than one the
+            // browser works out, and it rides the same 30-minute cache.
+            . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunset'
             . '&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&past_days=1&timezone=auto',
             $lat,
             $lng
@@ -1792,7 +1898,7 @@ final class Plugin
         // a video or the conditions card that silently does nothing the first
         // time a guest opens the guide without a signal.
         $chunks = [];
-        foreach (['conditions', 'gallery', 'wizard', 'video'] as $name) {
+        foreach (['conditions', 'gallery', 'wizard', 'video', 'app'] as $name) {
             $min = 'assets/js/widget-' . $name . '.min.js';
             $raw = 'assets/js/widget-' . $name . '.js';
             $rel = file_exists(DCCGG_DIR . $min) ? $min : $raw;

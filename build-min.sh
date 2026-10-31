@@ -30,7 +30,7 @@ SRC_JS_G="dcc-guest-guide/assets/js/widget-guest.js"
 OUT_JS_G="dcc-guest-guide/assets/js/widget-guest.min.js"
 # v0.25.0: the four per-element chunks. Core fetches one only when the page
 # contains the element it drives, so most guides download none of them.
-CHUNKS="conditions gallery wizard video"
+CHUNKS="conditions gallery wizard video app"
 
 if [ ! -f "$SRC_JS" ] || [ ! -f "$SRC_CSS" ] || [ ! -f "$SRC_JS_ED" ] || [ ! -f "$SRC_JS_G" ]; then
     echo "build-min.sh: source files missing" >&2

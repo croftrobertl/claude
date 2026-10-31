@@ -5044,3 +5044,327 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-stage.dccgg-stage [data-dccgg-quiet-focus]:focus-visible {
     outline: none;
 }
+
+/* ======================================================================
+   v0.26.0 — the app shell ("A1 · Postcard Hero")
+   ----------------------------------------------------------------------
+   Everything here is scoped to .dccgg-app-shell (the root) or to
+   .dccgg-stage--app (the stage). TWO hosts, not one, and deliberately:
+   the stage is moved to <body> when a section opens, so a rule anchored on
+   the root alone is inert in the one place the sheet is actually read —
+   the mistake v0.25.1 had to fix for the body copy.
+
+   The buttons are re-asserted STATELESS at (0,4,0). Bravada's kit paints
+   button:hover,:focus,:active #F08080 at (0,2,1), and a tab bar that turns
+   coral when touched is exactly the v0.24.4 bug with a new victim. One
+   stateless rule retires all three kit states at once; the hover this
+   layout does want is put back inside (hover:hover) and (pointer:fine), so
+   a finger never triggers it.
+
+   Tap targets are 44px or more and tab labels are 14px FIXED, not em —
+   Rob's guests skew older, and a theme that scales text down must not be
+   able to take a label below the floor.
+   ====================================================================== */
+
+.dccgg-app-shell {
+    --dccgg-app-ink: #0b3c66;          /* the deep navy of the mockup */
+    --dccgg-app-card: #ffffff;
+    --dccgg-app-muted: #5b6b7a;
+    --dccgg-app-fd: #d9480f;           /* the orange Front Desk pill */
+    --dccgg-app-surface: #eef2f7;
+    --dccgg-app-radius: 18px;
+}
+
+/* -------- The hero -------- */
+.dccgg-app-hero {
+    position: relative;
+    margin: 0 0 14px;
+    border-radius: var(--dccgg-app-radius);
+    overflow: hidden;
+    background: var(--dccgg-app-surface);
+    min-height: 220px;
+    display: flex;
+    align-items: flex-end;
+}
+.dccgg-app-hero-photo {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+}
+/* The frosted card. backdrop-filter is an enhancement, never the thing that
+   makes the text readable: the background below is already opaque enough on
+   its own, so a browser without the filter shows the same card. */
+.dccgg-app-stay {
+    position: relative;
+    margin: 0 14px 14px;
+    padding: 16px 18px;
+    width: calc(100% - 28px);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    text-align: left;
+}
+.dccgg-app-greeting {
+    margin: 0 0 2px;
+    font-size: 1em;
+    font-weight: 400;
+    color: var(--dccgg-app-muted);
+}
+.dccgg-app-welcome {
+    margin: 0;
+    font-size: 1.6em;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--dccgg-app-ink);
+}
+.dccgg-app-dates:not([hidden]) {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 1em;
+}
+.dccgg-app-date-label {
+    color: var(--dccgg-app-muted);
+    font-weight: 400;
+}
+.dccgg-app-date-value {
+    color: var(--dccgg-app-ink);
+    font-weight: 700;
+}
+.dccgg-app-progress {
+    margin-top: 10px;
+    height: 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--dccgg-app-ink) 14%, transparent);
+    overflow: hidden;
+}
+.dccgg-app-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--dccgg-primary);
+}
+
+/* -------- "Tavares Now" -------- */
+/* :not([hidden]) because a class that sets `display` beats the user agent's
+   [hidden]{display:none} — the element stayed on screen empty until this was
+   measured. */
+.dccgg-app-now:not([hidden]) {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 0 0 14px;
+    font-size: 0.95em;
+    color: var(--dccgg-app-muted);
+}
+.dccgg-app-now-label {
+    font-weight: 700;
+    color: var(--dccgg-app-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.82em;
+}
+.dccgg-app-now-rows {
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+}
+
+/* -------- Tiles: two up, big, with their one real line -------- */
+.dccgg-layout-app .dccgg-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+/* A phone in landscape, and anything wider, gets more across — the tiles stay
+   big because the screen is, not because the count is pinned. */
+@media (min-width: 600px) {
+    .dccgg-layout-app .dccgg-menu {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+.dccgg-app-shell .dccgg-tile {
+    min-height: 118px;
+    border-radius: var(--dccgg-app-radius);
+    padding: 16px;
+    text-align: left;
+    align-items: flex-start;
+}
+.dccgg-app-shell .dccgg-tile-title {
+    font-size: 1.22em;
+    font-weight: 700;
+    color: var(--dccgg-app-ink);
+}
+.dccgg-tile-summary {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78em;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dccgg-app-muted);
+}
+
+/* -------- The bottom tab bar -------- */
+/* FIXED, and sticky was tried first. Sticky only sticks inside its own
+   scrolling box, and the bar is the last child of the widget: its natural
+   position is already at the bottom of that box, so it never lifted off the
+   end of the page and a guest at the top of the guide could not see it.
+   Measured at 390: the bar sat at y=833 in an 844 viewport only because the
+   page happened to be that long.
+
+   Two consequences, both handled below. The root reserves the bar's height so
+   nothing hides underneath it, and the bar steps aside while a sheet is open,
+   because the sheet is portaled to <body> and owns the screen. */
+.dccgg-app-shell {
+    padding-bottom: 78px;
+}
+.dccgg-app-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    border-radius: 0;
+    display: flex;
+    margin: 16px 0 0;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: var(--dccgg-app-ink);
+}
+/* A sheet is a modal: the bar must not float over it, and must not be a Tab
+   stop behind it either. */
+html.dccgg-detail-open .dccgg-app-tabs {
+    display: none;
+}
+.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab {
+    flex: 1 1 0;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 2px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0.72;
+}
+.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab[aria-current="page"] {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.14);
+}
+.dccgg-app-tab-ico {
+    font-size: 20px;
+    line-height: 1;
+}
+/* 14px FIXED: the floor the brief sets, and em would let a theme undercut it. */
+.dccgg-app-tab-label {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab:hover,
+    .dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab:focus-visible {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* -------- The sheet -------- */
+/* NO GRAB HANDLE HERE. The brief lists one as a thing to build; the guide has
+   had one since v0.9.7.26 — `body.dccgg-detail-open .dccgg-detail-header::before`,
+   a 40x4 pill on the sticky header, inside the same under-600px block as the
+   bottom-sheet layout, so it appears exactly where the swipe gesture does.
+   A second pill was written here and shipped as far as the first screenshot,
+   which showed two stacked bars. Measure before adding. */
+.dccgg-stage--app .dccgg-app-due {
+    margin: 0 0 6px;
+    text-align: center;
+    font-size: 0.92em;
+    font-weight: 400;
+    color: var(--dccgg-text);
+}
+.dccgg-stage--app .dccgg-app-due:empty { display: none; }
+
+/* The Canal section: Rob's own My Maps embed, edge to edge. Only the frame
+   changes — nothing here touches the embed. */
+.dccgg-stage--app .dccgg-detail--fullscreen .dccgg-detail-layout {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: none;
+}
+.dccgg-stage--app .dccgg-detail--fullscreen iframe {
+    display: block;
+    width: 100%;
+    min-height: 60vh;
+    border: 0;
+}
+.dccgg-stage--app .dccgg-app-maps {
+    display: block;
+    width: calc(100% - 32px);
+    margin: 12px auto 0;
+    text-align: center;
+}
+
+/* -------- The Front Desk pill (guest bundle) --------
+   Every selector below carries .dccgg-report-, so build-min.sh moves the lot
+   into widget-guest.min.css — which is right: the pill is the Front Desk
+   report, and public mode switches that off. Nothing here may ever share a
+   selector list or an :is() with a public class, or the splitter would carry
+   a guest-only rule into the public bundle.
+
+   Two hosts again: the hero pill lives in the root, the contextual one lives
+   in the stage, and the stage is portaled to <body>. */
+.dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill,
+.dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 56px;
+    margin: 0 0 14px;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--dccgg-app-fd, #d9480f);
+    color: #ffffff;
+    font-size: 1.08em;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+}
+.dccgg-stage.dccgg-stage .dccgg-report-pill--section.dccgg-report-pill--section {
+    width: calc(100% - 32px);
+    margin: 18px auto 8px;
+    font-size: 1em;
+}
+.dccgg-report-pill-ico {
+    font-size: 20px;
+    line-height: 1;
+}
+.dccgg-report-pill-label {
+    flex: 1 1 auto;
+}
+.dccgg-report-pill-chev {
+    font-size: 22px;
+    line-height: 1;
+    opacity: 0.85;
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill:hover,
+    .dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill:focus-visible,
+    .dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill:hover,
+    .dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill:focus-visible {
+        filter: brightness(1.08);
+    }
+}

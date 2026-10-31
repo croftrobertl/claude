@@ -123,6 +123,12 @@ namespace {
     if (is_readable(DCCGG_PLUGIN . 'includes/class-icons.php')) {
         require_once DCCGG_PLUGIN . 'includes/class-icons.php';
     }
+    // v0.26.0: the app shell's tiles and config read the property's check-in
+    // and check-out times through Stay. Guarded, like class-icons.php above,
+    // so the harness still loads an older tree during a red-then-green run.
+    if (is_readable(DCCGG_PLUGIN . 'includes/class-stay.php')) {
+        require_once DCCGG_PLUGIN . 'includes/class-stay.php';
+    }
     require_once DCCGG_PLUGIN . 'includes/class-widget.php';
 
     function dccgg_render_guide(array $overrides = []): string {

@@ -268,6 +268,7 @@ final class Widget extends Widget_Base
         $this->register_search_controls();
         $this->register_emergency_controls();
         $this->register_review_controls();
+        $this->register_app_controls();
         $this->register_strings_controls();
 
         // Style tab
@@ -1081,6 +1082,25 @@ final class Widget extends Widget_Base
             'label' => __('Description', 'dcc-guest-guide'),
             'type'  => Controls_Manager::TEXTAREA,
         ]);
+
+        // v0.26.0: the app shell's tiles carry one real line each — "3
+        // networks", "11:00 AM · 7 steps". Authored text wins; otherwise the
+        // tile counts what is actually in the section and names it with the
+        // noun below. Both are facts about this guide, which is the point:
+        // nothing on a tile is written by the plugin out of thin air.
+        $repeater->add_control('section_summary', [
+            'label'       => __('Tile summary (app shell)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('One short line under the tile title, e.g. "Slips · Launch". Leave empty to count this section\'s items instead.', 'dcc-guest-guide'),
+        ]);
+        $repeater->add_control('section_summary_noun', [
+            'label'       => __('Counted as', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'placeholder' => __('items', 'dcc-guest-guide'),
+            'description' => __('Used only when the summary above is empty: "3 networks", "7 steps". Plural form.', 'dcc-guest-guide'),
+            'condition'   => ['section_summary' => ''],
+        ]);
         $repeater->add_control('section_icon', [
             'label'   => __('Icon', 'dcc-guest-guide'),
             'type'    => Controls_Manager::ICONS,
@@ -1668,6 +1688,71 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    /**
+     * v0.26.0 — the app shell ("A1 · Postcard Hero").
+     *
+     * Every control here is conditioned on menu_layout = app, so a guide that
+     * has not opted in sees none of it and renders exactly as before. Nothing
+     * in this section has a value that invents a fact: an empty hero image
+     * means no photo, an empty map link means no button, and the stay details
+     * appear only when a signed token resolves them (see Stay).
+     */
+    private function register_app_controls(): void
+    {
+        $this->start_controls_section('section_app', [
+            'label'     => __('App Shell', 'dcc-guest-guide'),
+            'tab'       => Controls_Manager::TAB_CONTENT,
+            'condition' => ['menu_layout' => 'app'],
+        ]);
+
+        $this->add_control('app_notice', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert elementor-panel-alert-info">' .
+                                  esc_html__('The app shell is a phone-first layout: a photo hero with the stay card, the Front Desk pill, big tiles and a bottom tab bar. Stay details appear only on a link carrying a guest token — mint one under Settings → DCC Guest Guide → Guest Links.', 'dcc-guest-guide') .
+                                  '</div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $this->add_control('app_hero_image', [
+            'label'       => __('Hero Photo', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::MEDIA,
+            'default'     => ['url' => ''],
+            'description' => __('The tall photo behind the stay card. Leave empty and the hero shows a plain colour band instead — nothing is substituted.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('app_hero_alt', [
+            'label'       => __('Hero Photo Description', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Read aloud by screen readers. Describe what is in the photo.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('app_tab_guide_key', [
+            'label'       => __('"Guide" Tab Opens', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => '',
+            'options'     => $this->sections_options(),
+            'description' => __('Leave unset and the Guide tab returns to the tiles.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('app_tab_canal_key', [
+            'label'       => __('"Canal" Tab Opens', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => '',
+            'options'     => $this->sections_options(),
+            'description' => __('The section holding the map. It opens full screen. Leave unset and the Canal tab is not shown at all.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('app_map_url', [
+            'label'       => __('"Open in Google Maps" Link', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::URL,
+            'default'     => ['url' => '', 'is_external' => true],
+            'description' => __('The same My Maps link the embed uses. Leave empty and no button is shown.', 'dcc-guest-guide'),
+        ]);
+
+        $this->end_controls_section();
+    }
+
     private function register_strings_controls(): void
     {
         $this->start_controls_section('section_strings', [
@@ -1763,6 +1848,43 @@ final class Widget extends Widget_Base
             ]);
         }
 
+        // v0.26.0: the app shell's own wording, shown only when that layout is
+        // chosen so the panel does not grow for guides that will never use it.
+        // Title Case throughout, per Rob's standing rule.
+        $app_strings = [
+            'str_app_greet_morning'   => [__('Greeting — morning', 'dcc-guest-guide'),   __('Good morning', 'dcc-guest-guide')],
+            'str_app_greet_afternoon' => [__('Greeting — afternoon', 'dcc-guest-guide'), __('Good afternoon', 'dcc-guest-guide')],
+            'str_app_greet_evening'   => [__('Greeting — evening', 'dcc-guest-guide'),   __('Good evening', 'dcc-guest-guide')],
+            'str_app_welcome'         => [__('Welcome — no stay known', 'dcc-guest-guide'), __('Welcome', 'dcc-guest-guide')],
+            /* translators: %s: the cottage name, e.g. "Cottage 34". */
+            'str_app_welcome_to'      => [__('Welcome — stay known', 'dcc-guest-guide'), __('Welcome to %s', 'dcc-guest-guide')],
+            'str_app_in'              => [__('Check-in label', 'dcc-guest-guide'),  __('In', 'dcc-guest-guide')],
+            'str_app_out'             => [__('Check-out label', 'dcc-guest-guide'), __('Out', 'dcc-guest-guide')],
+            'str_app_now'             => [__('Live conditions label', 'dcc-guest-guide'), __('Tavares Now', 'dcc-guest-guide')],
+            'str_app_sunset'          => [__('Sunset label', 'dcc-guest-guide'), __('Sunset', 'dcc-guest-guide')],
+            'str_app_open_maps'       => [__('Open-in-Maps button', 'dcc-guest-guide'), __('Open in Google Maps', 'dcc-guest-guide')],
+            /* translators: %1$d: items ticked. %2$d: items in total. */
+            'str_app_done'            => [__('Checkout progress', 'dcc-guest-guide'), __('%1$d of %2$d done', 'dcc-guest-guide')],
+            /* translators: %1$s: weekday, e.g. "Sunday". %2$s: clock time, e.g. "11:00 AM". */
+            'str_app_by'              => [__('Checkout deadline', 'dcc-guest-guide'), __('%1$s by %2$s', 'dcc-guest-guide')],
+            'str_app_tab_stay'        => [__('Tab — Stay', 'dcc-guest-guide'),  __('Stay', 'dcc-guest-guide')],
+            'str_app_tab_guide'       => [__('Tab — Guide', 'dcc-guest-guide'), __('Guide', 'dcc-guest-guide')],
+            'str_app_tab_canal'       => [__('Tab — Canal', 'dcc-guest-guide'), __('Canal', 'dcc-guest-guide')],
+            'str_app_tab_front_desk'  => [__('Tab — Front Desk', 'dcc-guest-guide'), __('Front Desk', 'dcc-guest-guide')],
+            'str_app_front_desk'      => [__('Front Desk pill', 'dcc-guest-guide'), __('Front Desk', 'dcc-guest-guide')],
+            /* translators: %s: the section title, e.g. "Wi-Fi". */
+            'str_app_section_fd'      => [__('Front Desk pill inside a section', 'dcc-guest-guide'), __('%s Not Working? Tell the Front Desk', 'dcc-guest-guide')],
+            'str_app_close_sheet'     => [__('Close sheet (screen readers)', 'dcc-guest-guide'), __('Close', 'dcc-guest-guide')],
+        ];
+        foreach ($app_strings as $key => [$label, $default]) {
+            $this->add_control($key, [
+                'label'     => $label,
+                'type'      => Controls_Manager::TEXT,
+                'default'   => $default,
+                'condition' => ['menu_layout' => 'app'],
+            ]);
+        }
+
         $this->end_controls_section();
     }
 
@@ -1840,6 +1962,10 @@ final class Widget extends Widget_Base
                 'masonry'    => __('Masonry / bento (mixed sizes)', 'dcc-guest-guide'),
                 'carousel'   => __('Carousel (snap-scroll on mobile)', 'dcc-guest-guide'),
                 'split-pane' => __('Split-pane (menu left, detail right ≥ 1024px)', 'dcc-guest-guide'),
+                // v0.26.0: the app shell. One option rather than a second
+                // switch, so a guide is either in it or untouched — there is
+                // no half-applied state for a host to land in by accident.
+                'app'        => __('App shell (photo hero + tab bar — phone)', 'dcc-guest-guide'),
             ],
             'prefix_class' => 'dccgg-layout-',
         ]);
@@ -3274,8 +3400,11 @@ final class Widget extends Widget_Base
 
         $reveal_mode  = (string) ($s['reveal_mode'] ?? 'stage');
         $menu_layout  = (string) ($s['menu_layout'] ?? 'grid');
+        // v0.26.0: the app shell. Opt-in and nothing else: a guide left on any
+        // other layout renders byte-for-byte what it rendered before.
+        $is_app       = ($menu_layout === 'app');
         // Flip-card falls back to stage-swap when paired with incompatible layouts.
-        $flip_incompatible = ['list', 'carousel', 'split-pane'];
+        $flip_incompatible = ['list', 'carousel', 'split-pane', 'app'];
         if ($reveal_mode === 'flip' && in_array($menu_layout, $flip_incompatible, true)) {
             $reveal_mode = 'stage';
         }
@@ -3487,6 +3616,32 @@ final class Widget extends Widget_Base
             // v0.9.7.16: searchIndex back inline. Lazy AJAX endpoint stays
             // registered as a fallback for stale cached v0.9.7.14/15 JS.
             'searchIndex'      => $search_index,
+            // v0.26.0: the app shell's own payload, and ONLY when that layout
+            // is chosen — every other guide carries none of it.
+            'app' => !$is_app ? null : [
+                'canalKey'    => trim((string) ($s['app_tab_canal_key'] ?? '')),
+                'guideKey'    => trim((string) ($s['app_tab_guide_key'] ?? '')),
+                'checkoutKey' => $checkout_key,
+                'mapUrl'      => trim((string) ($s['app_map_url']['url'] ?? '')),
+                'timeIn'      => Stay::property_times()['in'],
+                'timeOut'     => Stay::property_times()['out'],
+                // The cottages are in Florida and a check-out time is a time
+                // there, whatever the phone is set to. Same clock the
+                // checklist expiry already uses.
+                'tz'          => 'America/New_York',
+                'strings'     => [
+                    'morning'   => (string) ($s['str_app_greet_morning']   ?? __('Good morning', 'dcc-guest-guide')),
+                    'afternoon' => (string) ($s['str_app_greet_afternoon'] ?? __('Good afternoon', 'dcc-guest-guide')),
+                    'evening'   => (string) ($s['str_app_greet_evening']   ?? __('Good evening', 'dcc-guest-guide')),
+                    'welcome'   => (string) ($s['str_app_welcome']    ?? __('Welcome', 'dcc-guest-guide')),
+                    'welcomeTo' => (string) ($s['str_app_welcome_to'] ?? __('Welcome to %s', 'dcc-guest-guide')),
+                    'done'      => (string) ($s['str_app_done'] ?? __('%1\$d of %2\$d done', 'dcc-guest-guide')),
+                    'by'        => (string) ($s['str_app_by']   ?? __('%1\$s by %2\$s', 'dcc-guest-guide')),
+                    'sunset'    => (string) ($s['str_app_sunset'] ?? __('Sunset', 'dcc-guest-guide')),
+                    'openMaps'  => (string) ($s['str_app_open_maps'] ?? __('Open in Google Maps', 'dcc-guest-guide')),
+                    'closeSheet'=> (string) ($s['str_app_close_sheet'] ?? __('Close', 'dcc-guest-guide')),
+                ],
+            ],
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'secretError' => (string) ($s['str_secret_error'] ?? __('Could not load that just now. Please try again.', 'dcc-guest-guide')),
@@ -3511,6 +3666,10 @@ final class Widget extends Widget_Base
         $config = array_merge($config, self::settings_config());
 
         $root_class = 'dccgg-root';
+        // The prefix_class from menu_layout lands on Elementor's own wrapper,
+        // which neither .dccgg-root rules nor the portaled stage can see. This
+        // is the hook both of those use.
+        if ($is_app) { $root_class .= ' dccgg-app-shell'; }
         // v0.9: emergency tile position is driven by a root-level class.
         $emergency_pos = (string) ($s['emergency_position'] ?? 'top');
         if ($emergency_key !== '' && in_array($emergency_pos, ['top', 'bottom'], true)) {
@@ -3570,6 +3729,11 @@ final class Widget extends Widget_Base
                     <h2 class="dccgg-heading"><?php echo esc_html($s['heading_text']); ?></h2>
                 <?php endif; ?>
 
+                <?php if ($is_app) : ?>
+                    <?php $this->render_app_hero($s); ?>
+                    <?php if (!self::is_public_mode($s)) { $this->render_app_front_desk_pill($s); } ?>
+                <?php endif; ?>
+
                 <div class="dccgg-toolbar">
                     <?php if ($enable_print) : ?>
                         <button type="button" class="dccgg-btn dccgg-print">
@@ -3579,7 +3743,16 @@ final class Widget extends Widget_Base
                     <?php endif; ?>
 
                     <?php // v0.9.7: More menu (Print / Save PDF / Report a Problem) lives in the hub toolbar so guests reach Settings without first opening a section. v0.9.7.8: markup extracted into render_more_menu().
-                    if (($s['enable_detail_more_menu'] ?? '') === 'yes') {
+                    //
+                    // v0.26.0: NOT in the app shell. The Front Desk pill sits
+                    // directly beneath this row and does the same thing, so the
+                    // round ⋯ face would be a second bell stacked on the first.
+                    // It also overflows 390 by 25px — a defect of its own, older
+                    // than this release and present on the grid layout too, which
+                    // is reported rather than fixed here because fixing it would
+                    // change /guest/. Print and Save as PDF stay in each
+                    // section's pop-up header.
+                    if (!$is_app && ($s['enable_detail_more_menu'] ?? '') === 'yes') {
                         $this->render_more_menu($s, 'hub');
                     } ?>
                 </div>
@@ -3611,6 +3784,8 @@ final class Widget extends Widget_Base
                     </div>
                 <?php endif; ?>
 
+                <?php if ($is_app) { $this->render_app_now($s); } ?>
+
                 <div class="dccgg-stage-container">
                     <?php $this->render_menu($sections, $items_by_section, $s, $reveal_mode); ?>
                     <?php if ($reveal_mode === 'stage') : ?>
@@ -3641,6 +3816,8 @@ final class Widget extends Widget_Base
                     <?php endif;
                 endif; ?>
 
+                <?php if ($is_app) { $this->render_app_tabs($s, self::is_public_mode($s)); } ?>
+
                 <?php if ($reveal_mode === 'stage') : ?>
                     <div class="dccgg-detail-overlay" hidden></div>
                 <?php endif; ?>
@@ -3667,6 +3844,11 @@ final class Widget extends Widget_Base
     {
         $label_back   = (string) ($s['str_back'] ?? 'Back');
         $widget_uid   = $this->get_id();
+        // v0.26.0: the app shell's tiles carry a summary line. Read the
+        // property's check-out time ONCE here rather than per tile, and only
+        // when that layout is in use — it is a MotoPress call.
+        $is_app         = ($s['menu_layout'] ?? '') === 'app';
+        $checkout_clock = $is_app ? Stay::property_times()['out'] : '';
         ?>
         <div class="dccgg-menu">
             <?php foreach ($sections as $sec) :
@@ -3681,6 +3863,7 @@ final class Widget extends Widget_Base
 
                 // Stable IDs for a11y linkage. Hashed key so a quoted/odd
                 // section key still produces a valid attribute value.
+                $summary    = $is_app ? self::app_tile_summary($sec, count($items), $checkout_clock) : '';
                 $safe_key   = substr(sha1($widget_uid . '|' . $key), 0, 10);
                 $tile_id    = 'dccgg-tile-' . $safe_key;
                 $panel_id   = 'dccgg-panel-' . $safe_key;
@@ -3690,7 +3873,7 @@ final class Widget extends Widget_Base
                         <div class="dccgg-flip-card">
                             <div class="dccgg-flip-inner">
                                 <button type="button" class="dccgg-tile dccgg-flip-front" data-key="<?php echo esc_attr($key); ?>" aria-expanded="false">
-                                    <?php $this->render_tile_inner($sec, count($items)); ?>
+                                    <?php $this->render_tile_inner($sec, count($items), $summary); ?>
                                 </button>
                                 <div class="dccgg-flip-back" role="region" aria-label="<?php echo esc_attr($title); ?>">
                                     <button type="button" class="dccgg-flip-close" aria-label="<?php echo esc_attr($label_back); ?>">&times;</button>
@@ -3709,7 +3892,7 @@ final class Widget extends Widget_Base
                         </div>
                     <?php elseif ($reveal_mode === 'accordion') : ?>
                         <button type="button" id="<?php echo esc_attr($tile_id); ?>" class="dccgg-tile dccgg-accordion-toggle" data-key="<?php echo esc_attr($key); ?>" aria-expanded="false" aria-controls="<?php echo esc_attr($panel_id); ?>">
-                            <?php $this->render_tile_inner($sec, count($items)); ?>
+                            <?php $this->render_tile_inner($sec, count($items), $summary); ?>
                         </button>
                         <div id="<?php echo esc_attr($panel_id); ?>" class="dccgg-accordion-panel" role="region" aria-labelledby="<?php echo esc_attr($tile_id); ?>" hidden>
                             <?php if ($procedure) : ?>
@@ -3722,7 +3905,7 @@ final class Widget extends Widget_Base
                         </div>
                     <?php else : ?>
                         <button type="button" class="dccgg-tile" data-key="<?php echo esc_attr($key); ?>">
-                            <?php $this->render_tile_inner($sec, count($items)); ?>
+                            <?php $this->render_tile_inner($sec, count($items), $summary); ?>
                         </button>
                     <?php endif; ?>
 
@@ -3750,6 +3933,160 @@ final class Widget extends Widget_Base
                 <p class="dccgg-empty-hint"><?php esc_html_e('Add sections in the widget panel to populate the guide.', 'dcc-guest-guide'); ?></p>
             <?php endif; ?>
         </div>
+        <?php
+    }
+
+    /**
+     * The Postcard Hero (v0.26.0).
+     *
+     * A tall photo with the Your Stay card floating on it. The card's greeting
+     * and the stay details are both written by the browser, and for the same
+     * reason: this page is served from a full-page cache, so anything that
+     * depends on the hour or on who is asking cannot come from the server
+     * without being wrong for the next reader. The HTML therefore carries the
+     * one line that is always true — the plain welcome — and the rest arrives
+     * after.
+     */
+    private function render_app_hero(array $s): void
+    {
+        $photo = trim((string) ($s['app_hero_image']['url'] ?? ''));
+        $alt   = trim((string) ($s['app_hero_alt'] ?? ''));
+        $welcome = (string) ($s['str_app_welcome'] ?? __('Welcome', 'dcc-guest-guide'));
+        $in_lbl  = (string) ($s['str_app_in']  ?? __('In', 'dcc-guest-guide'));
+        $out_lbl = (string) ($s['str_app_out'] ?? __('Out', 'dcc-guest-guide'));
+        ?>
+        <div class="dccgg-app-hero">
+            <?php if ($photo !== '') : ?>
+                <?php // A decorative photo with no description stays hidden from
+                // screen readers rather than announcing a filename. ?>
+                <div class="dccgg-app-hero-photo" style="background-image:url('<?php echo esc_url($photo); ?>')"
+                     <?php if ($alt !== '') : ?>role="img" aria-label="<?php echo esc_attr($alt); ?>"<?php else : ?>aria-hidden="true"<?php endif; ?>></div>
+            <?php endif; ?>
+            <div class="dccgg-app-stay" data-dccgg-stay>
+                <p class="dccgg-app-greeting" data-dccgg-greeting hidden></p>
+                <h2 class="dccgg-app-welcome" data-dccgg-welcome><?php echo esc_html($welcome); ?></h2>
+                <div class="dccgg-app-dates" data-dccgg-dates hidden>
+                    <span class="dccgg-app-date">
+                        <span class="dccgg-app-date-label"><?php echo esc_html($in_lbl); ?></span>
+                        <span class="dccgg-app-date-value" data-dccgg-in></span>
+                    </span>
+                    <span class="dccgg-app-date dccgg-app-date--out">
+                        <span class="dccgg-app-date-label"><?php echo esc_html($out_lbl); ?></span>
+                        <span class="dccgg-app-date-value" data-dccgg-out></span>
+                    </span>
+                </div>
+                <div class="dccgg-app-progress" data-dccgg-progress hidden>
+                    <div class="dccgg-app-progress-fill" data-dccgg-progress-fill></div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * The Front Desk pill.
+     *
+     * No handler of its own: it carries .dccgg-more-report and
+     * data-report-section, which the guest bundle's delegated listener already
+     * drives. One flow, one dialog, one place where a report can go wrong.
+     *
+     * $context is the section title for the pill shown inside a section, and
+     * '' for the one under the hero.
+     */
+    private function render_app_front_desk_pill(array $s, string $context = ''): void
+    {
+        if (($s['enable_problem_report'] ?? '') !== 'yes') {
+            return;
+        }
+        if ($context === '') {
+            $label = (string) ($s['str_app_front_desk'] ?? __('Front Desk', 'dcc-guest-guide'));
+            $class = 'dccgg-report-pill dccgg-report-pill--hero dccgg-more-report';
+        } else {
+            $tpl   = (string) ($s['str_app_section_fd'] ?? __('%s Not Working? Tell the Front Desk', 'dcc-guest-guide'));
+            $label = sprintf($tpl, $context);
+            $class = 'dccgg-report-pill dccgg-report-pill--section dccgg-more-report';
+        }
+        ?>
+        <button type="button" class="<?php echo esc_attr($class); ?>" data-report-section="<?php echo esc_attr($context); ?>">
+            <span class="dccgg-report-pill-ico" aria-hidden="true">🛎️</span>
+            <span class="dccgg-report-pill-label"><?php echo esc_html($label); ?></span>
+            <?php if ($context === '') : ?>
+                <span class="dccgg-report-pill-chev" aria-hidden="true">›</span>
+            <?php endif; ?>
+        </button>
+        <?php
+    }
+
+    /**
+     * "Tavares Now" — temperature, wind and sunset.
+     *
+     * Only the shell is rendered here; every value is written by the app chunk
+     * from the same Open-Meteo proxy the conditions card already uses. A row
+     * whose reading does not arrive is removed rather than shown empty, and a
+     * strip with no rows at all hides itself — "If a reading is missing, show
+     * nothing", as briefed.
+     */
+    private function render_app_now(array $s): void
+    {
+        $label = (string) ($s['str_app_now'] ?? __('Tavares Now', 'dcc-guest-guide'));
+        ?>
+        <div class="dccgg-app-now" data-dccgg-now hidden>
+            <span class="dccgg-app-now-label"><?php echo esc_html($label); ?></span>
+            <span class="dccgg-app-now-rows" data-dccgg-now-rows></span>
+        </div>
+        <?php
+    }
+
+    /**
+     * The bottom tab bar.
+     *
+     * Labels are real text at 14px or more, not icons with a tooltip: Rob's
+     * guests skew older and an unlabelled glyph is a guess. A tab whose target
+     * the host has not chosen is not rendered — four tabs where one does
+     * nothing is worse than three that all work.
+     *
+     * @return void
+     */
+    private function render_app_tabs(array $s, bool $public_mode): void
+    {
+        $guide_key = trim((string) ($s['app_tab_guide_key'] ?? ''));
+        $canal_key = trim((string) ($s['app_tab_canal_key'] ?? ''));
+        $report_on = !$public_mode && ($s['enable_problem_report'] ?? '') === 'yes';
+
+        $tabs = [[
+            'act'   => 'stay',
+            'label' => (string) ($s['str_app_tab_stay'] ?? __('Stay', 'dcc-guest-guide')),
+            'emoji' => '🏠',
+            'key'   => '',
+        ]];
+        if ($guide_key !== '') {
+            $tabs[] = ['act' => 'section', 'label' => (string) ($s['str_app_tab_guide'] ?? __('Guide', 'dcc-guest-guide')), 'emoji' => '📖', 'key' => $guide_key];
+        }
+        if ($canal_key !== '') {
+            $tabs[] = ['act' => 'section', 'label' => (string) ($s['str_app_tab_canal'] ?? __('Canal', 'dcc-guest-guide')), 'emoji' => '🗺️', 'key' => $canal_key];
+        }
+        if ($report_on) {
+            $tabs[] = ['act' => 'report', 'label' => (string) ($s['str_app_tab_front_desk'] ?? __('Front Desk', 'dcc-guest-guide')), 'emoji' => '🛎️', 'key' => ''];
+        }
+        if (count($tabs) < 2) {
+            return;   // a single tab is not a tab bar.
+        }
+        ?>
+        <nav class="dccgg-app-tabs" aria-label="<?php echo esc_attr__('Guide sections', 'dcc-guest-guide'); ?>">
+            <?php foreach ($tabs as $i => $tab) :
+                $classes = 'dccgg-app-tab';
+                if ($tab['act'] === 'report') { $classes .= ' dccgg-more-report'; }
+                ?>
+                <button type="button" class="<?php echo esc_attr($classes); ?>"
+                        data-app-tab="<?php echo esc_attr($tab['act']); ?>"
+                        <?php if ($tab['key'] !== '') : ?>data-app-tab-key="<?php echo esc_attr($tab['key']); ?>"<?php endif; ?>
+                        <?php if ($tab['act'] === 'report') : ?>data-report-section=""<?php endif; ?>
+                        <?php if ($i === 0) : ?>aria-current="page"<?php endif; ?>>
+                    <span class="dccgg-app-tab-ico" aria-hidden="true"><?php echo esc_html($tab['emoji']); ?></span>
+                    <span class="dccgg-app-tab-label"><?php echo esc_html($tab['label']); ?></span>
+                </button>
+            <?php endforeach; ?>
+        </nav>
         <?php
     }
 
@@ -3801,7 +4138,60 @@ final class Widget extends Widget_Base
         \Elementor\Icons_Manager::render_icon((array) $icon, ['aria-hidden' => 'true']);
     }
 
-    private function render_tile_inner(array $sec, int $item_count): void
+    /**
+     * "11:00 AM" from MotoPress's "11:00". Empty in, empty out.
+     *
+     * Fixed as g:i A rather than the site's time_format, because the approved
+     * mockup reads "11:00 AM" and WordPress's own default would render it
+     * "11:00 am" on a card where every other label is Title Case.
+     */
+    public static function app_clock(string $hhmm): string
+    {
+        if (!preg_match('/^([01]?\d|2[0-3]):([0-5]\d)$/', $hhmm, $m)) {
+            return '';
+        }
+        $ts = gmmktime((int) $m[1], (int) $m[2], 0, 1, 1, 2000);
+        return $ts === false ? '' : gmdate('g:i A', $ts);
+    }
+
+    /**
+     * The one real line under an app-shell tile.
+     *
+     * Three sources, in order, and the third is silence. Authored text wins.
+     * Otherwise the tile counts what is actually in the section and names the
+     * count with the host's noun ("3 networks", "7 steps"). A section with no
+     * items and no authored line gets nothing — an empty tile is honest and a
+     * made-up one is not.
+     *
+     * The checkout tile is the one special case the brief names: its line
+     * leads with the property's check-out time, and only when MotoPress
+     * actually reports one.
+     */
+    public static function app_tile_summary(array $sec, int $item_count, string $checkout_time = ''): string
+    {
+        $summary = trim((string) ($sec['section_summary'] ?? ''));
+        if ($summary === '') {
+            $noun = trim((string) ($sec['section_summary_noun'] ?? ''));
+            if ($noun === '') {
+                $noun = __('items', 'dcc-guest-guide');
+            }
+            if ($item_count > 0) {
+                if ($item_count === 1 && substr($noun, -1) === 's') {
+                    $noun = substr($noun, 0, -1);
+                }
+                $summary = $item_count . ' ' . $noun;
+            }
+        }
+        if ((string) ($sec['section_role'] ?? '') === 'checkout') {
+            $clock = self::app_clock($checkout_time);
+            if ($clock !== '') {
+                $summary = $summary === '' ? $clock : $clock . ' · ' . $summary;
+            }
+        }
+        return $summary;
+    }
+
+    private function render_tile_inner(array $sec, int $item_count, string $summary = ''): void
     {
         $title = (string) ($sec['section_title'] ?? '');
         $desc  = (string) ($sec['section_desc'] ?? '');
@@ -3821,6 +4211,9 @@ final class Widget extends Widget_Base
             <span class="dccgg-tile-title"><?php echo esc_html($title); ?></span>
             <?php if ($desc !== '') : ?>
                 <span class="dccgg-tile-desc"><?php echo esc_html($desc); ?></span>
+            <?php endif; ?>
+            <?php if ($summary !== '') : ?>
+                <span class="dccgg-tile-summary"><?php echo esc_html($summary); ?></span>
             <?php endif; ?>
         </span>
         <?php
@@ -3988,8 +4381,16 @@ final class Widget extends Widget_Base
         $lng = (float) ($s['cottage_longitude'] ?? -81.6448);
         $emergency_contacts_render = (array) ($s['emergency_contacts'] ?? []);
         $label_911 = (string) ($s['str_emergency_911'] ?? __('Call 911', 'dcc-guest-guide'));
+        // v0.26.0: the stage is portaled to <body> when a section opens, so a
+        // class on .dccgg-root never reaches it. The app shell's sheet styling
+        // therefore has to be stamped on the stage itself.
+        $is_app      = ($s['menu_layout'] ?? '') === 'app';
+        $app_public  = self::is_public_mode($s);
+        $canal_key   = $is_app ? trim((string) ($s['app_tab_canal_key'] ?? '')) : '';
+        $map_url     = $is_app ? trim((string) ($s['app_map_url']['url'] ?? '')) : '';
+        $label_maps  = (string) ($s['str_app_open_maps'] ?? __('Open in Google Maps', 'dcc-guest-guide'));
         ?>
-        <div class="dccgg-stage" aria-live="polite">
+        <div class="dccgg-stage<?php echo $is_app ? ' dccgg-stage--app' : ''; ?>" aria-live="polite">
             <?php foreach ($valid_sections as $idx => $sec) :
                 $key = trim((string) ($sec['section_key'] ?? ''));
                 $title = (string) ($sec['section_title'] ?? $key);
@@ -4010,6 +4411,12 @@ final class Widget extends Widget_Base
                 if ($bg_url !== '') { $detail_classes .= ' dccgg-detail--parallax'; }
                 if ($role === 'emergency') { $detail_classes .= ' dccgg-detail--emergency'; }
                 if ($role === 'checkout')  { $detail_classes .= ' dccgg-detail--checkout'; }
+                // The Canal section is Rob's own My Maps embed; it opens edge
+                // to edge rather than inside the sheet's reading column. The
+                // embed itself is untouched — this only changes the frame
+                // around it.
+                $is_canal = ($is_app && $canal_key !== '' && $key === $canal_key);
+                if ($is_canal) { $detail_classes .= ' dccgg-detail--fullscreen'; }
                 ?>
                 <div class="<?php echo esc_attr($detail_classes); ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" data-checklist="<?php echo $checklist ? '1' : '0'; ?>"<?php echo $role !== '' ? ' data-section-role="' . esc_attr($role) . '"' : ''; ?> hidden>
                     <?php if ($bg_url !== '') : ?>
@@ -4021,7 +4428,15 @@ final class Widget extends Widget_Base
                     <div class="dccgg-detail-header">
                         <?php // v0.9.7.9: title row wrapped in a 1fr/auto/1fr grid so the title stays centered whether the right cell holds the ⋯ menu or an invisible spacer.
                         // v0.9.7.30: this row now renders FIRST, above Back / prev-next, per host request — the section title and the support (⋯) button share the top row. Markup order matches visual order, so tab order and screen-reader order stay correct, and the <h2> now precedes the controls that act on it.
-                        $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
+                        // v0.26.0: not in the app shell, for the same reason the hub
+                        // toolbar's copy is dropped — the contextual Front Desk pill
+                        // at the foot of every section already does this, and the
+                        // round ⋯ face is 44px wide around a 48px circle, so in a
+                        // 390 sheet the bell is cut off at the right edge. That
+                        // geometry is older than this release and present on the
+                        // grid layout too; it is reported, not fixed here, because
+                        // fixing it would change /guest/.
+                        $show_popup_more = !$is_app && ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
                         <div class="dccgg-detail-header-titlebar">
                             <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
                             <?php // v0.24.4: tabindex="-1" makes the title a focus
@@ -4062,6 +4477,14 @@ final class Widget extends Widget_Base
                         </div>
                         <?php // v0.9.7.10: checklist progress moved INSIDE the sticky header (was a sibling below) so it stays visible as the guest scrolls long checklists.
                         if ($checklist) : ?>
+                            <?php // v0.26.0: "Sunday by 11:00 AM · 3 of 7 done". The
+                            // weekday comes from the guest's own check-out date, so it
+                            // is written by the browser after the stay resolves; with
+                            // no stay it reads "3 of 7 done" and says nothing it
+                            // cannot prove.
+                            if ($is_app) : ?>
+                                <p class="dccgg-app-due" data-dccgg-due data-section-key="<?php echo esc_attr($key); ?>" data-total="<?php echo (int) count($items); ?>"></p>
+                            <?php endif; ?>
                             <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
                                 <div class="dccgg-checklist-progress-fill"></div>
                                 <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
@@ -4098,7 +4521,15 @@ final class Widget extends Widget_Base
                             </div>
                         <?php endif; ?>
                         <?php if ($show_cond && $cond_position === 'last') : self::render_conditions_card($lat, $lng, $cond_extras, $cond_title); endif; ?>
+                        <?php if ($is_canal && $map_url !== '') : ?>
+                            <a class="dccgg-btn dccgg-app-maps" href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener">
+                                <?php echo esc_html($label_maps); ?>
+                            </a>
+                        <?php endif; ?>
                         <?php if ($role === 'checkout' && ($s['enable_checkout_review'] ?? '') === 'yes') : $this->render_review_prompt($s, $title); endif; ?>
+                        <?php // The contextual pill, at the foot of the section — where a
+                        // guest who has read it and is still stuck actually is.
+                        if ($is_app && !$app_public) { $this->render_app_front_desk_pill($s, $title); } ?>
                     </div>
                 </div>
             <?php endforeach; ?>

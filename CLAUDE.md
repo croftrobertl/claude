@@ -525,6 +525,72 @@ before any script runs and sets the DEVICE timezone to somewhere that is never
 Eastern, so a case cannot pass by the two happening to agree;
 `tests/check-expiry.mutations.py` guards it.
 
+v0.26.0 is the APP SHELL ("A1 · Postcard Hero"), and it is OPT-IN. One
+SELECT value — Menu layout → App shell — turns on the hero, the Front Desk
+pill, the two-up tiles with their summary line, the "Tavares Now" strip, the
+bottom tab bar and the sheet polish. A guide on any other layout renders not
+one byte of it, which `tests/app-shell.test.php` section A checks class by
+class. /guest/ is on `grid`; /test/ is where this is built.
+
+THE STAY CARD NEVER GUESSES, and `?stay=` is not what proves a booking. It is
+free text (CLAUDE.md above: `jane-2026-06`, a month with no day) and anyone
+can type it, so it stays what it has always been — the checklist's storage
+key — and feeds the hero nothing. What proves a booking is `?t=<id>.<hmac20>`,
+signed with `dccgg_stay_secret` (generated on first MINT, never on activation)
+and resolved by `DCCGG\Stay` against the `mphb_booking` post. The reply holds
+the cottage label and the two dates and nothing else — no name, no email, no
+price — and a booking that is not `confirmed` resolves to nothing, because a
+cancelled stay must not greet anyone. Links are minted at Settings → DCC Guest
+Guide → Guest Links, which prints the `?t=…` SUFFIX rather than a whole URL:
+the guide lives on a page this plugin does not own.
+
+THE GREETING AND THE DATES ARE WRITTEN BY THE BROWSER, and that is forced, not
+stylistic: /guest/ is page-cached, so a server-rendered "Good morning" would
+still say so at ten at night — to the very guest the brief is about. The HTML
+carries the plain welcome, which is always true, and the rest arrives after.
+Every instant is formatted in `America/New_York`: check-out is 11:00 AM in
+Florida whatever the phone is set to. `tests/app-shell.ui.js` sets the DEVICE
+timezone to Tokyo or Honolulu so no case can pass by the two agreeing.
+
+FOUR OF THE BRIEF'S SHEET BULLETS, AND ONLY TWO WERE MISSING. Swipe-down has
+been in core since v0.12.5 (`wireSheetDrag` in widget.js: under 600px, within
+60px of the sheet top, 140px or a flick over 0.5px/ms, with the pointercancel
+and Safari-touchmove cases already handled) and the focus trap since
+v0.24.3/.4. v0.26.0 adds the GRAB HANDLE, so the grip is visible, and the BACK
+BUTTON, via a MutationObserver on `html.dccgg-detail-open` that pushes one
+history entry per open and rewinds it on close. A second drag handler on the
+same stage would have fought the first; widget-app.js says so where one would
+otherwise be written.
+
+THE TAB BAR IS FIXED, AND STICKY WAS TRIED FIRST. Sticky only sticks inside
+its own scrolling box and the bar is the widget's last child, so it never
+lifted off the end of the page — measured at 390, it sat at y=833 of an 844
+viewport only because the page happened to be that long. Fixed, with
+`padding-bottom` reserved on the root, and `display:none` while a sheet is
+open because the sheet is portaled to <body> and owns the screen. Labels are
+14px FIXED, not em: a theme that scales text down must not be able to take
+them under the floor the brief sets.
+
+TILE SUMMARIES ARE SOURCED, not generated. `Widget::app_tile_summary()` takes
+the host's authored line; failing that it counts the section's real items and
+names them with the host's noun ("3 networks", "7 steps"); failing that it
+says nothing — an empty tile is honest and "0 items" is noise. The checkout
+tile leads with MotoPress's own check-out time, and drops it when MotoPress
+reports none.
+
+A PRE-EXISTING 25px OVERFLOW AT 390, found while measuring this and NOT caused
+by it: the hub's round ⋯ Front Desk button overflows the harness viewport by
+25px on the GRID layout too, on 0.25.2. The suite therefore pins "the app
+shell adds no overflow of its own" by measuring both layouts, rather than an
+absolute number that would be measuring an older bug. Worth checking on live
+before anyone calls it a regression — the harness gives body a 16px gutter the
+real theme may not.
+
+`tests/popup.test.js` has ONE failing assertion that is also not this release:
+"the checklist Reset is 71x40" measures 69x40, on 0.25.2 as well as 0.26.0
+(verified by running the suite against a pristine archive of HEAD). Pixel
+drift in the harness, not a guide change.
+
 Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
 left-aligned) is implemented the way the Cottage Selector implements it —
 `isMulti()` tests the paragraph's own TEXT and adds a class, so a host who
@@ -574,7 +640,8 @@ Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `node tests/audit-fixes.ui.js`, `node tests/focus-colour.ui.js`,
 `php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js`,
 `php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js`,
-`node tests/sheet-polish.ui.js`, `node tests/check-expiry.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`node tests/sheet-polish.ui.js`, `node tests/check-expiry.ui.js`,
+`php tests/app-shell.test.php`, `node tests/app-shell.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

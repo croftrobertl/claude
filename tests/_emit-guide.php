@@ -136,6 +136,52 @@ function dccgg_all_on(): array {
         'more_menu_slot_3' => 'save_pdf'];
 }
 
+/**
+ * v0.26.0: the app shell, on top of the same eight live sections.
+ *
+ * Built from dccgg_all_on() rather than a fresh set, so the shell is measured
+ * with every other feature switched on around it — which is the state page
+ * 4645 is actually in, and the only way a layout change can be shown not to
+ * have moved anything else.
+ */
+function dccgg_app_case(bool $public = false): array {
+    // MotoPress's own check-in / check-out times, as this property keeps them.
+    // Stay::property_times() reads the option when the MPHB accessor is not
+    // there, which is exactly the harness's situation — so the clock path is
+    // measured rather than skipped.
+    $GLOBALS['options'] = ($GLOBALS['options'] ?? []) + [
+        'mphb_check_in_time'  => '14:00',
+        'mphb_check_out_time' => '11:00',
+    ];
+    $cfg = dccgg_all_on();
+    $cfg['menu_layout'] = 'app';
+    $cfg['guide_mode']  = $public ? 'public' : 'full';
+    $cfg['app_hero_image'] = ['url' => 'https://dccgg.test/canal.jpg'];
+    $cfg['app_hero_alt']   = 'The Dora Canal at the dock, with cypress trees reflected in still water.';
+    $cfg['app_tab_guide_key'] = 'amenities';
+    $cfg['app_tab_canal_key'] = 'canal';
+    $cfg['app_map_url'] = ['url' => 'https://www.google.com/maps/d/viewer?mid=TEST', 'is_external' => true];
+    // Two tiles carry an authored line; the rest fall back to the count, so
+    // both halves of app_tile_summary() are exercised on one page.
+    foreach ($cfg['guide_sections'] as &$sec) {
+        if ($sec['section_key'] === 'internet')  { $sec['section_summary_noun'] = 'networks'; }
+        if ($sec['section_key'] === 'checkout')  { $sec['section_summary_noun'] = 'steps'; }
+        if ($sec['section_key'] === 'clubhouse') { $sec['section_summary'] = 'Coffee · Games'; }
+        if ($sec['section_key'] === 'canal')     { $sec['section_summary'] = 'Slips · Launch'; }
+    }
+    unset($sec);
+    // The Emergency section is appended by dccgg_all_on() without an icon,
+    // which leaves a blank sticker on an app tile. Give it one.
+    foreach ($cfg['guide_sections'] as &$sec2) {
+        if (($sec2['section_key'] ?? '') === 'emergency' && empty($sec2['section_icon'])) {
+            $sec2['section_icon'] = ['value' => 'fas fa-triangle-exclamation', 'library' => 'fa-solid'];
+            $sec2['section_summary'] = 'Who To Call';
+        }
+    }
+    unset($sec2);
+    return $cfg;
+}
+
 function dccgg_guide_case(string $case): array {
     $sections = [
         ['_id' => 's1', 'section_key' => 'pool', 'section_title' => 'Pool', 'section_audience' => 'both'],
@@ -202,6 +248,13 @@ function dccgg_guide_case(string $case): array {
         // v0.24.4: every feature that renders a <button>, so the focus audit
         // can enumerate the real set instead of a hand-kept list.
         'all-on'          => dccgg_all_on(),
+        // v0.26.0: the app shell, full and public.
+        'app'             => dccgg_app_case(false),
+        'app-public'      => dccgg_app_case(true),
+        // The approved A1 exactly: no Print button in the hub toolbar, which
+        // the mockup does not have. Print is a host toggle, and this is the
+        // state the stills are taken in.
+        'app-a1'          => ['enable_print' => ''] + dccgg_app_case(false),
     ];
     return ($cases[$case] ?? $cases['public-intro']) + ['guide_sections' => $sections, 'guide_items' => $items];
 }

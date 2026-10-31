@@ -182,6 +182,11 @@
         hapticPulse,
         spawnConfetti,
         REDUCED_MOTION,
+        // v0.26.0, for the app shell's tab bar: opening and closing a section
+        // is core's job and must stay core's job — the chunk asks, it does not
+        // reimplement the portal, the focus trap or the scroll lock.
+        openDetail,
+        closeDetail,
         applyGuestToAll() {
             liveRoots.forEach((root) => {
                 const cfg = root.__dccgg && root.__dccgg.config;
@@ -322,6 +327,10 @@
         gallery:    '.dccgg-gallery-thumb, img.dccgg-media',
         wizard:     '.dccgg-wizard',
         video:      '.dccgg-video-poster',
+        // v0.26.0: the app shell. The class is on .dccgg-root itself, which
+        // the querySelector below would miss — see the matches() in
+        // applyChunks for why the gate tests the root as well as its subtree.
+        app:        '.dccgg-app-shell',
     };
     const _chunkLoads = {};
     function loadChunk(name) {
@@ -346,7 +355,13 @@
     function applyChunks(root, config) {
         const done = root.__dccggChunks || (root.__dccggChunks = {});
         Object.keys(CHUNKS).forEach((name) => {
-            if (done[name] || !root.querySelector(CHUNKS[name])) return;
+            // The gate is "does this page hold the element", and for the app
+            // shell that element IS the root. querySelector only looks at
+            // descendants, so the root is tested too, or the one chunk whose
+            // marker is the root itself would never load.
+            const present = root.matches && root.matches(CHUNKS[name])
+                ? true : !!root.querySelector(CHUNKS[name]);
+            if (done[name] || !present) return;
             done[name] = true;
             // Already here? Then use it and ask for nothing. A combiner — and
             // SpeedyCache is one — may have folded the chunks into the page's

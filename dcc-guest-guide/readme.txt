@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.2
+Stable tag: 0.26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,15 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.26.0 =
+* App shell layout (opt-in, "Menu layout → App shell"): photo hero with the
+  Your Stay card, Front Desk pill, two-up tiles with a one-line summary each,
+  a live "Tavares Now" strip, a bottom tab bar and sheet polish. Guides on any
+  other layout are unchanged.
+* Stay details appear only on a link carrying a signed guest token (Settings →
+  DCC Guest Guide → Guest Links); otherwise the hero shows the plain welcome.
+* The weather proxy now also returns today's sunset.
 
 = 0.25.2 =
 

@@ -182,8 +182,12 @@ check('the chunks are NOT registered with WordPress — core fetches them',
     strpos($widget, "wp_register_script('dccgg-widget-conditions'") === false);
 check('the worker precaches the guest script',
     strpos($plugin, 'widget-guest.min.js') !== false);
-check('…and all four chunks, since it cannot know which a guide needs',
-    preg_match("/foreach \(\['conditions', 'gallery', 'wizard', 'video'\] as \\\$name\)/", $plugin) === 1);
+// v0.26.0: five, not four — the app shell is a chunk too, and an offline
+// guest in that layout would otherwise find the hero, the tab bar and the
+// checkout line inert. The list is pinned by NAME rather than by count so
+// adding a chunk and forgetting the worker still fails here.
+check('…and every chunk, since it cannot know which a guide needs',
+    preg_match("/foreach \(\['conditions', 'gallery', 'wizard', 'video', 'app'\] as \\\$name\)/", $plugin) === 1);
 
 echo "\nD. Rob's alignment rule in the Front Desk note\n";
 
