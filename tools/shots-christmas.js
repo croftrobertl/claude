@@ -7,7 +7,7 @@
  * (no overlap); no sideways page scroll; every piece visible on the cream
  * page and on the navy footer.
  *
- *   node tools/shots-christmas.js   -> build/Seasons - 4.14.1 christmas <w>.png + the report on stdout
+ *   node tools/shots-christmas.js   -> build/Seasons - 4.14.2 christmas <w>.png + the report on stdout
  *
  * The fixture has no Sun-on-the-Canal dial, so a LABELED stand-in is put
  * where it sits on a computer (the picture's top right, 92px across). It
@@ -19,11 +19,11 @@ const { config, open, ROOT } = require('./harness');
 const { page: fixture } = require('./fixture');
 
 const OUT = path.join(ROOT, 'build');
-const PIECES = [['ornament', 28, '4.13.5'], ['sabalpalm', 36, '4.13.5'], ['ballred', 28], ['ballgold', 28], ['ballblue', 28], ['holly', 30], ['candycane', 30], ['gift', 26], ['pine', 34], ['palmxmas', 36], ['flamingoxmas', 40]];
+const PIECES = [['ballred', 28], ['ballgold', 28], ['ballblue', 28], ['holly', 30], ['candycane', 30], ['gift', 26], ['pine', 34], ['palmxmas', 36], ['flamingoxmas', 40]];
 const CREAM = '#FBF6EC', NAVY = '#16314A';
-/* the drawings live today (4.13.5), for comparison, from the commit that shipped them */
-const OLDENG = require('child_process').execFileSync('git', ['show', 'e8bd38f:dcc-seasons/assets/js/engine.js'], { cwd: ROOT, encoding: 'utf8' });
-const OLD = {}; ['ornament', 'sabalpalm'].forEach(k => { OLD[k] = (OLDENG.match(new RegExp(`\\n\\t\\t${k}: '([^']*)'`)) || [])[1]; });
+/* 4.14.2: the 4.13 comparison rows (ornament, sabalpalm) are gone: both
+ * have been off Christmas since 4.14.1 */
+const OLD = {};
 
 (async () => {
   const report = [];
@@ -104,8 +104,8 @@ const OLD = {}; ['ornament', 'sabalpalm'].forEach(k => { OLD[k] = (OLDENG.match(
         PIECES.filter(p => !p[2]).map(([k, size]) => `<img id="p-${k}-${bg.slice(1)}" style="height:${size}px">`).join('') + '</div>';
       const shotW = Math.min(560, W);
       await sheet.setContent(`<!doctype html><meta charset="utf-8"><body style="margin:0;padding:18px;background:#FBF6EC;font:13px/1.5 system-ui;color:#2b2b2b">
-        <h2 style="text-align:center;margin:0 0 4px">Seasons 4.14.1 — Christmas Preview at ${W}px</h2>
-        <p style="text-align:center;margin:0 0 12px;color:#666">?dcc_season=christmas · the scene caught mid-crossing · the wreath in its corner · then the navy footer${W >= 768 ? ' · the dial is a labeled stand-in' : ''}</p>
+        <h2 style="text-align:center;margin:0 0 4px">Seasons 4.14.2 — Christmas Preview at ${W}px</h2>
+        <p style="text-align:center;margin:0 0 12px;color:#666">?dcc_season=christmas · the scene caught mid-crossing · the wreath under the title · then the navy footer${W >= 768 ? ' · the dial is a labeled stand-in' : ''}</p>
         <div style="display:flex;gap:16px;justify-content:center;align-items:flex-start">
           <figure style="margin:0;text-align:center"><img src="${b64(top)}" style="width:${shotW}px;border:1px solid #ccc"><figcaption>the header picture and the page</figcaption></figure>
           <figure style="margin:0;text-align:center"><img src="${b64(foot)}" style="width:${shotW}px;border:1px solid #ccc"><figcaption>scrolled to the footer</figcaption></figure>
@@ -117,7 +117,7 @@ const OLD = {}; ['ornament', 'sabalpalm'].forEach(k => { OLD[k] = (OLDENG.match(
         for (var k in E) { ['FBF6EC','16314A'].forEach(function (c) { var el = document.getElementById('p-' + k + '-' + c); if (el) el.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(E[k]); }); }</script>`);
       await sheet.waitForTimeout(500);
       await sheet.setViewportSize({ width: 1200, height: await sheet.evaluate(() => document.body.scrollHeight + 20) });
-      const file = path.join(OUT, `Seasons - 4.14.1 christmas ${W}.png`);
+      const file = path.join(OUT, `Seasons - 4.14.2 christmas ${W}.png`);
       await sheet.screenshot({ path: file });
       await sheet.close();
       const minVis = Math.min(...PIECES.filter(p => !p[2]).map(([k]) => Math.min(vis[k].cream, vis[k].navy)));
@@ -128,5 +128,5 @@ const OLD = {}; ['ornament', 'sabalpalm'].forEach(k => { OLD[k] = (OLDENG.match(
       console.log(`   pieces clearly visible (worst of 9, cream/navy): ${minVis}% · page errors: ${errs.length}`);
     } finally { await ses.close(); }
   }
-  fs.writeFileSync(path.join(OUT, 'Seasons - 4.14.1 three widths.json'), JSON.stringify(report, null, 1));
+  fs.writeFileSync(path.join(OUT, 'Seasons - 4.14.2 three widths.json'), JSON.stringify(report, null, 1));
 })().catch(e => { console.error(e); process.exit(1); });
