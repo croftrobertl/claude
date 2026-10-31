@@ -44,6 +44,7 @@ require $ROOT . '/includes/class-cache.php';
 require $ROOT . '/includes/class-booking-rules.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
+require $ROOT . '/includes/class-staff-ready.php';
 require $ROOT . '/includes/class-staff-data.php';
 
 use MPHBAC\Staff;
@@ -152,8 +153,8 @@ echo "\n-- every registered staff endpoint runs the gate FIRST (0.45.0) --\n";
     $src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff.php');
     preg_match("/foreach \(\[([^\]]+)\] as \\\$ep\)/", $src, $m);
     $eps = array_map(static fn($x) => trim($x, " '"), explode(',', $m[1] ?? ''));
-    check('the endpoint list is read from Staff::register() (instrument check): month, booking, photo, search',
-        $eps === ['month', 'booking', 'photo', 'search'], $eps);
+    check('the endpoint list is read from Staff::register() (instrument check): month, booking, photo, search, ready (0.48.0)',
+        $eps === ['month', 'booking', 'photo', 'search', 'ready'], $eps);
     foreach ($eps as $ep) {
         $ok = (bool) preg_match('/public static function handle_' . $ep . '\(\): void\s*\{\s*self::require_authorization\(\);/', $src);
         check("handle_$ep: require_authorization() is its FIRST statement", $ok);

@@ -21,12 +21,15 @@ $delete_for_current_site = static function () use ($wpdb): void {
     // options that carry their own expiry). Uninstall is the one place a
     // range delete belongs — nobody is reading the calendar any more.
     $like_rows = $wpdb->esc_like('mphbac_c_') . '%';
+    // The cleaning dots' state and their quiet log (0.48.0): the plugin's own.
+    $like_ready = $wpdb->esc_like('mphbac_ready_') . '%';
     $wpdb->query(
         $wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
             $like,
             $like_timeout,
-            $like_rows
+            $like_rows,
+            $like_ready
         )
     );
     delete_option('mphbac_cache_gen');

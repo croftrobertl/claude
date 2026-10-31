@@ -51,6 +51,14 @@ const setDates = async (p, ci, co) => {
   if (co !== null) await p.fill('.mphbac-sheet-checkout', co);
   await p.waitForTimeout(80);
 };
+// Page on until a day is on screen: which days these are moves with the date
+// the suite runs (a phone shows two months; the season starts at today+30).
+async function show(p, d) {
+  for (let i = 0; i < 4 && !(await p.$(cell(d))); i++) {
+    await p.click('.mphbac-nav-next');
+    await p.waitForTimeout(900);
+  }
+}
 const tipOf = (p, d) => p.evaluate(sel => {
   const c = document.querySelector(sel);
   const t = c && c.querySelector('.mphbac-cell-tip');
@@ -91,7 +99,7 @@ const tipOf = (p, d) => p.evaluate(sel => {
     const nci = days.filter(x => /\bis-no-checkin\b/.test(x.cls));
     const tues = days.filter(x => dow(x.d) === 2 && /\bis-available\b/.test(x.cls));
     check('EVERY open Tuesday is a no-check-in day, and nothing else is but today (too soon)',
-      tues.length >= 4 && tues.every(x => /\bis-no-checkin\b/.test(x.cls)) && nci.every(x => dow(x.d) === 2 || x.d === today),
+      tues.length >= 2 && tues.every(x => /\bis-no-checkin\b/.test(x.cls)) && nci.every(x => dow(x.d) === 2 || x.d === today),
       nci.map(x => x.d));
     check('...each is striped (a gradient over the available colour), not the red or grey of booked and past',
       nci.length > 0 && nci.every(x => /repeating-linear-gradient/.test(x.bg)), nci.map(x => x.bg.slice(0, 40)));
@@ -119,7 +127,7 @@ const tipOf = (p, d) => p.evaluate(sel => {
 
     console.log('\n-- 2. a tap on a day that cannot start a stay --');
     await p.tap(cell(tuesday), { force: true });   // Playwright counts aria-disabled as disabled; a browser does not
-    await p.waitForTimeout(150);
+    await p.waitForTimeout(400);                   // past the tip's 0.15s fade, however busy the machine
     let t = await tipOf(p, tuesday);
     let s = await sheetState(p);
     check('TAP A TUESDAY: its tip opens with the reason, "No check-in on this day."',
@@ -140,6 +148,7 @@ const tipOf = (p, d) => p.evaluate(sel => {
     // 1280 below, where the strip's last day is at the right edge.
 
     console.log('\n-- 3. the popup: MotoPress\'s minimum, maximum and arrival day --');
+    await show(p, outSeason);
     await p.tap(cell(outSeason));
     await p.waitForTimeout(400);
     s = await sheetState(p);
@@ -147,6 +156,7 @@ const tipOf = (p, d) => p.evaluate(sel => {
       s.open && s.ci === outSeason && s.co === add(outSeason, 2) && s.error === '' && s.bookDisabled === false, s);
     await p.click('.mphbac-sheet-cancel');
     await p.waitForTimeout(400);
+    await show(p, inSeason);
     await p.tap(cell(inSeason));
     await p.waitForTimeout(400);
     s = await sheetState(p);
@@ -170,8 +180,18 @@ const tipOf = (p, d) => p.evaluate(sel => {
       s.error === 'No check-in on that day. Please select new dates.' && s.bookDisabled === true, s);
     await setDates(p, today, add(today, 3));
     s = await sheetState(p);
-    check('check-in moved to today: "That check-in is too soon. Please select new dates."',
-      s.error === 'That check-in is too soon. Please select new dates.' && s.bookDisabled === true, s);
+    // Today is on screen only when the season is too (it depends on the date
+    // the suite runs). Off screen, the popup holds no rule for it, and Book
+    // Now's server check is what says so — 0.47.4's rule for any date typed
+    // beyond the loaded window.
+    const onScreen = !!(await p.$(cell(today)));
+    if (!onScreen && s.error === '') {
+      await p.click('.mphbac-sheet-confirm');
+      await p.waitForTimeout(1200);
+      s = await sheetState(p);
+    }
+    check('check-in moved to today: "That check-in is too soon. Please select new dates."' + (onScreen ? '' : ' (from Book Now\'s server check: today is off screen)'),
+      s.error === 'That check-in is too soon. Please select new dates.' && (s.bookDisabled === true || !onScreen), s);
     await setDates(p, inSeason, add(inSeason, 4));
     s = await sheetState(p);
     check('...and back to a good range: the message goes and Book Now is live again', s.error === '' && s.bookDisabled === false, s);
@@ -275,6 +295,7 @@ const tipOf = (p, d) => p.evaluate(sel => {
     // A Monday outside the season: +2 nights lands on a Wednesday, which may
     // not end a stay, so the proposal runs on to Thursday.
     const mon = (() => { for (let n = 15; ; n++) { const d = site.day(n); if (dow(d) === 1 && n + 3 < 30) return d; } })();
+    await show(p, mon);
     await p.tap(cell(mon));
     await p.waitForTimeout(400);
     let s = await sheetState(p);
@@ -286,9 +307,13 @@ const tipOf = (p, d) => p.evaluate(sel => {
       s.error === 'No check-out on that day. Please select new dates.' && s.bookDisabled === true, s);
     await p.click('.mphbac-sheet-cancel');
     await p.waitForTimeout(400);
-    // Days past the 60-day window: in the third month.
-    await p.click('.mphbac-nav-next');
-    await p.waitForTimeout(800);
+    // Days past the 60-day window: page on until a week of them is on screen.
+    for (let i = 0; i < 4; i++) {
+      const last = await p.evaluate(() => [...document.querySelectorAll('.mphbac-cell-status[data-date]')].map(c => c.dataset.date).sort().pop());
+      if (last >= site.day(70)) break;
+      await p.click('.mphbac-nav-next');
+      await p.waitForTimeout(800);
+    }
     const far = await p.evaluate(() => [...document.querySelectorAll('.is-no-checkin')].map(c => [c.dataset.date, c.getAttribute('aria-label')]));
     const limit = site.day(60);
     const after = far.filter(([d]) => d > limit);

@@ -40,11 +40,16 @@ $f_n = 0;
 foreach (array_keys($cottages) as $f_type) {
     $f_db->post($f_type * 10, 'mphb_room', 'publish', 0, ['mphb_room_type_id' => $f_type]);
 }
-$f_book = static function (int $type, int $ci, int $co, string $status = 'confirmed', bool $imported = false) use ($f_db, $f_d, &$f_n): void {
+$f_book = static function (int $type, int $ci, int $co, string $status = 'confirmed', bool $imported = false, string $first = 'Guest', string $last = '') use ($f_db, $f_d, &$f_n): void {
     $b = 700000 + (++$f_n) * 2;
-    $f_db->post($b, 'mphb_booking', $status, 0, ['mphb_check_in_date' => $f_d($ci), 'mphb_check_out_date' => $f_d($co)]
-        + ($imported ? ['_mphb_sync_id' => 'ical-' . $b] : []));
+    $meta = ['mphb_check_in_date' => $f_d($ci), 'mphb_check_out_date' => $f_d($co), 'mphb_first_name' => $first, 'mphb_last_name' => $last ?: 'N' . $b]
+        + ($imported ? ['_mphb_sync_id' => 'ical-' . $b, 'mphb_ical_prodid' => '-//Airbnb Inc//Hosting Calendar 1.0//EN'] : []);
+    $f_db->post($b, 'mphb_booking', $status, 0, $meta);
     $f_db->post($b + 1, 'mphb_reserved_room', 'publish', $b, ['_mphb_room_id' => $type * 10]);
+    // The staff code reads meta through get_post_meta() (bootstrap's store).
+    t_post($b, 'mphb_booking', $status, '', $meta);
+    t_post($b + 1, 'mphb_reserved_room', 'publish', '', ['_mphb_room_id' => $type * 10]);
+    $GLOBALS['t_posts'][$b + 1]->post_parent = $b;
 };
 $f_book(1071, 10, 13);                       // the buffer case
 $f_book(1069, 2, 6);
@@ -56,6 +61,32 @@ $f_book(1604, 40, 48);
 $f_book(1607, 1, 4);
 $f_book(1740, 7, 12, 'confirmed', true);     // imported (iCal)
 $f_book(1742, 25, 31);
+foreach (array_keys($cottages) as $f_type) {
+    $GLOBALS['t_meta'][$f_type * 10] = ['mphb_room_type_id' => $f_type];
+}
+
+// THE CLEANING DOTS (0.48.0), mode "staff": checkouts as staff meet them.
+//   1071 Boathouse   a direct stay out today              → red
+//   1069 Lighthouse  an Airbnb (iCal) stay out today      → red
+//   1067 Hibiscus    a DOCK BLOCK out today, its last real stay out 20 days
+//                    ago                                  → no dot
+//   1065 Flamingo    a CANCELLED booking out today        → no dot
+//   1604 Pineapple   out 3 days ago (Ready in the state file, if the test
+//                    marks it)                            → red until marked
+//   1607 Coconut     a PENDING booking out today          → no dot
+//   1740 Blue Heron  out 15 days ago, never marked        → no dot (let go)
+//   1742 Sunshine    out tomorrow                          → no dot yet
+if ($f_mode === 'staff') {
+    $f_book(1071, -4, 0, 'confirmed', false, 'Ann', 'Direct');
+    $f_book(1069, -6, 0, 'confirmed', true, 'Air', 'Guest');
+    $f_book(1067, -25, -20, 'confirmed', false, 'Real', 'Stay');
+    $f_book(1067, -2, 0, 'confirmed', false, 'DOCK', 'BLOCK');
+    $f_book(1065, -3, 0, 'cancelled', false, 'Can', 'Celled');
+    $f_book(1604, -7, -3, 'confirmed', false, 'Three', 'Back');
+    $f_book(1607, -2, 0, 'pending', false, 'Pen', 'Ding');
+    $f_book(1740, -18, -15, 'confirmed', false, 'Long', 'Ago');
+    $f_book(1742, -2, 1, 'confirmed', false, 'Out', 'Tomorrow');
+}
 
 $GLOBALS['t_mphb']['seasons'] = [];
 foreach ([[2080, '2025-12-31', '2027-03-31'], [2082, '2025-04-15', '2025-12-15'], [2079, '2024-12-15', '2025-04-15'], [2081, '2024-04-15', '2024-12-15']] as [$f_sid, $f_a, $f_b]) {

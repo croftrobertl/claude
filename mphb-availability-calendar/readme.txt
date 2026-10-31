@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.5
+Stable tag: 0.48.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.48.0 =
+* **The cleaning dot on the staff calendar (Rob's request).** On the day a guest checks out of a cottage, a red dot appears beside its name (confirmed stays from every channel, direct and imported; dock blocks, cancelled and pending bookings don't count; the day is Eastern time). Hold the name (about half a second), or right-click it on a computer, and tap **Ready**: the dot turns green, and stays green until the next checkout turns it red again. If it is already green the same popup offers **Not Ready**, to undo a mis-tap. The dot changes the moment it is tapped; if saving fails it goes back and says so. An unmarked checkout stays red for 14 days. Each change is recorded quietly with its time.
+* The state is kept in the plugin's own options, one per cottage; MotoPress's bookings are only read. The new save endpoint checks the staff password (or a manager's login) and a token on every request, and refuses anything else. No guest details in anything new. Nothing is written on install, activation or upgrade.
 
 = 0.47.5 =
 * **No line under "View Photo ID" on the staff calendar (Rob's request).** The note "Opens the guest's uploaded ID. Do not share or download." is gone from the booking sheet, with its spacing; the link itself is unchanged (still through the staff-only gated proxy, in a new tab). Nothing is written on install, activation or upgrade.

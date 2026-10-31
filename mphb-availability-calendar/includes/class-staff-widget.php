@@ -151,6 +151,13 @@ final class Staff_Widget
                 'secCustomer'  => __('Customer Information', 'mphb-availability-calendar'),
                 'secNotes'     => __('Notes', 'mphb-availability-calendar'),
                 'viewPhoto'    => __('View Photo ID', 'mphb-availability-calendar'),
+                // ---- 0.48.0: the cleaning dot (Rob) ----
+                'readyBtn'     => __('Ready', 'mphb-availability-calendar'),
+                'notReadyBtn'  => __('Not Ready', 'mphb-availability-calendar'),
+                'dotRed'       => __('Not ready', 'mphb-availability-calendar'),
+                'dotGreen'     => __('Ready', 'mphb-availability-calendar'),
+                'readyPop'     => __('Cleaning for {cottage}', 'mphb-availability-calendar'),
+                'readyFailed'  => __('Could not save. Please try again.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
                 // ---- 0.44.0 / 0.44.1 ----
                 'srcDirect'    => __('Direct', 'mphb-availability-calendar'),

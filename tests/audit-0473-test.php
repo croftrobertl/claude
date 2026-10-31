@@ -55,6 +55,7 @@ namespace {
     require $ROOT . '/includes/class-data-provider.php';
     require $ROOT . '/includes/class-ajax.php';
     require $ROOT . '/includes/class-staff.php';
+    require $ROOT . '/includes/class-staff-ready.php';
     require $ROOT . '/includes/class-staff-data.php';
     require $ROOT . '/includes/class-staff-widget.php';
     require $ROOT . '/includes/class-cache-integration.php';
@@ -166,7 +167,8 @@ namespace {
         '/wp-admin/admin-ajax.php?action=mphbac_staff_search', '/wp-admin/admin-ajax.php?action=mphbac_staff_month',
         '/wp-admin/admin-ajax.php?action=mphbac_staff_booking', '/wp-admin/admin-ajax.php?action=mphbac_staff_photo'], $pats)) === 4, $pats);
     check('...and it is the action the search endpoint really answers', (bool) preg_match("/'mphbac_staff_' \\. \\\$ep/", file_get_contents($ROOT . '/includes/class-staff.php'))
-        && (bool) preg_match("/\\['month', 'booking', 'photo', 'search'\\]/", file_get_contents($ROOT . '/includes/class-staff.php')));
+        && (bool) preg_match("/\\['month', 'booking', 'photo', 'search'(, 'ready')?\\]/", file_get_contents($ROOT . '/includes/class-staff.php')));
+    check('(0.48.0) the cleaning dot\'s save action is excluded too', in_array('/wp-admin/admin-ajax.php?action=mphbac_staff_ready', $pats, true), $pats);
 
     echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
     exit($fail ? 1 : 0);

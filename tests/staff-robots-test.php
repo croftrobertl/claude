@@ -26,6 +26,7 @@ namespace {
     require $ROOT . '/includes/class-booking-rules.php';
     require $ROOT . '/includes/class-data-provider.php';
     require $ROOT . '/includes/class-staff.php';
+    require $ROOT . '/includes/class-staff-ready.php';
 
     use MPHBAC\Staff;
 
@@ -53,8 +54,8 @@ namespace {
     $wh = $GLOBALS['t_actions']['wp_head'] ?? [];
     check('template_redirect sends the header; wp_head prints the meta tag, first (priority 1)',
         count($th) === 1 && count($wh) === 1 && $wh[0][1] === 1, [$th, $wh]);
-    check('...and the four gated endpoints are still registered as before',
-        count(array_filter(array_keys($GLOBALS['t_actions']), static fn($k) => str_starts_with($k, 'wp_ajax_'))) === 8);
+    check('...and the five gated endpoints are still registered as before (ready since 0.48.0)',
+        count(array_filter(array_keys($GLOBALS['t_actions']), static fn($k) => str_starts_with($k, 'wp_ajax_'))) === 10);
 
     echo "\n-- the staff page (18102) --\n";
     [$h, $head] = page(Staff::DEFAULT_PAGE_ID);

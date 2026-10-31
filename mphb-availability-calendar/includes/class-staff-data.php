@@ -894,9 +894,10 @@ final class Staff_Data
      * Is this booking one of Rob's dock blocks? Its guest name — first name,
      * then last name, as name_from_meta() reads it — against the "Dock block
      * names" setting: comma-separated, capitals and spacing ignored. Meta is
-     * already primed for the month view, so this costs no query.
+     * already primed for the month view, so this costs no query. Public since
+     * 0.48.0: the cleaning dot (Staff_Ready) skips dock blocks by the same test.
      */
-    private static function is_dock_block(int $booking_id): bool
+    public static function is_dock_block(int $booking_id): bool
     {
         $names = self::dock_names();
         return $names !== [] && in_array(self::name_key(self::name_from_meta($booking_id)), $names, true);

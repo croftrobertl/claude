@@ -142,7 +142,8 @@ final class Staff
     {
         // Logged-out staff (password cookie only) hit the _nopriv variants,
         // so both must be registered — the gate, not the hook, is the check.
-        foreach (['month', 'booking', 'photo', 'search'] as $ep) {
+        // ready (0.48.0): the cleaning dot's Ready / Not Ready, gated the same.
+        foreach (['month', 'booking', 'photo', 'search', 'ready'] as $ep) {
             $action = 'mphbac_staff_' . $ep;
             add_action('wp_ajax_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
             add_action('wp_ajax_nopriv_' . $action, ['\\MPHBAC\\Staff', 'handle_' . $ep]);
@@ -233,11 +234,61 @@ final class Staff
     private static function view_or_fail(\DateTimeImmutable $from, \DateTimeImmutable $to): array
     {
         try {
-            return Staff_Data::month_view($from, $to);
+            $data = Staff_Data::month_view($from, $to);
         } catch (Staff_Read_Failed $e) {
             wp_send_json_error(['message' => __('Could not load bookings. Please try again.', 'mphb-availability-calendar')], 500);
+            return [];
         }
-        return [];
+        // THE CLEANING DOTS (0.48.0) ride on every board answer, so the
+        // 3-minute refresh brings a new checkout's red dot and another phone's
+        // Ready. A failed read leaves the field out: the board keeps the dots
+        // it has, rather than wiping them as if nobody had checked out.
+        try {
+            $data['turnover'] = Staff_Ready::state();
+        } catch (Staff_Read_Failed $e) {
+            // logged where it failed
+        }
+        return $data;
+    }
+
+    /**
+     * READY / NOT READY (0.48.0, Rob): one cottage's cleaning dot, set by a
+     * long press on its name. Gated FIRST like every staff endpoint — an
+     * unauthorized caller gets a 403 with an empty body and nothing is read
+     * or written — then POST only. It writes the plugin's own option
+     * (Staff_Ready), never MotoPress's bookings or their meta, and only for
+     * the checkout the cottage's dot stands for. Answers every dot, so the
+     * board shows exactly what is stored.
+     */
+    public static function handle_ready(): void
+    {
+        self::require_authorization();
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
+            status_header(405);
+            exit;
+        }
+        $type_id  = absint($_POST['room_type_id'] ?? 0);
+        $checkout = isset($_POST['checkout']) ? sanitize_text_field((string) wp_unslash($_POST['checkout'])) : '';
+        $ready    = (string) ($_POST['ready'] ?? '');
+        $listed   = array_map(static fn($t) => (int) $t['id'], Data_Provider::list_room_types());
+        if ($type_id <= 0 || !in_array($type_id, $listed, true)
+            || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $checkout) || !in_array($ready, ['0', '1'], true)) {
+            wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar')], 400);
+        }
+        try {
+            $saved = Staff_Ready::save($type_id, $checkout, $ready === '1');
+            $state = Staff_Ready::state();
+        } catch (\Throwable $e) {
+            error_log('MPHBAC staff: ready not saved: ' . $e->getMessage());
+            wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar')], 500);
+            return;
+        }
+        if ($saved === null) {
+            // The dot moved on (a new checkout) since the page loaded: nothing
+            // written; the board takes the dots as they are now.
+            wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar'), 'turnover' => $state], 409);
+        }
+        wp_send_json_success(['turnover' => $state]);
     }
 
     /**

@@ -3833,3 +3833,51 @@ checklist-0.47.5.md". The one exception is the plugin zip itself, which stays
 - **Untouched:** nothing outside the change moved.
 
 Titles centered, Title Case, American spelling.
+
+## 0.48.0 — the cleaning dot on /staff/ (Rob, 2026-10-31)
+
+"A red dot next to the cottage name automatically appearing the day a guest
+checks out, then we hold the cottage name and a popup appears where we select
+'Ready'. Simple: red = not ready; green = ready."
+
+**Which dot.** Staff_Ready (new) takes each cottage's LATEST checkout on or
+before today (Data_Provider::today(), America/New_York) of a CONFIRMED booking
+— direct or iCal-imported — skipping dock blocks (Staff_Data::is_dock_block,
+now public). Marked Ready for that checkout → green (no expiry, until the next
+checkout, which is a new key and so unmarked → red). Unmarked → red while the
+checkout is within the last RED_DAYS = 14 days (today counts), then no dot:
+my choice, so that going live does not light every cottage for checkouts long
+since cleaned, and an unmarked checkout does not stay red for months. Pending
+and cancelled bookings are not stays; a checkout tomorrow lights nothing yet.
+
+**Storage.** One non-autoloaded option per cottage, mphbac_ready_<type id>:
+[checkout Y-m-d => ['ready' => bool, 'log' => [[unix time, 0|1], ...]]],
+newest 12 checkouts, 20 changes each — the quiet record. Per cottage so two
+phones marking two cottages cannot overwrite each other. Written only by
+Staff_Ready::save(), only for the checkout the dot stands for (a stale page
+gets 409 and the current dots, nothing written). Removed on uninstall.
+
+**Endpoint.** mphbac_staff_ready: wp_ajax_ + nopriv like the others,
+Staff::require_authorization() first (password cookie or manager, then the
+nonce: 403 empty body / 403 + nonce header), then POST only (405), then
+room_type_id must be a listed cottage, checkout Y-m-d, ready 0|1. Answers
+every dot. Excluded from page caches. Every month/range answer carries
+`turnover` (the dots); a failed read leaves it out and the board keeps the
+dots it has.
+
+**Board (staff.js).** Chart views (Weekly, Monthly, Yearly) — the cottage
+column; Daily has no cottage column. The dot sits after "#22"; a dotted name
+becomes role=button, tabindex 0, aria-label "Cottage 22: Not ready" /
+"Ready". Long press 500ms (cancelled by 12px of movement, a scroll or a lift),
+a long click, a right-click (and Android's long-press contextmenu) or
+Enter/Space opens a one-button popup beside the name: Ready (green button) or,
+on a green dot, Not Ready (red button). The lift of the press that opened it
+cannot tap the button (it needs a fresh press, or a keyboard click). Optimistic:
+the dot changes at once; on failure it goes back and the status line says
+"Could not save. Please try again." Green carries a white tick (not colour
+alone). The name sets -webkit-touch-callout: none and user-select: none.
+
+**Tests.** ready-0480-test.php (the rules on SQLite, zero writes), browser/
+ready-0480-test.js (the real staff page through the real handlers via
+tests/render/ajax.php — staff actions, gate/nonce/method by environment, the
+dot state kept in a file between requests, every SQL statement logged).

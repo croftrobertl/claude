@@ -54,6 +54,7 @@ namespace {
     require $ROOT . '/includes/class-booking-rules.php';
     require $ROOT . '/includes/class-data-provider.php';
     require $ROOT . '/includes/class-staff.php';
+    require $ROOT . '/includes/class-staff-ready.php';
 
     use MPHBAC\Staff;
     use MPHBAC\Data_Provider;

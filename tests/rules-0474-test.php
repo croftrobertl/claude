@@ -385,14 +385,11 @@ check("600 random windows and cottage lists: {$rows()} rows — within one avail
 $rules_live();
 
 echo "\n-- 7. the staff board is untouched --\n";
-// Since 0.47.5 (Rob) one change is allowed: the note under View Photo ID
-// removed. Every other line of the staff code is still 0.47.3's.
-exec('cd ' . escapeshellarg(dirname(__DIR__)) . ' && git diff -U0 e515faf -- mphb-availability-calendar/includes/class-staff.php mphb-availability-calendar/includes/class-staff-data.php mphb-availability-calendar/includes/class-staff-widget.php mphb-availability-calendar/includes/class-staff-elementor.php mphb-availability-calendar/includes/class-staff-search.php mphb-availability-calendar/assets/js/staff.js mphb-availability-calendar/assets/css/staff.css 2>&1', $o2, $rc2);
-$changed = array_values(array_filter($o2, static fn($l) => preg_match('/^[-+](?![-+])/', $l)));
-$note = '/photo-note|photoNote|var note|appendChild\\(note\\)|No line under the link|uploaded ID: the|Do not share or download|0\\.47\\.5, Rob|^-\\s*(display: block;|margin-top: 6px;|color: #5b6470;|font-size: 0\\.85em;|\\})$/';
-check('the staff calendar\'s code and stylesheet are 0.47.3\'s but for 0.47.5\'s removed Photo ID note (git diff e515faf: ' . count($changed) . ' lines, all the note)',
-    $rc2 === 0 && $changed !== [] && count(array_filter($changed, static fn($l) => !preg_match($note, $l))) === 0,
-    array_values(array_filter($changed, static fn($l) => !preg_match($note, $l))));
+// What 0.47.4 itself did to the staff calendar: nothing. Pinned to its own
+// commit (cd0dfb4) against 0.47.3 (e515faf); later releases change the staff
+// board on purpose (0.47.5 the Photo ID note, 0.48.0 the cleaning dot).
+exec('cd ' . escapeshellarg(dirname(__DIR__)) . ' && git diff --stat e515faf cd0dfb4 -- mphb-availability-calendar/includes/class-staff.php mphb-availability-calendar/includes/class-staff-data.php mphb-availability-calendar/includes/class-staff-widget.php mphb-availability-calendar/includes/class-staff-elementor.php mphb-availability-calendar/includes/class-staff-search.php mphb-availability-calendar/assets/js/staff.js mphb-availability-calendar/assets/js/staff.min.js mphb-availability-calendar/assets/css/staff.css 2>&1', $o2, $rc2);
+check('0.47.4 left the staff calendar\'s code, script and stylesheet byte-for-byte 0.47.3\'s (git diff e515faf cd0dfb4: empty)', $rc2 === 0 && $o2 === [], $o2);
 $staff = '';
 foreach (glob($ROOT . '/includes/class-staff*.php') as $file) { $staff .= (string) file_get_contents($file); }
 check('...and none of it reads the booking rules', !preg_match('/Booking_Rules|get_rules|mphb_availability_facade/', $staff));

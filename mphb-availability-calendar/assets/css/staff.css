@@ -608,6 +608,81 @@ span.mphbac-staff-ico::before {
     text-overflow: ellipsis;
 }
 
+/* ---- THE CLEANING DOT (0.48.0, Rob): red = not ready, green = ready ----
+   Beside the cottage number. A long press on the name (or a right-click)
+   opens one button. The name must not select text or raise iOS's callout
+   while it is held; scrolling the grid past it still works. Green carries a
+   tick as well, so the two never rely on colour alone. */
+.mphbac-staff-rowlabel.has-ready {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.mphbac-staff-rowlabel.has-ready:focus-visible {
+    outline: 2px solid var(--staff-today, #f4da62);
+    outline-offset: -3px;
+}
+.mphbac-staff-ready {
+    position: relative;
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: #d93025;
+    box-shadow: 0 0 0 2px #ffffff;
+    vertical-align: 1px;
+}
+.mphbac-staff-ready.is-ready { background: #1e8e3e; }
+.mphbac-staff-ready.is-ready::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1.5px;
+    width: 3px;
+    height: 6.5px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.mphbac-staff-readypop {
+    position: fixed;
+    z-index: 100000;
+    padding: 8px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+.mphbac-staff-readypop[hidden] { display: none; }
+/* (0,4,0): Bravada's kit restyles buttons at (0,3,1). */
+.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn {
+    display: block;
+    min-width: 128px;
+    min-height: 48px;
+    margin: 0;
+    padding: 0 24px;
+    border: 0;
+    border-radius: 999px;
+    background: #1e8e3e;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    transition: none;
+    cursor: pointer;
+}
+.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn.is-undo { background: #d93025; }
+.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn:focus-visible {
+    outline: 2px solid #0A50B2;
+    outline-offset: 2px;
+}
+
 /* day background cells — the gridlines and the today/weekend tints */
 /* ---- THE MONTH BAND (0.43.1, Rob's option C, every chart view) ----
    "Hard to tell which month I'm in when I scroll": until 0.43.0 only the 1st

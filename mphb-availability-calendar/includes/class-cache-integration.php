@@ -36,7 +36,8 @@ final class Cache_Integration
         // Staff endpoints serve guest PII and must never be cached at any
         // layer, by anyone, for any duration.
         // search since 0.47.3 (the WD's audit): it answers with guest rows too.
-        foreach (['month', 'booking', 'photo', 'search'] as $ep) {
+        // ready since 0.48.0.
+        foreach (['month', 'booking', 'photo', 'search', 'ready'] as $ep) {
             $out[] = '/wp-admin/admin-ajax.php?action=mphbac_staff_' . $ep;
         }
         // ...and the staff PAGE itself. A full-page cache that ignores the
