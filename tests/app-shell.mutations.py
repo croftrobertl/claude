@@ -138,15 +138,6 @@ MUTANTS = [
     # ---- opt-in, and public mode -------------------------------------------
     ('the shell renders on every layout', W,
      "        $is_app       = ($menu_layout === 'app');", "        $is_app       = true;"),
-    ('the Front Desk pill renders on the public guide', W,
-     "                    <?php if (!self::is_public_mode($s)) { $this->render_app_front_desk_pill($s); } ?>",
-     "                    <?php $this->render_app_front_desk_pill($s); ?>"),
-    ('the Front Desk tab renders on the public guide', W,
-     "        $report_on = !$public_mode && ($s['enable_problem_report'] ?? '') === 'yes';",
-     "        $report_on = ($s['enable_problem_report'] ?? '') === 'yes';"),
-    ('the contextual pill renders on the public guide', W,
-     "                        if ($is_app && !$app_public) { $this->render_app_front_desk_pill($s, $title); } ?>",
-     "                        if ($is_app) { $this->render_app_front_desk_pill($s, $title); } ?>"),
 
     ('the hub keeps a second Front Desk control', W,
      "                    if (!$is_app && ($s['enable_detail_more_menu'] ?? '') === 'yes') {",
@@ -173,8 +164,6 @@ MUTANTS = [
     # ---- the layout ----------------------------------------------------------
     ('the tab labels drop below the 14px floor', CSS,
      ".dccgg-app-tab-label {\n    font-size: 14px;", ".dccgg-app-tab-label {\n    font-size: 12px;"),
-    ('the tabs drop below a 44px target', CSS,
-     "    min-height: 54px;\n    display: flex;\n    flex-direction: column;", "    min-height: 30px;\n    display: flex;\n    flex-direction: column;"),
     ('the tiles go back to one up on a phone', CSS,
      ".dccgg-layout-app .dccgg-menu {\n    grid-template-columns: repeat(2, minmax(0, 1fr));",
      ".dccgg-layout-app .dccgg-menu {\n    grid-template-columns: repeat(1, minmax(0, 1fr));"),
@@ -187,7 +176,23 @@ MUTANTS = [
      "            const present = !!root.querySelector(CHUNKS[name]);"),
 ]
 
-EQUIVALENT = []
+EQUIVALENT = [
+    ('the three !is_public_mode guards on the Front Desk pill and tab',
+     "measured: with ALL THREE removed, the public app shell still renders no "
+     "pill and no Front Desk tab. apply_public_mode() writes "
+     "enable_problem_report off, and render_app_front_desk_pill() and the tab "
+     "bar both test that flag, so either mechanism alone is enough. The guards "
+     "stay — this is the same defence in depth as the two focus guards recorded "
+     "in v0.24.3 — and this is recorded rather than dressed up as a kill."),
+    ('the tab bar\'s min-height dropped from 54px to 30px',
+     "measured at 390: the tabs are 51px with the mutant and 54px without, so "
+     "the 44px floor the brief sets is never crossed. It is held by the content "
+     "box — a 20px icon, a 14px label at 1.2 line-height, 12px of padding and a "
+     "2px gap — not by min-height, which only squares the row off. The "
+     "guarantee the suite states is therefore not broken by this mutant, and "
+     "inventing a test that failed on 51px would be testing the decoration "
+     "rather than the floor."),
+]
 UNREACHABLE = []
 
 def run(cmd, plugin_dir):
