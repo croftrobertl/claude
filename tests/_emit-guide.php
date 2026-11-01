@@ -170,13 +170,19 @@ function dccgg_app_case(bool $public = false): array {
         if ($sec['section_key'] === 'canal')     { $sec['section_summary'] = 'Slips · Launch'; }
     }
     unset($sec);
-    // The Emergency section is appended by dccgg_all_on() without an icon,
-    // which leaves a blank sticker on an app tile. Give it one.
+    // Two things dccgg_all_on() leaves that the LIVE guide does not have, and
+    // that made v0.26.0's stills look broken when they were not: an Emergency
+    // section with no icon (a blank sticker) and quick actions with no icon
+    // (an empty circle on the tile). Checked against doracanalcourt.com/guest/
+    // on 2026-11-01: it has no quick actions at all and no section without an
+    // icon. The fixture now matches, so a still shows the guide and not the
+    // fixture's gaps.
     foreach ($cfg['guide_sections'] as &$sec2) {
         if (($sec2['section_key'] ?? '') === 'emergency' && empty($sec2['section_icon'])) {
-            $sec2['section_icon'] = ['value' => 'fas fa-triangle-exclamation', 'library' => 'fa-solid'];
+            $sec2['section_emoji']   = '🚨';
             $sec2['section_summary'] = 'Who To Call';
         }
+        unset($sec2['enable_quick_action'], $sec2['quick_action_type'], $sec2['quick_action_val']);
     }
     unset($sec2);
     return $cfg;
