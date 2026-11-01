@@ -2831,6 +2831,7 @@
     rijeka: { t: 'Rijeka dubrovačka and the coast to Brsečine', s: 'Taken in October and November 1991: Bosanka on the Srđ plateau fell on 9 November, Mokošica in late November after Osojnik. Freed from 26 May 1992.', ev: 'the-ring-closes' }
   };
   const SIEGE_FORT = 'On 6 December 1991 a few dozen defenders held the fort against an infantry and tank attack from Bosanka and Strinčjera, with tanks right up at the fort. It was the anchor of the line that saved the city, and today it houses the Museum of the Homeland War.';
+  const THEN_LAB_MODE = (/[?&]thenlab=(\w+)/.exec(location.search) || [])[1] || 'now';   // PREVIEW ONLY: a / b / now
   const THEN_ORDER = ['core', 'elaph', 'lastovo', 'pel', 'mljet', 'prim', 'neum', 'konavle', 'sutorina', 'city'];   // the first town on top
   const THEN_LAB = { core: [42.6555, 18.118], elaph: [42.7277, 17.8803] };
   // the two 1699 corridors the Ottomans kept, at Ragusa's urging
@@ -3150,7 +3151,7 @@
       const d = e.key === 'ArrowLeft' ? -0.05 : e.key === 'ArrowRight' ? 0.05 : 0;
       if (d) { e.preventDefault(); thenCmp = Math.min(0.96, Math.max(0.04, thenCmp + d)); thenClip(); }
     });
-    mmMap.on('zoomend', () => { if (thenOn) { thenZoomClass(); thenDrawTop(); thenHere(); } });
+    mmMap.on('zoomend', () => { if (thenOn) { thenZoomClass(); thenDrawTop(); thenHere(); thenLabelTidy(); } });
     mmMap.on('moveend', () => { if (thenOn) { thenHere(); thenDeclutter(); } });
     mmMap.on('move zoom resize', () => { if (thenOn && thenCmpOn) thenClip(); });
   }
@@ -3202,16 +3203,21 @@
       const was = prev && k !== 'city' ? thenPartStatus(k, prev).cls : null;
       const gained = st.cls === 'rag' && was && was !== 'rag', lost = was === 'rag' && st.cls !== 'rag';
       const rag = st.cls === 'rag';
-      thenNear.addLayer(L.polygon(polys, { renderer: thenRN, pane: 'dccThen', interactive: false,
+      const partPoly = L.polygon(polys, { renderer: thenRN, pane: 'dccThen', interactive: THEN_LAB_MODE === 'b',
         color: rag ? '#7d5411' : st.cls === 'war' ? '#c0392b' : '#3b3934', weight: rag || gained || lost ? 2 : 1, opacity: rag ? 0.9 : 0.5,
         dashArray: st.cls === 'out' || st.cls === 'ceded' || st.cls === 'split' || k === 'city' ? '5 5' : null,
         fillColor: st.c, fillOpacity: rag ? 0.45 : 0.3,
-        className: 'dcc-then-part dcc-then-' + st.cls + (gained ? ' dcc-then-gain' : lost ? ' dcc-then-lost' : '') }));
+        className: 'dcc-then-part dcc-then-' + st.cls + (gained ? ' dcc-then-gain' : lost ? ' dcc-then-lost' : '') });
+      thenNear.addLayer(partPoly);
       const lab = THEN_LAB[k] || S.lab[k];
       const tag = gained ? '<em>new in ' + escapeHtml(f.label) + '</em>' : lost ? '<em>lost</em>' : '';
+      const status = escapeHtml(R.siege && k === 'core' ? 'Dubrovnik besieged, never taken · Župa occupied' : st.t);
+      if (THEN_LAB_MODE === 'b') thenStory(partPoly, '<b>' + escapeHtml(THEN_PART[k].name) + '</b><br>' + status + (tag ? '<br>' + tag : ''));
       thenNear.addLayer(L.marker(lab, { pane: 'dccThenTop', interactive: false, keyboard: false,
-        icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-' + st.cls + (k === 'city' ? ' dcc-then-plab-city' : ''),
-          html: '<div><b>' + escapeHtml(THEN_PART[k].name) + '</b><span>' + escapeHtml(R.siege && k === 'core' ? 'Dubrovnik besieged, never taken · Župa occupied' : st.t) + '</span>' + tag + '</div>', iconSize: null }) }));
+        icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-' + st.cls + (k === 'city' ? ' dcc-then-plab-city' : '') + (gained || lost ? ' dcc-then-plab-chg' : ''),
+          html: THEN_LAB_MODE === 'b'
+            ? '<div><b>' + escapeHtml(THEN_PART[k].name) + (gained || lost ? ' <i class="dcc-then-chgdot" title="' + (gained ? 'new in ' + escapeHtml(f.label) : 'lost') + '"></i>' : '') + '</b></div>'
+            : '<div><b>' + escapeHtml(THEN_PART[k].name) + '</b><span>' + status + '</span>' + tag + '</div>', iconSize: null }) }));
     });
     // the frontier and the two 1699 corridors, on today's border lines
     ['frontier', 'neum', 'sutorina'].forEach(k => {
@@ -3286,6 +3292,7 @@
     setTimeout(() => { mmMap.removeLayer(oldW); mmMap.removeLayer(oldN); }, quick ? 0 : 520);
     thenDrawTop();
     thenHere();
+    requestAnimationFrame(thenLabelTidy);
     if (thenCmpOn) thenClip();
     updateHash();
   }
@@ -3308,6 +3315,22 @@
   }
   // landmark labels at street zoom: where two would overlap, the one nearer the middle of the map
   // (or just built in this era) keeps its label; the other keeps its diamond, which still opens it
+  // the area names never sit on top of each other: Ragusa's own lands keep theirs, then the rest in
+  // map order, then the frontier and 1699 line labels; the hidden ones come back as you zoom in
+  function thenLabelTidy() {
+    if (THEN_LAB_MODE === 'now' || !thenNear) return;
+    const pri = ic => ic.classList.contains('dcc-then-llab') ? 4 : ic.classList.contains('dcc-then-plab-chg') ? 0 : ic.classList.contains('dcc-then-plab-rag') ? 1 : ic.classList.contains('dcc-then-plab-war') ? 2 : 3;
+    const items = [];
+    thenNear.eachLayer(l => { const ic = l._icon; if (ic && (ic.classList.contains('dcc-then-plab') || ic.classList.contains('dcc-then-llab'))) { ic.classList.remove('dcc-then-lhid'); items.push(ic); } });
+    items.sort((a, b) => pri(a) - pri(b));
+    const kept = [];
+    items.forEach(ic => {
+      const box = ic.firstElementChild; if (!box || !box.offsetWidth) return;
+      const r = box.getBoundingClientRect();
+      if (kept.some(k => r.left < k.right + 4 && r.right > k.left - 4 && r.top < k.bottom + 2 && r.bottom > k.top - 2)) ic.classList.add('dcc-then-lhid');
+      else kept.push(r);
+    });
+  }
   function thenDeclutter() {
     if (!thenTop || !mmMap.getContainer().classList.contains('dcc-then-close')) return;
     const c = mmMap.getSize().divideBy(2), items = [];

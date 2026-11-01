@@ -2032,3 +2032,6 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
 }
 /* phones: anything scrolled into view (keyboard focus, links) clears the floating dock */
 @media (max-width: 800px) { html:has(.dcc-tour-root) { scroll-padding-bottom: 104px; } }
+/* Old Borders: an area name hidden because another sits on top of it (it returns as you zoom in) */
+.dcc-then-plab.dcc-then-lhid, .dcc-then-llab.dcc-then-lhid { visibility: hidden; }
+.dcc-then-chgdot { display: inline-block; width: 8px; height: 8px; margin-left: 4px; border-radius: 50%; background: #d9a22b; box-shadow: 0 0 0 1.5px #fff; vertical-align: 1px; }
