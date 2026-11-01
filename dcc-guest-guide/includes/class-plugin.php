@@ -1513,6 +1513,59 @@ final class Plugin
     }
 
     /**
+     * Add today's sunrise and sunset to a weather payload, as `sunToday`.
+     *
+     * v0.26.2. Two things on a guide used to work out the sun's times
+     * independently — the app shell's "Tavares Now" strip read Open-Meteo's
+     * daily array, and the Conditions card computed them astronomically in
+     * PHP — and the two disagreed by a minute or two on the same page. They
+     * now read ONE value, resolved here, from the source that is right for
+     * this lat/lng.
+     *
+     * Resolved at SEND time rather than before the cache is written: the
+     * payload lives for thirty minutes and a window that straddles midnight
+     * would otherwise serve yesterday's row until it expired.
+     *
+     * Picked by DATE, never by position. `past_days=1` is in the request, so
+     * index 0 is yesterday — and Open-Meteo returns `daily.time`, which is
+     * already in the cottage's own timezone because the request says
+     * `timezone=auto`. That is also the timezone "today" has to be read in:
+     * the server's clock is not the property's.
+     */
+    private function with_sun_today(array $data): array
+    {
+        $daily = isset($data['daily']) && is_array($data['daily']) ? $data['daily'] : [];
+        $times = isset($daily['time']) && is_array($daily['time']) ? $daily['time'] : [];
+        if (!$times) {
+            return $data;
+        }
+        $tz_name = isset($data['timezone']) && is_string($data['timezone']) ? $data['timezone'] : '';
+        try {
+            $tz = new \DateTimeZone($tz_name !== '' ? $tz_name : 'UTC');
+        } catch (\Throwable $e) {
+            $tz = new \DateTimeZone('UTC');
+        }
+        $today = (new \DateTimeImmutable('now', $tz))->format('Y-m-d');
+        $idx = array_search($today, $times, true);
+        if ($idx === false) {
+            return $data;
+        }
+        $clock = static function ($v) {
+            // Open-Meteo gives "2026-11-01T18:41"; the clock is the last five.
+            return (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/', $v, $m)) ? $m[1] : '';
+        };
+        $sun = [
+            'sunrise' => $clock($daily['sunrise'][$idx] ?? null),
+            'sunset'  => $clock($daily['sunset'][$idx] ?? null),
+        ];
+        if ($sun['sunrise'] === '' && $sun['sunset'] === '') {
+            return $data;
+        }
+        $data['sunToday'] = $sun;
+        return $data;
+    }
+
+    /**
      * AJAX: Open-Meteo proxy with 30-min transient cache so widgets share
      * a single upstream call per lat/lng pair instead of one per visitor.
      */
@@ -1522,10 +1575,10 @@ final class Plugin
         // The suffix is the shape of the request, not the plugin version: a
         // cached payload from before sunset was asked for would have no sunset
         // in it, and the strip would stay a row short for half an hour.
-        $key = 'dccgg_wx2_' . md5($lat . ':' . $lng);
+        $key = 'dccgg_wx3_' . md5($lat . ':' . $lng);
         $cached = get_transient($key);
         if (is_array($cached)) {
-            wp_send_json_success($cached);
+            wp_send_json_success($this->with_sun_today($cached));
         }
         // Open-Meteo's documented param names: `past_days=1` (not `past_hours`),
         // `pressure_unit` only accepts hPa/mmHg — convert to inHg client-side.
@@ -1536,7 +1589,7 @@ final class Plugin
             // v0.26.0: sunset, for the app shell's "Tavares Now" strip. It is
             // the authoritative figure for this lat/lng rather than one the
             // browser works out, and it rides the same 30-minute cache.
-            . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunset'
+            . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunrise,sunset'
             . '&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&past_days=1&timezone=auto',
             $lat,
             $lng
@@ -1564,7 +1617,7 @@ final class Plugin
             wp_send_json_error(['message' => 'Bad upstream response'], 502);
         }
         set_transient($key, $data, 30 * MINUTE_IN_SECONDS);
-        wp_send_json_success($data);
+        wp_send_json_success($this->with_sun_today($data));
     }
 
     /**

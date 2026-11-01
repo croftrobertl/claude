@@ -41,6 +41,7 @@ $cssMin = plugin_file('assets/css/widget.min.css');
 $cssG   = plugin_file('assets/css/widget-guest.min.css');
 $jsCore = plugin_file('assets/js/widget.js');
 $jsApp  = plugin_file('assets/js/widget-app.js');
+$jsCond = plugin_file('assets/js/widget-conditions.js');
 $build  = (string) @file_get_contents(__DIR__ . '/../build-min.sh');
 
 require_once __DIR__ . '/_emit-guide.php';
@@ -179,11 +180,64 @@ check('a fresh widget gets four tabs, not the two staging showed',
     substr_count($appNoCfg, 'data-app-tab=') === 4,
     (string) substr_count($appNoCfg, 'data-app-tab='));
 check('the Checkout tile carries the property clock with no role set',
-    strpos($appNoCfg, '11:00 AM · 3 items') !== false,
+    strpos($appNoCfg, '11:00 AM · 3 steps') !== false,
     implode(' | ', (function ($h) {
         preg_match_all('/dccgg-tile-summary">([^<]*)</', $h, $m);
         return $m[1];
     })($appNoCfg)));
+
+echo "\nC3. v0.26.2 — the property's name, the noun, and one sun\n";
+
+check('an all-capitals site name is read in Title Case',
+    \DCCGG\Widget::title_case('DORA CANAL COURT') === 'Dora Canal Court');
+check('…with the small words left small in the middle',
+    \DCCGG\Widget::title_case('THE INN OF THE LAKES') === 'The Inn of the Lakes');
+check('…and capitalised after a hyphen',
+    \DCCGG\Widget::title_case('SMITH-JONES COTTAGES') === 'Smith-Jones Cottages');
+check('a name the host already cased is left exactly alone',
+    \DCCGG\Widget::title_case('McBride House') === 'McBride House'
+    && \DCCGG\Widget::title_case('cottage iQ') === 'cottage iQ');
+check('a single all-capitals word is left alone — it may be an initialism',
+    \DCCGG\Widget::title_case('DCC') === 'DCC'
+    && \DCCGG\Widget::title_case('NASA') === 'NASA');
+check('an empty name stays empty', \DCCGG\Widget::title_case('') === '');
+check('the welcome itself is Title Case on this site',
+    \DCCGG\Widget::default_welcome() === 'Welcome to Dora Canal Court');
+
+$sec2 = fn(array $x = []) => $x + ['section_key' => 'k'];
+check('a checklist section counts STEPS, not items',
+    \DCCGG\Widget::app_tile_summary($sec2(['checklist_mode' => 'yes']), 7) === '7 steps');
+check('…and a plain one still counts items',
+    \DCCGG\Widget::app_tile_summary($sec2(), 7) === '7 items');
+check('…while the host\'s own noun still beats both',
+    \DCCGG\Widget::app_tile_summary($sec2(['checklist_mode' => 'yes', 'section_summary_noun' => 'networks']), 7)
+        === '7 networks');
+check('one step is a step', \DCCGG\Widget::app_tile_summary($sec2(['checklist_mode' => 'yes']), 1) === '1 step');
+
+// Rob's pick: the live conditions inside the frosted card.
+check('the conditions strip renders inside the hero card',
+    preg_match('/dccgg-app-stay.*?data-dccgg-now.*?<\/div>\s*<\/div>/s', $appHtml) === 1);
+check('…and is not also left standing on its own below the hero',
+    substr_count($appHtml, 'class="dccgg-app-now"') === 1,
+    (string) substr_count($appHtml, 'class="dccgg-app-now"'));
+
+// ONE sun. Two places used to work it out separately.
+check('the server resolves today\'s sun times for everyone',
+    strpos($plugin, 'function with_sun_today') !== false
+    && strpos($plugin, "\$data['sunToday'] = \$sun;") !== false);
+check('…picking the row by DATE, never by position',
+    strpos($plugin, "array_search(\$today, \$times, true)") !== false);
+check('…in the cottage\'s timezone, not the server\'s',
+    strpos($plugin, "\$data['timezone']") !== false);
+check('…and at send time, so a cache across midnight cannot serve yesterday',
+    substr_count($plugin, 'with_sun_today(') === 3);
+check('the conditions card reads it rather than its own calculation',
+    strpos($jsCond, 'sunToday') !== false
+    && strpos($widget, 'data-dccgg-sun="sunset"') !== false);
+check('the app strip reads the same field',
+    strpos($jsApp, 'd.sunToday && d.sunToday.sunset') !== false);
+check('…and neither scans the daily array for itself any more',
+    strpos($jsApp, 'daily.sunset') === false);
 
 echo "\nD. Tile summaries\n";
 
@@ -297,9 +351,9 @@ check('…and the pill on both hosts, because the stage is portaled to <body>',
     && strpos($css, '.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill') !== false);
 check('the tab label is 14px fixed, not em',
     preg_match('/\.dccgg-app-tab-label \{[^}]*font-size: 14px;/s', $css) === 1);
-check('sunset is asked of the weather proxy, and its cache key moved with it',
-    strpos($plugin, 'uv_index_max,sunset') !== false
-    && strpos($plugin, "'dccgg_wx2_'") !== false);
+check('both sun times are asked of the weather proxy, and the cache key moved',
+    strpos($plugin, 'uv_index_max,sunrise,sunset') !== false
+    && strpos($plugin, "'dccgg_wx3_'") !== false);
 
 echo "\n$pass passed, $fail failed\n";
 if ($failures) {

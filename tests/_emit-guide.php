@@ -213,6 +213,10 @@ function dccgg_app_bare(): array {
     foreach ($spec as $i => [$key, $title]) {
         $sections[] = ['_id' => 's_' . $key, 'section_key' => $key,
             'section_title' => $title, 'section_audience' => 'both',
+            // Checkout is in checklist mode on live — measured 2026-11-01:
+            // seven checkable items and a progress bar — and NO section role,
+            // which is the whole point of this fixture.
+            'checklist_mode' => $key === 'checkout' ? 'yes' : '',
             'section_icon' => ['value' => 'fas fa-circle', 'library' => 'fa-solid']];
         for ($n = 1; $n <= ($key === 'checkout' ? 3 : 2); $n++) {
             $items[] = ['_id' => 'i' . $i . $n, 'item_section' => $key,

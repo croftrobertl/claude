@@ -80,9 +80,18 @@ const AT = (iso) => Date.parse(iso);
 /** 3pm Eastern on a Friday in June. EDT, UTC-4. */
 const MIDSTAY = AT('2026-06-19T19:00:00Z');
 
+/**
+ * The proxy's reply. `sunToday` is resolved SERVER-side since v0.26.2 — by
+ * date, because past_days=1 means index 0 is yesterday — so the app strip and
+ * the Conditions card read one value instead of working the sun out twice and
+ * disagreeing by a minute.
+ */
 const WEATHER = {
     current: { temperature_2m: 78.4, wind_speed_10m: 7.2 },
-    daily: { sunset: ['2026-06-18T20:28', '2026-06-19T20:28', '2026-06-20T20:29'] },
+    daily: { time: ['2026-06-18', '2026-06-19', '2026-06-20'],
+        sunrise: ['2026-06-18T06:28', '2026-06-19T06:28', '2026-06-20T06:29'],
+        sunset: ['2026-06-18T20:28', '2026-06-19T20:28', '2026-06-20T20:29'] },
+    sunToday: { sunrise: '06:28', sunset: '20:28' },
 };
 
 let pass = 0, fail = 0; const failures = [];
@@ -147,6 +156,9 @@ const check = (name, cond, detail) => {
         check('the welcome names the property, not a guest',
             await text(v.page, '[data-dccgg-welcome]') === 'Welcome to Dora Canal Court',
             await text(v.page, '[data-dccgg-welcome]'));
+        // Rob's pick: the live conditions inside the frosted card.
+        check('…and the conditions sit inside the card with it',
+            await v.page.$eval('[data-dccgg-now]', (e) => !!e.closest('.dccgg-app-stay')));
         check('there is no stay card left to fill',
             (await v.page.$$('[data-dccgg-dates]')).length === 0
             && (await v.page.$$('[data-dccgg-progress]')).length === 0);
@@ -199,12 +211,23 @@ const check = (name, cond, detail) => {
         await shut(v);
     }
     {
-        // past_days=1 is in the request, so index 0 is YESTERDAY. Picking by
-        // position would print last night's sunset all day.
+        // The strip no longer scans the daily array: it reads the one value
+        // the server resolved, so it cannot disagree with the Conditions card.
         const v = await open({ weather: { current: {},
-            daily: { sunset: ['2026-06-18T20:00', '2026-06-19T20:28'] } } });
-        check('sunset is picked by today\'s date, not by its position in the array',
+            daily: { time: ['2026-06-18'], sunset: ['2026-06-18T20:00'] },
+            sunToday: { sunrise: '06:28', sunset: '20:28' } } });
+        check('sunset comes from the server-resolved field, not from the array',
             await text(v.page, '[data-dccgg-now-rows]') === 'Sunset 8:28 PM',
+            await text(v.page, '[data-dccgg-now-rows]'));
+        await shut(v);
+    }
+    {
+        // No resolved field, no row — silence beats a wrong number, and this
+        // is also what a payload cached before v0.26.2 looks like.
+        const v = await open({ weather: { current: { temperature_2m: 78.4 },
+            daily: { time: ['2026-06-18'], sunset: ['2026-06-18T20:28'] } } });
+        check('a reply with no resolved sun shows the other readings and no sunset',
+            await text(v.page, '[data-dccgg-now-rows]') === '78°',
             await text(v.page, '[data-dccgg-now-rows]'));
         await shut(v);
     }
@@ -426,8 +449,8 @@ const check = (name, cond, detail) => {
                 (e) => e.getAttribute('aria-current')) === 'page'
             && !(await v.page.evaluate(() => document.documentElement.classList.contains('dccgg-detail-open'))));
         const sums = await v.page.$$eval('.dccgg-tile-summary', (e) => e.map((x) => x.textContent.trim()));
-        check('the Checkout tile carries the property clock with no role set',
-            sums.some((t) => /^11:00 AM · \d+ items?$/.test(t)), sums.join(' | '));
+        check('the Checkout tile carries the property clock and counts steps',
+            sums.some((t) => /^11:00 AM · \d+ steps?$/.test(t)), sums.join(' | '));
         await shut(v);
     }
 

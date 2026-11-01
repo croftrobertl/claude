@@ -5087,7 +5087,7 @@ dialog.dccgg-wrapper::backdrop {
     border-radius: var(--dccgg-app-radius);
     overflow: hidden;
     background: var(--dccgg-app-surface);
-    min-height: 240px;
+    min-height: 260px;
     display: flex;
     align-items: flex-end;
 }
@@ -5156,6 +5156,21 @@ dialog.dccgg-wrapper::backdrop {
     font-variant-numeric: tabular-nums;
     font-weight: 400;
     white-space: nowrap;
+}
+
+/* Rob's pick of the three header options, v0.26.2: the live conditions sit
+   INSIDE the frosted card. Without stay details a card holding a greeting and
+   a welcome looked unfinished, and this is the one line on the screen that
+   changes through the day. (0,5,0), so it beats the standalone strip's own
+   (0,4,0) rules above whichever order the file ends up in. */
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-app-stay .dccgg-app-now {
+    justify-content: flex-start;
+    gap: 2px 8px;
+    margin: 10px 0 0;
+    font-size: 0.92em;
+}
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-app-stay .dccgg-app-now-label {
+    font-size: 0.74em;
 }
 
 /* -------- Tiles: two up, big, with their one real line -------- */

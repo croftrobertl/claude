@@ -146,16 +146,14 @@
                 const wind = num(cur.wind_speed_10m);
                 if (wind !== null) { out.push(Math.round(wind) + ' mph'); }
 
-                const sunsets = (d.daily && d.daily.sunset) || [];
-                // past_days=1 is in the request, so index 0 is YESTERDAY.
-                // Pick by date instead of by position, or the strip shows last
-                // night's sunset all day.
-                const today = partsIn(app.tz, new Date(),
-                    { year: 'numeric', month: '2-digit', day: '2-digit' });
-                const todayISO = today.year ? (today.year + '-' + today.month + '-' + today.day) : '';
-                const hit = sunsets.find((v) => typeof v === 'string' && v.slice(0, 10) === todayISO);
-                if (hit) {
-                    const c = clock12(app.tz, hit.slice(11, 16));
+                // v0.26.2: ONE source for the sun's times. The server picks
+                // today's row out of the daily arrays — by date, since
+                // past_days=1 means index 0 is yesterday — and the Conditions
+                // card reads the same `sunToday`, so the two can no longer
+                // disagree by a minute the way they did on staging.
+                const sunset = d.sunToday && d.sunToday.sunset;
+                if (/^\d{1,2}:\d{2}$/.test(sunset || '')) {
+                    const c = clock12(app.tz, sunset);
                     const label = (app.strings && app.strings.sunset) || '';
                     if (c) { out.push(label ? (label + ' ' + c) : c); }
                 }

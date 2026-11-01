@@ -31,6 +31,39 @@
     // upstream payload to the console and (via wireConditionsDebug) into
     // a <pre> beneath the card so the host can paste the raw shapes back
     // for targeted follow-ups.
+    /**
+     * Replace the card's sunrise and sunset with Open-Meteo's.
+     *
+     * v0.26.2. The card's values are computed astronomically in PHP at render
+     * time; the app shell's "Tavares Now" strip reads Open-Meteo. Two sources
+     * on one page disagreed by a minute or two, so both now read the figure
+     * the server resolved for this lat/lng — see Plugin::with_sun_today(),
+     * which also picks the row by DATE rather than by position, because the
+     * request asks for yesterday too.
+     *
+     * It also fixes something the single source was never about: this page is
+     * served from a full-page cache, so the computed value in the HTML can be
+     * yesterday's. The replacement happens on every visit.
+     *
+     * No reading, no change: the card keeps what the server drew rather than
+     * blanking a row.
+     */
+    function paintSunToday(cards, d) {
+        const sun = d && d.sunToday;
+        if (!sun) { return; }
+        cards.forEach((card) => {
+            ['sunrise', 'sunset'].forEach((which) => {
+                const el = card.querySelector('[data-dccgg-sun="' + which + '"]');
+                const hhmm = sun[which];
+                if (!el || !/^\d{1,2}:\d{2}$/.test(hhmm || '')) { return; }
+                const [h, m] = hhmm.split(':').map(Number);
+                const period = h < 12 ? 'AM' : 'PM';
+                const hour = h % 12 === 0 ? 12 : h % 12;
+                el.textContent = hour + ':' + String(m).padStart(2, '0') + ' ' + period;
+            });
+        });
+    }
+
     function wireConditions(root, config) {
         const cards = root.querySelectorAll('.dccgg-conditions');
         if (!cards.length) return;
@@ -64,6 +97,7 @@
                 if (!json.success) return;
                 const d = json.data;
                 if (!d || !d.current || !d.daily) return;
+                paintSunToday(cards, d);
                 const code = d.current.weather_code;
                 const emoji = weatherEmoji(code, d.current.is_day);
                 const temp  = Math.round(d.current.temperature_2m);

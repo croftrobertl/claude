@@ -666,6 +666,53 @@ windows" overflow cannot occur there). Only the duplicate checkout count was
 real, and the sheet now shows one. STILLS FOR THE DIRECTOR COME FROM
 `tools/live-shell.js` from now on, for exactly this reason.
 
+v0.26.2 is Rob's header pick and three corrections from the real theme.
+
+THE HEADER IS OPTION 1: the live "Tavares Now" conditions render INSIDE the
+frosted card, from `render_app_hero()`, not as a strip below it. Without
+stay details the card held only a greeting and a welcome and looked
+unfinished; the conditions are the one line on that screen that changes
+through the day. Its rules are (0,5,0)
+(`.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-app-stay .dccgg-app-now`), so
+they beat the (0,4,0) ones the standalone strip still carries.
+
+THE PROPERTY'S NAME IS TITLE-CASED, because the site name is stored in
+capitals and the hero read "Welcome to DORA CANAL COURT".
+`Widget::title_case()` re-cases ONLY a string that is entirely capitals AND
+holds more than one word. Both halves are load-bearing: anything with a
+lowercase letter is a name somebody chose ("McBride", "cottage iQ") and a
+single all-caps word is as likely an initialism as a shout — "DCC" must not
+become "Dcc". Small words stay small in the middle, so "THE INN OF THE
+LAKES" reads "The Inn of the Lakes".
+
+ONE SUN, RESOLVED ON THE SERVER. The Conditions card computed sunrise and
+sunset astronomically in PHP while the app strip read Open-Meteo, and the
+two disagreed by a minute or two on the same page. `Plugin::with_sun_today()`
+now picks today's row out of the daily arrays and publishes it as
+`sunToday`; the card's values carry `data-dccgg-sun` and the conditions
+chunk overwrites them, and the strip reads the same field. Three things to
+keep:
+  · picked by DATE, never by position — `past_days=1` means index 0 is
+    yesterday;
+  · "today" is read in `$data['timezone']`, which is the cottage's because
+    the request says `timezone=auto`, not the server's;
+  · resolved at SEND time, not before the transient is written, or a
+    30-minute window across midnight serves yesterday's row.
+It also fixes something the single-source question was not about: the card's
+computed value is baked into a page-cached document, so without the
+overwrite a cached copy shows yesterday's sunrise.
+
+A CHECKLIST SECTION'S TILE COUNTS "STEPS". Keyed off `checklist_mode`, not
+off the word "checkout", so any list a host builds reads the same way.
+Measured on live: the Checkout section is in checklist mode with seven
+checkable items — Checkout Time, Kitchenware, Cleaning, Take Out Trash,
+Dirty Linens, Electronics, Key & Lock. The host's own noun still beats it.
+
+STAGING IS A SUBFOLDER of the live site, not a subdomain, and is not
+reachable from here. The Director installs the zip and takes the real-theme
+stills. `tools/live-shell.js` is still the right tool for measuring, but say
+"the live theme with the layout swapped in", never "staging".
+
 Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
 left-aligned) is implemented the way the Cottage Selector implements it —
 `isMulti()` tests the paragraph's own TEXT and adds a class, so a host who

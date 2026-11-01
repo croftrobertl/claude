@@ -3804,8 +3804,6 @@ final class Widget extends Widget_Base
                     </div>
                 <?php endif; ?>
 
-                <?php if ($is_app) { $this->render_app_now($s); } ?>
-
                 <div class="dccgg-stage-container">
                     <?php $this->render_menu($sections, $items_by_section, $s, $reveal_mode); ?>
                     <?php if ($reveal_mode === 'stage') : ?>
@@ -3966,10 +3964,55 @@ final class Widget extends Widget_Base
      */
     public static function default_welcome(): string
     {
-        $name = trim(wp_strip_all_tags((string) get_bloginfo('name')));
+        $name = self::title_case(trim(wp_strip_all_tags((string) get_bloginfo('name'))));
         /* translators: %s: the property's name. */
         return $name === '' ? __('Welcome', 'dcc-guest-guide')
             : sprintf(__('Welcome to %s', 'dcc-guest-guide'), $name);
+    }
+
+    /**
+     * "DORA CANAL COURT" -> "Dora Canal Court", and nothing else touched.
+     *
+     * v0.26.2. The site's stored name is in capitals, so the hero read
+     * "Welcome to DORA CANAL COURT" — shouting at a guest, and against Rob's
+     * Title Case rule. Re-casing is deliberately limited to a string that is
+     * ALL capitals: anything with a lowercase letter in it is a name somebody
+     * chose, and "McBride" or "cottage iQ" must survive being read.
+     *
+     * Small words stay small unless they lead or close, which is what Title
+     * Case means — "Inn of the Lakes", not "Inn Of The Lakes".
+     */
+    public static function title_case(string $name): string
+    {
+        if ($name === '' || preg_match('/\p{Ll}/u', $name)) {
+            return $name;   // already has lowercase: the host's own casing.
+        }
+        // ONE word is left exactly as stored. "DCC" is as likely an initialism
+        // as a shout, and "Welcome to Dcc" is worse than either. Several words
+        // in capitals is unambiguous, and a host whose brand really is
+        // all-caps can type their own welcome line.
+        if (!preg_match('/\s/u', $name)) {
+            return $name;
+        }
+        $small = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor',
+                  'of', 'on', 'or', 'the', 'to', 'up', 'via'];
+        $words = preg_split('/(\s+)/u', mb_strtolower($name, 'UTF-8'), -1, PREG_SPLIT_DELIM_CAPTURE);
+        if (!is_array($words)) {
+            return $name;
+        }
+        $real = array_values(array_filter(array_keys($words), static fn($i) => trim($words[$i]) !== ''));
+        $first = $real ? $real[0] : -1;
+        $last  = $real ? $real[count($real) - 1] : -1;
+        foreach ($real as $i) {
+            $w = $words[$i];
+            if ($i !== $first && $i !== $last && in_array($w, $small, true)) {
+                continue;
+            }
+            // Capitalise after a hyphen too, so "SMITH-JONES" reads right.
+            $words[$i] = preg_replace_callback('/(^|-)(\p{L})/u',
+                static fn($m) => $m[1] . mb_strtoupper($m[2], 'UTF-8'), $w) ?? $w;
+        }
+        return implode('', $words);
     }
 
     /**
@@ -4055,6 +4098,12 @@ final class Widget extends Widget_Base
             <div class="dccgg-app-stay" data-dccgg-stay>
                 <p class="dccgg-app-greeting" data-dccgg-greeting hidden></p>
                 <h2 class="dccgg-app-welcome" data-dccgg-welcome><?php echo esc_html($welcome); ?></h2>
+                <?php // v0.26.2, Rob's pick of the three header options: the live
+                // conditions sit INSIDE the frosted card. Without a stay to show,
+                // a card holding only a greeting and a welcome looked unfinished;
+                // this is the one thing on the screen that changes through the
+                // day, so it is what makes the card worth looking at.
+                self::render_app_now($s); ?>
             </div>
         </div>
         <?php
@@ -4103,7 +4152,7 @@ final class Widget extends Widget_Base
      * strip with no rows at all hides itself — "If a reading is missing, show
      * nothing", as briefed.
      */
-    private function render_app_now(array $s): void
+    public static function render_app_now(array $s): void
     {
         $label = (string) ($s['str_app_now'] ?? __('Tavares Now', 'dcc-guest-guide'));
         ?>
@@ -4261,7 +4310,16 @@ final class Widget extends Widget_Base
         if ($summary === '') {
             $noun = trim((string) ($sec['section_summary_noun'] ?? ''));
             if ($noun === '') {
-                $noun = __('items', 'dcc-guest-guide');
+                // v0.26.2: a section whose items are a CHECKLIST counts steps,
+                // not items. Read off the section's own checklist_mode rather
+                // than off the word "checkout", so any list the host builds
+                // reads the same way. Measured on live: the Checkout section
+                // is in checklist mode with seven checkable items — Checkout
+                // Time, Kitchenware, Cleaning, Take Out Trash, Dirty Linens,
+                // Electronics, Key & Lock — which are steps by any reading.
+                $noun = (($sec['checklist_mode'] ?? '') === 'yes')
+                    ? __('steps', 'dcc-guest-guide')
+                    : __('items', 'dcc-guest-guide');
             }
             if ($item_count > 0) {
                 if ($item_count === 1 && substr($noun, -1) === 's') {
@@ -5459,11 +5517,19 @@ final class Widget extends Widget_Base
                 </div>
             <?php endif; ?>
             <ul class="dccgg-conditions-list">
+                <?php // v0.26.2: the value is MARKED so the conditions chunk can
+                // replace it with Open-Meteo's figure for this lat/lng. Two
+                // places on one page used to work the sun's times out
+                // separately — this card astronomically in PHP, the app
+                // shell's strip from Open-Meteo — and they disagreed by a
+                // minute or two. The computed value stays as the first paint,
+                // which also matters because this page is cached: without the
+                // replacement a cached copy shows yesterday's sunrise. ?>
                 <?php if ($c['sunrise'] !== '') : ?>
-                    <li><span class="dccgg-cond-ico">🌅</span><span class="dccgg-cond-k"><?php esc_html_e('Sunrise', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['sunrise']); ?></span></li>
+                    <li><span class="dccgg-cond-ico">🌅</span><span class="dccgg-cond-k"><?php esc_html_e('Sunrise', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v" data-dccgg-sun="sunrise"><?php echo esc_html($c['sunrise']); ?></span></li>
                 <?php endif; ?>
                 <?php if ($c['sunset'] !== '') : ?>
-                    <li><span class="dccgg-cond-ico">🌇</span><span class="dccgg-cond-k"><?php esc_html_e('Sunset', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['sunset']); ?></span></li>
+                    <li><span class="dccgg-cond-ico">🌇</span><span class="dccgg-cond-k"><?php esc_html_e('Sunset', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v" data-dccgg-sun="sunset"><?php echo esc_html($c['sunset']); ?></span></li>
                 <?php endif; ?>
                 <li><span class="dccgg-cond-ico"><?php echo esc_html($c['moon_emoji']); ?></span><span class="dccgg-cond-k"><?php esc_html_e('Moon', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['moon_name']); ?> (<?php echo (int) $c['illumination']; ?>%)</span></li>
                 <li class="dccgg-cond-weather" data-empty="<?php echo esc_attr__('Loading weather…', 'dcc-guest-guide'); ?>">

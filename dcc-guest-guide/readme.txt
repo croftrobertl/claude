@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.1
+Stable tag: 0.26.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,15 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.26.2 =
+* Hero: the live "Tavares Now" conditions now sit inside the frosted card.
+* The property's name is rendered in Title Case, so a site name stored in
+  capitals no longer shouts at guests.
+* One source for sunrise and sunset: the conditions card and the app strip
+  both read the figure the weather proxy resolves, so they cannot disagree.
+  A cached page no longer shows yesterday's sunrise.
+* A checklist section's tile counts "steps" rather than "items".
 
 = 0.26.1 =
 * The stay resolver is removed: no `?t=` token, no Guest Links page, no
