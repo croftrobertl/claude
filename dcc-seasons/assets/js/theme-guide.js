@@ -275,7 +275,7 @@
 		/* Corner accent */
 		if (accent) {
 			var as = section(T.accent, on.accent);
-			as.appendChild(item([spriteImg(accent[0], spriteName(accent[0]))], spriteName(accent[0]), T.accentNote));
+			as.appendChild(item([spriteImg(accent[0], spriteName(accent[0]))], spriteName(accent[0]), E.accentPic && E.accentPic[accent[0]] ? T.accentPicNote : T.accentNote));
 			c.appendChild(as);
 		}
 
@@ -358,6 +358,13 @@
 	var first = function (k) { return D.runs[k] && D.runs[k].length ? D.runs[k][0][0] : '9999'; };
 	keys.sort(function (a, b) { var x = first(a), y = first(b); return x < y ? -1 : x > y ? 1 : keys.indexOf(a) - keys.indexOf(b); });
 
+	/* The Preview tab (4.14.3) shows one theme's card under its frame */
+	if (root.getAttribute('data-only')) {
+		var only = root.getAttribute('data-only');
+		root.innerHTML = '';
+		if (D.labels[only]) { var one = el('div', 'dcc-guide-grid dcc-guide-one'); one.appendChild(card(only)); root.appendChild(one); }
+		return;
+	}
 	root.innerHTML = '';
 	root.appendChild(el('p', 'description dcc-guide-intro', T.intro));
 	if (!S.enabled) { root.appendChild(el('p', 'notice notice-warning inline dcc-guide-note', T.masterOff)); }

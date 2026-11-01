@@ -1,14 +1,15 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.14.2 (Christmas's wreath and
- * colors) against 4.14.1, the release that is live when it ships. (Its
- * 4.14.1 form, Christmas against 4.13.5, is at e8db5eb; the Anniversary
- * against 4.13.4 at e8bd38f; 4.13.2/4.13.3 at 4de6bb9.) Outside Christmas
- * the build is 4.14.1. Three proofs, each
- * mutation-checked at the end of the run:
+ * DCC Seasons — the Untouched test, for 4.14.3 (the Preview tab) against
+ * 4.14.2. NO theme is exempt: the preview's play buttons and its variant
+ * rotation exist only when the page's config carries them (an
+ * administrator or the check key), so every theme a guest sees must draw
+ * exactly what 4.14.2 draws. (Its 4.14.2 form, against 4.14.1, is in
+ * e721abd; 4.14.1 against 4.13.5 in e8db5eb; the Anniversary in e8bd38f.)
+ * Three proofs, each mutation-checked at the end of the run:
  *
- *  1. THEMES. Themes::themes() and subtle_defaults() for every theme but
- *     Christmas are byte-identical to 4.14.1's.
+ *  1. THEMES. Themes::themes() and subtle_defaults() for every theme are
+ *     byte-identical to 4.14.2's.
  *  2. TEXT. engine.js with Christmas's own code taken out is 4.14.1's
  *     engine.js line for line. Everything removed is named below, by
  *     marker or as the literal line; nothing is removed by "looks
@@ -26,8 +27,8 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'e8db5eb';   /* 4.14.1, Christmas on 4.13.5 (live 31 Oct) */
-const NEW = 'christmas';
+const BASE = 'e721abd';   /* 4.14.2, the wreath and the colors */
+const NEW = '';   /* 4.14.3 changes no theme */
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -86,6 +87,13 @@ function strip(src) {
     .filter(l => l !== "\t\tif (themeKey === 'christmas' && !footMode) { wrInit(); }")
     .filter(l => l !== '\t\t\tel._dccKey = key;')
     .filter(l => !/^\t\t\t\tget wreath\(\) \{/.test(l))
+    /* 4.14.3: the Preview tab's play buttons and variants, only when the
+     * config carries them; each added line named */
+    .filter(l => l !== "\t\tvar PLAY = CFG.play ? String(CFG.play) : '', playHero = PLAY.indexOf('h:') === 0 ? PLAY.slice(2) : '';")
+    .filter(l => l !== '\t\tif (playHero) { heroForced = true; heroPool = [playHero]; }')
+    .filter(l => l !== '\t\t\tif (playHero) { heroAt = vt + 3; vigAt = INF; return; }')
+    .filter(l => l !== "\t\tif (PLAY) { vigList = PLAY.indexOf('v:') === 0 && SCENES[PLAY.slice(2)] ? [PLAY.slice(2)] : []; }")
+    .filter(l => l !== '\t\t\t\tif (CFG.variants && Array.isArray(sp.s) && sp.s.length > 1) { key = sp.s[((vt / 3) | 0) % sp.s.length]; }')
     /* the debug-only getter (stripped from the shipped build) */
     .filter(l => !/^\t\t\t\tget sleigh\(\) \{/.test(l))
     /* exact in-line changes, each put back as the literal text */
@@ -95,7 +103,13 @@ function strip(src) {
       .replace(" christmas: 'bokeh',", " christmas: '',")
       .replace('witch: 1, sleigh: 1, osprey: 1 };', 'witch: 1, osprey: 1 };')
       .replace('osprey: 1 };   /* the sleigh flyer is gone since 4.14.0 */', 'osprey: 1 };')
-      .replace("} else if (h.kind === 'sleigh' || h.kind === 'manatee') {", "} else if (h.kind === 'manatee') {"))
+      .replace("} else if (h.kind === 'sleigh' || h.kind === 'manatee') {", "} else if (h.kind === 'manatee') {")
+      .replace("var sceneNow = !!CFG.sceneNow || PLAY.indexOf('v:') === 0;", 'var sceneNow = !!CFG.sceneNow;')
+      .replace("var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : (playHero ? 1 : INF),", 'var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : INF,')
+      .replace("return !!W.DCCMoments && !sceneNow && !PLAY; }", 'return !!W.DCCMoments && !sceneNow; }')
+      .replace(" && vt < FX_CAP && !playHero) { return; }", ' && vt < FX_CAP) { return; }')
+      .replace("p.sKey = Array.isArray(sp.s) ? (CFG.variants ? sp.s[(sp.rr = (sp.rr || 0) + 1) % sp.s.length] : pick(sp.s)) : sp.s;", 'p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;')
+      .replace('p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;   /* the Preview tab shows every variant in turn */', 'p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;'))
     .map(l => l.replace(/\s+$/, ''))
     .filter(l => l !== '');
 }
@@ -106,7 +120,7 @@ function textSame(newSrc, oldSrc) {
   }
   return { same: true, n: b.length };
 }
-const SAME_FILES = ['ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-crane.js', 'art-anniversary.js'];
+const SAME_FILES = ['ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-crane.js', 'art-anniversary.js', 'art-christmas.js'];
 
 /* ---- 3. pixels ---- */
 function hashes(assets, themes) {
@@ -129,18 +143,18 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme but Christmas is 4.14.1's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme is 4.14.2's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - 1} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
 
-  console.log('\n  --- 2. the text outside Christmas ---');
+  console.log('\n  --- 2. the text, outside the Preview tab\'s named lines ---');
   const tx = textSame(engNew, engOld);
-  ok(tx.same, `engine.js identical to 4.14.1 line for line (${tx.n} lines compared)`, tx.at);
+  ok(tx.same, `engine.js identical to 4.14.2 line for line (${tx.n} lines compared)`, tx.at);
   const same = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); ok(same[f] === git(`dcc-seasons/assets/js/${f}`), `${f} is byte-identical to 4.14.1`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); ok(same[f] === git(`dcc-seasons/assets/js/${f}`), `${f} is byte-identical to 4.14.2`, f); }
 
-  console.log('\n  --- 3. the pixels: every theme but Christmas, both builds ---');
+  console.log('\n  --- 3. the pixels: every theme, both builds ---');
   const now = {}, was = {};
   for (const f of fs.readdirSync(JS).filter(f => /\.js$/.test(f) && !/\.min\.js$/.test(f))) { now[f] = fs.readFileSync(path.join(JS, f), 'utf8'); }
   for (const f of ['engine.js'].concat(SAME_FILES)) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
@@ -176,6 +190,11 @@ function folder(files, drop) {
     /* the packs and the loader, byte for byte */
     const m8 = same['art-thanksgiving.js'].replace('#5E4331', '#5E4332');
     ok(m8 !== same['art-thanksgiving.js'] && m8 !== git('dcc-seasons/assets/js/art-thanksgiving.js'), "a Thanksgiving colour changed fails proof 2", 'tk');
+    /* 4.14.3: the Preview tab's variant rotation applied to every guest */
+    const m9 = engNew.replace('(CFG.variants ? sp.s[(sp.rr', '(1 ? sp.s[(sp.rr');
+    ok(m9 !== engNew && !textSame(m9, engOld).same, "the preview's variant rotation reaching guests fails proof 2", 'variants');
+    const m10 = engNew.replace("if (PLAY) { vigList = PLAY.indexOf('v:') === 0", "if (1) { vigList = PLAY.indexOf('v:') === 0");
+    ok(m10 !== engNew && !textSame(m10, engOld).same, "the preview's play list reaching guests fails proof 2", 'play');
     /* and the pixels see a sprite change on their own */
     const dm = folder(Object.assign({}, now, { 'engine.js': engNew.replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);

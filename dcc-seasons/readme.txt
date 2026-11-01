@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.14.2
+Stable tag: 4.14.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.14.3 =
+The Preview tab, for reviewing a whole theme. Nothing a guest sees changes:
+every theme draws exactly what it drew in 4.14.2, proven pixel for pixel.
+Rollback: reinstall the 4.14.2 zip.
+
+* A third tab on the Seasons page, Preview, beside Settings and the Theme
+  guide. Pick a theme (today's is chosen first) and see all of it on the
+  real home page, at 390, 768 or 1440 px wide.
+* One button shows the falling pieces, the background layer and the corner
+  accent, with every variant of a piece taking its turn (the red, gold and
+  blue ornaments all appear). One button per scene and per flyer plays
+  that one alone, about a second in, then again after it leaves. The
+  Easter Egg button opens the egg by tapping the title, as a guest does.
+* The theme's own Theme guide card sits below the frame.
+* The play buttons and the variants work only for an administrator (or
+  with the check key). A guest's page never carries them.
 
 = 4.14.2 =
 Christmas's wreath in its place, and five colors from the style test. Every

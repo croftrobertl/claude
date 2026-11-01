@@ -453,7 +453,7 @@ final class Plugin {
         if ($this->is_excluded()) {
             return false;
         }
-        if ($this->preview_theme() !== null || $this->diag_requested() || $this->scene_now()) {
+        if ($this->preview_theme() !== null || $this->diag_requested() || $this->scene_now() || $this->play() !== '') {
             return true;
         }
         return $this->in_scope();
@@ -507,6 +507,25 @@ final class Plugin {
      */
     private function scene_now(): bool {
         return isset($_GET['dcc_scene']) && $_GET['dcc_scene'] === 'now' && $this->may_preview(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    }
+
+    /**
+     * The Preview tab's play buttons (4.14.3), for an administrator or the
+     * check key only: ?dcc_play=v:<scene> plays that scene and nothing else,
+     * ?dcc_play=h:<flyer> that flyer, each at 1 s and again 3 s after it
+     * leaves. Anything else is ignored.
+     */
+    private function play(): string {
+        if (!isset($_GET['dcc_play']) || !$this->may_preview()) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return '';
+        }
+        $v = (string) wp_unslash($_GET['dcc_play']); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        return preg_match('/^[vh]:[a-z0-9_]{1,40}$/', $v) ? $v : '';
+    }
+
+    /** ?dcc_variants=1 (the Preview tab): every sprite variant in turn. */
+    private function variants(): bool {
+        return isset($_GET['dcc_variants']) && $this->may_preview(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     }
 
     /**
@@ -1079,6 +1098,8 @@ final class Plugin {
              * Gated server-side exactly like the preview flag. */
             'diag'         => $this->diag_requested(),
             'sceneNow'     => $this->scene_now(),
+            'play'         => $this->play(),
+            'variants'     => $this->variants(),
             'date'         => null,
             'i18n'        => [
                 'close'         => __('Close', 'dcc-seasons'),

@@ -51,7 +51,7 @@ function req(array $page, array $get, bool $admin = false): array {
     $load = (bool) $call('should_load');
     $cfg = $call('config', array_merge(Settings::defaults(), ['scope' => 'home']));
     $inst->no_cache_for_checks();
-    return ['load' => $load, 'now' => !empty($cfg['sceneNow']), 'preview' => $cfg['preview'], 'nocache' => $GLOBALS['NOCACHE'] > 0, 'date' => $cfg['date'] ?? null, 'themes' => array_keys($cfg['themes'])];
+    return ['load' => $load, 'now' => !empty($cfg['sceneNow']), 'preview' => $cfg['preview'], 'nocache' => $GLOBALS['NOCACHE'] > 0, 'date' => $cfg['date'] ?? null, 'themes' => array_keys($cfg['themes']), 'play' => $cfg['play'] ?? '', 'variants' => !empty($cfg['variants'])];
 }
 $HOME = ['front' => true, 'path' => '/'];
 $CONTACT = ['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'];
@@ -107,6 +107,20 @@ ok($r['date'] === '2026-11-11', 'an administrator needs no key for it', json_enc
 echo "\n=== an administrator needs no key ===\n";
 $r = req($HOME, ['dcc_scene' => 'now'], true);
 ok($r['now'] && !$r['nocache'], 'an admin gets the scene now (logged-in pages are not cached anyway)', json_encode($r));
+
+echo "\n=== the Preview tab's play buttons and variants (4.14.3) ===\n";
+$r = req($HOME, ['dcc_season' => 'christmas', 'dcc_play' => 'v:sleighmoon', 'dcc_variants' => '1']);
+ok($r['play'] === '' && !$r['variants'], 'a guest: dcc_play and dcc_variants are ignored', json_encode($r));
+$r = req($HOME, ['dcc_season' => 'christmas', 'dcc_play' => 'v:sleighmoon', 'dcc_variants' => '1'], true);
+ok($r['play'] === 'v:sleighmoon' && $r['variants'] && $r['load'], 'an administrator: the scene to play and the variants reach the config', json_encode($r));
+$r = req($HOME, ['dcc_key' => $k, 'dcc_season' => 'christmas', 'dcc_play' => 'h:heron']);
+ok($r['play'] === 'h:heron' && $r['nocache'], 'the check key: the flyer to play, and the page is not cached', json_encode($r));
+foreach (['x:heron', 'v:', 'v:<script>', 'h:heron;alert(1)', 'v:' . str_repeat('a', 41)] as $bad) {
+    $r = req($HOME, ['dcc_season' => 'christmas', 'dcc_play' => $bad], true);
+    ok($r['play'] === '', "not a scene or flyer name ('" . substr($bad, 0, 18) . "'): ignored", json_encode($r));
+}
+$r = req($SUBMIT, ['dcc_key' => $k, 'dcc_play' => 'v:sleighmoon']);
+ok(!$r['load'], '/submit-booking/ stays silent with a play button too', json_encode($r));
 
 echo "\n=== a key too short to trust is refused ===\n";
 $GLOBALS['OPTIONS'][Plugin::CHECK_KEY_OPTION] = 'short';

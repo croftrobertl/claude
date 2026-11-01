@@ -1218,6 +1218,20 @@ Rob sees it (the overlay rows; sources named on the sheets).
   band rgba(74,14,36)), and #F6F4EE for the candy cane, the hat brim and
   Santa's beard. `tools/xmas-colors-sheet.js` renders before and after.
 
+- **4.14.3: the Preview tab (Rob's Step 0, 2026-11-01).** A third tab
+  (`Theme_Guide::TAB_PREVIEW`, `render_preview()`, `assets/js/preview.js`,
+  `assets/css/preview.css`) frames the REAL home page with the admin
+  `?dcc_season=` preview at 390/768/1440, one play button per scene and
+  flyer the engine lists (`?dcc_play=v:<scene>|h:<flyer>`, `Plugin::play()`,
+  admin or check key only, pattern-checked), the egg played by tapping the
+  title in the frame, and the theme's own guide card below
+  (`#dcc-seasons-guide[data-only]`). `?dcc_variants=1` (`CFG.variants`)
+  makes a piece with variants show each in turn every 3 s at draw time, so
+  a hanging piece that never respawns still shows red, gold and blue. None
+  of it reaches a guest: `test-untouched.js` (against 4.14.2, NO theme
+  exempt) and `test-check-key.php` prove it; `tools/test-preview.js` drives
+  the real rendered admin page with the real home page in its frame.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1650,7 +1664,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the live release: 4.14.1 for 4.14.2), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.2 for 4.14.3), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

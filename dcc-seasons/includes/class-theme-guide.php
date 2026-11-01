@@ -23,20 +23,44 @@ defined('ABSPATH') || exit;
 final class Theme_Guide {
 
     public const TAB = 'guide';
+    /** The Preview tab (4.14.3): one whole theme on the real home page. */
+    public const TAB_PREVIEW = 'preview';
 
-    /** Is the Theme guide the tab being viewed? */
-    public static function is_tab(): bool {
+    private static function tab(): string {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        return isset($_GET['tab']) && sanitize_key(wp_unslash($_GET['tab'])) === self::TAB;
+        return isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
+    }
+
+    /** Is the Theme guide (or the Preview, which is built on it) being viewed? */
+    public static function is_tab(): bool {
+        return in_array(self::tab(), [self::TAB, self::TAB_PREVIEW], true);
+    }
+
+    public static function is_preview(): bool {
+        return self::tab() === self::TAB_PREVIEW;
+    }
+
+    /** The theme the Preview tab shows: the one asked for, else today's. */
+    public static function preview_key(): string {
+        $themes = Themes::themes();
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $k = isset($_GET['theme']) ? sanitize_key(wp_unslash($_GET['theme'])) : '';
+        if ($k !== '' && isset($themes[$k])) {
+            return $k;
+        }
+        $row = Schedule::active(Themes::schedule((array) Settings::options()['schedule']), current_time('Y-m-d'));
+        return $row && isset($themes[$row['theme']]) ? (string) $row['theme'] : (string) array_key_first($themes);
     }
 
     /** Settings | Theme guide tabs. */
     public static function tabs(): void {
-        $base  = admin_url('admin.php?page=' . Settings::SLUG);
-        $guide = self::is_tab();
+        $base = admin_url('admin.php?page=' . Settings::SLUG);
+        $cur  = self::is_tab() ? self::tab() : '';
         echo '<nav class="nav-tab-wrapper dcc-seasons-tabs" aria-label="' . esc_attr__('Seasons sections', 'dcc-seasons') . '">';
-        echo '<a href="' . esc_url($base) . '" class="nav-tab' . ($guide ? '' : ' nav-tab-active') . '"' . ($guide ? '' : ' aria-current="page"') . '>' . esc_html__('Settings', 'dcc-seasons') . '</a>';
-        echo '<a href="' . esc_url(add_query_arg('tab', self::TAB, $base)) . '" class="nav-tab' . ($guide ? ' nav-tab-active' : '') . '"' . ($guide ? ' aria-current="page"' : '') . '>' . esc_html__('Theme guide', 'dcc-seasons') . '</a>';
+        foreach (['' => __('Settings', 'dcc-seasons'), self::TAB => __('Theme guide', 'dcc-seasons'), self::TAB_PREVIEW => __('Preview', 'dcc-seasons')] as $t => $label) {
+            $on = $cur === $t;
+            echo '<a href="' . esc_url($t === '' ? $base : add_query_arg('tab', $t, $base)) . '" class="nav-tab' . ($on ? ' nav-tab-active' : '') . '"' . ($on ? ' aria-current="page"' : '') . '>' . esc_html($label) . '</a>';
+        }
         echo '</nav>';
     }
 
@@ -52,10 +76,18 @@ final class Theme_Guide {
         wp_enqueue_script('dcc-seasons-engine', DCC_SEASONS_URL . 'assets/js/engine' . Plugin::suffix() . '.js', $art, DCC_SEASONS_VERSION, true);
         wp_enqueue_script('dcc-seasons-guide', DCC_SEASONS_URL . 'assets/js/theme-guide.js', ['dcc-seasons-engine'], DCC_SEASONS_VERSION, true);
         wp_add_inline_script('dcc-seasons-guide', 'window.DCCSeasonsGuideData = ' . wp_json_encode(self::payload()) . ';', 'before');
+        if (self::is_preview()) {
+            wp_enqueue_style('dcc-seasons-preview', DCC_SEASONS_URL . 'assets/css/preview.css', [], DCC_SEASONS_VERSION);
+            wp_enqueue_script('dcc-seasons-preview', DCC_SEASONS_URL . 'assets/js/preview.js', ['dcc-seasons-guide'], DCC_SEASONS_VERSION, true);
+        }
     }
 
     /** The tab's markup: a container the script fills. */
     public static function render(): void {
+        if (self::is_preview()) {
+            self::render_preview();
+            return;
+        }
         echo '<div id="dcc-seasons-guide" class="dcc-guide" aria-live="polite"><p class="description">' .
             esc_html__('Loading the theme guide…', 'dcc-seasons') . '</p></div>';
         echo '<noscript><p>' . esc_html__('The theme guide draws each theme with the effects engine, which needs JavaScript.', 'dcc-seasons') . '</p></noscript>';
@@ -64,6 +96,35 @@ final class Theme_Guide {
     /** A theme's preview URL (works for logged-in administrators only). */
     public static function preview_url(string $key): string {
         return home_url('/?dcc_season=' . rawurlencode($key));
+    }
+
+    /**
+     * The Preview tab (4.14.3, Rob's Step 0): pick a theme and see all of it
+     * on the real home page — its falling pieces with every variant in turn,
+     * its background layer and corner accent, each scene and each flyer on a
+     * play button, and the easter egg — at 390, 768 or 1440, with the
+     * theme's own guide card below. The frame is the site's own front page
+     * with the administrator's ?dcc_season= preview; dcc_play and
+     * dcc_variants are honored for an administrator (or the check key) only.
+     */
+    private static function render_preview(): void {
+        $key    = self::preview_key();
+        $labels = Themes::labels();
+        $opt    = Settings::options();
+        $base   = admin_url('admin.php');
+        echo '<div id="dcc-seasons-preview" class="dcc-pv" data-theme="' . esc_attr($key) . '" data-home="' . esc_url(add_query_arg(['dcc_season' => $key, 'dcc_variants' => 1], home_url('/'))) . '"'
+            . ' data-taps="' . esc_attr((string) max(2, (int) ($opt['tap_count'] ?? 4))) . '" data-tapsel="' . esc_attr((string) ($opt['tap_selector'] ?? '')) . '">';
+        echo '<h2 class="dcc-pv-title">' . esc_html__('Preview a Whole Theme', 'dcc-seasons') . '</h2>';
+        echo '<form class="dcc-pv-pick" method="get" action="' . esc_url($base) . '">';
+        echo '<input type="hidden" name="page" value="' . esc_attr(Settings::SLUG) . '"><input type="hidden" name="tab" value="' . esc_attr(self::TAB_PREVIEW) . '">';
+        echo '<label for="dcc-pv-theme">' . esc_html__('Theme', 'dcc-seasons') . '</label> <select id="dcc-pv-theme" name="theme" onchange="this.form.submit()">';
+        foreach ($labels as $k => $label) {
+            echo '<option value="' . esc_attr((string) $k) . '"' . selected($key, (string) $k, false) . '>' . esc_html((string) $label) . '</option>';
+        }
+        echo '</select> <noscript><button class="button">' . esc_html__('Show', 'dcc-seasons') . '</button></noscript></form>';
+        echo '<div class="dcc-pv-stage"><p class="description">' . esc_html__('Loading the preview…', 'dcc-seasons') . '</p></div>';
+        echo '</div>';
+        echo '<div id="dcc-seasons-guide" class="dcc-guide" data-only="' . esc_attr($key) . '" aria-live="polite"></div>';
     }
 
     /**
@@ -125,6 +186,16 @@ final class Theme_Guide {
     private static function strings(array $opt): array {
         return [
             'notScheduled' => __('Not scheduled', 'dcc-seasons'),
+            /* the Preview tab (4.14.3) */
+            'pvWidth'      => __('Screen width', 'dcc-seasons'),
+            'pvPlay'       => __('Play', 'dcc-seasons'),
+            'pvPieces'     => __('Falling Pieces and Background', 'dcc-seasons'),
+            'pvScene'      => __('Scene', 'dcc-seasons'),
+            'pvHero'       => __('Flyer', 'dcc-seasons'),
+            'pvEgg'        => __('Easter Egg', 'dcc-seasons'),
+            'pvEggNone'    => __('The easter egg opens from the home page title, so it plays only in the home page frame.', 'dcc-seasons'),
+            'pvNote'       => __('The real home page, as a guest sees it on this theme\'s days. Every variant of a piece takes its turn, so all of them show. A scene or a flyer plays about a second after you press it, then again a few seconds after it leaves.', 'dcc-seasons'),
+            'pvOpen'       => __('Open in a new tab', 'dcc-seasons'),
             'preview'      => __('Preview this theme', 'dcc-seasons'),
             'newTab'       => __('(opens in a new tab)', 'dcc-seasons'),
             'off'          => __('Switched off in Settings', 'dcc-seasons'),
@@ -138,6 +209,7 @@ final class Theme_Guide {
             'subtle'       => __('Background layer', 'dcc-seasons'),
             'accent'       => __('Corner accent', 'dcc-seasons'),
             'accentNote'   => __('Fixed in a corner of the screen.', 'dcc-seasons'),
+            'accentPicNote' => __('In the header picture: centered under the tagline on the home page, under the page title on every other page.', 'dcc-seasons'),
             'scenes'       => __('Scenes', 'dcc-seasons'),
             /* translators: 1: first delay range in seconds, 2: repeat range in seconds */
             'sceneTiming'  => __('First scene %1$s s after the page opens. After that, scene and hero take turns: one every %2$s s, never two at once.', 'dcc-seasons'),

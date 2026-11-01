@@ -1,0 +1,13 @@
+/* DCC Seasons — the Preview tab (4.14.3). Titles centered. */
+.dcc-pv { max-width: 1480px; margin: 16px auto 24px; }
+.dcc-pv-title { text-align: center; font-size: 1.6em; margin: 8px 0 12px; }
+.dcc-pv-pick { text-align: center; margin: 0 0 12px; }
+.dcc-pv-pick label { font-weight: 600; margin-right: 6px; }
+.dcc-pv-pick select { font-size: 15px; min-width: 260px; }
+.dcc-pv-note { text-align: center; max-width: 820px; margin: 0 auto 12px; }
+.dcc-pv-seg, .dcc-pv-play { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 12px; }
+.dcc-pv-play .button, .dcc-pv-seg .button { min-height: 36px; font-size: 14px; }
+.dcc-pv-box { position: relative; overflow: hidden; margin: 0 auto; border: 1px solid #c3c4c7; border-radius: 6px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
+.dcc-pv-frame { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+.dcc-pv-open { display: block; text-align: center; margin: 8px 0 18px; }
+.dcc-guide-one { display: block; max-width: 980px; margin: 0 auto; }

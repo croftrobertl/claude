@@ -3239,7 +3239,7 @@
 			p.pop = 0;
 			p.ox = 0; p.oy = 0;
 			p.dormant = false;
-			p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;
+			p.sKey = Array.isArray(sp.s) ? (CFG.variants ? sp.s[(sp.rr = (sp.rr || 0) + 1) % sp.s.length] : pick(sp.s)) : sp.s;   /* the Preview tab shows every variant in turn */
 			p.shim = (rand() * 2) | 0;
 			p.trail = null;
 			/* Depth layer: FAR = 60% scale, 50% speed, 60% opacity. Only
@@ -3758,6 +3758,8 @@
 				cx.fillText(sp.g, 0, 0);
 			} else if (sp.kind === 's') {
 				var key = p.sKey;
+				/* the Preview tab: a piece with variants shows each in turn, every 3 s, so a hanging one that never respawns still shows them all */
+				if (CFG.variants && Array.isArray(sp.s) && sp.s.length > 1) { key = sp.s[((vt / 3) | 0) % sp.s.length]; }
 				if (sp.def.fx === 'letter') { key = p.y > vh * 0.5 ? 'letter1' : 'letter0'; }
 				if (sp.def.glow) { /* jack-o'-lantern flicker glow */
 					var fl = 0.3 + 0.15 * sin(p.ph * 7) + (evening ? 0.12 : 0);
@@ -4211,6 +4213,12 @@
 		if (A.hero) { heroPool.push(A.hero); }
 		var heroForced = !!(DEBUG && CFG.heroOnly);
 		if (heroForced) { heroPool = [CFG.heroOnly]; }   /* the suites force one hero */
+		/* The Preview tab's play buttons (4.14.3; CFG.play is set server-side
+		 * only for an administrator or the check key): 'v:<scene>' plays that
+		 * scene and nothing else, 'h:<flyer>' that flyer, each at 1 s and
+		 * again 3 s after it leaves. */
+		var PLAY = CFG.play ? String(CFG.play) : '', playHero = PLAY.indexOf('h:') === 0 ? PLAY.slice(2) : '';
+		if (playHero) { heroForced = true; heroPool = [playHero]; }
 		/* 4.12.0 (Rob): the Hero Effects mu-plugin carries its own copy of the
 		 * 4.9.0 heron (3.16.2). Where its heron is on it says so with
 		 * window.DCCHeroFx.heron === true, and ours stands down — read at
@@ -4424,7 +4432,7 @@
 			return rnd(EVERY[0], EVERY[1]);
 		}
 		var heroFirst = (DEBUG && CFG.heroFirst) || null;
-		var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : INF, heroCount = 0, heroLive = false;
+		var heroAt = heroFirst ? rnd(heroFirst[0], heroFirst[1]) : (playHero ? 1 : INF), heroCount = 0, heroLive = false;
 		/* First page: the flyer's turn comes when the first scene ends. Under
 		 * the moments queue there is no first-page rule and the question is
 		 * never asked (reading it writes the visit key). */
@@ -4465,8 +4473,8 @@
 		/* ?dcc_scene=now (4.13.2, the Director's check link, key-gated in
 		 * PHP): the scene at 1 s and again 3 s after each one ends, outside
 		 * the moments queue, which then skips us (momReady). */
-		var sceneNow = !!CFG.sceneNow;
-		function momentsOn() { return !!W.DCCMoments && !sceneNow; }
+		var sceneNow = !!CFG.sceneNow || PLAY.indexOf('v:') === 0;
+		function momentsOn() { return !!W.DCCMoments && !sceneNow && !PLAY; }
 		function momReady() {
 			/* cheap and without side effects: it is asked every turn */
 			return !!(cv && !sceneNow && !reduced() && (canVig() || canHero()));
@@ -4617,6 +4625,7 @@
 			/* The queue decides what comes next, and when (4.12.0). */
 			if (momentsOn()) { heroAt = INF; vigAt = INF; heroAfterScene = false; return; }
 			if (sceneNow && canVig()) { vigAt = vt + 3; heroAt = INF; return; }
+			if (playHero) { heroAt = vt + 3; vigAt = INF; return; }
 			/* The first scene of a visit's first page hands straight over to
 			 * the flyer, a breath after it leaves. */
 			if (kind === 'vig' && heroAfterScene) {
@@ -4641,7 +4650,7 @@
 				/* the queue starts flyers through play(), never this path */
 				if (momentsOn()) { heroAt = INF; return; }
 				watchHeroFx();
-				if (heroFxState() === 'busy' && vt < FX_CAP) { return; }
+				if (heroFxState() === 'busy' && vt < FX_CAP && !playHero) { return; }
 				var at = heroAt;
 				if (!heroCount && fxDoneAt >= 0) { at = mx2(at, fxDoneAt + 2); }
 				if (vt < at) { return; }
@@ -7151,6 +7160,7 @@
 		};
 		var vigList = (FX.vig && VIGS[themeKey]) ? VIGS[themeKey].slice() : [];
 		if (DEBUG && CFG.vigOnly) { vigList = [CFG.vigOnly]; }   /* the suites force one scene */
+		if (PLAY) { vigList = PLAY.indexOf('v:') === 0 && SCENES[PLAY.slice(2)] ? [PLAY.slice(2)] : []; }
 		if (FX.vig && evening && EVENING_VIGS[themeKey]) { vigList = vigList.concat(EVENING_VIGS[themeKey]); }
 		/* no header picture: no sky scene (4.10.7) */
 		if (!skyPic) { vigList = vigList.filter(function (n) { return !SKY_VIG[n]; }); }
@@ -7865,7 +7875,8 @@
 
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
-		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, vigs: VIGS, eveningVigs: EVENING_VIGS,
+		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, accentPic: { wreath: 1 },   /* 4.14.2: placed in the header picture (wrPlace), not a corner */
+		 vigs: VIGS, eveningVigs: EVENING_VIGS,
 		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, artDraw: ART_DRAW, tk: TKM, crane: ART.crane || null, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, witch: { body: witchBody, cape: witchCape, hair: witchHair, still: witchStill, box: WITCH_BOX, capeAt: WITCH_CAPE, hairAt: WITCH_HAIR }, moon: moonPaint, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
 		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
 	} };

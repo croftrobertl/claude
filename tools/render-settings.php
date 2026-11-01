@@ -8,7 +8,7 @@
  * the actual markup. It is not WP-admin: there is no admin chrome or
  * common.css, only the plugin's own styles on a WP-like base.
  *
- * Usage: php tools/render-settings.php [--tab=settings|guide] [--opt=json-file]
+ * Usage: php tools/render-settings.php [--tab=settings|guide|preview] [--theme=key] [--opt=json-file]
  *        [--assets-url=file:///…/dcc-seasons/]
  */
 define('ABSPATH', 1);
@@ -20,6 +20,7 @@ define('DCC_SEASONS_URL', $args['assets-url'] ?? ('file://' . $ROOT . '/'));
 define('DCC_SEASONS_FILE', $ROOT . '/dcc-seasons.php');
 $_GET['page'] = 'dcc-seasons';
 if (($args['tab'] ?? '') !== '') { $_GET['tab'] = $args['tab']; }
+if (($args['theme'] ?? '') !== '') { $_GET['theme'] = $args['theme']; }   /* the Preview tab's theme (4.14.3) */
 $GLOBALS['OPTIONS'] = [];
 if (!empty($args['opt'])) { $GLOBALS['OPTIONS']['dcc_seasons_options'] = json_decode(file_get_contents($args['opt']), true); }
 $GLOBALS['ENQ'] = ['style' => [], 'script' => [], 'inline' => []];
