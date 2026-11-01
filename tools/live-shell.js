@@ -129,9 +129,24 @@ async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1
     return { ctx, page, errors };
 }
 
-const WX = { current: { temperature_2m: 76.1, wind_speed_10m: 10.4 },
-    daily: { sunset: [new Date(Date.now() - 864e5).toISOString().slice(0, 10) + 'T18:42',
-        new Date().toISOString().slice(0, 10) + 'T18:41'] } };
+/**
+ * What the weather proxy returns. `sunToday` is resolved SERVER-side since
+ * v0.26.2 — see Plugin::with_sun_today() — and both the app strip and the
+ * Conditions card read it, so a mock without it shows no sunset at all.
+ * That is exactly how the first 0.26.2 still came out, before this was fixed.
+ */
+const WX = {
+    current: { temperature_2m: 76.1, wind_speed_10m: 10.4 },
+    daily: {
+        time: [new Date(Date.now() - 864e5).toISOString().slice(0, 10),
+            new Date().toISOString().slice(0, 10)],
+        sunrise: [new Date(Date.now() - 864e5).toISOString().slice(0, 10) + 'T07:38',
+            new Date().toISOString().slice(0, 10) + 'T07:39'],
+        sunset: [new Date(Date.now() - 864e5).toISOString().slice(0, 10) + 'T18:42',
+            new Date().toISOString().slice(0, 10) + 'T18:41'],
+    },
+    sunToday: { sunrise: '07:39', sunset: '18:41' },
+};
 
 module.exports = { openLive, markup, WIDGET_SEL, CSS, JS, WX };
 
