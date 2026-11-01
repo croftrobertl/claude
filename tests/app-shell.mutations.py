@@ -158,9 +158,14 @@ MUTANTS = [
      ""),
     ('the hub stops being a query container', CSS,
      "    container-type: inline-size;\n    container-name: dccgg-hub;", ""),
+    # The real shape of the v0.26.0 bug: initAll() called from where the
+    # bootstrap used to sit, which is before `const liveRoots` exists.
     ('the bootstrap runs before its own declarations again', 'assets/js/widget.js',
-     "    // -- Bootstrap, LAST, after every declaration above --------------------",
-     "    if (false) { /* moved */ }\n    // -- Bootstrap, LAST, after every declaration above --------------------"),
+     "    // v0.12.0: Elementor renders widgets in the editor preview via AJAX and\n"
+     "    // swaps the DOM on every setting change — long after DOMContentLoaded —",
+     "    initAll();\n"
+     "    // v0.12.0: Elementor renders widgets in the editor preview via AJAX and\n"
+     "    // swaps the DOM on every setting change — long after DOMContentLoaded —"),
 ]
 
 EQUIVALENT = [

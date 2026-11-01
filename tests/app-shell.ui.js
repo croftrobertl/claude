@@ -102,7 +102,7 @@ const check = (name, cond, detail) => {
      */
     const open = async ({
         markup = 'app', now = MIDSTAY, tz = 'Asia/Tokyo', query = '',
-        weather = WEATHER, width = 390, height = 844,
+        weather = WEATHER, width = 390, height = 844, extraCss = '',
     } = {}) => {
         const ctx = await browser.newContext({ viewport: { width, height },
             isMobile: width < 700, hasTouch: width < 700, timezoneId: tz });
@@ -125,6 +125,7 @@ const check = (name, cond, detail) => {
         await page.route('https://dccgg.test/g**', (r) =>
             r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(MARKUP[markup]) }));
         await page.goto('https://dccgg.test/g' + query, { waitUntil: 'load' });
+        if (extraCss) { await page.addStyleTag({ content: extraCss }); }
         await page.waitForTimeout(700);
         // Playwright's pointer stays where it last clicked, so a later read
         // would be a :hover read. Park it out of the way first.
@@ -221,6 +222,15 @@ const check = (name, cond, detail) => {
         check('…over several rows, so nothing is hidden', rows >= 4, 'rows=' + rows);
         const tile = await box(v.page, '.dccgg-tile');
         check('a tile is a generous target', tile.h >= 100 && tile.w >= 150, JSON.stringify(tile));
+        // The kit's `button { border-width: 0 }` is (0,1,1) and strips the
+        // border `.dccgg-tile` draws, which on a white page leaves a white
+        // card with no edge — "flat icons with no card", as staging showed.
+        const edge = await v.page.$eval('.dccgg-tile', (e) => {
+            const cs = getComputedStyle(e);
+            return { w: parseFloat(cs.borderTopWidth), c: cs.borderTopColor };
+        });
+        check('…and it has a visible card edge, which the kit tries to strip',
+            edge.w >= 1 && !/rgba\(0, 0, 0, 0\)|transparent/.test(edge.c), JSON.stringify(edge));
         const labels = await v.page.$$eval('.dccgg-app-tab-label', (els) =>
             els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
         check('every tab label is at least 14px', labels.length > 1 && labels.every((s) => s >= 14),
@@ -274,6 +284,28 @@ const check = (name, cond, detail) => {
             await v.page.$eval('.dccgg-detail[data-key="internet"] .dccgg-detail-header',
                 (e) => getComputedStyle(e, '::before').content) === 'none');
         await shut(v);
+    }
+
+    console.log('\nC2. The column count follows the container, not the viewport');
+    {
+        // Rob's pick caps the shell at 460px, so in practice the hub is always
+        // two up — but the thing he asked for is that the COUNT follow the
+        // container, and that only shows when the container is wide inside a
+        // narrow window and narrow inside a wide one. Both, measured.
+        const perRow = async (page) => page.$$eval('.dccgg-tile-wrap', (els) => {
+            const top = Math.round(els[0].getBoundingClientRect().top);
+            return els.filter((e) => Math.round(e.getBoundingClientRect().top) === top).length;
+        });
+        const wide = await open({ width: 1440, height: 900,
+            extraCss: '.dccgg-root.dccgg-root.dccgg-app-shell{max-width:1100px}' });
+        check('a wide hub goes to four across inside the same 1440 window',
+            await perRow(wide.page) === 4, 'perRow=' + await perRow(wide.page));
+        await shut(wide);
+        const narrow = await open({ width: 1440, height: 900,
+            extraCss: '.dccgg-root.dccgg-root.dccgg-app-shell{max-width:420px}' });
+        check('…and a narrow one stays two, in that same window',
+            await perRow(narrow.page) === 2, 'perRow=' + await perRow(narrow.page));
+        await shut(narrow);
     }
 
     console.log('\nD. The tab bar');
