@@ -1980,24 +1980,9 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
     font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
   .dcc-gal-scrub button:hover, .dcc-gal-scrub button:focus-visible { color: var(--dcc-tour-primary); outline: none; }
 }
-/* Map on phones: one screen tall. The controls keep every option but tighten into three short rows;
-   the map takes the rest of the screen above the dock */
+/* Map on phones: unchanged, except it clears the notch now the header is gone (the dock replaced it) */
 @media (max-width: 800px) {
-  .dcc-tour-root[data-view="map"] .dcc-tour-mapmode { display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;
-    height: calc(100vh - 92px - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 92px - env(safe-area-inset-bottom, 0px));
-    padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 0; }
-  .dcc-tour-mapmode > * { flex: none; }
-  .dcc-tour-mm-bar { gap: 6px; margin-bottom: 6px; }
-  .dcc-tour-mm-colorby .mm-cb-lab { display: none; }
-  .dcc-tour-mm-colorby .mm-cb:first-of-type { border-left: 0; }
-  .mm-cb { padding: 6px 9px; font-size: 0.78rem; min-height: 34px; }
-  .dcc-tour-mm-layers .facet-btn { min-height: 34px; padding: 4px 12px; font-size: 0.82rem; }
-  .dcc-tour-mm-stats { display: none; }
-  .dcc-tour-mm-play { margin: 0 0 6px; gap: 8px; }
-  .mm-spd { padding: 5px 8px; min-height: 30px; }
-  .dcc-tour-mm-legend { margin-bottom: 4px; }
-  .dcc-tour-mapmode > .dcc-tour-mm-wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  .dcc-tour-mm-wrap > .dcc-tour-mm-map { flex: 1 1 auto; height: auto; min-height: 0; }
+  .dcc-tour-root[data-view="map"] .dcc-tour-mapmode { padding-top: env(safe-area-inset-top, 0px); }
 }
 /* Stats on phones: the totals as an entry ticket */
 .dcc-tour-ticket { display: none; }
