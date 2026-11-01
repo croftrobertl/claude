@@ -1,7 +1,7 @@
 <h1 align="center">Seasons Style Bible</h1>
 
-<p align="center">Drawn from the three approved pieces: the heron (4.9.0), the witch (4.10.x) and the tom (4.13.2).<br>
-Every value below is read from their painters' code. New and redrawn art is checked against this page.</p>
+<p align="center">Version 2 (2026-11-01), for Rob's OK before the grand pass. Matched to the approved animals: the heron (4.9.0), the tom (4.13.2), the Christmas flamingo (4.14.0) and the sandhill cranes (4.13.5); the witch (4.10.x) is approved too and is quoted where she sets a rule.<br>
+Every value below is read from their painters' code. Every drawing in the grand pass is checked against this page.</p>
 
 <h2 align="center">The House Look in One Line</h2>
 
@@ -37,7 +37,7 @@ step quieter than life so it sits in the photograph instead of on top of it.
   silhouette while it crosses the disc. A colored rim keeps it readable
   (see 3).
 
-<h2 align="center">2. Outline Policy</h2>
+<h2 align="center">2. Line Weight and Outlines</h2>
 
 - **No outline around the whole figure.** None of the three is stroked round
   its silhouette. The shape is made by the fill and by the value change
@@ -63,7 +63,10 @@ step quieter than life so it sits in the photograph instead of on top of it.
   black.**
   - heron: slate `#7F95AE` → `#5D6B7C`;
   - witch: purple-black `#2A2236` → `#1E1928`;
-  - tom: warm brown-black.
+  - tom: warm brown-black;
+  - flamingo: deep rose `#D64A86` under `#FFA8C8`;
+  - crane: cool slate `rgba(52,60,76,…)` over the grey `#63666B`, with a
+    rim `rgba(226,230,232,…)` on the edge away from the light.
 - **Ambient occlusion where parts meet** is a soft drop shadow under the part
   on top, offset toward the side away from the light:
   - tom fan: `rgba(12,6,2,.45)`, blur 1.6 u, offset 0.4 u;
@@ -78,11 +81,11 @@ step quieter than life so it sits in the photograph instead of on top of it.
 - **The lightest value is never pure white.**
   - Lightest values in use: `#F6F4EE` (heron face), `#F1F0F3` (tom crown),
     `#E6CDA4` (fan tips).
-- **Contact shadow: required for new art on ground.** None of the three
-  approved pieces draws one (the heron's flights never touch the ground; the
-  tom's feet have none). They are not reopened. Every new piece that stands
-  on ground has a soft ellipse under its feet, in the ground's color made
-  darker, at 35-50% alpha.
+- **Contact shadow: required for new art on ground.** The cranes are the
+  model: a soft ellipse wider than the feet, `rgba(22,30,28,.42)`, fading
+  as the bird rises off the ground. The heron, witch and tom draw none and
+  are not reopened. Every new piece that stands on ground has one, in the
+  ground's color made darker, at 35-50% alpha.
 - **On water: nothing, or the same soft darkened ellipse, kept subtle.**
   Never a reflection or a ripple. Rob's standing rule is no imitation water
   effects on the canal or any site photo. Art that is clearly drawn on top
@@ -111,10 +114,14 @@ step quieter than life so it sits in the photograph instead of on top of it.
   - heron slate: `#7F95AE` `#62788F` `#86A0BA`;
   - heron rust: `#8E4A2A` `#A75C36`;
   - tom bronze and copper edges: `#8E6440` `#86603E`;
-  - tom fan: `#5E4331` with buff tips `#A9744A` → `#E6CDA4`.
+  - tom fan: `#5E4331` with buff tips `#A9744A` → `#E6CDA4`;
+  - flamingo pink: `#FFB8D2` → `#EC6AA0`, deepest `#D64A86`;
+  - crane grey: `#63666B`, coverts `#857E78`, flight feathers `#5E5550` →
+    tips `#2A2523`, rust staining `rgb(168,108,62)`.
 - **Bright color only where the animal really has it, and small:**
   - heron bill and eye: `#E2B23E` / `#F2C230`;
   - tom wattle and face: `#D52B3D` / `#4F72D2`;
+  - crane crown: `#C9414A` → `#7E1C25`;
   - the witch's purple band and gold buckle: `#9C36B5` / `#E2B23E`.
 
   These are accents, a few percent of the figure's area.
@@ -126,7 +133,30 @@ step quieter than life so it sits in the photograph instead of on top of it.
 - **Shared gold.** `#E2B23E` is the house gold. It is the heron's bill, the
   witch's buckle and the moon-lit details. Reuse it before inventing another.
 
-<h2 align="center">6. How Detail Scales With Size</h2>
+<h2 align="center">6. Eye Detail</h2>
+
+The eye is what makes an animal read as alive, and it is the first thing
+the 50% overlay checks.
+
+| Animal | Iris | Pupil | Highlight |
+|---|---|---|---|
+| Heron | `#F2C230`, r 1.05 | `#111`, 48% of the iris, set a hair forward | none |
+| Crane | `#C9681E` (orange-red) | `#1E1C1B`, 45% of the iris | none |
+| Flamingo | the pink eye patch `#F783AC` | `#1A1A1A`, r .85 | `#FFF`, r .3, upper left |
+| Poult | pale eye ring `rgba(214,180,130,.8)` | `#120C0A` | none |
+
+For every new animal and fish:
+- **the iris in the species' true color**, sampled from the photo (a
+  largemouth bass: gold);
+- **a pupil at 45-50% of the iris radius**, near-black in the subject's
+  own darkest tone, never `#000`;
+- **the eye placed exactly on the photo's eye** in the overlay;
+- **a highlight only where the eye is big enough to hold one** (about 3
+  px or more at guest size), small, on the key light's side, and no
+  brighter than `#F6F4EE`. The flamingo's pure-white glint is approved and
+  not reopened; new art does not copy it.
+
+<h2 align="center">7. How Detail Scales With Size</h2>
 
 | Size on screen | What is drawn | Example |
 |---|---|---|
@@ -146,7 +176,9 @@ step quieter than life so it sits in the photograph instead of on top of it.
 
 <h2 align="center">Using This Page</h2>
 
-The Art Standards' **style test** checks new art against sections 1-6 and
-against the three pieces side by side, at the same scale. Report a pass or a
-fail per section, one line each. The test passes only if all six pass and
-the piece looks like the same artist drew all three.
+The Art Standards' **style test** checks new art against sections 1-7 and
+against the heron, the tom, the flamingo and the crane side by side, at the
+same scale. Report a pass or a fail per section, one line each. The test
+passes only if all seven pass and the piece looks like the same artist drew
+all four. A piece that fails is fixed before it ships, never sent below the
+bar.
