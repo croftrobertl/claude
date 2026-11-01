@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v115';
+const CACHE_VERSION = 'dcc-tour-v116';
 const SHELL = [
   './',
   'index.html',
@@ -11,6 +11,7 @@ const SHELL = [
   'bundle.css',
   'trip.json',
   'manifest.webmanifest',
+  'data/covers.json',     // the family's pick of each day's cover photo
   'track.json',          // the GPS track: the "Then" overlay's border crossings work offline
   'icons/favicon-32.png',
   'icons/favicon-96.png',

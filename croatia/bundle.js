@@ -14,7 +14,7 @@
   if (!root) { console.warn('[dcc-tour] no mount element'); return; }
 
   let map = null;
-  let DATA = null, curDay = 0;
+  let DATA = null, curDay = 0, DAY_COVERS = {};
   let viewerItems = [], viewerIdx = -1;   // unified list of ALL media (photos+videos+clips) in the active view
   const markersByPlace = {};
 
@@ -172,8 +172,11 @@
     root.querySelectorAll('.dcc-tour-idx-chips').forEach(el => enhanceHScroll(el, el.closest('.dcc-tour-places-index') || el));
   }
 
-  fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
+  // the family's own pick of each day's cover photo (data/covers.json); the site still works without it
+  const coversReq = fetch(baseURL + 'data/covers.json').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  Promise.all([fetch(baseURL + 'trip.json').then(r => r.json()), coversReq]).then(([data, cv]) => {
     DATA = data;
+    DAY_COVERS = (cv && cv.covers) || {};
     // stamp each media item with its day's date so the viewer caption can show it
     (DATA.days || []).forEach(d => (d.places || []).forEach(p => (p.items || []).forEach(it => {
       it._date = d.date; it._dlabel = dDate(d);
@@ -4093,6 +4096,7 @@
   // a representative "cover" thumbnail for a day (middle shot of its biggest place)
   // the picture a day's cover shows on a phone: the middle photo of its most-photographed place
   function coverFull(day) {
+    if (DAY_COVERS[day.date]) return resolveUrl(DAY_COVERS[day.date]);
     let best = null, bestN = -1;
     (day.places || []).forEach(p => { const imgs = p.items.filter(it => it.kind !== 'video' && it.kind !== 'clip' && (it.full || it.src)); if (imgs.length > bestN) { bestN = imgs.length; best = imgs; } });
     if (!best || !best.length) return coverSrc(day);

@@ -1,0 +1,23 @@
+{
+ "_about": "The cover photo that opens each day on phones, picked by the family (1 November 2026). Keyed by date; each value is the photo's own file, so trip.json is never changed. A day not listed falls back to the automatic cover.",
+ "covers": {
+  "2025-09-10": "media/unbucketed/EB316B5F-1180-5C69-8865-BCCFA7FB28A2-full.jpg",
+  "2025-09-11": "media/unbucketed/2567A2F8-72E6-5E54-B056-31FDBEBAB891-full.jpg",
+  "2025-09-12": "media/dubrovnik-old-town/D8EBBBE6-DDDE-4DE0-BB27-022C8AE05D0B-full.jpg",
+  "2025-09-13": "media/dubrovnik-old-town/30C9D034-9360-443E-B47F-F22CF63D31CF-full.jpg",
+  "2025-09-14": "media/dubrovnik-old-town/4D03E09E-42BA-4D6D-8F9E-7A145DDCA043-full.jpg",
+  "2025-09-15": "media/dubrovnik-old-town/068ED9F7-A9BA-4089-81E4-1A3D19A88DF3-full.jpg",
+  "2025-09-16": "media/dubrovnik-old-town/C9B8A8D4-1195-4FB4-A685-3A37E8915C24-full.jpg",
+  "2025-09-17": "media/cavtat/B65452FA-8746-4A3D-8C99-0EE14ACD55D6-full.jpg",
+  "2025-09-18": "media/cavtat/88ED833E-C057-4FA8-962A-91A6E650BC23-full.jpg",
+  "2025-09-19": "media/dubrovnik-old-town/3E3FC181-1B24-4FB7-A0E5-B6DEF70C9AE3-full.jpg",
+  "2025-09-20": "media/elaphiti/FC224183-9DEF-4F2E-94BA-0EC8BCD9B209-full.jpg",
+  "2025-09-21": "media/unbucketed/F72AA184-6EDE-5976-B471-2602B5FA5DDA-full.jpg",
+  "2025-09-22": "media/cavtat/8FF6C503-74AF-42B2-931D-C7F5403985A2-full.jpg",
+  "2025-09-23": "media/unbucketed/419E335F-F347-590B-A3FD-CAEECFE08570-full.jpg",
+  "2025-09-24": "media/unbucketed/9EC32B4E-8D4E-5018-9BEE-2D150708F581-full.jpg",
+  "2025-09-25": "media/dubrovnik-old-town/840C8F2C-6986-418A-8CB5-46BD385B2DE3-full.jpg",
+  "2025-09-26": "media/dubrovnik-old-town/F448B30F-2D29-4BCB-AF89-E9B4AB975267-full.jpg",
+  "2025-09-27": "media/dbv-airport/ED962123-C82A-4727-BE48-8858D7ACD62D-full.jpg"
+ }
+}
