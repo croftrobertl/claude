@@ -64,6 +64,65 @@ final class Property
     }
 
     /**
+     * Add today's sunrise and sunset to a weather payload, as `sunToday`.
+     *
+     * It lives on Property rather than on Plugin because it is a fact about
+     * the property's DAY, and because it is a pure function worth testing by
+     * running it: on Plugin the render harness's own stub of that class made
+     * the test skip itself silently, which is how the timezone rule survived
+     * a mutation run.
+     *
+     * v0.26.2. Two things on a guide used to work out the sun's times
+     * independently — the app shell's "Tavares Now" strip read Open-Meteo's
+     * daily array, and the Conditions card computed them astronomically in
+     * PHP — and the two disagreed by a minute or two on the same page. They
+     * now read ONE value, resolved here, from the source that is right for
+     * this lat/lng.
+     *
+     * Resolved at SEND time rather than before the cache is written: the
+     * payload lives for thirty minutes and a window that straddles midnight
+     * would otherwise serve yesterday's row until it expired.
+     *
+     * Picked by DATE, never by position. `past_days=1` is in the request, so
+     * index 0 is yesterday — and Open-Meteo returns `daily.time`, which is
+     * already in the cottage's own timezone because the request says
+     * `timezone=auto`. That is also the timezone "today" has to be read in:
+     * the server's clock is not the property's.
+     */
+    public static function sun_today(array $data): array
+    {
+        $daily = isset($data['daily']) && is_array($data['daily']) ? $data['daily'] : [];
+        $times = isset($daily['time']) && is_array($daily['time']) ? $daily['time'] : [];
+        if (!$times) {
+            return $data;
+        }
+        $tz_name = isset($data['timezone']) && is_string($data['timezone']) ? $data['timezone'] : '';
+        try {
+            $tz = new \DateTimeZone($tz_name !== '' ? $tz_name : 'UTC');
+        } catch (\Throwable $e) {
+            $tz = new \DateTimeZone('UTC');
+        }
+        $today = (new \DateTimeImmutable('now', $tz))->format('Y-m-d');
+        $idx = array_search($today, $times, true);
+        if ($idx === false) {
+            return $data;
+        }
+        $clock = static function ($v) {
+            // Open-Meteo gives "2026-11-01T18:41"; the clock is the last five.
+            return (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/', $v, $m)) ? $m[1] : '';
+        };
+        $sun = [
+            'sunrise' => $clock($daily['sunrise'][$idx] ?? null),
+            'sunset'  => $clock($daily['sunset'][$idx] ?? null),
+        ];
+        if ($sun['sunrise'] === '' && $sun['sunset'] === '') {
+            return $data;
+        }
+        $data['sunToday'] = $sun;
+        return $data;
+    }
+
+    /**
      * Drop the secret v0.26.0 created, once, in wp-admin.
      *
      * This plugin writes nothing on install, activation or upgrade, and that

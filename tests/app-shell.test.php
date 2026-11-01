@@ -142,8 +142,10 @@ foreach (['', '11', '25:00', '11:60', 'eleven', '11:0', '1100'] as $bad) {
 check('MotoPress is asked first, the option second, and nothing third',
     strpos($propPhp, 'getCheckInTime') !== false
     && strpos($propPhp, 'get_option($option') !== false);
+// Both sources, by the clock pattern itself rather than by counting every
+// preg_match in the file — sun_today() has one of its own now.
 check('a malformed time from either source is discarded, not shown',
-    substr_count($propPhp, 'preg_match(') === 2);
+    substr_count($propPhp, "([01]?\\d|2[0-3]):[0-5]\\d") === 2);
 
 echo "\nC2. Working with nothing configured\n";
 
@@ -223,14 +225,45 @@ check('…and is not also left standing on its own below the hero',
 
 // ONE sun. Two places used to work it out separately.
 check('the server resolves today\'s sun times for everyone',
-    strpos($plugin, 'function with_sun_today') !== false
-    && strpos($plugin, "\$data['sunToday'] = \$sun;") !== false);
+    strpos($propPhp, 'function sun_today') !== false
+    && strpos($propPhp, "\$data['sunToday'] = \$sun;") !== false);
 check('…picking the row by DATE, never by position',
-    strpos($plugin, "array_search(\$today, \$times, true)") !== false);
+    strpos($propPhp, "array_search(\$today, \$times, true)") !== false);
 check('…in the cottage\'s timezone, not the server\'s',
-    strpos($plugin, "\$data['timezone']") !== false);
+    strpos($propPhp, "\$data['timezone']") !== false);
 check('…and at send time, so a cache across midnight cannot serve yesterday',
-    substr_count($plugin, 'with_sun_today(') === 3);
+    substr_count($plugin, 'sun_today(') === 2
+    && substr_count($propPhp, 'function sun_today') === 1);
+
+// Run it, rather than only reading it — and with no guard, because a guard
+// is how this very rule survived a mutation run: it lived on Plugin, the
+// render harness stubs that class, and the whole block skipped in silence.
+$far  = (new DateTimeImmutable('now', new DateTimeZone('Pacific/Kiritimati')))->format('Y-m-d');
+$near = (new DateTimeImmutable('now', new DateTimeZone('Pacific/Niue')))->format('Y-m-d');
+check('the two probe zones are on different days — 25 hours apart, always',
+    $far !== $near, "$far vs $near");
+$payload = static fn(string $tz) => [
+    'timezone' => $tz,
+    'daily' => [
+        'time'    => [$near, $far],
+        'sunrise' => [$near . 'T05:00', $far . 'T06:00'],
+        'sunset'  => [$near . 'T17:00', $far . 'T18:00'],
+    ],
+];
+$a = \DCCGG\Property::sun_today($payload('Pacific/Kiritimati'));
+$b = \DCCGG\Property::sun_today($payload('Pacific/Niue'));
+check('today is read in the payload\'s own timezone, not this machine\'s',
+    ($a['sunToday']['sunset'] ?? '') === '18:00'
+    && ($b['sunToday']['sunset'] ?? '') === '17:00',
+    json_encode([$a['sunToday'] ?? null, $b['sunToday'] ?? null]));
+check('…and the row is found by date, not by sitting at index 0',
+    ($a['sunToday']['sunrise'] ?? '') === '06:00');
+$none = \DCCGG\Property::sun_today(['timezone' => 'Pacific/Niue',
+    'daily' => ['time' => ['1999-01-01'], 'sunset' => ['1999-01-01T17:00']]]);
+check('a payload with no row for today gains nothing rather than a wrong one',
+    !isset($none['sunToday']));
+check('a payload with no daily block is returned untouched',
+    \DCCGG\Property::sun_today(['current' => []]) === ['current' => []]);
 check('the conditions card reads it rather than its own calculation',
     strpos($jsCond, 'sunToday') !== false
     && strpos($widget, 'data-dccgg-sun="sunset"') !== false);

@@ -91,7 +91,12 @@ namespace {
         'home_url' => fn($p = '') => 'https://example.test' . $p, 'get_permalink' => fn($id = 0) => 'https://example.test/explore/',
         'get_the_ID' => fn() => 4645, 'get_queried_object_id' => fn() => 4645,
         'wp_create_nonce' => fn($a = '') => 'nonce123', 'is_user_logged_in' => fn() => false,
-        'current_user_can' => fn($c) => false, 'get_bloginfo' => fn($k = '') => 'Dora Canal Court',
+        'current_user_can' => fn($c) => false,
+        // v0.26.2: the name AS THE SITE STORES IT. doracanalcourt.com has it
+        // in capitals, which is why the hero read "Welcome to DORA CANAL
+        // COURT". A stub holding the tidy version let the Title Case work
+        // pass whether or not it ran.
+        'get_bloginfo' => fn($k = '') => 'DORA CANAL COURT',
         'wp_enqueue_style' => fn(...$a) => null, 'wp_enqueue_script' => fn(...$a) => null,
         'wp_style_is' => fn(...$a) => true, 'wp_script_is' => fn(...$a) => true,
         'get_option' => fn($k, $d = false) => $GLOBALS['options'][$k] ?? $d,
