@@ -1111,6 +1111,29 @@ again**. Build checks: Untouched (mutation-checked), the 8 ms frame bar,
 reduced motion, `/submit-booking/` zero requests, three widths on the real
 page, and a key-gated check link that forces 11 Nov on staging.
 
+**Rob's answers on the full-year plan (the Director, 2026-11-01; 4.14.3 is
+LIVE).**
+- **Holidays ship first**: Thanksgiving's and Christmas's corrections go out
+  as their own release on top of 4.14.3, as fast as the standard allows;
+  every other theme follows in the full pass. Same review format: contact
+  sheets, 6-second clips at 390, numbered options.
+- **STYLE-BIBLE.md v2 is APPROVED.** Every drawing in both releases is held
+  to it.
+- **Size caps (replace "not past 4.14.1's 195,413"):** engine.min.js no more
+  than 200,000 bytes and it may NOT grow from 4.14.3's 198,113; moving theme
+  code into the packs should take it under 180,000. Each art pack no more
+  than 60 KB minified. A guest's whole Seasons download on any one day
+  (engine + ambient + that day's packs) about 95 KB gzipped at most. Report
+  minified AND gzipped sizes against these in EVERY release.
+- **Fall Fishing (full pass)** uses the hero's own catch through
+  `window.DCCHeroFx.playCatch()` (true if it starts; false under reduced
+  motion, with no hero, or already playing) and the `dcc:herofx` busy/done
+  events; never copy the catch code. Source: dcc-hero-life 3.16.3, attached
+  by the Director as "dcc-hero-life.php (for Seasons).txt".
+- Standing guards: opt-in pages seeded with today's pages (/submit-booking/,
+  /guest/, /staff/, /explore/ off), art-only packs, the Director's
+  pre-theme check.
+
 **The moon is true (Rob's standing rule).** November's full moon is NOT the
 harvest moon (that is the full moon nearest the autumn equinox, late
 September). Call it the full moon, or November's Beaver Moon, in code,
