@@ -3881,3 +3881,8 @@ alone). The name sets -webkit-touch-callout: none and user-select: none.
 ready-0480-test.js (the real staff page through the real handlers via
 tests/render/ajax.php — staff actions, gate/nonce/method by environment, the
 dot state kept in a file between requests, every SQL statement logged).
+
+**0.48.0 live (2026-11-01, the WD).** Installed on doracanalcourt.com; Rob
+kept the 14 days. Caches purged; pages, the 8 calendar feeds and the 403 gate
+checked. Still to confirm: the hold-and-tap on a real phone on live /staff/
+(Rob).
