@@ -2831,7 +2831,9 @@
     rijeka: { t: 'Rijeka dubrovačka and the coast to Brsečine', s: 'Taken in October and November 1991: Bosanka on the Srđ plateau fell on 9 November, Mokošica in late November after Osojnik. Freed from 26 May 1992.', ev: 'the-ring-closes' }
   };
   const SIEGE_FORT = 'On 6 December 1991 a few dozen defenders held the fort against an infantry and tank attack from Bosanka and Strinčjera, with tanks right up at the fort. It was the anchor of the line that saved the city, and today it houses the Museum of the Homeland War.';
-  const THEN_LAB_MODE = (/[?&]thenlab=(\w+)/.exec(location.search) || [])[1] || 'now';   // PREVIEW ONLY: a / b / now
+  // Old Borders labels on phones: the area's name only (a gold dot when it just changed hands), and a tap on the
+  // area tells who held it; desktop keeps the full three-line labels, which have room there
+  const thenNamesOnly = () => !!(window.matchMedia && matchMedia('(max-width: 800px)').matches);
   const THEN_ORDER = ['core', 'elaph', 'lastovo', 'pel', 'mljet', 'prim', 'neum', 'konavle', 'sutorina', 'city'];   // the first town on top
   const THEN_LAB = { core: [42.6555, 18.118], elaph: [42.7277, 17.8803] };
   // the two 1699 corridors the Ottomans kept, at Ragusa's urging
@@ -3152,6 +3154,10 @@
       if (d) { e.preventDefault(); thenCmp = Math.min(0.96, Math.max(0.04, thenCmp + d)); thenClip(); }
     });
     mmMap.on('zoomend', () => { if (thenOn) { thenZoomClass(); thenDrawTop(); thenHere(); thenLabelTidy(); } });
+    if (window.matchMedia) {
+      const mq = matchMedia('(max-width: 800px)'), redraw = () => { if (thenOn && thenIdx >= 0) { const i = thenIdx; thenIdx = -1; thenShow(i); } };
+      if (mq.addEventListener) mq.addEventListener('change', redraw); else if (mq.addListener) mq.addListener(redraw);
+    }
     mmMap.on('moveend', () => { if (thenOn) { thenHere(); thenDeclutter(); } });
     mmMap.on('move zoom resize', () => { if (thenOn && thenCmpOn) thenClip(); });
   }
@@ -3191,7 +3197,7 @@
         icon: L.divIcon({ className: 'dcc-then-elab', html: '<span>' + escapeHtml(ft.n) + '</span>', iconSize: null }) }));
     });
     // zoomed in: neighbours, then Ragusa's parts on today's outlines
-    const S = thenStreet, inl = thenInland(f);
+    const S = thenStreet, inl = thenInland(f), namesOnly = thenNamesOnly();
     // solid shapes with a matching outline: separately mapped municipalities leave hairline gaps
     // where their borders don't quite meet, and the outline closes them without darkening the seams
     thenNear.addLayer(L.polygon(S.bih, { renderer: thenRB, pane: 'dccThenBih', interactive: false,
@@ -3203,7 +3209,7 @@
       const was = prev && k !== 'city' ? thenPartStatus(k, prev).cls : null;
       const gained = st.cls === 'rag' && was && was !== 'rag', lost = was === 'rag' && st.cls !== 'rag';
       const rag = st.cls === 'rag';
-      const partPoly = L.polygon(polys, { renderer: thenRN, pane: 'dccThen', interactive: THEN_LAB_MODE === 'b',
+      const partPoly = L.polygon(polys, { renderer: thenRN, pane: 'dccThen', interactive: namesOnly,
         color: rag ? '#7d5411' : st.cls === 'war' ? '#c0392b' : '#3b3934', weight: rag || gained || lost ? 2 : 1, opacity: rag ? 0.9 : 0.5,
         dashArray: st.cls === 'out' || st.cls === 'ceded' || st.cls === 'split' || k === 'city' ? '5 5' : null,
         fillColor: st.c, fillOpacity: rag ? 0.45 : 0.3,
@@ -3212,10 +3218,10 @@
       const lab = THEN_LAB[k] || S.lab[k];
       const tag = gained ? '<em>new in ' + escapeHtml(f.label) + '</em>' : lost ? '<em>lost</em>' : '';
       const status = escapeHtml(R.siege && k === 'core' ? 'Dubrovnik besieged, never taken · Župa occupied' : st.t);
-      if (THEN_LAB_MODE === 'b') thenStory(partPoly, '<b>' + escapeHtml(THEN_PART[k].name) + '</b><br>' + status + (tag ? '<br>' + tag : ''));
+      if (namesOnly) thenStory(partPoly, '<b>' + escapeHtml(THEN_PART[k].name) + '</b><br>' + status + (tag ? '<br>' + tag : ''));
       thenNear.addLayer(L.marker(lab, { pane: 'dccThenTop', interactive: false, keyboard: false,
         icon: L.divIcon({ className: 'dcc-then-plab dcc-then-plab-' + st.cls + (k === 'city' ? ' dcc-then-plab-city' : '') + (gained || lost ? ' dcc-then-plab-chg' : ''),
-          html: THEN_LAB_MODE === 'b'
+          html: namesOnly
             ? '<div><b>' + escapeHtml(THEN_PART[k].name) + (gained || lost ? ' <i class="dcc-then-chgdot" title="' + (gained ? 'new in ' + escapeHtml(f.label) : 'lost') + '"></i>' : '') + '</b></div>'
             : '<div><b>' + escapeHtml(THEN_PART[k].name) + '</b><span>' + status + '</span>' + tag + '</div>', iconSize: null }) }));
     });
@@ -3318,7 +3324,7 @@
   // the area names never sit on top of each other: Ragusa's own lands keep theirs, then the rest in
   // map order, then the frontier and 1699 line labels; the hidden ones come back as you zoom in
   function thenLabelTidy() {
-    if (THEN_LAB_MODE === 'now' || !thenNear) return;
+    if (!thenNear || !thenNamesOnly()) return;
     const pri = ic => ic.classList.contains('dcc-then-llab') ? 4 : ic.classList.contains('dcc-then-plab-chg') ? 0 : ic.classList.contains('dcc-then-plab-rag') ? 1 : ic.classList.contains('dcc-then-plab-war') ? 2 : 3;
     const items = [];
     thenNear.eachLayer(l => { const ic = l._icon; if (ic && (ic.classList.contains('dcc-then-plab') || ic.classList.contains('dcc-then-llab'))) { ic.classList.remove('dcc-then-lhid'); items.push(ic); } });
@@ -4744,7 +4750,7 @@
         const bits = [];
         if (st != null) bits.push('≈' + fmt(st) + ' steps');
         if (cl) bits.push('↑' + cl + ' m');
-        if (bits.length) cum = ' <span class="dcc-tour-place-cum">· ' + bits.join(' · ') + ' by now</span>';
+        if (bits.length) cum = ' <span class="dcc-tour-place-cum">' + bits.join(' · ') + ' by now</span>';
       }
       const spent = p.mins ? ' · ' + (p.mins >= 60 ? (p.mins/60).toFixed(1) + ' h' : p.mins + ' min') + ' here' : '';
       const openAttr = placesOpenDefault ? '1' : '0';
