@@ -7875,8 +7875,7 @@
 
 	/* The admin Theme guide reads these, so it shows exactly what plays. */
 	W.DCCSeasonsEngine = { start: start, guide: {
-		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, accentPic: { wreath: 1 },   /* 4.14.2: placed in the header picture (wrPlace), not a corner */
-		 vigs: VIGS, eveningVigs: EVENING_VIGS,
+		svgs: SVGS, pal: PAL, svgDoc: svgDoc, accents: ACCENTS, accentPic: { wreath: 1 }, vigs: VIGS, eveningVigs: EVENING_VIGS,
 		countdown: COUNTDOWN_THEME, heroArt: HERO_ART, artDraw: ART_DRAW, tk: TKM, crane: ART.crane || null, heron: { pose: hnPose, fly: hnFly, stand: hnStand, legs: hnLegs, bounds: hnBounds }, witch: { body: witchBody, cape: witchCape, hair: witchHair, still: witchStill, box: WITCH_BOX, capeAt: WITCH_CAPE, hairAt: WITCH_HAIR }, moon: moonPaint, heroGlyphs: HERO_GLYPHS, prims: PRIMS, sceneArt: SCENE_ART, wings: WINGS, timing: TIMING,
 		target: partTargetFor, limit: specLimitAt, shares: sharesAt, subtleKit: subtleKit
 	} };

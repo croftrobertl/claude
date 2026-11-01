@@ -109,7 +109,9 @@ function strip(src) {
       .replace("return !!W.DCCMoments && !sceneNow && !PLAY; }", 'return !!W.DCCMoments && !sceneNow; }')
       .replace(" && vt < FX_CAP && !playHero) { return; }", ' && vt < FX_CAP) { return; }')
       .replace("p.sKey = Array.isArray(sp.s) ? (CFG.variants ? sp.s[(sp.rr = (sp.rr || 0) + 1) % sp.s.length] : pick(sp.s)) : sp.s;", 'p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;')
-      .replace('p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;   /* the Preview tab shows every variant in turn */', 'p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;'))
+      .replace('p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;   /* the Preview tab shows every variant in turn */', 'p.sKey = Array.isArray(sp.s) ? pick(sp.s) : sp.s;')
+      /* the guide's note that the wreath sits in the header picture (admin only) */
+      .replace(' accentPic: { wreath: 1 }, ', ' '))
     .map(l => l.replace(/\s+$/, ''))
     .filter(l => l !== '');
 }
