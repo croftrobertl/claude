@@ -75,21 +75,7 @@
         return new Date(guess);
     }
 
-    /** "Thu 2:00 PM", or "Thu" when the property keeps no time for it. */
-    function dayTime(tz, iso, hhmm) {
-        const at = instantAt(tz, iso, hhmm || '12:00');
-        const p = partsIn(tz, at, { weekday: 'short' });
-        const day = p.weekday || '';
-        if (!hhmm) { return day; }
-        const t = partsIn(tz, at, { hour: 'numeric', minute: '2-digit', hour12: true });
-        const clock = t.hour ? (t.hour + ':' + t.minute + ' ' + String(t.dayPeriod || '').toUpperCase()) : '';
-        return clock ? (day + ' ' + clock) : day;
-    }
 
-    /** "Sunday" — the full weekday, for the checkout line. */
-    function weekdayLong(tz, iso) {
-        return partsIn(tz, instantAt(tz, iso, '12:00'), { weekday: 'long' }).weekday || '';
-    }
 
     /** "11:00 AM" from "11:00". */
     function clock12(tz, hhmm) {
@@ -120,63 +106,18 @@
         el.hidden = false;
     }
 
-    /** The token on the link, or ''. */
-    function stayToken() {
-        try { return (new URLSearchParams(window.location.search).get('t') || '').trim(); }
-        catch (_) { return ''; }
-    }
-
-    /**
-     * Fill the stay card from a resolved booking.
+    /*
+     * THE STAY CARD IS GONE, and so is everything that fed it.
      *
-     * Called only with a stay the server vouched for. With no token, a bad
-     * token or an unresolvable one, this never runs and the card keeps the
-     * plain welcome it was rendered with — which is the whole specification
-     * for that case: show the plain welcome and never guess.
+     * v0.26.0 resolved a signed `?t=` token to a booking and painted the
+     * cottage name, the two dates and a progress bar. Rob's decision is that
+     * no per-guest link will be sent, so there is no booking to name — and
+     * the resolver, its endpoint and its secret were removed rather than left
+     * idle, because an unused public endpoint backed by a secret is something
+     * we would have to defend for nothing.
+     *
+     * What is left of it is the greeting above, which needs no guest.
      */
-    function paintStay(root, app, stay) {
-        const S = app.strings || {};
-        if (stay.cottage && S.welcomeTo) {
-            const h = root.querySelector('[data-dccgg-welcome]');
-            if (h) { h.textContent = fmt(S.welcomeTo, [stay.cottage]); }
-        }
-        const inEl  = root.querySelector('[data-dccgg-in]');
-        const outEl = root.querySelector('[data-dccgg-out]');
-        const dates = root.querySelector('[data-dccgg-dates]');
-        if (inEl && outEl && dates) {
-            inEl.textContent  = dayTime(app.tz, stay.checkIn,  stay.timeIn);
-            outEl.textContent = dayTime(app.tz, stay.checkOut, stay.timeOut);
-            dates.hidden = false;
-        }
-        // How far through the stay they are. Clamped, so an early arrival
-        // reads empty rather than negative and a late checkout reads full.
-        const start = instantAt(app.tz, stay.checkIn,  stay.timeIn  || '15:00').getTime();
-        const end   = instantAt(app.tz, stay.checkOut, stay.timeOut || '11:00').getTime();
-        const bar   = root.querySelector('[data-dccgg-progress]');
-        const fill  = root.querySelector('[data-dccgg-progress-fill]');
-        if (bar && fill && end > start) {
-            const pct = Math.max(0, Math.min(100, ((Date.now() - start) / (end - start)) * 100));
-            fill.style.width = pct.toFixed(1) + '%';
-            bar.hidden = false;
-            bar.setAttribute('role', 'img');
-            bar.setAttribute('aria-label', Math.round(pct) + '%');
-        }
-        root.__dccggStay = stay;
-        paintDue(root, app);
-    }
-
-    function wireStay(root, config, app) {
-        paintGreeting(root, app);
-        const token = stayToken();
-        if (!token) { return; }
-        dccggFetchGet(config, 'dccgg_stay', { t: token })
-            .then((r) => r.json())
-            .then((j) => {
-                const stay = j && j.success && j.data && j.data.stay;
-                if (stay && stay.checkIn && stay.checkOut) { paintStay(root, app, stay); }
-            })
-            .catch(() => { /* no stay details, same as no token. Never a guess. */ });
-    }
 
     // -- "Tavares Now" ----------------------------------------------------
 
@@ -248,13 +189,11 @@
             const total = detail.querySelectorAll('.dccgg-item[data-checkable="1"]').length;
             const done  = detail.querySelectorAll('.dccgg-item[data-checkable="1"][data-checked="1"]').length;
             const parts = [];
-            const stay = root.__dccggStay;
-            if (stay && stay.checkOut) {
-                const day = weekdayLong(app.tz, stay.checkOut);
-                const at  = clock12(app.tz, stay.timeOut || app.timeOut || '');
-                if (day && at) { parts.push(fmt(S.by, [day, at])); }
-                else if (day)  { parts.push(day); }
-            }
+            // "By 11:00 AM" and no weekday: the hour is the PROPERTY's and is
+            // always true, while the day belonged to a booking this release
+            // no longer resolves. Saying only what is known.
+            const at = clock12(app.tz, app.timeOut || '');
+            if (at) { parts.push(fmt(S.by, [at])); }
             if (total > 0) { parts.push(fmt(S.done, [done, total])); }
             el.textContent = parts.join(' · ');
         });
@@ -306,6 +245,16 @@
                     // sheet's own Back button all close it.
                     try { root.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
                     catch (_) { root.scrollIntoView(); }
+                    mark(tab);
+                    return;
+                }
+                if (act === 'menu') {
+                    // No section chosen: the Guide tab is the full list.
+                    const menu = root.querySelector('.dccgg-menu');
+                    if (menu) {
+                        try { menu.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                        catch (_) { menu.scrollIntoView(); }
+                    }
                     mark(tab);
                     return;
                 }
@@ -382,7 +331,7 @@
         // watchChecks FIRST: it is what collects the due lines, and the stay
         // fetch repaints them the moment it lands.
         watchChecks(root, app);
-        wireStay(root, config, app);
+        paintGreeting(root, app);
         wireNow(root, config, app);
         wireTabs(root, config, app);
         wireSheetHistory(root, app);

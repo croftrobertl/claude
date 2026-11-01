@@ -124,10 +124,14 @@ namespace {
         require_once DCCGG_PLUGIN . 'includes/class-icons.php';
     }
     // v0.26.0: the app shell's tiles and config read the property's check-in
-    // and check-out times through Stay. Guarded, like class-icons.php above,
-    // so the harness still loads an older tree during a red-then-green run.
-    if (is_readable(DCCGG_PLUGIN . 'includes/class-stay.php')) {
-        require_once DCCGG_PLUGIN . 'includes/class-stay.php';
+    // and check-out times. v0.26.1 renamed that class from Stay to Property
+    // when the stay resolver was removed. Both are loaded when present, and
+    // both are guarded, so a red-then-green run against an older tree still
+    // works.
+    foreach (['class-stay.php', 'class-property.php'] as $dccgg_rel) {
+        if (is_readable(DCCGG_PLUGIN . 'includes/' . $dccgg_rel)) {
+            require_once DCCGG_PLUGIN . 'includes/' . $dccgg_rel;
+        }
     }
     require_once DCCGG_PLUGIN . 'includes/class-widget.php';
 

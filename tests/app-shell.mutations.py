@@ -16,7 +16,7 @@ SUITES = [
     ['node', os.path.join(ROOT, 'tests', 'app-shell.ui.js')],
 ]
 APP = 'assets/js/widget-app.js'
-STAY = 'includes/class-stay.php'
+PROP = 'includes/class-property.php'
 W = 'includes/class-widget.php'
 P = 'includes/class-plugin.php'
 CSS = 'assets/css/widget.css'
@@ -35,23 +35,6 @@ MUTANTS = [
      "        const h = new Date().getHours();"),
 
     # ---- the stay: never guessed ----------------------------------------
-    ('the stay endpoint is called even with no token on the link', APP,
-     "        const token = stayToken();\n        if (!token) { return; }",
-     "        const token = stayToken();"),
-    ('an unresolved stay is filled in with a plausible one', APP,
-     "                const stay = j && j.success && j.data && j.data.stay;",
-     "                const stay = (j && j.success && j.data && j.data.stay)\n"
-     "                    || { cottage: 'Cottage 1', checkIn: '2026-06-18', checkOut: '2026-06-21',\n"
-     "                         timeIn: '14:00', timeOut: '11:00' };"),
-    ('the progress bar is not clamped to the stay', APP,
-     "            const pct = Math.max(0, Math.min(100, ((Date.now() - start) / (end - start)) * 100));",
-     "            const pct = ((Date.now() - start) / (end - start)) * 100;"),
-    ('the dates are formatted on the device clock', APP,
-     "        const at = instantAt(tz, iso, hhmm || '12:00');",
-     "        const at = new Date(iso + 'T' + (hhmm || '12:00') + ':00');"),
-    ('the progress bar tells a screen reader nothing', APP,
-     "            bar.setAttribute('aria-label', Math.round(pct) + '%');", ""),
-
     # ---- "Tavares Now": show nothing rather than something wrong --------
     ('a missing reading is printed as zero', APP,
      "                const num = (v) => (typeof v === 'number' && isFinite(v)) ? v : null;",
@@ -65,9 +48,6 @@ MUTANTS = [
     # ---- the checkout line ----------------------------------------------
     ('the count is dropped from the checkout line', APP,
      "            if (total > 0) { parts.push(fmt(S.done, [done, total])); }", ""),
-    ('a day is named even when no stay is known', APP,
-     "            const stay = root.__dccggStay;",
-     "            const stay = root.__dccggStay || { checkOut: '2026-06-21', timeOut: '11:00' };"),
     ('the due lines are re-queried from the root, which the portal emptied', APP,
      "        (root.__dccggDues || []).forEach((el) => {",
      "        root.querySelectorAll('[data-dccgg-due]').forEach((el) => {"),
@@ -77,7 +57,10 @@ MUTANTS = [
 
     # ---- the tab bar ------------------------------------------------------
     ('the bar floats over the open sheet', CSS,
-     "html.dccgg-detail-open .dccgg-app-tabs {\n    display: none;\n}", ""),
+     "html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {\n    display: none;\n}", ""),
+    ('the hide loses to the bar\'s own rule, as it did mid-sweep', CSS,
+     "html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {",
+     "html.dccgg-detail-open .dccgg-app-tabs {"),
     ('the bar stops following which section is open', APP,
      "                if (key) { openDetail(root, key); mark(tab); }",
      "                if (key) { openDetail(root, key); }"),
@@ -89,33 +72,6 @@ MUTANTS = [
      "                try { history.pushState({ dccggSheet: 1 }, ''); pushed = true; } catch (_) {}", ""),
     ('popstate stops closing the sheet', APP,
      "            if (pushed && isOpen()) { pushed = false; closeDetail(root); }", ""),
-
-    # ---- the token --------------------------------------------------------
-    ('the signature stops covering the booking id', STAY,
-     "            hash_hmac('sha256', self::HMAC_CONTEXT . $booking_id, self::secret()),",
-     "            hash_hmac('sha256', self::HMAC_CONTEXT, self::secret()),"),
-    ('the comparison becomes a plain ===', STAY,
-     "        return hash_equals(self::sign($id), $sig) ? $id : 0;",
-     "        return self::sign($id) === $sig ? $id : 0;"),
-    ('a cancelled booking greets the guest', STAY,
-     "        if (!$booking || $booking->post_type !== 'mphb_booking' || $booking->post_status !== self::GREETING_STATUS) {",
-     "        if (!$booking || $booking->post_type !== 'mphb_booking') {"),
-    ('any post id is accepted as a booking', STAY,
-     "$booking->post_type !== 'mphb_booking' || ", ""),
-    ('a backwards date range is accepted', STAY,
-     "        if (!self::is_iso_date($in) || !self::is_iso_date($out) || $out <= $in) {",
-     "        if (!self::is_iso_date($in) || !self::is_iso_date($out)) {"),
-    ('an impossible date passes as a date', STAY,
-     "        return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);", "        return true;"),
-    ('a leading colon empties the cottage name', STAY,
-     "        if ($pos !== false && $pos > 0) {", "        if ($pos !== false) {"),
-    ('a malformed property time is shown as given', STAY,
-     "                        if (preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d$/', $v)) {\n                            return $v;\n                        }",
-     "                        return $v;"),
-    ('the guest name rides along with the stay', STAY,
-     "        $stay = [\n            'cottage' => self::cottage_label($booking_id),",
-     "        $stay = [\n            'guestName' => (string) get_post_meta($booking_id, 'mphb_first_name', true),\n"
-     "            'cottage' => self::cottage_label($booking_id),"),
 
     # ---- the tile summaries ------------------------------------------------
     ('an empty section is labelled "0 items"', W,
@@ -147,15 +103,6 @@ MUTANTS = [
      "                        $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes'"),
 
     # ---- the endpoint -------------------------------------------------------
-    ('the stay endpoint reads a POST body', P,
-     "        $token = isset($_GET['t']) ? sanitize_text_field(wp_unslash((string) $_GET['t'])) : '';",
-     "        $token = isset($_POST['t']) ? sanitize_text_field(wp_unslash((string) $_POST['t'])) : '';"),
-    ('the stay endpoint stops checking the nonce', P,
-     "        check_ajax_referer('dccgg_nonce', 'nonce');\n\n        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);\n        $rl_key  = 'dccgg_stay_rl_'",
-     "        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);\n        $rl_key  = 'dccgg_stay_rl_'"),
-    ('the stay endpoint stops being rate-limited', P,
-     "        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);\n\n        $token = isset($_GET['t'])",
-     "        $token = isset($_GET['t'])"),
     ('sunset is no longer asked of the weather proxy', P,
      "precipitation_probability_max,uv_index_max,sunset'", "precipitation_probability_max,uv_index_max'"),
     ('the worker stops precaching the app chunk', P,
@@ -174,6 +121,46 @@ MUTANTS = [
     ('the chunk gate stops testing the root itself', 'assets/js/widget.js',
      "            const present = root.matches && root.matches(CHUNKS[name])\n                ? true : !!root.querySelector(CHUNKS[name]);",
      "            const present = !!root.querySelector(CHUNKS[name]);"),
+    # ---- v0.26.1: working with nothing configured ------------------------
+    ('the Checkout tile goes back to needing a section role', W,
+     "        $is_checkout = (string) ($sec['section_role'] ?? '') === 'checkout'\n"
+     "            || ($checkout_key !== '' && trim((string) ($sec['section_key'] ?? '')) === $checkout_key);",
+     "        $is_checkout = (string) ($sec['section_role'] ?? '') === 'checkout';"),
+    ('the checkout key is matched loosely, so any section gets the clock', W,
+     "            if (strtolower(trim((string) ($sec['section_key'] ?? ''))) === 'checkout') {",
+     "            if (true) {"),
+    ('the Canal tab stops finding the map section', W,
+     "        if ($canal_key === '') {\n            $canal_key = self::app_map_key((array) ($s['guide_sections'] ?? []));\n        }",
+     ""),
+    ('the Canal tab picks the first section instead of the map', W,
+     "        foreach (['/\\bmaps?\\b/i', '/canal/i'] as $pattern) {",
+     "        foreach (['/./', '/canal/i'] as $pattern) {"),
+    ('the Guide tab disappears again when no section is chosen', W,
+     "            'act'   => $guide_key !== '' ? 'section' : 'menu',",
+     "            'act'   => 'section',"),
+    ('the Guide tab does nothing when it has no section', APP,
+     "                if (act === 'menu') {", "                if (false) {"),
+    ('the welcome goes back to a bare word', W,
+     "            $welcome = self::default_welcome();", "            $welcome = __('Welcome', 'dcc-guest-guide');"),
+    ('the welcome loses to the kit again', CSS,
+     ".dccgg-root.dccgg-root .dccgg-app-stay .dccgg-app-welcome {",
+     ".dccgg-app-welcome {"),
+    ('the tiles lose their border to the kit again', CSS,
+     "    border: 1px solid color-mix(in srgb, var(--dccgg-app-ink) 14%, transparent);\n    border-radius: var(--dccgg-app-radius);",
+     "    border-radius: var(--dccgg-app-radius);"),
+    ('two counts again: the bar keeps its number', CSS,
+     ".dccgg-stage--app .dccgg-checklist-progress .dccgg-checklist-progress-label {\n    display: none;\n}", ""),
+    ('the due line names a weekday it cannot know', APP,
+     "            const at = clock12(app.tz, app.timeOut || '');\n            if (at) { parts.push(fmt(S.by, [at])); }",
+     "            parts.push('Sunday');"),
+    ('the tile columns follow the viewport again', CSS,
+     "@container dccgg-hub (min-width: 600px) {\n    .dccgg-layout-app .dccgg-menu { grid-template-columns: repeat(4, minmax(0, 1fr)); }\n}",
+     ""),
+    ('the hub stops being a query container', CSS,
+     "    container-type: inline-size;\n    container-name: dccgg-hub;", ""),
+    ('the bootstrap runs before its own declarations again', 'assets/js/widget.js',
+     "    // -- Bootstrap, LAST, after every declaration above --------------------",
+     "    if (false) { /* moved */ }\n    // -- Bootstrap, LAST, after every declaration above --------------------"),
 ]
 
 EQUIVALENT = [

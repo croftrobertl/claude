@@ -202,11 +202,18 @@
         window.__dccggGuestBoot = null;
         try { boot(window.DCCGG_CORE); } catch (_) { /* never break a page over it */ }
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initAll, { once: true });
-    } else {
-        initAll();
-    }
+    // THE BOOTSTRAP IS AT THE BOTTOM OF THIS FILE, not here, and that is
+    // load-bearing. It used to run at this point, and when readyState was
+    // already past 'loading' it called initAll() immediately — before
+    // `const liveRoots` below had been initialised. init() adds to that Set,
+    // so the whole guide died with "Cannot access 'liveRoots' before
+    // initialization" and nothing on the page worked.
+    //
+    // It has never fired on live, because widget.min.js is a plain footer
+    // script and the document is still parsing when it runs. It fires the
+    // moment anything defers or injects the file — and SpeedyCache has a
+    // defer-JS setting on this host. Found 2026-11-01 by running the real
+    // page through tools/live-shell.js, which injects the script after load.
 
     // v0.12.0: Elementor renders widgets in the editor preview via AJAX and
     // swaps the DOM on every setting change — long after DOMContentLoaded —
@@ -3560,5 +3567,14 @@
         if (root) root.dataset.dccggArrows = '1';
     }
 
+    // -- Bootstrap, LAST, after every declaration above --------------------
+    // See the note where this used to live. Everything this reaches has to
+    // exist before it runs, and the only way to guarantee that in a file this
+    // size is to run it at the end.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll, { once: true });
+    } else {
+        initAll();
+    }
 
 })();

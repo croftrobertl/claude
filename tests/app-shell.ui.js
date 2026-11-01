@@ -40,12 +40,26 @@ const JS = frontEndJs(A, SRC);
 const emit = (c) => execFileSync('php', [path.join(TESTS, '_emit-guide.php'), c],
     { encoding: 'utf8', env: Object.assign({}, process.env, { DCCGG_PLUGIN_DIR: PLUGIN }) });
 
-const MARKUP = { app: emit('app'), 'app-public': emit('app-public'), grid: emit('all-on') };
+const MARKUP = { app: emit('app-a1'), 'app-public': emit('app-public'),
+    grid: emit('all-on'), bare: emit('app-bare') };
 
-/** The live theme's ground: html 700, and the kit's button reset. */
+/**
+ * The live theme's ground — and v0.26.1 widened it, because the old block
+ * was a MODEL of the kit and missed the two rules that actually bit.
+ * Measured in the real combined stylesheet on 2026-11-01:
+ *
+ *   .elementor-kit-331 h2 { font-size: 20px }      (0,1,1)
+ *   .elementor-kit-331 button { border-width: 0 }  (0,1,1)
+ *
+ * The first rendered the hero's welcome at 20px instead of the intended
+ * size, and the second stripped the tiles' border so they read as flat
+ * icons on a white page. Both beat a single plugin class, and neither was
+ * in this block, so the suite passed while the real page was wrong.
+ */
 const KIT = `html{font-weight:700}
  body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0;padding:0 16px}
- .elementor-kit-331 button{font-family:Pavanam,sans-serif;font-size:18px;font-weight:900;line-height:50px;padding:0 18px}
+ .elementor-kit-331 h1,.elementor-kit-331 h2,.elementor-kit-331 h3{font-size:20px}
+ .elementor-kit-331 button{font-family:Pavanam,sans-serif;font-size:18px;font-weight:900;line-height:50px;padding:0 18px;border-width:0}
  .elementor-kit-331 button:hover,.elementor-kit-331 button:focus,.elementor-kit-331 button:active{background-color:#F08080}
  .dccgg-item-report .fas{display:inline-block;width:14px}`;
 const pageFor = (markup) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
@@ -63,12 +77,7 @@ const freezeClock = (ms) => `(() => {
 
 const AT = (iso) => Date.parse(iso);
 
-/** A confirmed stay: Thu 18 June 2026 to Sun 21 June 2026, Cottage 34. */
-const STAY = {
-    cottage: 'Cottage 34', checkIn: '2026-06-18', checkOut: '2026-06-21',
-    timeIn: '14:00', timeOut: '11:00',
-};
-/** Mid-stay, 3pm Eastern on the Friday. June is EDT, UTC-4. */
+/** 3pm Eastern on a Friday in June. EDT, UTC-4. */
 const MIDSTAY = AT('2026-06-19T19:00:00Z');
 
 const WEATHER = {
@@ -93,7 +102,7 @@ const check = (name, cond, detail) => {
      */
     const open = async ({
         markup = 'app', now = MIDSTAY, tz = 'Asia/Tokyo', query = '',
-        stay = null, weather = WEATHER, width = 390, height = 844,
+        weather = WEATHER, width = 390, height = 844,
     } = {}) => {
         const ctx = await browser.newContext({ viewport: { width, height },
             isMobile: width < 700, hasTouch: width < 700, timezoneId: tz });
@@ -101,14 +110,13 @@ const check = (name, cond, detail) => {
         page.on('pageerror', (e) => errors.push(String(e)));
         await page.addInitScript(freezeClock(now));
         await routeChunks(page, A, SRC);
-        const seen = { stayToken: null, posts: 0 };
+        const seen = { stayAsked: false, posts: 0 };
         await page.route('**/admin-ajax.php*', (r) => {
             const url = r.request().url();
             if (r.request().method() === 'POST') { seen.posts++; }
             let body = { success: true, data: {} };
             if (/action=dccgg_stay/.test(url)) {
-                seen.stayToken = new URL(url).searchParams.get('t');
-                body = { success: true, data: { stay } };
+                seen.stayAsked = true;     // nothing should ever ask again
             } else if (/action=dccgg_weather/.test(url)) {
                 body = weather ? { success: true, data: weather } : { success: false, data: {} };
             }
@@ -135,10 +143,16 @@ const check = (name, cond, detail) => {
     console.log('\nA. The Postcard Hero');
     {
         const v = await open();
-        check('with no token the welcome stays plain', await text(v.page, '[data-dccgg-welcome]') === 'Welcome');
-        check('…the dates are not shown', !(await shown(v.page, '[data-dccgg-dates]')));
-        check('…the progress bar is not shown', !(await shown(v.page, '[data-dccgg-progress]')));
-        check('…and the server is never asked', v.seen.stayToken === null);
+        check('the welcome names the property, not a guest',
+            await text(v.page, '[data-dccgg-welcome]') === 'Welcome to Dora Canal Court',
+            await text(v.page, '[data-dccgg-welcome]'));
+        check('there is no stay card left to fill',
+            (await v.page.$$('[data-dccgg-dates]')).length === 0
+            && (await v.page.$$('[data-dccgg-progress]')).length === 0);
+        check('…and nothing is asked of the server about one', v.seen.stayAsked === false);
+        // The kit renders every h2 at 20px and beat this in v0.26.0.
+        const size = await v.page.$eval('.dccgg-app-welcome', (e) => parseFloat(getComputedStyle(e).fontSize));
+        check('the welcome beats the kit\'s 20px heading rule', size > 22, 'got ' + size + 'px');
         await shut(v);
     }
     for (const [label, when, want] of [
@@ -155,42 +169,6 @@ const check = (name, cond, detail) => {
         const got = await text(v.page, '[data-dccgg-greeting]');
         check(`${label} on a phone set elsewhere greets "${want}"`, got === want, 'got ' + got);
         await shut(v);
-    }
-    {
-        const v = await open({ query: '?t=4242.abcdef0123456789abcd', stay: STAY });
-        check('the token on the link is the one sent', v.seen.stayToken === '4242.abcdef0123456789abcd');
-        check('the welcome names the cottage',
-            await text(v.page, '[data-dccgg-welcome]') === 'Welcome to Cottage 34');
-        check('check-in reads "Thu 2:00 PM"', await text(v.page, '[data-dccgg-in]') === 'Thu 2:00 PM');
-        check('check-out reads "Sun 11:00 AM"', await text(v.page, '[data-dccgg-out]') === 'Sun 11:00 AM');
-        check('the dates are shown now', await shown(v.page, '[data-dccgg-dates]'));
-        const pct = await v.page.$eval('[data-dccgg-progress-fill]', (e) => parseFloat(e.style.width));
-        // Thu 2pm to Sun 11am is 69 hours; 3pm Friday is 25 of them, 36.2%.
-        check('the progress bar is part way through the stay, not at either end',
-            Math.abs(pct - 36.2) < 0.5, 'pct=' + pct);
-        check('…and it tells a screen reader what it shows',
-            /%$/.test(await v.page.$eval('[data-dccgg-progress]', (e) => e.getAttribute('aria-label') || '')));
-        await shut(v);
-    }
-    {
-        // A token the server will not vouch for: the same as no token.
-        const v = await open({ query: '?t=9.deadbeefdeadbeefdead', stay: null });
-        check('an unresolvable token shows the plain welcome, not a guess',
-            await text(v.page, '[data-dccgg-welcome]') === 'Welcome'
-            && !(await shown(v.page, '[data-dccgg-dates]')));
-        await shut(v);
-    }
-    {
-        // Before check-in and after check-out: clamped, never negative or >100.
-        for (const [label, when, want] of [
-            ['before arrival', AT('2026-06-17T12:00:00Z'), 0],
-            ['after departure', AT('2026-06-25T12:00:00Z'), 100],
-        ]) {
-            const v = await open({ now: when, query: '?t=1.aaaaaaaaaaaaaaaaaaaa', stay: STAY });
-            const pct = await v.page.$eval('[data-dccgg-progress-fill]', (e) => parseFloat(e.style.width));
-            check(`${label}: the bar reads ${want}%, not out of range`, pct === want, 'pct=' + pct);
-            await shut(v);
-        }
     }
 
     console.log('\nB. "Tavares Now"');
@@ -366,32 +344,58 @@ const check = (name, cond, detail) => {
 
     console.log('\nF. The checkout line');
     {
-        const v = await open({ query: '?t=1.aaaaaaaaaaaaaaaaaaaa', stay: STAY });
+        const v = await open();
         await v.page.tap('.dccgg-tile[data-key="checkout"]');
         await v.page.waitForTimeout(650);
         const total = await v.page.$$eval(
             '.dccgg-detail[data-key="checkout"] .dccgg-item[data-checkable="1"]', (e) => e.length);
-        check('the sheet names the day, the time and the count',
-            await text(v.page, '[data-dccgg-due]') === `Sunday by 11:00 AM · 0 of ${total} done`,
+        // "By 11:00 AM" and no weekday: the hour belongs to the property and
+        // is always true; the day belonged to a booking nothing resolves now.
+        check('the sheet names the property\'s hour and the count',
+            await text(v.page, '[data-dccgg-due]') === `By 11:00 AM · 0 of ${total} done`,
             await text(v.page, '[data-dccgg-due]'));
+        // ONE count. The bar used to carry "0 / 3" beside Reset while the due
+        // line said something else, and the two could disagree.
+        check('…and it is the only count on screen',
+            !(await shown(v.page, '.dccgg-detail[data-key="checkout"] .dccgg-checklist-progress-label')));
+        check('…while the bar keeps its fill and its Reset',
+            (await shown(v.page, '.dccgg-detail[data-key="checkout"] .dccgg-checklist-progress-fill'))
+            && (await shown(v.page, '.dccgg-detail[data-key="checkout"] .dccgg-checklist-reset')));
         await v.page.tap('.dccgg-detail[data-key="checkout"] .dccgg-item[data-checkable="1"] .dccgg-item-check');
         await v.page.waitForTimeout(350);
         check('…and keeps up as the guest ticks',
-            await text(v.page, '[data-dccgg-due]') === `Sunday by 11:00 AM · 1 of ${total} done`,
+            await text(v.page, '[data-dccgg-due]') === `By 11:00 AM · 1 of ${total} done`,
             await text(v.page, '[data-dccgg-due]'));
         await v.page.tap('.dccgg-detail[data-key="checkout"] .dccgg-checklist-reset');
         await v.page.waitForTimeout(350);
-        check('…and Reset puts it back', await text(v.page, '[data-dccgg-due]')
-            === `Sunday by 11:00 AM · 0 of ${total} done`);
+        check('…and Reset puts it back',
+            await text(v.page, '[data-dccgg-due]') === `By 11:00 AM · 0 of ${total} done`);
         check('nothing was sent to the server', v.seen.posts === 0);
         await shut(v);
     }
+
+    console.log('\nF2. A guide with nothing configured');
     {
-        const v = await open();
-        await v.page.tap('.dccgg-tile[data-key="checkout"]');
+        // The staging state: no section roles, no tab targets, no nouns.
+        const v = await open({ markup: 'bare' });
+        const names = await v.page.$$eval('.dccgg-app-tab-label', (e) => e.map((x) => x.textContent.trim()));
+        check('the bar still has four tabs, not the two staging showed',
+            names.join(' · ') === 'Stay · Guide · Canal · Front Desk', names.join(' · '));
+        await v.page.tap('.dccgg-app-tab[data-app-tab="section"]');
         await v.page.waitForTimeout(650);
-        const due = await text(v.page, '[data-dccgg-due]');
-        check('with no stay it counts but names no day', /^\d+ of \d+ done$/.test(due), due);
+        check('Canal opens the map section it found for itself',
+            await v.page.$eval('.dccgg-detail[data-key="map"]', (e) => !e.hidden));
+        await v.page.tap('.dccgg-detail:not([hidden]) .dccgg-back');
+        await v.page.waitForTimeout(700);
+        await v.page.tap('.dccgg-app-tab[data-app-tab="menu"]');
+        await v.page.waitForTimeout(500);
+        check('the Guide tab goes to the tiles rather than doing nothing',
+            await v.page.$eval('.dccgg-app-tab[data-app-tab="menu"]',
+                (e) => e.getAttribute('aria-current')) === 'page'
+            && !(await v.page.evaluate(() => document.documentElement.classList.contains('dccgg-detail-open'))));
+        const sums = await v.page.$$eval('.dccgg-tile-summary', (e) => e.map((x) => x.textContent.trim()));
+        check('the Checkout tile carries the property clock with no role set',
+            sums.some((t) => /^11:00 AM · \d+ items?$/.test(t)), sums.join(' | '));
         await shut(v);
     }
 
@@ -441,6 +445,23 @@ const check = (name, cond, detail) => {
         const over = await v.page.evaluate(() =>
             document.documentElement.scrollWidth - document.documentElement.clientWidth);
         check(`${w}: nothing overflows the width`, over <= 0, 'over=' + over);
+        // Rob's pick: the phone shell centred, not a second layout.
+        const shell = await box(v.page, '.dccgg-app-shell');
+        check(`${w}: the shell is a centred column, not full width`,
+            shell.w <= 470 && Math.abs((shell.x + shell.w / 2) - w / 2) < 20, JSON.stringify(shell));
+        const bar = await box(v.page, '.dccgg-app-tabs');
+        check(`${w}: the tab bar is centred on the same column`,
+            Math.abs(bar.w - shell.w) < 24 && Math.abs((bar.x + bar.w / 2) - w / 2) < 20,
+            JSON.stringify(bar));
+        // The column is 460px inside a 1440px window: a VIEWPORT rule would
+        // ask for four tiles across and clip every label, which is what
+        // Option B's picture showed. The count follows the container now.
+        const perRow = await v.page.$$eval('.dccgg-tile-wrap', (els) => {
+            const top = Math.round(els[0].getBoundingClientRect().top);
+            return els.filter((e) => Math.round(e.getBoundingClientRect().top) === top).length;
+        });
+        check(`${w}: the tiles stay two up, because the count follows the container`,
+            perRow === 2, 'perRow=' + perRow);
         check(`${w}: the hero, the tiles and the tab bar all render`,
             (await shown(v.page, '.dccgg-app-hero'))
             && (await shown(v.page, '.dccgg-tile'))

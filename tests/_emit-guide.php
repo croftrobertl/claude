@@ -182,6 +182,47 @@ function dccgg_app_case(bool $public = false): array {
     return $cfg;
 }
 
+/**
+ * The app shell with nothing configured, on live-shaped sections.
+ *
+ * Deliberately NOT built from dccgg_all_on(): that fixture sets roles and
+ * nouns, and the point here is a guide that sets neither.
+ */
+function dccgg_app_bare(): array {
+    $GLOBALS['options'] = ($GLOBALS['options'] ?? []) + [
+        'mphb_check_in_time'  => '14:00',
+        'mphb_check_out_time' => '11:00',
+    ];
+    $spec = [
+        ['internet',  'Internet'],
+        ['amenities', 'Amenities'],
+        ['clubhouse', 'Clubhouse'],
+        ['canal',     'Boating / Fishing'],
+        ['checkout',  'Checkout'],
+        ['rules',     'Rules'],
+        ['map',       'Map'],
+        ['review',    'Review Us'],
+    ];
+    $sections = $items = [];
+    foreach ($spec as $i => [$key, $title]) {
+        $sections[] = ['_id' => 's_' . $key, 'section_key' => $key,
+            'section_title' => $title, 'section_audience' => 'both',
+            'section_icon' => ['value' => 'fas fa-circle', 'library' => 'fa-solid']];
+        for ($n = 1; $n <= ($key === 'checkout' ? 3 : 2); $n++) {
+            $items[] = ['_id' => 'i' . $i . $n, 'item_section' => $key,
+                'item_title' => $title . ' ' . $n,
+                'item_content' => '<p>Something about ' . $title . '.</p>']
+                + ($key === 'checkout' ? ['item_checkable' => 'yes'] : []);
+        }
+    }
+    return ['guide_mode' => 'full', 'menu_layout' => 'app',
+        'cottage_latitude' => 28.8028, 'cottage_longitude' => -81.6448,
+        'guide_sections' => $sections, 'guide_items' => $items,
+        'enable_search' => 'yes', 'enable_problem_report' => 'yes',
+        'problem_report_recipients' => 'host@example.test',
+        'app_hero_image' => ['url' => 'https://dccgg.test/canal.jpg']];
+}
+
 function dccgg_guide_case(string $case): array {
     $sections = [
         ['_id' => 's1', 'section_key' => 'pool', 'section_title' => 'Pool', 'section_audience' => 'both'],
@@ -255,6 +296,12 @@ function dccgg_guide_case(string $case): array {
         // the mockup does not have. Print is a host toggle, and this is the
         // state the stills are taken in.
         'app-a1'          => ['enable_print' => ''] + dccgg_app_case(false),
+        // v0.26.1: the app layout on a guide configured the way the LIVE one
+        // is — no section roles at all (measured on doracanalcourt.com/guest/
+        // 2026-11-01: not one data-section-role in the page), no tab targets,
+        // no tile nouns. This is what a fresh widget looks like, and it is
+        // the state every fault the Director reported from staging came from.
+        'app-bare'        => dccgg_app_bare(),
     ];
     return ($cases[$case] ?? $cases['public-intro']) + ['guide_sections' => $sections, 'guide_items' => $items];
 }

@@ -591,6 +591,81 @@ real theme may not.
 (verified by running the suite against a pristine archive of HEAD). Pixel
 drift in the harness, not a guide change.
 
+v0.26.1 took the app shell to the real theme, and four of its five faults
+were things the harness could not see.
+
+THE STAY RESOLVER IS GONE, on Rob's decision: he will not paste a per-guest
+link. The `?t=` token, the Guest Links admin page, the `dccgg_stay` endpoint
+and `DCCGG\Stay` were deleted rather than left idle — an unused public
+endpoint backed by a secret is something we would have to defend for nothing
+— and `dccgg_stay_secret` is deleted once from `admin_init`. That last part
+sets aside the standing "nothing is written on install, activation or
+upgrade" rule, on the Director's explicit instruction; it is idempotent and
+the read is a cache hit, so it costs one write ever. What survives is
+`DCCGG\Property::times()`, because the property's check-out hour is a fact
+about the property and not about a booking.
+
+SPECIFICITY: ONE CLASS IS NOT ENOUGH, AND (0,2,1) WAS NEVER THE ONLY THREAT.
+Measured in the live combined stylesheet on 2026-11-01:
+
+    .elementor-kit-331 h2     { font-size: 20px }     (0,1,1)
+    .elementor-kit-331 button { border-width: 0 }     (0,1,1)
+
+The first rendered the hero's welcome at 20px instead of 1.55em — the host
+reported it as "the theme sets fonts on headings", but it is the Elementor
+kit. The second strips the border off every `.dccgg-tile`, which on a white
+page leaves a white card with no edge: "flat icons with no card". Both beat
+a single plugin class. Every app-shell declaration now reaches (0,4,0), and
+the browser suite's kit block carries both rules so it would have caught it.
+
+Three traps inside that sweep, all hit once:
+  · `.dccgg-root.dccgg-root .dccgg-app-shell …` matches NOTHING — the root
+    carries both classes, so it is `.dccgg-root.dccgg-root.dccgg-app-shell`.
+  · raising the tab bar to (0,3,0) silently outranked the (0,2,1) rule that
+    hides it behind an open sheet; the hide is now (0,4,1).
+  · a class that sets `display` beats the user agent's `[hidden]`, so every
+    element that is shown by script needs `:not([hidden])`.
+
+WHAT IS DELIBERATELY NOT FOUGHT: tile padding is 10px on live because page
+4645 sets it through an Elementor style control, which compiles to
+`.elementor-4645 .elementor-element-… .dccgg-root.dccgg-root .dccgg-tile`.
+A host-set control must win. If the roomier look is wanted on a page, the
+control is cleared there — it is not overridden from the stylesheet.
+
+THE LIVE GUIDE HAS NO SECTION ROLES. Not one `data-section-role` in
+/guest/'s rendered HTML, on any of its eight sections. That is why the
+Checkout tile read "7 items" instead of "11:00 AM · 7 items", and it is why
+anything keyed off `section_role` silently does nothing there. The app shell
+therefore resolves its checkout section by role and THEN by key, and its
+Canal tab by a map-ish key or title; a stored setting still wins over both.
+`tests/_emit-guide.php`'s `app-bare` case is that guide — no roles, no tab
+targets, no nouns — and every v0.26.1 fault is reproduced by it.
+
+THE BOOTSTRAP RUNS LAST IN widget.js, AND MUST. It used to sit mid-file, and
+when `document.readyState` was already past 'loading' it called `initAll()`
+before `const liveRoots` below it had been initialised — a TDZ error that
+kills the entire guide. It has never fired on live, because widget.min.js is
+a plain footer script, but SpeedyCache has a defer-JS setting on this host
+and one checkbox would have done it. Found by injecting the script into the
+real page after load.
+
+THE TILE GRID'S COLUMN COUNT FOLLOWS ITS CONTAINER since v0.26.1
+(`container-type: inline-size` on `.dccgg-stage-container`, `@container
+dccgg-hub (min-width: 600px)`), with the old viewport rule kept behind
+`@supports not (container-type: inline-size)`. The centred desktop column is
+430px inside a 1440px window, and the viewport rule gave it four columns and
+clipped every label.
+
+THREE OF THE FOUR FAULTS SPOTTED IN v0.26.0's STILLS WERE THE FIXTURE, NOT
+THE GUIDE, and that is worth more than the fixes. Checked against the live
+page: the section-nav chevrons render fine (Font Awesome is in the combined
+bundle; the harness has none, so its buttons look like empty boxes), the
+guide has no quick actions and no section without an icon (so no empty
+circles), and it has no conditions card at all (so the "major feeding
+windows" overflow cannot occur there). Only the duplicate checkout count was
+real, and the sheet now shows one. STILLS FOR THE DIRECTOR COME FROM
+`tools/live-shell.js` from now on, for exactly this reason.
+
 Rob's alignment rule (titles centred; only a MULTI-sentence paragraph
 left-aligned) is implemented the way the Cottage Selector implements it —
 `isMulti()` tests the paragraph's own TEXT and adds a class, so a host who
@@ -641,7 +716,10 @@ Run `php tests/public-mode.test.php`, `php tests/discovery.test.php`,
 `php tests/site-blue.test.php`, `node tests/front-desk-form.ui.js`,
 `php tests/bundle-split.test.php`, `node tests/bundle-split.ui.js`,
 `node tests/sheet-polish.ui.js`, `node tests/check-expiry.ui.js`,
-`php tests/app-shell.test.php`, `node tests/app-shell.ui.js` and `node tests/popup.test.js` after touching any of it. Those tests guard
+`php tests/app-shell.test.php`, `node tests/app-shell.ui.js` and `node tests/popup.test.js` after touching any of it.
+And when the change is about how the guide LOOKS, also
+`bash tools/live-fetch.sh && node tools/live-shell.js measure` — the
+suites model the theme, that one IS the theme. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 
@@ -771,10 +849,19 @@ and report the transferred size. Server compression is not `gzip -9` — on the
 same file it measured 36.1 KB over the wire against 26.5 KB locally, so a
 local figure understates transfer and flatters any saving computed from it.
 
-This container cannot reach doracanalcourt.com (the egress proxy 403s it). So
-a wire measurement is not something this session can produce: ASK for it, or
-hand over a snippet that produces it, and never present a local computation as
-a served figure.
+THE EGRESS PROXY REACHED doracanalcourt.com FROM 2026-11-01. It 403'd for
+every session before that, and the rule written here said a wire measurement
+was impossible. Re-check with one curl at the start of a session rather than
+assuming either way. When it is reachable, `tools/live-fetch.sh` caches the
+live /guest/ document and its combined stylesheet, and `tools/live-shell.js`
+renders any layout inside that real document — real Elementor kit, real
+Raleway, real Font Awesome, the host's own stored style controls. Use it for
+anything about how the guide LOOKS on the site; the browser suites' synthetic
+kit block is a model of the theme and a model is what let v0.26.0 ship a
+20px heading.
+
+Still never present a local computation as a served figure: a transferred
+size has to come from a real response, not from `gzip -9`.
 
 CALIBRATION, for when an estimate is all that is available: on this host the
 wire figure for JS runs about **1.4x a local `gzip -9`**. The compressor is a

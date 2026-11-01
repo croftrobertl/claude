@@ -35,7 +35,7 @@ function check(string $name, bool $cond, string $detail = ''): void
 
 $widget = plugin_file('includes/class-widget.php');
 $plugin = plugin_file('includes/class-plugin.php');
-$stayPhp = plugin_file('includes/class-stay.php');
+$propPhp = plugin_file('includes/class-property.php');
 $css    = plugin_file('assets/css/widget.css');
 $cssMin = plugin_file('assets/css/widget.min.css');
 $cssG   = plugin_file('assets/css/widget-guest.min.css');
@@ -49,6 +49,9 @@ require_once __DIR__ . '/_emit-guide.php';
 $appHtml    = dccgg_render_guide(dccgg_guide_case('app'));
 $appPublic  = dccgg_render_guide(dccgg_guide_case('app-public'));
 $gridHtml   = dccgg_render_guide(dccgg_guide_case('all-on'));
+// The staging state: the app layout on a guide with NO section roles, NO
+// tab settings and NO tile nouns — which is how every fresh widget starts.
+$appNoCfg   = dccgg_render_guide(dccgg_guide_case('app-bare'));
 
 echo "\nA. Opt-in: every other layout is untouched\n";
 
@@ -90,64 +93,43 @@ check('the app layout is one SELECT value, not a second switch',
 check('flip falls back to stage in the app layout — a sheet needs the stage',
     strpos($widget, "\$flip_incompatible = ['list', 'carousel', 'split-pane', 'app'];") !== false);
 
-echo "\nB. The stay token\n";
+echo "\nB. The stay resolver is GONE\n";
 
-// _render-guide.php already defines get_option; Stay also needs these two.
-$GLOBALS['options'] = $GLOBALS['options'] ?? [];
-if (!function_exists('add_option')) {
-    function add_option($k, $v, $x = '', $a = true) {
-        if (!array_key_exists($k, $GLOBALS['options'])) { $GLOBALS['options'][$k] = $v; }
-        return true;
-    }
+// Rob's decision: no per-guest links, so nothing resolves a booking and the
+// machinery that did is removed rather than left idle. An unused public
+// endpoint backed by a secret is something we would have to defend for
+// nothing. These are absence checks, and absence is the whole feature.
+check('there is no Stay class left', !is_readable($dir . 'includes/class-stay.php'));
+foreach ([
+    'the signed token'   => 'dccgg-stay-v1',
+    'the signing helper' => 'hash_hmac',
+    'the booking lookup' => 'mphb_booking',
+    'the cottage label'  => 'short_cottage_name',
+] as $what => $needle) {
+    check("$what is gone from the plugin",
+        strpos($propPhp, $needle) === false
+        && strpos($widget, $needle) === false
+        && strpos($plugin, $needle) === false);
 }
-if (!function_exists('wp_strip_all_tags')) {
-    function wp_strip_all_tags($s) { return strip_tags((string) $s); }
-}
-// Guarded so a red run against a tree that predates the class reports real
-// failures instead of fatalling on line one of this block.
-check('the Stay resolver exists at all', is_readable($dir . 'includes/class-stay.php'));
-if (is_readable($dir . 'includes/class-stay.php')) {
-    require_once $dir . 'includes/class-stay.php';
-}
-if (!class_exists('\\DCCGG\\Stay')) {
-    echo "  (skipping the rest of B and C — no Stay class)\n";
-} else {
-$tok = \DCCGG\Stay::token(4242);
-check('a minted token verifies back to its booking', \DCCGG\Stay::verify($tok) === 4242);
-check('the secret is 64 hex characters',
-    preg_match('/^[0-9a-f]{64}$/', (string) get_option(\DCCGG\Stay::SECRET_OPTION, '')) === 1);
-check('a token for one booking does not verify as another',
-    \DCCGG\Stay::verify('4243.' . explode('.', $tok)[1]) === 0);
-check('one flipped character in the signature fails',
-    \DCCGG\Stay::verify(substr($tok, 0, -1) . (substr($tok, -1) === 'a' ? 'b' : 'a')) === 0);
-check('a truncated signature fails rather than matching a prefix',
-    \DCCGG\Stay::verify(substr($tok, 0, strlen($tok) - 4)) === 0);
-foreach (['', '   ', '4242', '4242.', '.abc', '4242.4242.abc', '0.' . explode('.', $tok)[1],
-          '-1.aaaaaaaaaaaaaaaaaaaa', str_repeat('9', 200)] as $junk) {
-    check("junk token " . var_export($junk, true) . " is refused", \DCCGG\Stay::verify($junk) === 0);
-}
-check('an unverified id resolves to nothing, whatever the caller passes',
-    \DCCGG\Stay::resolve(0) === null && \DCCGG\Stay::resolve(-5) === null);
-check('the comparison is constant-time, not ===',
-    strpos($stayPhp, 'hash_equals(') !== false
-    && preg_match('/==\s*\$sig|\$sig\s*==/', $stayPhp) !== 1);
-check('the signature is domain-separated, so it cannot be replayed elsewhere',
-    strpos($stayPhp, "HMAC_CONTEXT = 'dccgg-stay-v1|'") !== false);
-check('only a CONFIRMED booking greets anyone',
-    strpos($stayPhp, "GREETING_STATUS = 'confirmed'") !== false
-    && strpos($stayPhp, '$booking->post_status !== self::GREETING_STATUS') !== false);
-check('the post type is checked too, so any post id is not a stay',
-    strpos($stayPhp, "post_type !== 'mphb_booking'") !== false);
-check('the resolved stay carries dates and a cottage, and nothing personal',
-    preg_match('/\$stay = \[\s*\'cottage\'.*?\'checkIn\'.*?\'checkOut\'.*?\'timeIn\'.*?\'timeOut\'.*?\];/s', $stayPhp) === 1
-    && !preg_match("/'(email|guestName|name|price|total|phone)'\s*=>/", $stayPhp));
-check('the secret is NOT written on install, activation or upgrade',
-    strpos($plugin, 'Stay::secret') === false
-    && strpos($stayPhp, 'register_activation_hook') === false);
-check('a backwards date range is refused',
-    strpos($stayPhp, '$out <= $in') !== false);
+check('the dccgg_stay endpoint is unregistered', strpos($plugin, 'dccgg_stay') === false);
+check('…and its handler is gone', strpos($plugin, 'function handle_stay') === false);
+check('the Guest Links admin page is gone',
+    strpos($plugin, 'Guest Links') === false
+    && strpos($plugin, 'render_guest_links_panel') === false);
+check('the chunk no longer asks for a stay',
+    strpos($jsApp, 'dccgg_stay') === false && strpos($jsApp, "get('t')") === false);
+check('…and no longer paints dates or a progress bar',
+    strpos($jsApp, 'data-dccgg-dates') === false && strpos($jsApp, 'progress-fill') === false);
+check('the hero markup carries neither',
+    strpos($appHtml, 'data-dccgg-dates') === false
+    && strpos($appHtml, 'data-dccgg-progress') === false);
+check('the secret is deleted once, from admin only',
+    strpos($plugin, "'forget_dead_secret'") !== false
+    && substr_count($propPhp, 'delete_option(') === 1);
+check('…and only when it is there, so nothing is written twice',
+    strpos($propPhp, 'get_option(self::DEAD_SECRET_OPTION, null) !== null') !== false);
 
-echo "\nC. The property's clock, and the cottage label\n";
+echo "\nC. The property's clock\n";
 
 check('"11:00" reads as "11:00 AM"', \DCCGG\Widget::app_clock('11:00') === '11:00 AM');
 check('"14:00" reads as "2:00 PM"',  \DCCGG\Widget::app_clock('14:00') === '2:00 PM');
@@ -157,22 +139,51 @@ foreach (['', '11', '25:00', '11:60', 'eleven', '11:0', '1100'] as $bad) {
         \DCCGG\Widget::app_clock($bad) === '');
 }
 check('MotoPress is asked first, the option second, and nothing third',
-    strpos($stayPhp, 'getCheckInTime') !== false
-    && strpos($stayPhp, "get_option(\$option, '')") !== false);
+    strpos($propPhp, 'getCheckInTime') !== false
+    && strpos($propPhp, 'get_option($option') !== false);
 check('a malformed time from either source is discarded, not shown',
-    substr_count($stayPhp, "preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d\$/'") === 2);
-check('"Cottage 34: Coconut Cottage" shortens to "Cottage 34"',
-    \DCCGG\Stay::short_cottage_name('Cottage 34: Coconut Cottage') === 'Cottage 34');
-check('a title with no colon is kept whole',
-    \DCCGG\Stay::short_cottage_name('The Boathouse') === 'The Boathouse');
-check('a leading colon does not empty the label',
-    \DCCGG\Stay::short_cottage_name(': Coconut') === ': Coconut');
-check('an ISO date is validated, not just pattern-matched',
-    \DCCGG\Stay::is_iso_date('2026-02-29') === false
-    && \DCCGG\Stay::is_iso_date('2028-02-29') === true
-    && \DCCGG\Stay::is_iso_date('2026-13-01') === false);
+    substr_count($propPhp, 'preg_match(') === 2);
 
-}
+echo "\nC2. Working with nothing configured\n";
+
+// Every one of these was reported from staging, where the widget was fresh:
+// no section roles, no tab settings, no tile nouns.
+$live_like = [
+    ['section_key' => 'internet', 'section_title' => 'Internet'],
+    ['section_key' => 'canal',    'section_title' => 'Boating / Fishing'],
+    ['section_key' => 'checkout', 'section_title' => 'Checkout'],
+    ['section_key' => 'map',      'section_title' => 'Map'],
+];
+check('the checkout section is found by KEY when no role is set',
+    \DCCGG\Widget::app_checkout_key($live_like) === 'checkout');
+check('…and by role when one is given, which still wins',
+    \DCCGG\Widget::app_checkout_key(
+        [['section_key' => 'leaving', 'section_role' => 'checkout'], ['section_key' => 'checkout']]
+    ) === 'leaving');
+check('…and is empty when the guide has neither',
+    \DCCGG\Widget::app_checkout_key([['section_key' => 'pool']]) === '');
+check('the Canal tab finds the map section',
+    \DCCGG\Widget::app_map_key($live_like) === 'map');
+check('…falling back to a canal one when there is no map',
+    \DCCGG\Widget::app_map_key([['section_key' => 'canal', 'section_title' => 'Boating / Fishing']]) === 'canal');
+check('…and to nothing at all rather than a wrong guess',
+    \DCCGG\Widget::app_map_key([['section_key' => 'pool', 'section_title' => 'Pool']]) === '');
+check('the welcome names the property from the site title',
+    \DCCGG\Widget::default_welcome() === 'Welcome to Dora Canal Court',
+    \DCCGG\Widget::default_welcome());
+check('the Guide tab renders even with no section chosen',
+    substr_count($appNoCfg, 'data-app-tab="menu"') === 1);
+check('…and the Canal tab appears from the auto-detected map section',
+    strpos($appNoCfg, 'data-app-tab-key="map"') !== false);
+check('a fresh widget gets four tabs, not the two staging showed',
+    substr_count($appNoCfg, 'data-app-tab=') === 4,
+    (string) substr_count($appNoCfg, 'data-app-tab='));
+check('the Checkout tile carries the property clock with no role set',
+    strpos($appNoCfg, '11:00 AM · 3 items') !== false,
+    implode(' | ', (function ($h) {
+        preg_match_all('/dccgg-tile-summary">([^<]*)</', $h, $m);
+        return $m[1];
+    })($appNoCfg)));
 
 echo "\nD. Tile summaries\n";
 
@@ -216,28 +227,10 @@ check('…and from the guest app shell\'s source as well — it is revealed, not
     strpos($appHtml, 'DCC32586') === false);
 check('a guest-only section is dropped from the public app shell',
     strpos($appPublic, 'data-section-key="emergency"') === false);
-check('the hero itself is the same either way — it holds no stay details',
+check('the hero is the same either way, and holds no stay details on either',
     strpos($appPublic, 'dccgg-app-hero') !== false
-    && strpos($appPublic, 'data-dccgg-dates') !== false);
-
-echo "\nF. The endpoint\n";
-
-check('dccgg_stay is registered for logged-out guests too',
-    strpos($plugin, "add_action('wp_ajax_nopriv_dccgg_stay'") !== false);
-check('it reads $_GET, never $_POST',
-    preg_match('/function handle_stay\(\).*?\n    \}/s', $plugin, $m) === 1
-    && strpos($m[0], "\$_GET['t']") !== false
-    && strpos($m[0], '$_POST') === false);
-check('it writes nothing but its own rate-limit counter',
-    isset($m[0]) && substr_count($m[0], 'set_transient') === 1
-    && strpos($m[0], 'update_option') === false
-    && strpos($m[0], 'wp_insert') === false);
-check('no token is a plain success with no stay, not an error',
-    isset($m[0]) && strpos($m[0], "wp_send_json_success(['stay' => \$stay ?: null])") !== false);
-check('it is rate-limited',
-    isset($m[0]) && strpos($m[0], 'dccgg_stay_rl_') !== false);
-check('it checks the nonce',
-    isset($m[0]) && strpos($m[0], "check_ajax_referer('dccgg_nonce'") !== false);
+    && strpos($appPublic, 'data-dccgg-dates') === false
+    && strpos($appHtml, 'data-dccgg-dates') === false);
 
 echo "\nG. The wiring\n";
 
@@ -300,8 +293,8 @@ check('every pill selector is one the splitter recognises as guest-only',
 check('the tab bar is re-asserted stateless at (0,4,0), beating the kit',
     strpos($css, '.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab {') !== false);
 check('…and the pill on both hosts, because the stage is portaled to <body>',
-    strpos($css, '.dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill,') !== false
-    && strpos($css, '.dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill') !== false);
+    strpos($css, '.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill,') !== false
+    && strpos($css, '.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill') !== false);
 check('the tab label is 14px fixed, not em',
     preg_match('/\.dccgg-app-tab-label \{[^}]*font-size: 14px;/s', $css) === 1);
 check('sunset is asked of the weather proxy, and its cache key moved with it',

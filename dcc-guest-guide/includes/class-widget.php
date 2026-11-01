@@ -1855,18 +1855,13 @@ final class Widget extends Widget_Base
             'str_app_greet_morning'   => [__('Greeting — morning', 'dcc-guest-guide'),   __('Good morning', 'dcc-guest-guide')],
             'str_app_greet_afternoon' => [__('Greeting — afternoon', 'dcc-guest-guide'), __('Good afternoon', 'dcc-guest-guide')],
             'str_app_greet_evening'   => [__('Greeting — evening', 'dcc-guest-guide'),   __('Good evening', 'dcc-guest-guide')],
-            'str_app_welcome'         => [__('Welcome — no stay known', 'dcc-guest-guide'), __('Welcome', 'dcc-guest-guide')],
-            /* translators: %s: the cottage name, e.g. "Cottage 34". */
-            'str_app_welcome_to'      => [__('Welcome — stay known', 'dcc-guest-guide'), __('Welcome to %s', 'dcc-guest-guide')],
-            'str_app_in'              => [__('Check-in label', 'dcc-guest-guide'),  __('In', 'dcc-guest-guide')],
-            'str_app_out'             => [__('Check-out label', 'dcc-guest-guide'), __('Out', 'dcc-guest-guide')],
             'str_app_now'             => [__('Live conditions label', 'dcc-guest-guide'), __('Tavares Now', 'dcc-guest-guide')],
             'str_app_sunset'          => [__('Sunset label', 'dcc-guest-guide'), __('Sunset', 'dcc-guest-guide')],
             'str_app_open_maps'       => [__('Open-in-Maps button', 'dcc-guest-guide'), __('Open in Google Maps', 'dcc-guest-guide')],
             /* translators: %1$d: items ticked. %2$d: items in total. */
             'str_app_done'            => [__('Checkout progress', 'dcc-guest-guide'), __('%1$d of %2$d done', 'dcc-guest-guide')],
-            /* translators: %1$s: weekday, e.g. "Sunday". %2$s: clock time, e.g. "11:00 AM". */
-            'str_app_by'              => [__('Checkout deadline', 'dcc-guest-guide'), __('%1$s by %2$s', 'dcc-guest-guide')],
+            /* translators: %s: clock time, e.g. "11:00 AM". */
+            'str_app_by'              => [__('Checkout deadline', 'dcc-guest-guide'), __('By %s', 'dcc-guest-guide')],
             'str_app_tab_stay'        => [__('Tab — Stay', 'dcc-guest-guide'),  __('Stay', 'dcc-guest-guide')],
             'str_app_tab_guide'       => [__('Tab — Guide', 'dcc-guest-guide'), __('Guide', 'dcc-guest-guide')],
             'str_app_tab_canal'       => [__('Tab — Canal', 'dcc-guest-guide'), __('Canal', 'dcc-guest-guide')],
@@ -1876,6 +1871,21 @@ final class Widget extends Widget_Base
             'str_app_section_fd'      => [__('Front Desk pill inside a section', 'dcc-guest-guide'), __('%s Not Working? Tell the Front Desk', 'dcc-guest-guide')],
             'str_app_close_sheet'     => [__('Close sheet (screen readers)', 'dcc-guest-guide'), __('Close', 'dcc-guest-guide')],
         ];
+        // v0.26.1: no packaged default. An Elementor control's default is
+        // written into the page the moment it is saved, so a default of
+        // "Welcome" would freeze that word onto every guide and the site's
+        // own name would never appear. Empty means "use the property's name",
+        // which Widget::default_welcome() reads from WordPress.
+        $this->add_control('str_app_welcome', [
+            'label'       => __('Welcome line', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'label_block' => true,
+            'placeholder' => self::default_welcome(),
+            'description' => __('Leave empty to greet guests with the property\'s own name.', 'dcc-guest-guide'),
+            'condition'   => ['menu_layout' => 'app'],
+        ]);
+
         foreach ($app_strings as $key => [$label, $default]) {
             $this->add_control($key, [
                 'label'     => $label,
@@ -3403,6 +3413,13 @@ final class Widget extends Widget_Base
         // v0.26.0: the app shell. Opt-in and nothing else: a guide left on any
         // other layout renders byte-for-byte what it rendered before.
         $is_app       = ($menu_layout === 'app');
+        // Read MotoPress once per render, not once per consumer.
+        $app_times     = $is_app ? Property::times() : ['in' => '', 'out' => ''];
+        $app_canal_key = '';
+        if ($is_app) {
+            $app_canal_key = trim((string) ($s['app_tab_canal_key'] ?? ''));
+            if ($app_canal_key === '') { $app_canal_key = self::app_map_key($sections); }
+        }
         // Flip-card falls back to stage-swap when paired with incompatible layouts.
         $flip_incompatible = ['list', 'carousel', 'split-pane', 'app'];
         if ($reveal_mode === 'flip' && in_array($menu_layout, $flip_incompatible, true)) {
@@ -3618,13 +3635,18 @@ final class Widget extends Widget_Base
             'searchIndex'      => $search_index,
             // v0.26.0: the app shell's own payload, and ONLY when that layout
             // is chosen — every other guide carries none of it.
+            // v0.26.0, trimmed in v0.26.1: the app shell's own payload, and ONLY
+            // when that layout is chosen — every other guide carries none of it.
             'app' => !$is_app ? null : [
-                'canalKey'    => trim((string) ($s['app_tab_canal_key'] ?? '')),
+                // The resolved keys, not the raw settings: the tab bar has to
+                // work on a widget where neither has been set, which is how
+                // every fresh one starts.
+                'canalKey'    => $app_canal_key,
                 'guideKey'    => trim((string) ($s['app_tab_guide_key'] ?? '')),
-                'checkoutKey' => $checkout_key,
+                'checkoutKey' => self::app_checkout_key($sections),
                 'mapUrl'      => trim((string) ($s['app_map_url']['url'] ?? '')),
-                'timeIn'      => Stay::property_times()['in'],
-                'timeOut'     => Stay::property_times()['out'],
+                'timeIn'      => $app_times['in'],
+                'timeOut'     => $app_times['out'],
                 // The cottages are in Florida and a check-out time is a time
                 // there, whatever the phone is set to. Same clock the
                 // checklist expiry already uses.
@@ -3633,10 +3655,8 @@ final class Widget extends Widget_Base
                     'morning'   => (string) ($s['str_app_greet_morning']   ?? __('Good morning', 'dcc-guest-guide')),
                     'afternoon' => (string) ($s['str_app_greet_afternoon'] ?? __('Good afternoon', 'dcc-guest-guide')),
                     'evening'   => (string) ($s['str_app_greet_evening']   ?? __('Good evening', 'dcc-guest-guide')),
-                    'welcome'   => (string) ($s['str_app_welcome']    ?? __('Welcome', 'dcc-guest-guide')),
-                    'welcomeTo' => (string) ($s['str_app_welcome_to'] ?? __('Welcome to %s', 'dcc-guest-guide')),
                     'done'      => (string) ($s['str_app_done'] ?? __('%1\$d of %2\$d done', 'dcc-guest-guide')),
-                    'by'        => (string) ($s['str_app_by']   ?? __('%1\$s by %2\$s', 'dcc-guest-guide')),
+                    'by'        => (string) ($s['str_app_by']   ?? __('By %s', 'dcc-guest-guide')),
                     'sunset'    => (string) ($s['str_app_sunset'] ?? __('Sunset', 'dcc-guest-guide')),
                     'openMaps'  => (string) ($s['str_app_open_maps'] ?? __('Open in Google Maps', 'dcc-guest-guide')),
                     'closeSheet'=> (string) ($s['str_app_close_sheet'] ?? __('Close', 'dcc-guest-guide')),
@@ -3848,7 +3868,8 @@ final class Widget extends Widget_Base
         // property's check-out time ONCE here rather than per tile, and only
         // when that layout is in use — it is a MotoPress call.
         $is_app         = ($s['menu_layout'] ?? '') === 'app';
-        $checkout_clock = $is_app ? Stay::property_times()['out'] : '';
+        $checkout_clock = $is_app ? Property::times()['out'] : '';
+        $checkout_tile  = $is_app ? self::app_checkout_key($sections) : '';
         ?>
         <div class="dccgg-menu">
             <?php foreach ($sections as $sec) :
@@ -3863,7 +3884,7 @@ final class Widget extends Widget_Base
 
                 // Stable IDs for a11y linkage. Hashed key so a quoted/odd
                 // section key still produces a valid attribute value.
-                $summary    = $is_app ? self::app_tile_summary($sec, count($items), $checkout_clock) : '';
+                $summary    = $is_app ? self::app_tile_summary($sec, count($items), $checkout_clock, $checkout_tile) : '';
                 $safe_key   = substr(sha1($widget_uid . '|' . $key), 0, 10);
                 $tile_id    = 'dccgg-tile-' . $safe_key;
                 $panel_id   = 'dccgg-panel-' . $safe_key;
@@ -3937,23 +3958,92 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * "Welcome to Dora Canal Court", from the site's own name.
+     *
+     * A default rather than a packaged string, because the property's name is
+     * a fact WordPress already holds and nobody should have to type it. An
+     * unnamed site falls back to the bare word.
+     */
+    public static function default_welcome(): string
+    {
+        $name = trim(wp_strip_all_tags((string) get_bloginfo('name')));
+        /* translators: %s: the property's name. */
+        return $name === '' ? __('Welcome', 'dcc-guest-guide')
+            : sprintf(__('Welcome to %s', 'dcc-guest-guide'), $name);
+    }
+
+    /**
+     * Which section is the checkout one, for the app shell's tile.
+     *
+     * The role comes first, and then the KEY, and the second half is not
+     * belt-and-braces — it is the only one that fires on the live guide.
+     * Measured 2026-11-01 on doracanalcourt.com/guest/: the rendered page
+     * carries no `data-section-role` at all, on any of its eight sections,
+     * so nothing there has ever had a role set. That is why the Checkout tile
+     * read "7 items" on staging instead of "11:00 AM · 7 items".
+     *
+     * This looks a guide's own data up; it does not invent one. A guide whose
+     * checkout section is called something else gets no clock, and can say so
+     * with the tile's own summary field.
+     */
+    public static function app_checkout_key(array $sections): string
+    {
+        foreach ($sections as $sec) {
+            if ((string) ($sec['section_role'] ?? '') === 'checkout') {
+                $k = trim((string) ($sec['section_key'] ?? ''));
+                if ($k !== '') { return $k; }
+            }
+        }
+        foreach ($sections as $sec) {
+            if (strtolower(trim((string) ($sec['section_key'] ?? ''))) === 'checkout') {
+                return trim((string) ($sec['section_key'] ?? ''));
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Which section the Canal tab opens when the host has set nothing.
+     *
+     * "Canal opens the section that holds the map" — so a section whose key
+     * or title says map wins, and a canal one is the fallback. Both exist on
+     * the live guide (`map` and `canal`), and the map one is the right
+     * answer there.
+     */
+    public static function app_map_key(array $sections): string
+    {
+        foreach (['/\bmaps?\b/i', '/canal/i'] as $pattern) {
+            foreach ($sections as $sec) {
+                $key   = trim((string) ($sec['section_key'] ?? ''));
+                $title = trim((string) ($sec['section_title'] ?? ''));
+                if ($key !== '' && (preg_match($pattern, $key) || preg_match($pattern, $title))) {
+                    return $key;
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
      * The Postcard Hero (v0.26.0).
      *
-     * A tall photo with the Your Stay card floating on it. The card's greeting
-     * and the stay details are both written by the browser, and for the same
-     * reason: this page is served from a full-page cache, so anything that
-     * depends on the hour or on who is asking cannot come from the server
-     * without being wrong for the next reader. The HTML therefore carries the
-     * one line that is always true — the plain welcome — and the rest arrives
-     * after.
+     * A tall photo with the welcome card floating on it.
+     *
+     * v0.26.1 removed the stay details entirely — Rob will not hand out a
+     * per-guest link, so there is no booking to name and nothing to put in
+     * their place but the truth. What is left is the greeting and the
+     * welcome, and the greeting is still written by the browser: this page is
+     * served from a full-page cache, so a server-rendered "Good morning"
+     * would still say so at ten at night.
      */
     private function render_app_hero(array $s): void
     {
         $photo = trim((string) ($s['app_hero_image']['url'] ?? ''));
         $alt   = trim((string) ($s['app_hero_alt'] ?? ''));
-        $welcome = (string) ($s['str_app_welcome'] ?? __('Welcome', 'dcc-guest-guide'));
-        $in_lbl  = (string) ($s['str_app_in']  ?? __('In', 'dcc-guest-guide'));
-        $out_lbl = (string) ($s['str_app_out'] ?? __('Out', 'dcc-guest-guide'));
+        $welcome = trim((string) ($s['str_app_welcome'] ?? ''));
+        if ($welcome === '') {
+            $welcome = self::default_welcome();
+        }
         ?>
         <div class="dccgg-app-hero">
             <?php if ($photo !== '') : ?>
@@ -3965,19 +4055,6 @@ final class Widget extends Widget_Base
             <div class="dccgg-app-stay" data-dccgg-stay>
                 <p class="dccgg-app-greeting" data-dccgg-greeting hidden></p>
                 <h2 class="dccgg-app-welcome" data-dccgg-welcome><?php echo esc_html($welcome); ?></h2>
-                <div class="dccgg-app-dates" data-dccgg-dates hidden>
-                    <span class="dccgg-app-date">
-                        <span class="dccgg-app-date-label"><?php echo esc_html($in_lbl); ?></span>
-                        <span class="dccgg-app-date-value" data-dccgg-in></span>
-                    </span>
-                    <span class="dccgg-app-date dccgg-app-date--out">
-                        <span class="dccgg-app-date-label"><?php echo esc_html($out_lbl); ?></span>
-                        <span class="dccgg-app-date-value" data-dccgg-out></span>
-                    </span>
-                </div>
-                <div class="dccgg-app-progress" data-dccgg-progress hidden>
-                    <div class="dccgg-app-progress-fill" data-dccgg-progress-fill></div>
-                </div>
             </div>
         </div>
         <?php
@@ -4052,6 +4129,14 @@ final class Widget extends Widget_Base
         $guide_key = trim((string) ($s['app_tab_guide_key'] ?? ''));
         $canal_key = trim((string) ($s['app_tab_canal_key'] ?? ''));
         $report_on = !$public_mode && ($s['enable_problem_report'] ?? '') === 'yes';
+        // v0.26.1: the bar works with nothing configured. A fresh widget had
+        // both of these empty, so staging showed a two-tab bar — Stay and
+        // Front Desk — and the brief is that it should work with no setup.
+        // Guide, with no section chosen, goes to the full section list; Canal
+        // finds the section that holds the map. A stored value still wins.
+        if ($canal_key === '') {
+            $canal_key = self::app_map_key((array) ($s['guide_sections'] ?? []));
+        }
 
         $tabs = [[
             'act'   => 'stay',
@@ -4059,9 +4144,12 @@ final class Widget extends Widget_Base
             'emoji' => '🏠',
             'key'   => '',
         ]];
-        if ($guide_key !== '') {
-            $tabs[] = ['act' => 'section', 'label' => (string) ($s['str_app_tab_guide'] ?? __('Guide', 'dcc-guest-guide')), 'emoji' => '📖', 'key' => $guide_key];
-        }
+        $tabs[] = [
+            'act'   => $guide_key !== '' ? 'section' : 'menu',
+            'label' => (string) ($s['str_app_tab_guide'] ?? __('Guide', 'dcc-guest-guide')),
+            'emoji' => '📖',
+            'key'   => $guide_key,
+        ];
         if ($canal_key !== '') {
             $tabs[] = ['act' => 'section', 'label' => (string) ($s['str_app_tab_canal'] ?? __('Canal', 'dcc-guest-guide')), 'emoji' => '🗺️', 'key' => $canal_key];
         }
@@ -4167,7 +4255,7 @@ final class Widget extends Widget_Base
      * leads with the property's check-out time, and only when MotoPress
      * actually reports one.
      */
-    public static function app_tile_summary(array $sec, int $item_count, string $checkout_time = ''): string
+    public static function app_tile_summary(array $sec, int $item_count, string $checkout_time = '', string $checkout_key = ''): string
     {
         $summary = trim((string) ($sec['section_summary'] ?? ''));
         if ($summary === '') {
@@ -4182,7 +4270,11 @@ final class Widget extends Widget_Base
                 $summary = $item_count . ' ' . $noun;
             }
         }
-        if ((string) ($sec['section_role'] ?? '') === 'checkout') {
+        // Role first, then the resolved key — and the key half is the one that
+        // fires on the live guide, which carries no section roles at all.
+        $is_checkout = (string) ($sec['section_role'] ?? '') === 'checkout'
+            || ($checkout_key !== '' && trim((string) ($sec['section_key'] ?? '')) === $checkout_key);
+        if ($is_checkout) {
             $clock = self::app_clock($checkout_time);
             if ($clock !== '') {
                 $summary = $summary === '' ? $clock : $clock . ' · ' . $summary;
@@ -4387,6 +4479,7 @@ final class Widget extends Widget_Base
         $is_app      = ($s['menu_layout'] ?? '') === 'app';
         $app_public  = self::is_public_mode($s);
         $canal_key   = $is_app ? trim((string) ($s['app_tab_canal_key'] ?? '')) : '';
+        if ($is_app && $canal_key === '') { $canal_key = self::app_map_key($sections); }
         $map_url     = $is_app ? trim((string) ($s['app_map_url']['url'] ?? '')) : '';
         $label_maps  = (string) ($s['str_app_open_maps'] ?? __('Open in Google Maps', 'dcc-guest-guide'));
         ?>

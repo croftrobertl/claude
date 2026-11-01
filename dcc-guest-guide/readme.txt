@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.0
+Stable tag: 0.26.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,19 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.26.1 =
+* The stay resolver is removed: no `?t=` token, no Guest Links page, no
+  `dccgg_stay` endpoint, and the `dccgg_stay_secret` option is deleted once
+  from wp-admin. The hero greets guests with the property's own name.
+* App-shell styling now outranks the Elementor kit, so the hero heading and
+  the tile borders render as designed on the live theme.
+* The app shell works with nothing configured: the Guide tab goes to the
+  tiles, the Canal tab finds the section holding the map, and the Checkout
+  tile shows the property's check-out time without needing a section role.
+* The tile grid's column count follows its container, not the viewport.
+* One count in the checkout sheet, not two.
+* Fixed: the guide failed to start if widget.js ran after DOM ready.
 
 = 0.26.0 =
 * App shell layout (opt-in, "Menu layout → App shell"): photo hero with the

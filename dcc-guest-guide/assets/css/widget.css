@@ -5046,24 +5046,28 @@ dialog.dccgg-wrapper::backdrop {
 }
 
 /* ======================================================================
-   v0.26.0 — the app shell ("A1 · Postcard Hero")
+   v0.26.0 — the app shell ("A1 · Postcard Hero"), reworked in v0.26.1
    ----------------------------------------------------------------------
-   Everything here is scoped to .dccgg-app-shell (the root) or to
-   .dccgg-stage--app (the stage). TWO hosts, not one, and deliberately:
-   the stage is moved to <body> when a section opens, so a rule anchored on
-   the root alone is inert in the one place the sheet is actually read —
-   the mistake v0.25.1 had to fix for the body copy.
+   EVERY DECLARATION HERE REACHES (0,4,0), and v0.26.1 is why. v0.26.0
+   wrote `.dccgg-app-welcome { font-size: 1.6em }` — one class — and on the
+   real site the heading rendered at 20px, because `.elementor-kit-331 h2`
+   is (0,1,1) and beats (0,1,0). The tiles lost their border the same way:
+   the kit's `button { border-width: 0 }` outranks `.dccgg-tile`.
 
-   The buttons are re-asserted STATELESS at (0,4,0). Bravada's kit paints
-   button:hover,:focus,:active #F08080 at (0,2,1), and a tab bar that turns
-   coral when touched is exactly the v0.24.4 bug with a new victim. One
-   stateless rule retires all three kit states at once; the hover this
-   layout does want is put back inside (hover:hover) and (pointer:fine), so
-   a finger never triggers it.
+   Measured on the live page, not modelled: tools/live-shell.js renders this
+   layout inside the real doracanalcourt.com document with the real combined
+   stylesheet, and tests/app-shell.ui.js now carries both of those kit rules
+   in its own ground block so the suite would have caught it.
 
-   Tap targets are 44px or more and tab labels are 14px FIXED, not em —
-   Rob's guests skew older, and a theme that scales text down must not be
-   able to take a label below the floor.
+   The prefixes are `.dccgg-root.dccgg-root` for anything in the hub and
+   `.dccgg-stage.dccgg-stage` for anything in a sheet — the stage is moved to
+   <body> when a section opens and a root-anchored rule never reaches it.
+
+   WHAT IS DELIBERATELY NOT FOUGHT: tile padding. On page 4645 the host has
+   set it through an Elementor control, which compiles to
+   `.elementor-4645 .elementor-element-… .dccgg-root.dccgg-root .dccgg-tile`
+   and rightly beats anything written here. A host-set control wins; that is
+   the whole point of having one.
    ====================================================================== */
 
 .dccgg-app-shell {
@@ -5073,20 +5077,21 @@ dialog.dccgg-wrapper::backdrop {
     --dccgg-app-fd: #d9480f;           /* the orange Front Desk pill */
     --dccgg-app-surface: #eef2f7;
     --dccgg-app-radius: 18px;
+    padding-bottom: 78px;              /* room for the fixed tab bar */
 }
 
 /* -------- The hero -------- */
-.dccgg-app-hero {
+.dccgg-root.dccgg-root .dccgg-app-hero {
     position: relative;
     margin: 0 0 14px;
     border-radius: var(--dccgg-app-radius);
     overflow: hidden;
     background: var(--dccgg-app-surface);
-    min-height: 220px;
+    min-height: 240px;
     display: flex;
     align-items: flex-end;
 }
-.dccgg-app-hero-photo {
+.dccgg-root.dccgg-root .dccgg-app-hero .dccgg-app-hero-photo {
     position: absolute;
     inset: 0;
     background-size: cover;
@@ -5095,7 +5100,7 @@ dialog.dccgg-wrapper::backdrop {
 /* The frosted card. backdrop-filter is an enhancement, never the thing that
    makes the text readable: the background below is already opaque enough on
    its own, so a browser without the filter shows the same card. */
-.dccgg-app-stay {
+.dccgg-root.dccgg-root .dccgg-app-hero .dccgg-app-stay {
     position: relative;
     margin: 0 14px 14px;
     padding: 16px 18px;
@@ -5107,54 +5112,29 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
     text-align: left;
 }
-.dccgg-app-greeting {
+.dccgg-root.dccgg-root .dccgg-app-stay .dccgg-app-greeting {
     margin: 0 0 2px;
-    font-size: 1em;
+    font-size: 0.95em;
     font-weight: 400;
+    line-height: 1.3;
     color: var(--dccgg-app-muted);
 }
-.dccgg-app-welcome {
+.dccgg-root.dccgg-root .dccgg-app-stay .dccgg-app-welcome {
     margin: 0;
-    font-size: 1.6em;
+    font-size: 1.55em;
     line-height: 1.2;
     font-weight: 700;
     color: var(--dccgg-app-ink);
 }
-.dccgg-app-dates:not([hidden]) {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 8px;
-    font-size: 1em;
-}
-.dccgg-app-date-label {
-    color: var(--dccgg-app-muted);
-    font-weight: 400;
-}
-.dccgg-app-date-value {
-    color: var(--dccgg-app-ink);
-    font-weight: 700;
-}
-.dccgg-app-progress {
-    margin-top: 10px;
-    height: 7px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--dccgg-app-ink) 14%, transparent);
-    overflow: hidden;
-}
-.dccgg-app-progress-fill {
-    height: 100%;
-    width: 0;
-    border-radius: 999px;
-    background: var(--dccgg-primary);
-}
 
 /* -------- "Tavares Now" -------- */
 /* :not([hidden]) because a class that sets `display` beats the user agent's
-   [hidden]{display:none} — the element stayed on screen empty until this was
+   [hidden]{display:none} — the strip stayed on screen empty until this was
    measured. */
-.dccgg-app-now:not([hidden]) {
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-app-now:not([hidden]) {
     display: flex;
+}
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-app-now {
     align-items: baseline;
     justify-content: center;
     flex-wrap: wrap;
@@ -5163,43 +5143,59 @@ dialog.dccgg-wrapper::backdrop {
     font-size: 0.95em;
     color: var(--dccgg-app-muted);
 }
-.dccgg-app-now-label {
+.dccgg-root.dccgg-root .dccgg-app-now .dccgg-app-now-label {
     font-weight: 700;
     color: var(--dccgg-app-ink);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-size: 0.82em;
 }
-.dccgg-app-now-rows {
+/* A clock must never break across lines: "Sunset 6:41 / PM" is not a time.
+   Staging showed exactly that in the stay card at 390. */
+.dccgg-root.dccgg-root .dccgg-app-now .dccgg-app-now-rows {
     font-variant-numeric: tabular-nums;
     font-weight: 400;
+    white-space: nowrap;
 }
 
 /* -------- Tiles: two up, big, with their one real line -------- */
+/* The column count follows the CONTAINER, not the viewport, since v0.26.1:
+   the centred desktop column is 430px wide inside a 1440px window, and a
+   viewport rule gave it four columns and clipped every label. The viewport
+   rule is kept as the fallback for engines without container queries. */
+.dccgg-layout-app .dccgg-stage-container {
+    container-type: inline-size;
+    container-name: dccgg-hub;
+}
 .dccgg-layout-app .dccgg-menu {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
-/* A phone in landscape, and anything wider, gets more across — the tiles stay
-   big because the screen is, not because the count is pinned. */
-@media (min-width: 600px) {
-    .dccgg-layout-app .dccgg-menu {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+@supports not (container-type: inline-size) {
+    @media (min-width: 600px) {
+        .dccgg-layout-app .dccgg-menu { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
 }
-.dccgg-app-shell .dccgg-tile {
+@container dccgg-hub (min-width: 600px) {
+    .dccgg-layout-app .dccgg-menu { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* The card edge. The kit's `button { border-width: 0 }` is (0,1,1) and strips
+   the one `.dccgg-tile` draws, which on a white page leaves a white tile with
+   nothing round it — "flat icons with no card", as staging showed. Padding is
+   NOT set here; where the host has a control for it, the host wins. */
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile {
     min-height: 118px;
+    border: 1px solid color-mix(in srgb, var(--dccgg-app-ink) 14%, transparent);
     border-radius: var(--dccgg-app-radius);
-    padding: 16px;
     text-align: left;
     align-items: flex-start;
 }
-.dccgg-app-shell .dccgg-tile-title {
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-title {
     font-size: 1.22em;
     font-weight: 700;
     color: var(--dccgg-app-ink);
 }
-.dccgg-tile-summary {
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-summary {
     display: block;
     margin-top: 4px;
     font-size: 0.78em;
@@ -5212,33 +5208,28 @@ dialog.dccgg-wrapper::backdrop {
 
 /* -------- The bottom tab bar -------- */
 /* FIXED, and sticky was tried first. Sticky only sticks inside its own
-   scrolling box, and the bar is the last child of the widget: its natural
-   position is already at the bottom of that box, so it never lifted off the
-   end of the page and a guest at the top of the guide could not see it.
-   Measured at 390: the bar sat at y=833 in an 844 viewport only because the
-   page happened to be that long.
-
-   Two consequences, both handled below. The root reserves the bar's height so
-   nothing hides underneath it, and the bar steps aside while a sheet is open,
-   because the sheet is portaled to <body> and owns the screen. */
-.dccgg-app-shell {
-    padding-bottom: 78px;
-}
-.dccgg-app-tabs {
+   scrolling box, and the bar is the widget's last child: its natural position
+   is already at the bottom of that box, so it never lifted off the end of the
+   page. Measured at 390, it sat at y=833 in an 844 viewport only because the
+   page happened to be that long. */
+.dccgg-root.dccgg-root .dccgg-app-tabs {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 5;
-    border-radius: 0;
     display: flex;
     margin: 16px 0 0;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
     background: var(--dccgg-app-ink);
 }
 /* A sheet is a modal: the bar must not float over it, and must not be a Tab
    stop behind it either. */
-html.dccgg-detail-open .dccgg-app-tabs {
+/* (0,4,1), because the bar's own rule above is (0,3,0) and a weaker hide
+   loses to it — which is exactly what happened when this file moved to
+   (0,4,0) and the bar started floating over the open sheet again. */
+html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
     display: none;
 }
 .dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab {
@@ -5261,12 +5252,12 @@ html.dccgg-detail-open .dccgg-app-tabs {
     opacity: 1;
     background: rgba(255, 255, 255, 0.14);
 }
-.dccgg-app-tab-ico {
+.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab-ico {
     font-size: 20px;
     line-height: 1;
 }
 /* 14px FIXED: the floor the brief sets, and em would let a theme undercut it. */
-.dccgg-app-tab-label {
+.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab-label {
     font-size: 14px;
     font-weight: 700;
     line-height: 1.2;
@@ -5279,36 +5270,67 @@ html.dccgg-detail-open .dccgg-app-tabs {
     }
 }
 
+/* -------- Desktop: Rob's pick, "B · Centred Column" -------- */
+/* The phone shell, centred, rather than a second layout to maintain. The
+   guide then reads the same on every device, and the tile grid follows its
+   CONTAINER (above), so a 460px column keeps two tiles across inside a
+   1440px window instead of the four a viewport rule gave it.
+
+   700px, not 600: below that the column is wider than the screen anyway and
+   the centring would do nothing but add a scrollbar's worth of doubt. */
+@media (min-width: 700px) {
+    .dccgg-root.dccgg-root.dccgg-app-shell {
+        max-width: 460px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .dccgg-root.dccgg-root .dccgg-app-tabs {
+        left: 50%;
+        right: auto;
+        width: 460px;
+        transform: translateX(-50%);
+        border-radius: var(--dccgg-app-radius) var(--dccgg-app-radius) 0 0;
+    }
+}
+
 /* -------- The sheet -------- */
-/* NO GRAB HANDLE HERE. The brief lists one as a thing to build; the guide has
-   had one since v0.9.7.26 — `body.dccgg-detail-open .dccgg-detail-header::before`,
+/* NO GRAB HANDLE HERE. The brief listed one as a thing to build; the guide
+   has had one since v0.9.7.26 — `body.dccgg-detail-open .dccgg-detail-header::before`,
    a 40x4 pill on the sticky header, inside the same under-600px block as the
-   bottom-sheet layout, so it appears exactly where the swipe gesture does.
-   A second pill was written here and shipped as far as the first screenshot,
+   bottom-sheet layout, so it appears exactly where the swipe gesture does. A
+   second pill was written here and shipped as far as the first screenshot,
    which showed two stacked bars. Measure before adding. */
-.dccgg-stage--app .dccgg-app-due {
+.dccgg-stage.dccgg-stage .dccgg-app-due {
     margin: 0 0 6px;
     text-align: center;
     font-size: 0.92em;
     font-weight: 400;
+    line-height: 1.3;
     color: var(--dccgg-text);
 }
-.dccgg-stage--app .dccgg-app-due:empty { display: none; }
+.dccgg-stage.dccgg-stage .dccgg-app-due:empty { display: none; }
+/* ONE count, not two. The sheet header carried "2 of 3 done" in the due line
+   and "0 / 3" beside Reset, and the two could disagree. The due line is the
+   one a guest reads, so the bar keeps its fill and its Reset and gives up its
+   number. */
+.dccgg-stage--app .dccgg-checklist-progress .dccgg-checklist-progress-label {
+    display: none;
+}
 
 /* The Canal section: Rob's own My Maps embed, edge to edge. Only the frame
    changes — nothing here touches the embed. */
-.dccgg-stage--app .dccgg-detail--fullscreen .dccgg-detail-layout {
+.dccgg-stage.dccgg-stage .dccgg-detail--fullscreen .dccgg-detail-layout {
     padding-left: 0;
     padding-right: 0;
     max-width: none;
 }
-.dccgg-stage--app .dccgg-detail--fullscreen iframe {
+.dccgg-stage.dccgg-stage .dccgg-detail--fullscreen iframe {
     display: block;
     width: 100%;
     min-height: 60vh;
     border: 0;
 }
-.dccgg-stage--app .dccgg-app-maps {
+.dccgg-stage.dccgg-stage .dccgg-detail--fullscreen .dccgg-app-maps {
     display: block;
     width: calc(100% - 32px);
     margin: 12px auto 0;
@@ -5324,8 +5346,8 @@ html.dccgg-detail-open .dccgg-app-tabs {
 
    Two hosts again: the hero pill lives in the root, the contextual one lives
    in the stage, and the stage is portaled to <body>. */
-.dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill,
-.dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill {
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill,
+.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -5343,28 +5365,30 @@ html.dccgg-detail-open .dccgg-app-tabs {
     text-align: left;
     cursor: pointer;
 }
-.dccgg-stage.dccgg-stage .dccgg-report-pill--section.dccgg-report-pill--section {
+.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill--section {
     width: calc(100% - 32px);
     margin: 18px auto 8px;
     font-size: 1em;
 }
-.dccgg-report-pill-ico {
+.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-ico,
+.dccgg-stage.dccgg-stage .dccgg-report-pill .dccgg-report-pill-ico {
     font-size: 20px;
     line-height: 1;
 }
-.dccgg-report-pill-label {
+.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-label,
+.dccgg-stage.dccgg-stage .dccgg-report-pill .dccgg-report-pill-label {
     flex: 1 1 auto;
 }
-.dccgg-report-pill-chev {
+.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-chev {
     font-size: 22px;
     line-height: 1;
     opacity: 0.85;
 }
 @media (hover: hover) and (pointer: fine) {
-    .dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill:hover,
-    .dccgg-root.dccgg-root .dccgg-report-pill.dccgg-report-pill:focus-visible,
-    .dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill:hover,
-    .dccgg-stage.dccgg-stage .dccgg-report-pill.dccgg-report-pill:focus-visible {
+    .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill:hover,
+    .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill:focus-visible,
+    .dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill:hover,
+    .dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill:focus-visible {
         filter: brightness(1.08);
     }
 }
