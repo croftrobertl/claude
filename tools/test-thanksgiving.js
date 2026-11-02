@@ -25,7 +25,8 @@ const QUIET = '.dcc-wx-banner{display:none!important} div[style*="2147482000"]{d
 /* Rob's approved set, written out rather than derived: a test that reads the
  * same source as the code cannot tell you the code changed. */
 const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
-  'gourd1', 'gourd3', 'corn', 'cranberry', 'acorn', 'pie', 'turkey'];
+  'gourd1', 'gourd3', 'corn', 'cranberry', 'acorn', 'pie', 'turkey',
+  'cornucopia'];   /* 4.14.4 (Rob): it falls with the pieces now */
 
 (async () => {
   console.log('\n  --- the approved pieces, and nothing else ---');
@@ -47,6 +48,7 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     ok(['gourd1', 'gourd3'].every(g => keys.includes(g)) && !keys.includes('gourd2'),
       'the two approved gourds, and no squash (the flat gourd2 is gone — Rob, 4.13.2)', keys.join(','));
     const row = k => rows.find(r => [].concat(r.s).includes(k)) || {};
+    ok(row('cornucopia').b === 'drop' && (row('cornucopia').w || 1) === (row('pie').w || 1), 'the cornucopia falls (drop), weighted as the pie', JSON.stringify(row('cornucopia')));
     ok(!row('pie').fx, 'the pie has no smoke effect (no steam, Rob)', JSON.stringify(row('pie')));
     const tk = row('turkey');
     ok(tk.draw === 'tom' && tk.b === 'forage' && tk.face === 'L', 'the turkey is the drawn tom, walking (forage), art facing left', JSON.stringify(tk));
@@ -98,7 +100,8 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     ok(/\n\t\tpie: function \(\) \{ return tgPie\(\); \}/.test(src) && pf.includes('dccTgI1p') && pf.includes('dccTgI1s') && !/steam/i.test(pf.replace('No steam', '')),
       'the pie sits in its foil tin with a soft shadow, and no steam', 'tgPie');
     /* the cornucopia at 0.85 (Rob saw it over page text at 390), no squash */
-    ok(/thanksgiving: \['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:\.85;'\]/.test(src), 'the cornucopia accent is at 0.85', 'ACCENTS');
+    /* 4.14.4 (Rob): no corner accent; the cornucopia falls, weighted as the pie */
+    ok(!/\n\t\tthanksgiving: \['cornucopia'/.test(src), 'the cornucopia is no longer the corner accent', 'ACCENTS');
     const hf = src.slice(src.indexOf('function tgHorn'), src.indexOf('/* TG_GEN_END */'));
     ok(!/gourd2|squash/i.test(hf.replace('no squash', '')) && /tgNest\('gourd1'/.test(hf), "the cornucopia's spill has no squash", 'tgHorn');
     /* 4.13.2: the red maple from its photograph (Rob approved both), the
