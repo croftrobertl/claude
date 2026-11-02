@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.49.0
+Stable tag: 0.50.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.50.0 =
+* **Mark any cottage, any time (Rob's pick).** Hold any cottage's name on the staff calendar — with a guest in it or not, with a sign or not — to mark it Ready or Not Ready. The newer of the two decides: a guest's checkout (automatic Not Ready, which clears after 14 days) or your last mark (which never expires). A cottage never marked and with no recent checkout shows no sign. The popup offers the opposite of the current state, or both when there is none.
+* **The popup opens beside the cottage you held, and names it.** On a phone it could open several rows higher (the page's layout moved it), looking as if it were for another cottage. It now always opens next to the name you held, with that cottage's name — "#33 Pineapple" — above the buttons.
+* **Two phones at once.** If the cottage was changed on another phone since your page loaded, your tap is refused, the calendar shows the current state, and it says so. The staff password check, the plugin's own storage and the quiet record of every change are unchanged; MotoPress is only read. Nothing is written on install, activation or upgrade.
 
 = 0.49.0 =
 * **New Ready / Not Ready signs on the staff calendar (Rob's pick D).** Not Ready is now a white broom on a red circle ("needs cleaning"); Ready is a white check, centred, on a green circle. Both are a little larger (17px) and still read "Not ready" / "Ready" to screen readers. Nothing else changes: the same long press, the same popup, the same rules. Nothing is written on install, activation or upgrade.

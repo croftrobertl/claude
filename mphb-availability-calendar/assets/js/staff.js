@@ -148,17 +148,19 @@
             return S.error || 'Could not load bookings.';
         }
 
-        // ---- the cleaning dot (0.48.0, Rob) -----------------------------------
-        // "A red dot next to the cottage name automatically appearing the day
-        // a guest checks out, then we hold the cottage name and a popup
-        // appears where we select 'Ready'. Simple: red = not ready; green =
-        // ready." The server decides each dot (Staff_Ready: the latest
-        // confirmed checkout, Eastern time, dock blocks left out) and sends
-        // them with every board answer; a long press — or a right-click, a
-        // long click, Enter — on the name opens one button, Ready, or Not
-        // Ready to undo. The dot changes the moment it is tapped, and goes
-        // back, saying so, if the save fails.
-        var ready = { map: {}, saving: {} };          // type id -> { checkout, ready }
+        // ---- the cleaning sign (0.48.0; any cottage, any time 0.50.0, Rob) ----
+        // Red broom = Not Ready, green check = Ready, nothing = never marked
+        // and no recent checkout. The server decides each cottage's state —
+        // the NEWER of its latest checkout (automatic Not Ready) and its last
+        // manual mark (Staff_Ready) — and sends every cottage's with each
+        // board answer, with `at`, the time of the event behind it. A long
+        // press, a long click, a right-click or Enter on ANY cottage's name
+        // opens the popup: the cottage's name, then the opposite of its state
+        // (both, when it has none). The sign changes the moment it is tapped;
+        // if the save fails it goes back and says so; if the cottage changed
+        // first (another phone, a new checkout) the server refuses, and the
+        // board shows the state as it now is.
+        var ready = { map: {}, saving: {} };          // type id -> { state, at }
         var LONG_PRESS_MS = 500;
 
         function adoptTurnover(t) {
@@ -166,10 +168,12 @@
             var next = {};
             Object.keys(t).forEach(function (k) {
                 var v = t[k];
-                if (v && /^\d{4}-\d{2}-\d{2}$/.test(String(v.checkout))) next[String(k)] = { checkout: String(v.checkout), ready: !!v.ready };
+                if (v && (v.state === 'ready' || v.state === 'notready' || v.state === 'none')) {
+                    next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0 };
+                }
             });
             // A save still on its way keeps the state it showed until it answers.
-            Object.keys(ready.saving).forEach(function (k) { if (ready.map[k]) next[k] = ready.map[k]; else delete next[k]; });
+            Object.keys(ready.saving).forEach(function (k) { if (ready.map[k]) next[k] = ready.map[k]; });
             ready.map = next;
             paintDots();
         }
@@ -178,13 +182,19 @@
             [].forEach.call(gridEl.querySelectorAll('.mphbac-staff-rowlabel[data-type]'), paintDot);
         }
 
+        function stateOf(id) { return ready.map[id] || { state: 'none', at: 0 }; }
+
         function paintDot(label) {
-            var st = ready.map[label.getAttribute('data-type')];
+            var st = stateOf(label.getAttribute('data-type'));
             var dot = label.querySelector('.mphbac-staff-ready');
-            if (!st) {
+            // Every cottage name can be held and marked, sign or no sign.
+            label.classList.add('has-ready');
+            label.setAttribute('tabindex', '0');
+            label.setAttribute('role', 'button');
+            label.setAttribute('aria-haspopup', 'dialog');
+            if (st.state === 'none') {
                 if (dot) dot.parentNode.removeChild(dot);
-                label.classList.remove('has-ready');
-                ['tabindex', 'role', 'aria-haspopup', 'aria-label'].forEach(function (a) { label.removeAttribute(a); });
+                label.setAttribute('aria-label', label.getAttribute('data-name') || '');
                 return;
             }
             if (!dot) {
@@ -193,39 +203,55 @@
                 dot.setAttribute('role', 'img');
                 (label.querySelector('.mphbac-staff-rownum') || label).appendChild(dot);
             }
-            var words = st.ready ? (S.dotGreen || 'Ready') : (S.dotRed || 'Not ready');
-            dot.classList.toggle('is-ready', st.ready);
+            var words = st.state === 'ready' ? (S.dotGreen || 'Ready') : (S.dotRed || 'Not ready');
+            dot.classList.toggle('is-ready', st.state === 'ready');
             dot.setAttribute('aria-label', words);
-            label.classList.add('has-ready');
-            label.setAttribute('tabindex', '0');
-            label.setAttribute('role', 'button');
-            label.setAttribute('aria-haspopup', 'dialog');
             label.setAttribute('aria-label', (label.getAttribute('data-name') || '') + ': ' + words);
         }
 
-        // The popup: one button.
+        // THE POPUP LIVES ON <body> (0.50.0). Inside the board, an Elementor
+        // ancestor with a transform turned its position: fixed into "fixed to
+        // that ancestor", and on Rob's phone a held #33 opened three rows up,
+        // over #23. On <body>, fixed is the viewport, and the label's own
+        // getBoundingClientRect() places it. It names its cottage, so even a
+        // misplaced popup cannot be mistaken for another.
         var pop = document.createElement('div');
         pop.className = 'mphbac-staff-readypop';
         pop.setAttribute('role', 'dialog');
         pop.hidden = true;
-        var popBtn = document.createElement('button');
-        popBtn.type = 'button';
-        popBtn.className = 'mphbac-staff-readybtn';
-        pop.appendChild(popBtn);
-        root.appendChild(pop);
+        var popName = document.createElement('div');
+        popName.className = 'mphbac-staff-readyname';
+        pop.appendChild(popName);
+        var popBtns = document.createElement('div');
+        popBtns.className = 'mphbac-staff-readybtns';
+        pop.appendChild(popBtns);
+        document.body.appendChild(pop);
+
+        function button(want) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'mphbac-staff-readybtn' + (want ? '' : ' is-undo');
+            b.textContent = want ? (S.readyBtn || 'Ready') : (S.notReadyBtn || 'Not Ready');
+            b.addEventListener('click', function () { chooseReady(want); });
+            return b;
+        }
 
         function openReady(label, viaKey) {
             var id = label.getAttribute('data-type');
-            var st = ready.map[id];
-            if (!st) return;
+            var st = stateOf(id);
             pop.__label = label;
             pop.__type = id;
-            popBtn.textContent = st.ready ? (S.notReadyBtn || 'Not Ready') : (S.readyBtn || 'Ready');
-            popBtn.classList.toggle('is-undo', st.ready);
+            pop.__seen = st.at;
+            popName.textContent = label.getAttribute('data-short') || label.getAttribute('data-name') || '';
+            popBtns.textContent = '';
+            if (st.state !== 'ready') popBtns.appendChild(button(true));
+            if (st.state !== 'notready') popBtns.appendChild(button(false));
             pop.setAttribute('aria-label', (S.readyPop || 'Cleaning for {cottage}').replace('{cottage}', label.getAttribute('data-name') || ''));
+            // The board's own typeface, now that the popup is not inside it.
+            pop.style.fontFamily = getComputedStyle(root).fontFamily;
             pop.hidden = false;
             // Beside the name, so never under the finger still down from the
-            // long press: its lift lands on the name, not on the button.
+            // long press: its lift lands on the name, not on a button.
             var r = label.getBoundingClientRect();
             var vw = document.documentElement.clientWidth, vh = window.innerHeight;
             var w = pop.offsetWidth, h = pop.offsetHeight;
@@ -233,7 +259,7 @@
             var top = Math.max(8, Math.min(r.top + r.height / 2 - h / 2, vh - h - 8));
             pop.style.left = Math.round(Math.max(8, left)) + 'px';
             pop.style.top = Math.round(top) + 'px';
-            if (viaKey) popBtn.focus();
+            if (viaKey) { var f = popBtns.querySelector('button'); if (f) f.focus(); }
         }
 
         function closeReady(refocus) {
@@ -242,24 +268,25 @@
             if (refocus && pop.__label && document.contains(pop.__label)) pop.__label.focus();
         }
 
-        function chooseReady() {
+        function chooseReady(want) {
             var id = pop.__type;
-            var st = ready.map[id];
+            var seen = pop.__seen;
             closeReady(false);
-            if (!st) return;
-            var was = { checkout: st.checkout, ready: st.ready };
-            var want = !st.ready;
-            ready.map[id] = { checkout: st.checkout, ready: want };      // shown at once
+            if (!id) return;
+            var was = stateOf(id);
+            ready.map[id] = { state: want ? 'ready' : 'notready', at: was.at };   // shown at once
             ready.saving[id] = (ready.saving[id] || 0) + 1;
             paintDots();
             var settle = function () { if (--ready.saving[id] <= 0) delete ready.saving[id]; };
             var back = function () { ready.map[id] = was; paintDots(); };
-            post('mphbac_staff_ready', { room_type_id: id, checkout: st.checkout, ready: want ? '1' : '0' }).then(function (json) {
+            post('mphbac_staff_ready', { room_type_id: id, ready: want ? '1' : '0', seen: String(seen || 0) }).then(function (json) {
                 settle();
                 if (json && json.success && json.data) { adoptTurnover(json.data.turnover); say(''); return; }
                 back();
                 if (json && json.data && json.data.turnover) adoptTurnover(json.data.turnover);
-                say(S.readyFailed || 'Could not save. Please try again.', true);
+                say(json && json.data && json.data.changed
+                    ? (S.readyChanged || 'This cottage was just changed. Please check it and try again.')
+                    : (S.readyFailed || 'Could not save. Please try again.'), true);
             }).catch(function (err) {
                 settle();
                 back();
@@ -267,8 +294,6 @@
                 say(err && err.forbidden ? failureText(err) : (S.readyFailed || 'Could not save. Please try again.'), true);
             });
         }
-
-        popBtn.addEventListener('click', chooseReady);
 
         var press = null;
         function cancelPress() { if (press) { clearTimeout(press.timer); press = null; } }
@@ -309,6 +334,7 @@
             if (!pop.hidden && (e.key === 'Escape' || e.key === 'Esc')) { e.preventDefault(); closeReady(true); }
         });
         window.addEventListener('resize', function () { closeReady(false); });
+        window.addEventListener('scroll', function () { closeReady(false); }, { passive: true });
         gridEl.addEventListener('scroll', function () { closeReady(false); }, { passive: true });
 
         // ---- periods: Daily / Weekly / Monthly / Yearly ---------------------
@@ -712,6 +738,8 @@
                 // long press on it can mark it Ready.
                 label.setAttribute('data-type', String(c.id));
                 label.setAttribute('data-name', c.number ? (S.cottageWord || 'Cottage') + ' ' + c.number : (c.title || ''));
+                // The popup's heading (0.50.0): "#33 Pineapple", as the column shows it.
+                label.setAttribute('data-short', c.number ? '#' + c.number + ((c.abbrev || c.title) ? ' ' + (c.abbrev || c.title) : '') : (c.title || ''));
                 paintDot(label);
                 chart.appendChild(label);
 

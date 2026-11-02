@@ -644,19 +644,36 @@ span.mphbac-staff-ico::before {
 .mphbac-staff-readypop {
     position: fixed;
     z-index: 100000;
-    padding: 8px;
+    padding: 10px 10px 10px;
     border-radius: 14px;
     background: #ffffff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    color: #1f2933;
+    text-align: center;
 }
 .mphbac-staff-readypop[hidden] { display: none; }
-/* (0,4,0): Bravada's kit restyles buttons at (0,3,1). */
-.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn {
+/* The cottage it is for (0.50.0): "#33 Pineapple", centred above the buttons. */
+.mphbac-staff-readypop .mphbac-staff-readyname {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-align: center;
+}
+.mphbac-staff-readypop .mphbac-staff-readybtns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+/* (0,4,0): Bravada's kit restyles buttons at (0,3,1). The popup sits on
+   <body> since 0.50.0, so it is scoped by its own doubled class. */
+.mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn {
     display: block;
-    min-width: 128px;
+    min-width: 116px;
     min-height: 48px;
     margin: 0;
-    padding: 0 24px;
+    padding: 0 20px;
     border: 0;
     border-radius: 999px;
     background: #1e8e3e;
@@ -671,8 +688,8 @@ span.mphbac-staff-ico::before {
     transition: none;
     cursor: pointer;
 }
-.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn.is-undo { background: #d93025; }
-.mphbac-staff .mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn:focus-visible {
+.mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn.is-undo { background: #d93025; }
+.mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn:focus-visible {
     outline: 2px solid #0A50B2;
     outline-offset: 2px;
 }

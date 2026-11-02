@@ -158,6 +158,8 @@ final class Staff_Widget
                 'dotGreen'     => __('Ready', 'mphb-availability-calendar'),
                 'readyPop'     => __('Cleaning for {cottage}', 'mphb-availability-calendar'),
                 'readyFailed'  => __('Could not save. Please try again.', 'mphb-availability-calendar'),
+                // 0.50.0: a save refused because the cottage changed first.
+                'readyChanged' => __('This cottage was just changed. Please check it and try again.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
                 // ---- 0.44.0 / 0.44.1 ----
                 'srcDirect'    => __('Direct', 'mphb-availability-calendar'),

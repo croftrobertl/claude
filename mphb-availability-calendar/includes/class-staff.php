@@ -252,13 +252,15 @@ final class Staff
     }
 
     /**
-     * READY / NOT READY (0.48.0, Rob): one cottage's cleaning dot, set by a
-     * long press on its name. Gated FIRST like every staff endpoint — an
-     * unauthorized caller gets a 403 with an empty body and nothing is read
-     * or written — then POST only. It writes the plugin's own option
-     * (Staff_Ready), never MotoPress's bookings or their meta, and only for
-     * the checkout the cottage's dot stands for. Answers every dot, so the
-     * board shows exactly what is stored.
+     * READY / NOT READY (0.48.0; any cottage, any time since 0.50.0, Rob):
+     * one cottage's cleaning sign, set by a long press on its name. Gated
+     * FIRST like every staff endpoint — an unauthorized caller gets a 403
+     * with an empty body and nothing is read or written — then POST only. It
+     * writes the plugin's own option (Staff_Ready), never MotoPress's bookings
+     * or their meta. `seen` is the state time the page last showed: a cottage
+     * whose state is newer (another phone's mark, a new checkout) is refused
+     * as "changed" — 409, nothing written, the signs as they are now. Answers
+     * every cottage's sign, so the board shows exactly what is stored.
      */
     public static function handle_ready(): void
     {
@@ -267,16 +269,16 @@ final class Staff
             status_header(405);
             exit;
         }
-        $type_id  = absint($_POST['room_type_id'] ?? 0);
-        $checkout = isset($_POST['checkout']) ? sanitize_text_field((string) wp_unslash($_POST['checkout'])) : '';
-        $ready    = (string) ($_POST['ready'] ?? '');
-        $listed   = array_map(static fn($t) => (int) $t['id'], Data_Provider::list_room_types());
+        $type_id = absint($_POST['room_type_id'] ?? 0);
+        $ready   = (string) ($_POST['ready'] ?? '');
+        $seen    = (string) ($_POST['seen'] ?? '');
+        $listed  = array_map(static fn($t) => (int) $t['id'], Data_Provider::list_room_types());
         if ($type_id <= 0 || !in_array($type_id, $listed, true)
-            || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $checkout) || !in_array($ready, ['0', '1'], true)) {
+            || !in_array($ready, ['0', '1'], true) || !preg_match('/^\d{1,12}$/', $seen)) {
             wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar')], 400);
         }
         try {
-            $saved = Staff_Ready::save($type_id, $checkout, $ready === '1');
+            $saved = Staff_Ready::save($type_id, $ready === '1', (int) $seen);
             $state = Staff_Ready::state();
         } catch (\Throwable $e) {
             error_log('MPHBAC staff: ready not saved: ' . $e->getMessage());
@@ -284,9 +286,10 @@ final class Staff
             return;
         }
         if ($saved === null) {
-            // The dot moved on (a new checkout) since the page loaded: nothing
-            // written; the board takes the dots as they are now.
-            wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar'), 'turnover' => $state], 409);
+            // CHANGED SINCE THE PAGE SAW IT (another phone, a new checkout):
+            // nothing written; the board takes the signs as they are now.
+            wp_send_json_error(['message' => __('This cottage was just changed. Please check it and try again.', 'mphb-availability-calendar'),
+                'changed' => true, 'turnover' => $state], 409);
         }
         wp_send_json_success(['turnover' => $state]);
     }

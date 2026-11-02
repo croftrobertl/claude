@@ -3897,3 +3897,41 @@ l3.75 3.75 L17.5 9, its box centred in the 24 grid — the "now centered" of the
 sheet; the old ::after tick sat high and left). No markup, script or rule
 change: same role=img + aria-label, same long press and popup. The relayed
 prompt itself did not reach this session; only the sheet and the pick did.
+
+## 0.50.0 — any cottage, any time; the popup in the right place (Rob, 2026-11-02)
+
+**The rule (Staff_Ready::decide).** A cottage's state is the NEWER of (a) its
+latest confirmed, non-dock-block checkout on or before today — its time the
+START of the checkout day, Eastern; automatic Not Ready, shown for RED_DAYS
+(14) — and (b) its last manual mark, Ready or Not Ready, with its time, which
+never expires. A tie goes to the mark. Never marked and no checkout within
+RED_DAYS: no sign. Any cottage can be marked, a guest in it or not. Every
+listed cottage is in the board's `turnover`: state, source (auto|manual|''),
+`at` (the newest event's time, shown or not).
+
+**Storage** (still mphbac_ready_<type>, not autoloaded): ['v' => 2, 'manual'
+=> ['ready', 'at'] | null, 'log' => [[t, 0|1], ...] ≤ 50]. A 0.48/0.49
+record ([checkout => ['ready', 'log']]) is read as it is — its last change, if
+Ready, is the mark; 0.48's Not Ready was only an undo back to automatic — and
+rewritten in the new shape only by the next mark.
+
+**Stale page.** mphbac_staff_ready takes room_type_id, ready, seen (the `at`
+the page showed, digits). The cottage's `at` newer than seen → 409, `changed`,
+the current signs, nothing written; the board shows them and says "This
+cottage was just changed. Please check it and try again." A mark's time is
+max(now, at + 1), so it is always newer than what it replaces.
+
+**The popup** is appended to document.body (it was inside the board, where an
+Elementor ancestor's transform made position: fixed relative to that
+ancestor: Rob held #33 and it opened three rows up). Placed from the label's
+getBoundingClientRect, beside it; closes on any scroll. Shows the cottage —
+"#33 Pineapple" (data-short) — centred above one button (the opposite state)
+or two (no state). Styles scoped by .mphbac-staff-readypop.mphbac-staff-readypop
+(0,4,0 over Bravada's buttons); the board's font copied onto it. Every
+cottage name is a button (role, tabindex), sign or none.
+
+**Tests.** ready-0500-test.php (the rule, stale page, old records, zero
+writes), browser/ready-0500-test.js (the calendar inside a transformed
+ancestor below a 640px header, page scrolled; the lowest row, #36, held at
+390, 768 and 1440). The 0.48.0 suites were removed: they asserted the rule
+this replaces ("only the latest checkout can be marked").
