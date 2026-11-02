@@ -199,9 +199,6 @@ MUTANTS = [
     ('the bar stops being scoped to the guide, and floats over what follows', APP,
      "                entries.forEach((e) => show(e.isIntersecting));",
      "                entries.forEach(() => show(true));"),
-    ('the bar starts visible before the observer has decided', APP,
-     "        bar.dataset.dccggOffscreen = '1';\n        const show = (on) => {",
-     "        const show = (on) => {"),
     ('the bar no longer steps aside for an open sheet', CSS,
      "html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {\n    display: none;\n}", ""),
     ('the offscreen marker stops hiding anything', CSS,
@@ -212,12 +209,6 @@ MUTANTS = [
 
     ('the browser restores its own scroll offset on the history rewind', APP,
      "            if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }", ""),
-    ('the scroll restore animates again', 'assets/js/widget.js',
-     "            try { window.scrollTo({ top: lockedScrollY, left: 0, behavior: 'instant' }); }\n"
-     "            catch (_) { window.scrollTo(0, lockedScrollY); }",
-     "            window.scrollTo(0, lockedScrollY);"),
-    ('the inline scroll-behavior override is dropped', 'assets/js/widget.js',
-     "            de.style.scrollBehavior = 'auto';", ""),
 
     ('the pressed state is never taken off again', APP,
      "        ['touchmove', 'touchend', 'touchcancel'].forEach((type) => {\n"
@@ -264,6 +255,22 @@ EQUIVALENT = [
      "rather than the floor."),
 ]
 UNREACHABLE = [
+    ('the three belt-and-braces guards on the scroll restore and the tab bar',
+     "all three measured in Chromium, each on its own, and none of them can be "
+     "made to show: (a) reverting window.scrollTo to the plain form still gives "
+     "ZERO visible drift, with html{scroll-behavior:smooth} genuinely in effect "
+     "and the page genuinely scrollable — both asserted in the same test — "
+     "because the scroll is issued in the same task as the unpin and there is no "
+     "painted frame to animate from; (b) dropping the inline scroll-behavior "
+     "override changes nothing for the same reason; (c) removing the tab bar's "
+     "initial hidden attribute never produces a flash, because Chromium delivers "
+     "the first IntersectionObserver callback before the bar's first paint. "
+     "The load-bearing fix IS tested and IS killed: history.scrollRestoration = "
+     "'manual', without which the close drifts 756px on the real page. These "
+     "three are kept rather than deleted — unlike the two no-op CSS rules this "
+     "release removed — because those were redundant in EVERY engine, while "
+     "these are redundant only in the one we can run. Safari is the browser Rob "
+     "uses and the one WebKit-less containers cannot check."),
     ('removing touch-action: manipulation from the tiles',
      "measured, clean and mutant alike: getComputedStyle(tile).touchAction reports "
      "'manipulation' with the declaration and without it. Chromium already treats "

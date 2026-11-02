@@ -594,6 +594,11 @@ const check = (name, cond, detail) => {
             requestAnimationFrame(tick);
             document.querySelector('.dccgg-detail:not([hidden]) .dccgg-back').click();
         }));
+        // The theme's smooth scrolling has to be in play, or a restore that
+        // animates is indistinguishable from one that does not.
+        check('the page really is scrollable and smooth-scrolling here',
+            await v.page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior === 'smooth'
+                && document.documentElement.scrollHeight > window.innerHeight + 500));
         check('closing a sheet moves nothing the guest can see', drift === 0, 'drift=' + drift + 'px');
         check('…and the guide owns scroll restoration, so the browser cannot override it',
             await v.page.evaluate(() => history.scrollRestoration) === 'manual');
