@@ -203,8 +203,10 @@ class Themes {
                         ['s' => 'pie', 'b' => 'drop'],
                         /* 4.14.4 (Rob): the cornucopia leaves its corner ("it looks
                          * odd and makes the page too busy") and falls with the
-                         * pieces, weighted as the pie is; the approved fuller horn. */
-                        ['s' => 'cornucopia', 'b' => 'drop'],
+                         * pieces, weighted as the pie is; the approved fuller horn,
+                         * drawn about as wide as the corner accent was (56 px): at
+                         * the default piece size a horn reads 20 px wide. */
+                        ['s' => 'cornucopia', 'b' => 'drop', 'sz' => [40, 46]],
                         /* 4.13.2: the strutting wild tom (Rob, 2026-10-27),
                          * drawn in code (TK_ in engine.js) and stepping, two
                          * poults following him; he stops, feeds with his fan
