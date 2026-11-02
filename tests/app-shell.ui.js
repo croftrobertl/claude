@@ -741,6 +741,62 @@ const check = (name, cond, detail) => {
                     });
                 check(`${layout} at ${width}: nothing spills out of its track`,
                     spill.worstSpill <= 1, `${spill.worstSpill}px on "${spill.who}"`);
+                // And the third thing, which the gap mutant walked through:
+                // a word must never be SPLIT. Breaking mid-word neither
+                // overlaps nor overflows, so neither check above can see it
+                // — yet it is the exact defect the first 0.27.1 attempt
+                // shipped ("Kitchenwar / e"). Measured by laying each word
+                // out in the title's own font and comparing it against the
+                // track: hyphens: auto cannot be leaned on here, because
+                // this Chromium carries no hyphenation dictionary and does
+                // not hyphenate at all (measured: auto, manual and none all
+                // render identically, with and without lang).
+                const split = await v.page.$$eval(
+                    '.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) => {
+                        const probe = document.createElement('span');
+                        probe.style.cssText =
+                            'position:fixed;left:-9999px;top:0;white-space:pre;visibility:hidden';
+                        document.body.appendChild(probe);
+                        let worst = 0, who = '', word = '';
+                        rows.forEach((row) => {
+                            const t = row.querySelector('.dccgg-item-title-text');
+                            if (!t || !t.getClientRects().length) { return; }
+                            const cs = getComputedStyle(t);
+                            probe.style.font = cs.font || `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+                            probe.style.fontWeight = cs.fontWeight;
+                            probe.style.fontSize = cs.fontSize;
+                            probe.style.fontFamily = cs.fontFamily;
+                            probe.style.letterSpacing = cs.letterSpacing;
+                            const track = t.clientWidth;
+                            const title = (t.textContent || '').trim();
+                            // 'Troubleshooting' is the synthetic over-long word
+                            // this fixture carries ON PURPOSE, to exercise the
+                            // overflow backstop. It is entitled to break; the
+                            // spill check above is what guards it. Every OTHER
+                            // word here is one of Rob's own.
+                            if (title === 'Troubleshooting') { return; }
+                            title.split(/\s+/).forEach((w) => {
+                                if (!w) { return; }
+                                probe.textContent = w;
+                                const need = Math.ceil(probe.getBoundingClientRect().width);
+                                const over = need - track;
+                                if (over > worst) {
+                                    worst = over; who = (t.textContent || '').trim(); word = w;
+                                }
+                            });
+                        });
+                        probe.remove();
+                        return { worst, who, word };
+                    });
+                // 2px, not 0: the probe lays the word out in a detached
+                // span, which lands within a pixel or two of the real line
+                // box (measured: 'Bins' reads 1px over at 1440, where it
+                // plainly occupies one line of its own). The margin is far
+                // below what a real split costs — Kitchenware runs 8px over
+                // when the narrow-width gap is given back.
+                check(`${layout} at ${width}: no word in the host's own titles is split`,
+                    split.worst <= 2,
+                    `"${split.word}" needs ${split.worst}px more than its track, in "${split.who}"`);
                 await shut(v);
             }
         }

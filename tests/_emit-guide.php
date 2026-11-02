@@ -88,6 +88,18 @@ function dccgg_all_on(): array {
          'item_content' => '<p>No password.</p>', 'item_copy' => 'yes',
          'item_copy_value' => 'dcc-guest'],
         // Checkable, so the checklist and its Reset render.
+        //
+        // v0.27.1: these were briefly renamed to Rob's own checkout titles, to
+        // give the narrow-width-gap mutant a word at its track to break. It
+        // does not work, and the reason is worth keeping. Measured at 320:
+        // this harness lays the title track out at 82px in 20px type, where
+        // the live page gives it 151px in 25px. That is a different type
+        // scale, not a slightly narrower column, so 'Kitchenware' splits here
+        // whatever the gap does, while on live it sits on one line. The
+        // harness models the theme and its geometry is the model's, not the
+        // property's — the same divergence as the Font Awesome width in the
+        // kit block. The real guarantee is measured against the real pages by
+        // tools/title-overlap.js instead.
         ['_id' => 'c1', 'item_section' => 'checkout', 'item_title' => 'Strip the beds',
          'item_content' => '<p>Leave them in the hamper.</p>', 'item_checkable' => 'yes'],
         ['_id' => 'c2', 'item_section' => 'checkout', 'item_title' => 'Lock the door',

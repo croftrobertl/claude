@@ -8,6 +8,14 @@
  * and comparing the title text's box against the lead and tail boxes in the
  * same row. A positive number is an overlap in pixels.
  *
+ * It also reports a SPLIT WORD, which is a different fault with the same
+ * cause and none of the same symptoms: breaking mid-word neither overlaps
+ * anything nor overflows anything, so the comparison above cannot see it —
+ * yet "Kitchenwar / e" is what the first attempt at this fix shipped. It
+ * lives here rather than in the browser suite because the suite's harness
+ * lays the title out at 82px in 20px type where the live page gives it 151px
+ * in 25px, so no fixture word sits at the real boundary.
+ *
  * The page keeps its own markup throughout: this is about the host's titles,
  * not a fixture's.
  */
@@ -20,6 +28,7 @@ const WIDTHS = [320, 390, 768, 1440];
 (async () => {
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const found = [];
+    const splits = [];
     for (const which of ['guest', 'test']) {
         for (const width of WIDTHS) {
             const { ctx, page } = await openLive(browser, {
@@ -51,10 +60,36 @@ const WIDTHS = [320, 390, 768, 1440];
                             const d = Math.round(c.right - a.left);
                             if (d > out.over) { out.over = d; out.side = 'lead'; }
                         }
+                        // Does any single word want more than the track?
+                        // Laid out in the title's own font, in a detached
+                        // span, so it measures the word and not the wrap.
+                        const probe = document.createElement('span');
+                        probe.style.cssText =
+                            'position:fixed;left:-9999px;top:0;white-space:pre;visibility:hidden';
+                        const cs = getComputedStyle(t);
+                        probe.style.fontWeight = cs.fontWeight;
+                        probe.style.fontSize = cs.fontSize;
+                        probe.style.fontFamily = cs.fontFamily;
+                        probe.style.letterSpacing = cs.letterSpacing;
+                        document.body.appendChild(probe);
+                        out.split = 0; out.word = '';
+                        out.textContent = (t.textContent || '').trim();
+                        out.textContent.split(/\s+/).forEach((w) => {
+                            if (!w) { return; }
+                            probe.textContent = w;
+                            const over = Math.ceil(probe.getBoundingClientRect().width) - t.clientWidth;
+                            if (over > out.split) { out.split = over; out.word = w; }
+                        });
+                        probe.remove();
                         return out;
                     }).filter(Boolean));
                 rows.filter((r) => r.over > 0).forEach((r) => {
                     found.push({ page: which, width, section: key, title: r.t, overlap: r.over, side: r.side });
+                });
+                // 2px, not 0: the detached probe lands within a pixel or two
+                // of the real line box. A genuine split costs far more.
+                rows.filter((r) => r.split > 2).forEach((r) => {
+                    splits.push({ page: which, width, section: key, title: r.t, word: r.word, over: r.split });
                 });
                 await page.keyboard.press('Escape');
                 await page.waitForTimeout(400);
@@ -67,5 +102,9 @@ const WIDTHS = [320, 390, 768, 1440];
     found.forEach((f) => console.log(
         `  ${f.page.padEnd(5)} ${String(f.width).padStart(4)}  ${f.section.padEnd(10)} ` +
         `${String(f.overlap).padStart(3)}px over the ${f.side}  "${f.title}"`));
+    if (!splits.length) { console.log('  no word split in any title'); }
+    splits.forEach((f) => console.log(
+        `  ${f.page.padEnd(5)} ${String(f.width).padStart(4)}  ${f.section.padEnd(10)} ` +
+        `SPLIT "${f.word}" by ${f.over}px  in "${f.title}"`));
     await browser.close();
 })();

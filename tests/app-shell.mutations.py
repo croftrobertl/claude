@@ -241,9 +241,6 @@ MUTANTS = [
      "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);"),
     ('a word longer than the track can neither hyphenate nor break', CSS,
      "    hyphens: auto;\n    overflow-wrap: break-word;", "    hyphens: auto;"),
-    ('…nor hyphenate at all', CSS, "    hyphens: auto;\n", ""),
-    ('the narrow-width gap is given back, so the longest word no longer fits', CSS,
-     "@media (max-width: 480px) {\n    .dccgg-item-title {\n        gap: 6px;\n    }\n}", ""),
 ]
 
 EQUIVALENT = [
@@ -270,6 +267,29 @@ EQUIVALENT = [
      "rather than the floor."),
 ]
 UNREACHABLE = [
+    ('removing hyphens: auto from the title',
+     "measured, and it decides the other one too: THIS CHROMIUM DOES NOT "
+     "HYPHENATE AT ALL. A 15-character word in a 90px box renders three "
+     "lines and 87px with hyphens:auto, with hyphens:manual, with "
+     "hyphens:none, and with no lang attribute — four cases, one result. The "
+     "container carries no hyphenation dictionary, so no test that can run "
+     "here can tell the declaration from its absence. It is kept because "
+     "mobile Safari, which is the browser Rob uses, does hyphenate en-US — "
+     "but note what follows: hyphens:auto is NOT what fixed 'Kitchenwar / e' "
+     "in this release, the 6px narrow-width gap is. Hyphenation is a backstop "
+     "for a longer word later, and it is unverified here. Said so in the "
+     "report rather than implying iPhone coverage."),
+    ('giving the narrow-width gap back, so the longest word no longer fits',
+     "not reachable by THIS SUITE, and the reason is the harness rather than "
+     "the guide: measured at 320, the fixture lays the title track out at "
+     "82px in 20px type where the live page gives it 151px in 25px. No "
+     "fixture word sits at the real boundary, so the gap can be given back "
+     "with nothing to break — renaming two fixture items to Rob's own titles "
+     "was tried and makes 'Kitchenware' split at ANY gap, which measures the "
+     "model and not the property. The mutant IS killed, against the real "
+     "pages, by tools/title-overlap.js: with the 6px rule removed it reports "
+     "SPLIT \"Kitchenware\" by 8px on both /guest/ and /test/ at 320, and "
+     "nothing on the clean tree. Demonstrated, not asserted."),
     ('the three belt-and-braces guards on the scroll restore and the tab bar',
      "all three measured in Chromium, each on its own, and none of them can be "
      "made to show: (a) reverting window.scrollTo to the plain form still gives "
