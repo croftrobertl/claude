@@ -544,9 +544,26 @@ const check = (name, cond, detail) => {
         check('Reset has no second pill drawn round it',
             parseFloat(bar.b) === 0 && /rgba\(0, 0, 0, 0\)|transparent/.test(bar.bg),
             JSON.stringify(bar));
+        // Measured as GEOMETRY, not as a property that happens to read
+        // "center": the title sits in the centre track of a 1fr/auto/1fr
+        // grid and has done since v0.24.x, so a computed-style assertion
+        // here would be testing a rule that does not exist.
         check('…and the item titles in the sheet are centred',
-            await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title',
-                (e) => getComputedStyle(e).justifyContent) === 'center');
+            await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (row) => {
+                const t = row.querySelector('.dccgg-item-title-text');
+                const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
+                return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
+            }));
+        check('…and a one-sentence item body is centred',
+            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-body p', (ps) => {
+                const plain = ps.find((p) => !p.classList.contains('dccgg-multi'));
+                return !!plain && getComputedStyle(plain).textAlign === 'center';
+            }));
+        check('…while a paragraph of more than one sentence still reads left',
+            await v.page.$$eval('.dccgg-item-body p', (ps) => {
+                const multi = ps.find((p) => p.classList.contains('dccgg-multi'));
+                return !multi || getComputedStyle(multi).textAlign === 'left';
+            }));
         await shut(v);
     }
 

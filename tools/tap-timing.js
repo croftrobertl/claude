@@ -8,6 +8,8 @@
  *   node tools/tap-timing.js [shipped|working] [runs]
  *
  * Two numbers per run, both from the instant of the tap:
+ *   pressed — the tile shows the guest that the tap landed (v0.27.0's
+ *             .is-pressing on touchstart, or 0.26.2's .is-tap on touchend).
  *   sheet   — the detail panel is on screen (the modal has its open class
  *             AND the panel has a non-zero box).
  *   content — the first item's text inside that panel is painted.
@@ -43,12 +45,17 @@ const RUNS = parseInt(process.argv[3] || '3', 10);
         // The clock starts inside the page, on the real pointerdown, so no
         // round trip to the driver is counted against the guide.
         await page.evaluate(() => {
-            window.__dccgg = { t0: null, sheet: null, content: null };
+            window.__dccgg = { t0: null, pressed: null, sheet: null, content: null };
             document.addEventListener('pointerdown', (e) => {
                 if (!window.__dccgg.t0 && e.target.closest('.dccgg-tile')) {
                     window.__dccgg.t0 = performance.now();
+                    const tile = e.target.closest('.dccgg-tile');
                     const tick = () => {
                         const s = window.__dccgg;
+                        if (s.pressed === null && tile
+                            && (tile.classList.contains('is-pressing') || tile.classList.contains('is-tap'))) {
+                            s.pressed = Math.round(performance.now() - s.t0);
+                        }
                         const panel = document.querySelector('.dccgg-detail:not([hidden])');
                         const open = document.documentElement.classList.contains('dccgg-detail-open');
                         if (s.sheet === null && open && panel && panel.getClientRects().length) {
@@ -68,11 +75,24 @@ const RUNS = parseInt(process.argv[3] || '3', 10);
                 }
             }, true);
         });
-        await tile.tap();
+        // A HELD press, not an instantaneous one. Playwright's tap() fires
+        // touchstart and touchend in the same tick, which makes a pressed
+        // state applied on touchEND look as fast as one applied on
+        // touchSTART — so the harness would report no difference where a
+        // real finger feels a clear one. A human press rests ~120ms.
+        {
+            const box = await tile.boundingBox();
+            const pt = [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+            const cdp = await page.context().newCDPSession(page);
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
+            await page.waitForTimeout(120);
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        }
         await page.waitForFunction(
             () => window.__dccgg.content !== null || (window.__dccgg.t0 && performance.now() - window.__dccgg.t0 > 14000),
             null, { timeout: 20000 }).catch(() => {});
-        const r = await page.evaluate(() => ({ sheet: window.__dccgg.sheet, content: window.__dccgg.content }));
+        const r = await page.evaluate(() => ({ pressed: window.__dccgg.pressed,
+            sheet: window.__dccgg.sheet, content: window.__dccgg.content }));
         rows.push(r);
         await ctx.close();
     }

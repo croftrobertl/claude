@@ -5229,11 +5229,17 @@ dialog.dccgg-wrapper::backdrop {
    SENTENCE stays left, which is the same rule the Cottage Selector uses and
    the same one the Front Desk privacy note follows. The class is put on by
    the app chunk from the paragraph's own text. */
-.dccgg-stage.dccgg-stage--app .dccgg-item-title,
-.dccgg-stage.dccgg-stage--app .dccgg-item-head {
-    justify-content: center;
-    text-align: center;
-}
+/* NO RULE FOR .dccgg-item-title HERE, and that is the measured answer rather
+   than an omission: the title row is already a `1fr auto 1fr` grid with the
+   text in the centre track, so it has been centred since v0.24.x. A rule was
+   written here, measured, and found to change nothing — identical boxes with
+   and without it — so it went again.
+
+   One thing that measurement did turn up and v0.27.0 does NOT fix, because
+   it is not in the brief and it is not new: a title long enough to outgrow
+   the centre track overflows into the trailing controls. "Pasted from an
+   email" overlaps the read-aloud button by 28px, on 0.26.2 and 0.27.0 alike,
+   on the grid layout as well as this one. Reported, not fixed. */
 .dccgg-stage.dccgg-stage--app .dccgg-item-body {
     text-align: center;
 }

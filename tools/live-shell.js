@@ -54,12 +54,13 @@ function markup(caseName) {
  * regex that matches a balanced div is a regex that will one day not.
  */
 async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1', extraCss = '',
-    stay = null, weather = WX, keepReal = false, page: which = 'guest', inject = true, throttle = null } = {}) {
+    stay = null, weather = WX, keepReal = false, page: which = 'guest', inject = true,
+    throttle = null, scale = 2 } = {}) {
     const PAGE = PAGES[which] || PAGES.guest;
     const LIVE_HTML = fs.readFileSync(PAGE.html, 'utf8');
     const ctx = await browser.newContext({
         viewport: { width, height }, isMobile: width < 700, hasTouch: width < 700,
-        deviceScaleFactor: 2, timezoneId: 'America/Chicago',
+        deviceScaleFactor: scale, timezoneId: 'America/Chicago',
     });
     const page = await ctx.newPage();
     const errors = [];

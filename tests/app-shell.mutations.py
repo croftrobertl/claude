@@ -53,11 +53,6 @@ MUTANTS = [
      "        const obs = new MutationObserver(() => {});"),
 
     # ---- the tab bar ------------------------------------------------------
-    ('the bar floats over the open sheet', CSS,
-     "html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {\n    display: none;\n}", ""),
-    ('the hide loses to the bar\'s own rule, as it did mid-sweep', CSS,
-     "html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {",
-     "html.dccgg-detail-open .dccgg-app-tabs {"),
     ('the bar stops following which section is open', APP,
      "                if (key) { openDetail(root, key); mark(tab); }",
      "                if (key) { openDetail(root, key); }"),
@@ -198,6 +193,58 @@ MUTANTS = [
      "    initAll();\n"
      "    // v0.12.0: Elementor renders widgets in the editor preview via AJAX and\n"
      "    // swaps the DOM on every setting change — long after DOMContentLoaded —"),
+    # ---- v0.27.0 --------------------------------------------------------
+    ('the tab bar stays inside the widget, where a transform traps it', APP,
+     "        document.body.appendChild(bar);", "        /* not portaled */"),
+    ('the bar stops being scoped to the guide, and floats over what follows', APP,
+     "                entries.forEach((e) => show(e.isIntersecting));",
+     "                entries.forEach(() => show(true));"),
+    ('the bar starts visible before the observer has decided', APP,
+     "        bar.dataset.dccggOffscreen = '1';\n        const show = (on) => {",
+     "        const show = (on) => {"),
+    ('the bar no longer steps aside for an open sheet', CSS,
+     "html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {\n    display: none;\n}", ""),
+    ('the hide loses to the bar\'s own rule, as it did once before', CSS,
+     "html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {",
+     "html.dccgg-detail-open .dccgg-app-tabs {"),
+    ('the offscreen marker stops hiding anything', CSS,
+     '.dccgg-app-tabs.dccgg-app-tabs[hidden],\n.dccgg-app-tabs.dccgg-app-tabs[data-dccgg-offscreen="1"] {\n    display: none;\n}', ""),
+    ('the Front Desk tab loses its direct handler with the bar out of the root', APP,
+     "                    if (typeof root.__dccggOpenReport === 'function') {\n"
+     "                        root.__dccggOpenReport('', '', tab);\n                    }", ""),
+
+    ('the browser restores its own scroll offset on the history rewind', APP,
+     "            if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }", ""),
+    ('the scroll restore animates again', 'assets/js/widget.js',
+     "            try { window.scrollTo({ top: lockedScrollY, left: 0, behavior: 'instant' }); }\n"
+     "            catch (_) { window.scrollTo(0, lockedScrollY); }",
+     "            window.scrollTo(0, lockedScrollY);"),
+    ('the inline scroll-behavior override is dropped', 'assets/js/widget.js',
+     "            de.style.scrollBehavior = 'auto';", ""),
+
+    ('the pressed state is never taken off again', APP,
+     "        ['touchmove', 'touchend', 'touchcancel'].forEach((type) => {\n"
+     "            root.addEventListener(type, release, { passive: true });\n        });", ""),
+    ('a scroll leaves the tile looking pressed', APP,
+     "        bindGlobal(root, window, 'scroll', release, { passive: true });", ""),
+    ('tiles wait on the double-tap delay again', CSS,
+     "    touch-action: manipulation;\n}\n.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-content {", "}\n.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-content {"),
+
+    ('the tiles go back to left-aligned', CSS,
+     "    text-align: center;\n    align-items: center;\n    /* No double-tap-to-zoom wait",
+     "    text-align: left;\n    align-items: flex-start;\n    /* No double-tap-to-zoom wait"),
+    ('the sheet text is no longer centred', CSS,
+     ".dccgg-stage.dccgg-stage--app .dccgg-item-body {\n    text-align: center;\n}", ""),
+    ('every paragraph is centred, multi-sentence ones included', APP,
+     "            if (isMulti(el.textContent)) { el.classList.add('dccgg-multi'); }", ""),
+    ('one long sentence is treated as many', APP,
+     "    const isMulti = (text) => /[.!?][\"\\u201D']?\\s+\\S/.test(String(text == null ? '' : text));",
+     "    const isMulti = (text) => /[.!?]/.test(String(text == null ? '' : text));"),
+    ('Reset gets its second border back', CSS,
+     ".dccgg-stage.dccgg-stage--app .dccgg-checklist-progress {\n    border: 0;\n    background: transparent;\n    padding: 0;\n    max-width: none;\n}", ""),
+    ('the per-section Front Desk pill comes back', W,
+     "        $label = (string) ($s['str_app_front_desk'] ?? __('Front Desk', 'dcc-guest-guide'));",
+     "        $label = 'Wi-Fi Not Working? Tell the Front Desk';"),
 ]
 
 EQUIVALENT = [
