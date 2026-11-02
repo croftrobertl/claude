@@ -129,7 +129,7 @@ foreach (['leafo', 'leafc', 'leafm', 'leafm2', 'leafs'] as $leaf) {
     ok(in_array($leaf, $tg, true), "thanksgiving: the drawn '$leaf' falls", implode(',', $tg));
 }
 $sub = \DCC_Seasons\Themes::subtle_defaults();
-ok(($sub['thanksgiving'] ?? null) === '', 'thanksgiving: no background leaf layer under the drawn ones', var_export($sub['thanksgiving'] ?? null, true));
+ok(($sub['thanksgiving'] ?? null) === 'leafbg', "thanksgiving: the background is the theme's own drawn leaves (Rob's B1, 4.14.4), never the ovals", var_export($sub['thanksgiving'] ?? null, true));
 ok(($sub['fall_fishing'] ?? null) === 'leaves' && ($sub['veterans_day'] ?? null) === 'leaves',
     'and only Thanksgiving changed: Fall Fishing and Veterans Day keep the effect',
     ($sub['fall_fishing'] ?? '?') . ',' . ($sub['veterans_day'] ?? '?'));
