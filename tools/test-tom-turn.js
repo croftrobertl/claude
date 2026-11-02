@@ -84,7 +84,7 @@ function watch(secs) {
 }
 
 (async () => {
-  console.log('\n  --- he and his poults never meet the cornucopia (180 s each) ---');
+  console.log('\n  --- no corner accent since 4.14.4; he and his poults walk smoothly (180 s each) ---');
   for (const real of [false, true]) {
     for (const w of [390, 768, 1440]) {
       for (const seed of [3, 11]) {
@@ -96,9 +96,10 @@ function watch(secs) {
           await ses.page.evaluate(() => window.DCCSeasonsEngine._state.manual(true));
           const r = await ses.page.evaluate(watch, 180);
           const tag = `${real ? 'real page' : 'fixture'} ${w}px seed ${seed}`;
-          ok(r.ar && r.hits === 0 && r.draws > 1000, `${tag}: no tom or poult box meets the accent box (${r.draws} draws, closest ${r.near} px, ${r.turns} turns)`, JSON.stringify(r));
+          /* 4.14.4 (Rob): the cornucopia falls with the pieces; nothing stands in his way */
+          ok(!r.ar && r.draws > 1000 && r.turns === 0, `${tag}: no corner accent and no turn (${r.draws} draws)`, JSON.stringify(r));
+          ok(r.jump < 3, `${tag}: a poult never jumps between frames (largest step ${r.jump} px)`, JSON.stringify(r));
           ok(r.maxToms === 1, `${tag}: one tom, never two`, JSON.stringify(r));
-          if (r.turns) { ok(r.jump < 3 && r.waitSeen > 0, `${tag}: at the turn the poults stay put and wait (largest poult step ${r.jump} px)`, JSON.stringify(r)); }
         } finally { await ses.close(); }
       }
     }
