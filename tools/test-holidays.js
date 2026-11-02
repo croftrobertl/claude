@@ -136,6 +136,89 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
     } finally { await ses.close(); }
   }
 
+  console.log("\n  --- the tom's fan is never clipped, and every foot is planted (real page, 390) ---");
+  {
+    /* every pose's real extent (painted at a big margin) lies inside the
+     * box its cache canvas is made from */
+    const T = pack('art-thanksgiving.js').thanksgiving, M = T.tk();
+    const ext = await (async () => {
+      const ses = await open('<!doctype html><body>', { viewport: { width: 400, height: 300 } });
+      try {
+        return await ses.page.evaluate(src => {
+          const W = {}; new Function('window', src)(W); const M = W.DCCSeasonsArt.thanksgiving.tk(), paint = M[0], box = M[2];
+          const out = { box, over: [] };
+          const keys = []; for (let i = 0; i < 16; i++) { keys.push('w' + i); } keys.push('p1', 'p2', 'p3', 'p4', 'pj');
+          for (const k of keys) {
+            const c = document.createElement('canvas'); c.width = c.height = 500; const g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 150, 150);
+            const ph = k[0] === 'w' ? +k.slice(1) / 16 : 0, d = k[0] === 'p' ? (k === 'pj' ? 1 : +k.slice(1) / 4) : 0;
+            paint(g, ph, d, k === 'pj' ? 1 : 0);
+            const D = g.getImageData(0, 0, 500, 500).data; let y0 = 1e9, y1 = -1e9, x0 = 1e9, x1 = -1e9;
+            for (let y = 0; y < 500; y++) { for (let x = 0; x < 500; x++) { if (D[(y * 500 + x) * 4 + 3] > 8) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); x0 = Math.min(x0, x); x1 = Math.max(x1, x); } } }
+            const b = [(x0 - 150) / 2, (y0 - 150) / 2, (x1 + 1 - 150) / 2, (y1 + 1 - 150) / 2];
+            if (b[0] < box[0] || b[1] < box[1] || b[2] > box[2] || b[3] > box[3]) { out.over.push([k, b]); }
+          }
+          return out;
+        }, fs.readFileSync(`${JS}/art-thanksgiving.js`, 'utf8'));
+      } finally { await ses.close(); }
+    })();
+    ok(!ext.over.length, `all 21 of his poses lie inside their canvas box ${JSON.stringify(ext.box)} — the fan's top is never cut`, JSON.stringify(ext.over));
+
+    const cfg = config(['--theme=thanksgiving', '--placement=content', '--layering=front', '--density=16', '--diag']);
+    cfg.forceHour = 12; cfg.vigFirst = 1e9; cfg.heroFirst = [1e9, 1e9 + 1]; cfg.heroEvery = [1e9, 1e9 + 1];
+    const ses = await open(rt.page({ config: cfg, extraHead: `<style>${QUIET}</style>` }), { ...rt.opts(390), viewport: { width: 390, height: 844 }, dsf: 2,
+      init: 'Math.random = (() => { let a = 14; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();' });
+    try {
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
+      const r = await ses.page.evaluate(([KS, KB, KG, TS, TB, TG, TST]) => {
+        const S = window.DCCSeasonsEngine._state; S.manual(true);
+        const cache = S.tom.cache, key = new Map(); for (const k in cache) { key.set(cache[k].c, k); }
+        const dpr = Math.min(devicePixelRatio || 1, 2), cv = document.querySelector('canvas.dcc-seasons-canvas');
+        function foot(ph, hx, st, gr, lift) { ph = ((ph % 1) + 1) % 1; return ph < TST ? [hx + st / 2 - st * ph / TST, 0] : [0, 1]; }
+        const P = CanvasRenderingContext2D.prototype, di = P.drawImage; let fr = [];
+        P.drawImage = function (src, x, y, w, h) {
+          const k = key.get(src);
+          if (k && this.canvas === cv && w !== undefined) {
+            const m = this.getTransform(), cr = cv.getBoundingClientRect(), z = cv.width / cr.width, poult = k[0] === 'k', b = poult ? KB : TB;
+            const s2 = src.width / (b[2] - b[0]);
+            /* a unit point (fx, ground) to page x, through the cache's mirror and this draw */
+            const px = fx => { const cx = (b[2] - fx) * s2, cy = ((poult ? KG : TG) - b[1]) * s2; const X = x + cx / src.width * w, Y = y + cy / src.height * h; return (m.a * X + m.c * Y + m.e) / z + cr.left; };
+            fr.push({ k, px });
+          }
+          return di.apply(this, arguments);
+        };
+        const track = {}, spread = { tom: 0, poult: 0 }, back = { tom: 0, poult: 0 }, last = {};
+        let steps = 0, feeds = 0;
+        for (let i = 0; i < 30 * 40; i++) {
+          fr = []; S.tick(1000 / 30, 1);
+          /* draw order: far poult, the tom, near poult */
+          const who = fr.map((d, j) => d.k[0] === 'k' ? (j === 0 ? 'k2' : 'k1') : 't');
+          fr.forEach((d, j) => {
+            const id = who[j], poult = id !== 't', n = poult ? 12 : 16;
+            if (!/^k?w\d+$/.test(d.k)) { delete track[id + 'A']; delete track[id + 'B']; if (poult && /kp/.test(d.k)) { feeds++; } return; }
+            const f = +d.k.replace(/\D/g, '');
+            if (last[id] != null) { const dd = (f - last[id] + n) % n; if (dd > n / 2) { back[poult ? 'poult' : 'tom']++; } }
+            last[id] = f;
+            const ph = f / n, feet = poult ? [[ph + 0.5, 11, 'A'], [ph, 25, 'B']] : [[ph + 0.5, 74, 'A'], [ph, 81, 'B']];
+            feet.forEach(([q, hx, nm]) => {
+              const ft = foot(q, hx, poult ? KS : TS), tag = id + nm;
+              if (ft[1]) { delete track[tag]; return; }   /* lifted */
+              const X = d.px(ft[0]);
+              if (!track[tag]) { track[tag] = [X, X]; steps++; } else { track[tag][0] = Math.min(track[tag][0], X); track[tag][1] = Math.max(track[tag][1], X); }
+              const k = poult ? 'poult' : 'tom'; spread[k] = Math.max(spread[k], track[tag][1] - track[tag][0]);
+            });
+          });
+        }
+        P.drawImage = di;
+        return { spread, back, steps, feeds };
+      }, [M[7], M[3], M[8], M[4], M[2], M[5], M[6]]);
+      ok(r.steps > 20, `${r.steps} planted steps watched over 40 s`, String(r.steps));
+      ok(r.spread.poult <= 1.5, `a poult's planted foot holds within ${r.spread.poult.toFixed(2)} px while it is down (the drawn frames step; no slide)`, JSON.stringify(r.spread));
+      ok(r.spread.tom <= 1.5, `and the tom's within ${r.spread.tom.toFixed(2)} px`, JSON.stringify(r.spread));
+      ok(!r.back.poult && !r.back.tom, 'no walk cycle ever steps backward', JSON.stringify(r.back));
+      ok(r.feeds > 0, 'the poults still feed beside him', String(r.feeds));
+    } finally { await ses.close(); }
+  }
+
   console.log('\n  --- the gift drop on the real home page, every frame ---');
   for (const w of [390, 768, 1440]) {
     for (const dir of [1, -1]) {

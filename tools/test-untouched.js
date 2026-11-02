@@ -88,6 +88,12 @@ function strip(src) {
   cut('\t\tvar GD_KINDS = ', '\t\t\tcx.stroke();\n\t\t}\n', false);
   cut('\t\t\tleafbg: {', '\t\t\t\t}\n\t\t\t},\n', false);
   cut('\t\tfunction evenKey(ks) {', '\t\t\treturn pick(best);\n\t\t}\n', false);
+  /* Thanksgiving's tom and poults (Rob's 4.14.4 fixes): the walk step, the
+   * poults' drawing and the accent turn it no longer needs, old and new */
+  const cutTo = (from, before) => { const i = t.indexOf(from); if (i < 0) { return; } const j = t.indexOf(before, i + from.length); if (j < 0) { throw new Error('end missing: ' + before); } t = t.slice(0, i) + t.slice(j); };
+  cutTo("\t\t\t\tcase 'forage':", "\t\t\t\tcase '");
+  cut('\t\tfunction tomPoults(', '\t\t\t}\n\t\t}\n', true);
+  cut("\t\t/* the corner accent's box in canvas px", 'tkBk : null;   /* his height is size * 1.3 * 1.55 */\n\t\t}\n', false);
   cut("\t\t\t} else if (kind === 'sleigh') {\n", "\t\t\t\tsprite('sleigh');\n", false);
   return t.split('\n')
     /* comment lines say nothing a guest sees */
@@ -98,6 +104,10 @@ function strip(src) {
     .filter(l => !/^\t\tthanksgiving: \[/.test(l))
     .filter(l => !/^\t\tsleigh: '122 46\|/.test(l))
     .filter(l => !/^\t\t\t\tget cranes\(\) \{/.test(l))
+    .filter(l => !/^\t\t\t\tif \(b === 'forage'\) \{/.test(l))
+    .filter(l => !/^\t\tthanksgiving: \['cornucopia'/.test(l))
+    .filter(l => !/^\t\tvar TK_REF = 107,/.test(l))
+    .filter(l => l !== '\t\t\t\t\tvar twR = TK_REFW * tf.u * ts;')
     .filter(l => !/^\tvar EVENING_VIGS = /.test(l))
     .filter(l => !/^\t\tif \(!ART\.xm\) \{ vigList = vigList\.filter/.test(l))
     /* 4.14.2: the wreath's placement is called for Christmas only, and
@@ -126,6 +136,10 @@ function strip(src) {
       .replace(" thanksgiving: 'leafbg', anniversary:", " thanksgiving: '', anniversary:")
       .replace(", spr: function (k) { return sprite(k); } });", " });")
       .replace("(sp.def.ev ? evenKey(sp.s) : pick(sp.s))", "pick(sp.s)")
+      .replace('H: tkSz * 1.3 * 1.4 * TK_H * TK_R, k: KP_K / TK_R,', 'H: tkSz * 1.3 * 1.4 * TK_H, k: KP_K,')
+      .replace('var ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h;', 'var ts = (p.size * 1.3 * s * TK_H) / tf.h;')
+      .replace('tomPoults(p, s, twR, th,', 'tomPoults(p, s, tw, th,')
+      .replace("if (d <= 0) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }   /* standing as it stopped, mid-stride (4.14.4) */", "if (d <= 0) { return poult ? 'kw0' : 'w0'; }")
       .replace("if (!ART.xm) { vigList = vigList.filter(function (n) { return n !== 'sleighmoon' && n !== 'giftdrop'; }); }", "if (!ART.xm) { vigList = vigList.filter(function (n) { return n !== 'sleighmoon'; }); }")
       .replace('witch: 1, sleigh: 1, osprey: 1 };', 'witch: 1, osprey: 1 };')
       .replace('osprey: 1 };   /* the sleigh flyer is gone since 4.14.0 */', 'osprey: 1 };')
@@ -230,6 +244,11 @@ function folder(files, drop) {
     ok(m12 !== engNew && !textSame(m12, engOld).same, "the drawn leaves behind Halloween fails proof 2", 'leafbg');
     const m13 = thNew.replace("'thanksgiving' => 'leafbg',", "'thanksgiving' => 'leafbg', 'fall_fishing_x' => 1,").replace("'fall_fishing' => 'leaves',", "'fall_fishing' => 'leafbg',");
     ok(m13 !== thNew && themesSame(themesOf(m13, thOld)).sub.includes('fall_fishing'), "Fall Fishing's background changed in PHP fails proof 1", 'sub');
+    /* 4.14.4: the tom's size ratio read without its pack throws on every
+     * other theme: the pixels must see it */
+    const dr = folder(Object.assign({}, now, { 'engine.js': engNew.replace('TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1,', 'TK_R = (TK_BOX[3] - TK_BOX[1]) / TK_REF,') }), []);
+    let hr; try { hr = hashes(dr, ['halloween']); } catch (e) { hr = { halloween: ['ERR ' + String(e.message).slice(0, 40)] }; }
+    ok(JSON.stringify(hr.halloween) !== JSON.stringify(ho.halloween), "the tom's size ratio unguarded (no Thanksgiving pack) fails proof 3", JSON.stringify(hr.halloween));
     /* and the pixels see a sprite change on their own */
     const dm = folder(Object.assign({}, now, { 'engine.js': engNew.replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);

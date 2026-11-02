@@ -503,7 +503,12 @@
 		/* the near leg, in front of the body and the wing */
 		tkLeg(g, [81, 85 + bob], fN, fN[2], TK.leg, 1);
 	}
-	var TK_BOX = [-2, -3, 131, 104];   /* wide enough for his head at the ground */   /* x0 y0 x1 y1, every frame */
+	/* x0 y0 x1 y1, every frame: his REAL extent over every pose (4.14.4,
+	 * measured: bending to feed tips the fan up to y -14, the feet reach
+	 * 105.3, the head at the ground 132), plus a margin. 4.14.3's box
+	 * (-2, -3, 131, 104) clipped the fan's top in a straight line. The
+	 * engine keeps his size by the old box's height (TK_REF). */
+	var TK_BOX = [-3, -16, 134, 107];
 
 	/* A POULT, traced from the front poult of "Wild turkeys" (NPS,
 	 * Shenandoah, Luca Pfeiffer, public domain), in that photo's pixels / 10

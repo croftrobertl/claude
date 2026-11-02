@@ -201,6 +201,10 @@ class Themes {
                         ['s' => 'cranberry', 'b' => 'drop'],
                         ['s' => 'acorn', 'b' => 'drop', 'w' => 2],
                         ['s' => 'pie', 'b' => 'drop'],
+                        /* 4.14.4 (Rob): the cornucopia leaves its corner ("it looks
+                         * odd and makes the page too busy") and falls with the
+                         * pieces, weighted as the pie is; the approved fuller horn. */
+                        ['s' => 'cornucopia', 'b' => 'drop'],
                         /* 4.13.2: the strutting wild tom (Rob, 2026-10-27),
                          * drawn in code (TK_ in engine.js) and stepping, two
                          * poults following him; he stops, feeds with his fan

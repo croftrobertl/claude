@@ -578,7 +578,6 @@
 		/* The wreath (4.14.0, Rob's pick A) in the web's size class: 96px
 		 * at half opacity, in the same corner, inset so the ring is whole. */
 		christmas: ['wreath', 'right:8px;top:8px;width:96px;opacity:.5;'],
-		thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.85;'],
 		snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
 		earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
 		summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;'],
@@ -3282,7 +3281,7 @@
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
 				/* 4.13.2 forage (Thanksgiving's tom): walk, stop, feed, walk on */
-				if (b === 'forage') { var tb = tkBlock(p); if (tb) { p.dir = tb[0] + tb[1] < vw ? -1 : 1; if (tkDone) { anywhere = 0; } } p.pw = 1e9; if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = rnd(1.6, 3.0); p.gap = 1; p.wp = 0; p.kp = 0.3; }   /* a strut */
+				if (b === 'forage') { if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = rnd(1.6, 3.0); p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
 			}
 			if (b === 'dart') {
 				spreadPlace(p, vw * 0.1, vw * 0.9, vh * 0.1, vh * 0.66);
@@ -3534,33 +3533,34 @@
 					if (!tkDone) { break; }   /* waits just off the edge until his poses are drawn */
 					p.ft -= dt;
 					{
-						var tu = (p.size * 1.3 * TK_H * p.sc) / (TK_BOX[3] - TK_BOX[1]), cyc = TK_STRIDE / TK_STANCE * tu, ku = tu * (TK_BOX[3] - TK_BOX[1]) * KP_K / (KP_BOX[3] - KP_BOX[1]);
+						/* 4.14.4 (Rob: the poults moonwalked): each poult's walk
+						 * cycle advances by the ground IT covers — his advance less
+						 * the change in its distance behind him — so its planted
+						 * foot stays put. The gap opens no faster than half his pace
+						 * (a poult never goes backward) and, while he feeds, closes
+						 * no faster than 1.2x his pace; a poult that has caught up
+						 * stops and feeds. */
+						var tu = (p.size * 1.3 * TK_H * p.sc) / TK_REF, cyc = TK_STRIDE / TK_STANCE * tu, ku = tu * TK_REF * KP_K / (KP_BOX[3] - KP_BOX[1]), kc = KP_STRIDE / TK_STANCE * ku;
+						var g0 = p.gap == null ? 1 : p.gap, adv = 0, span = TK_REFW * tu * KP_OFF[1], c3;
 						p.y = ground; p.rot = 0;
 						if (p.fs !== 1) {
-							var adv = abs(p.vx) * dt, bk = tkBlock(p);
+							adv = abs(p.vx) * dt;
 							p.x += p.vx * dt;
 							p.wp = (p.wp || 0) + adv / cyc;
-							p.kp = (p.kp || 0.3) + adv / (KP_STRIDE / TK_STANCE * ku);
-							p.gap = mn(1, (p.gap == null ? 1 : p.gap) + dt * 0.6);
-							p.pw += adv;   /* since his last turn: the poults left standing wait for him to pass */
-							/* 4.13.3 (Rob): he turns before the corner accent, a stride
-							 * plus 8px out, so neither he nor a poult ever overlaps it */
-							var dk = bk ? (p.vx < 0 ? p.x - bk[1] : bk[0] - p.x) : -1;
-							if (dk > 0 && dk - tu * 67 < 8 + cyc) { p.tn = 1; if (!p.fs) { p.fs = 2; } }
+							p.gap = mn(1, g0 + mn(dt * 0.6, 0.5 * adv / span));
 							if (p.fs === 0 && p.ft <= 0) { p.fs = 2; }
-							if (p.fs === 2 && (p.wp % 1) < adv / cyc) {
-								p.wp = 0; p.kp = MT.round(p.kp);
-								if (p.tn) {   /* both feet down: he turns round, and his poults stay where they stand */
-									p.pw = 0; p.vx = -p.vx; p.dir = -p.dir; p.tn = 0; p.fs = 0; p.ft = rnd(2.2, 3.0);
-								} else { p.fs = 1; p.ft = p.ftS = rnd(2.5, 3.1); }
-							}
+							if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.ft = p.ftS = rnd(2.5, 3.1); }   /* both feet down: he feeds */
 						} else {
-							p.gap = mx2(0.55, p.gap - dt * 0.8);
+							p.gap = mx2(0.55, g0 - mn(dt * 0.8, 1.2 * abs(p.vx) * dt / span));
 							if (p.ft <= 0) { p.fs = 0; p.ft = rnd(2.2, 3.0); }
 						}
+						if (!p.kq) { p.kq = [0.67, 1.04]; p.kf = [0, 0]; }
+						for (c3 = 0; c3 < 2; c3++) {
+							var ka = adv - TK_REFW * tu * KP_OFF[c3] * (p.gap - g0);   /* its own ground covered: never negative */
+							p.kq[c3] += mx2(0, ka) / kc;
+							p.kf[c3] = (p.fs === 1 && ka < 0.02 * tu) ? p.kf[c3] + dt : 0;   /* stopped beside him: feeding */
+						}
 					}
-					/* his box and the poults behind it: re-seed only once all are off */
-					if (p.x < -tu * 230 || p.x > vw + tu * 230) { seed(p); }
 					break;
 				case 'waddle': case 'chatter':
 					p.x += p.vx * dt;
@@ -3703,11 +3703,12 @@
 					/* 4.13.2: one pre-drawn pose of the tom, then his poults */
 					var tf = tkGet(tkPose(p.wp || 0, TK_FR, p.fs, p.fs === 1 ? p.ftS - p.ft : 0, false));
 					if (!tf) { return (flip ? cx.restore() : 0); }
-					var ts = (p.size * 1.3 * s * TK_H) / tf.h;
+					var ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h;
 					var tw = tf.w * ts, th = tf.h * ts, gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts, fy = 10 * s;   /* his feet stand 10px below the walkers' line: they show */
-					tomPoults(p, s, tw, th, fy, ts, true);
+					var twR = TK_REFW * tf.u * ts;
+					tomPoults(p, s, twR, th, fy, ts, true);
 					cx.drawImage(tf.c, -tw / 2, fy - gy - th / 2, tw, th);
-					tomPoults(p, s, tw, th, fy, ts, false);
+					tomPoults(p, s, twR, th, fy, ts, false);
 					return (flip ? cx.restore() : 0);
 				}
 				var im = sprite(key);
@@ -3727,13 +3728,12 @@
 		 * phase; while he feeds they close up and feed too. The far one is
 		 * drawn behind him, the near one in front. */
 		function tomPoults(p, s, tw, th, gy, ts, far) {
-			var c = far ? 2 : 1, gap = p.gap == null ? 1 : p.gap;
+			var c = far ? 2 : 1, gap = p.gap == null ? 1 : p.gap, q = p.kq || [0.67, 1.04], kf = p.kf || [0, 0];
 			{
-				var gx = tw * (0.22 + (c === 1 ? 0.34 : 0.62) * gap), po = mn(0, p.pw - 2 * gx);   /* left standing at his turn: mirrored, then caught up */
-				var f = tkGet(po < 0 ? 'kp4' : tkPose((p.kp || 0) + c * 0.37, KP_FR, p.fs, p.fs === 1 ? p.ftS - p.ft - c * 0.35 : 0, true)), sc2 = ts;
+				var gx = tw * (0.22 + KP_OFF[c - 1] * gap);   /* tw: 4.14.3's box width at his scale */
+				var f = tkGet(kf[c - 1] > 0 ? tkPose(q[c - 1], KP_FR, 1, kf[c - 1] + 0.3, true) : tkPose(q[c - 1], KP_FR, 0, 0, true)), sc2 = ts;
 				if (!f) { return; }
 				var pw = f.w * sc2, phh = f.h * sc2, py = gy - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * sc2 + (far ? -th * 0.03 : th * 0.02);
-				gx += po;
 				if (far) { cx.save(); cx.globalAlpha *= 0.94; }
 				cx.drawImage(f.c, gx - pw / 2, py - phh / 2, pw, phh);
 				if (far) { cx.restore(); }
@@ -4193,24 +4193,15 @@
 		 * Keys: 'w0'-'w15' the walk, 'p0'-'p4' the head lowering to feed,
 		 * 'pj' the jab; 'k…' the same for a poult. */
 		var TK_FR = 16, KP_FR = 12, TK_H = 1.55, KP_K = 0.4, tkCache = {}, tkN = 0, tkSz = 0;
+		/* 4.14.4: his size is set by 4.14.3's box (107 units tall, 133 wide),
+		 * so the box can grow to his real extent without shrinking him */
+		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1, KP_OFF = [0.34, 0.62];
 		for (var tkI = 0; tkI < specs.length; tkI++) { if (specs[tkI].def.draw === 'tom' && TKM.length) { tkSz = mx2(tkSz, (specs[tkI].def.sz || [32, 32])[1]); } }
-		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H, k: KP_K, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2) };
+		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R, k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2) };
 		function tkBuild(key) {
 			var c = D.createElement('canvas'), m = tkDraw(c, key, tkO);
 			m.c = c; tkN++;
 			return (tkCache[key] = m);
-		}
-		/* the corner accent's box in canvas px [x0, x1] when it reaches down
-		 * into his band (his height above the walkers' line), read at most
-		 * every 250 ms; null when there is none or it stands clear */
-		var tkBk = null, tkBkT = -1;
-		function tkBlock(p) {
-			var t2 = nowMs(), a = accents[0];
-			if (t2 - tkBkT > 250) {
-				tkBkT = t2; tkBk = null;
-				if (a && a.isConnected) { var r = a.getBoundingClientRect(), c = cv.getBoundingClientRect(); tkBk = [r.left - c.left, r.right - c.left, r.top - c.top, r.bottom - c.top]; }   /* an empty box blocks nothing */
-			}
-			return tkBk && tkBk[3] > ground - p.size * 2.1 * p.sc && tkBk[2] < ground + 18 * p.sc ? tkBk : null;   /* his height is size * 1.3 * 1.55 */
 		}
 		/* never built inside a frame: until the pre-draw is done he waits off
 		 * the edge, so a miss draws nothing */
@@ -4275,7 +4266,7 @@
 			if (fs !== 1) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }
 			var d = fe < 0.3 ? 0 : fe < 0.7 ? (fe - 0.3) / 0.4 : fe < 1.6 ? 1 : fe < 2 ? 1 - (fe - 1.6) / 0.4 : 0;
 			var jab = (fe > 0.8 && fe < 1.0) || (fe > 1.25 && fe < 1.45);
-			if (d <= 0) { return poult ? 'kw0' : 'w0'; }
+			if (d <= 0) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }   /* standing as it stopped, mid-stride (4.14.4) */
 			return (poult ? 'k' : '') + (jab && !poult ? 'pj' : 'p' + mx2(1, MT.round(d * 4)));
 		}
 		if (FX.heroes && heroPool.indexOf('heron') >= 0 && !heronOff()) {
