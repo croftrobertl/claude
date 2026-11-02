@@ -1,6 +1,8 @@
 'use strict';
 /**
- * DCC Seasons — 4.13.3, Rob's picks for the tom:
+ * DCC Seasons — the tom on the page (4.13.3, revised for 4.14.4: the
+ * cornucopia is no longer a corner accent, so points 2 and 3 below are
+ * now "no accent, no turn, the poults never jump"):
  *  1. B, one tom on every page: every visit at every width, never two —
  *     measured on the REAL home page (tools/real-theme.js), 20 visits at
  *     each of 390, 768 and 1440, as the Director asked;
