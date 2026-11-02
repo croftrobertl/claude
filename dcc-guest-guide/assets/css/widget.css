@@ -5240,9 +5240,13 @@ dialog.dccgg-wrapper::backdrop {
    the centre track overflows into the trailing controls. "Pasted from an
    email" overlaps the read-aloud button by 28px, on 0.26.2 and 0.27.0 alike,
    on the grid layout as well as this one. Reported, not fixed. */
-.dccgg-stage.dccgg-stage--app .dccgg-item-body {
-    text-align: center;
-}
+/* Only the MULTI case is written here. Centring the body was written too,
+   measured, and removed: `.dccgg-item` already centres, so item content has
+   been centred inside a sheet since long before this release — the tiles
+   were the half that was not. (An earlier "proof" that the rule mattered
+   used !important, which shows a rule can be overridden, not that it does
+   anything.) The left-alignment below is new and is the only thing here
+   doing work. */
 .dccgg-stage.dccgg-stage--app .dccgg-item-body .dccgg-multi {
     text-align: left;
 }
@@ -5303,6 +5307,10 @@ dialog.dccgg-wrapper::backdrop {
 /* (0,4,1), because the bar's own rule above is (0,3,0) and a weaker hide
    loses to it — which is exactly what happened when this file moved to
    (0,4,0) and the bar started floating over the open sheet again. */
+/* (0,2,1) would be enough — an element plus two classes already outranks the
+   bar's own (0,2,0) — so the doubled class here is consistency with the rest
+   of the file, not necessity. Measured; the single-class form behaves
+   identically, and the mutation runner records it as equivalent. */
 html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {
     display: none;
 }

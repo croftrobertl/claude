@@ -92,6 +92,12 @@ function dccgg_all_on(): array {
          'item_content' => '<p>Leave them in the hamper.</p>', 'item_checkable' => 'yes'],
         ['_id' => 'c2', 'item_section' => 'checkout', 'item_title' => 'Lock the door',
          'item_content' => '<p>Twice.</p>', 'item_checkable' => 'yes'],
+        // v0.27.0: a paragraph of MORE THAN ONE SENTENCE. Without one in the
+        // fixture, "a multi-sentence paragraph still reads left" passed
+        // whether or not anything marked one — a test that can only pass.
+        ['_id' => 'c4', 'item_section' => 'checkout', 'item_title' => 'Bins',
+         'item_content' => '<p>Wheel the bin to the kerb. Collection is Tuesday morning.</p>',
+         'item_checkable' => 'yes'],
         // v0.25.1: pasted copy carries its own inline weight. An inline style
         // beats any author rule that is not !important, so this is the only
         // thing that exercises the !important on .dccgg-item-body — the host

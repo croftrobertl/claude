@@ -554,16 +554,92 @@ const check = (name, cond, detail) => {
                 const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
                 return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
             }));
-        check('…and a one-sentence item body is centred',
-            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-body p', (ps) => {
-                const plain = ps.find((p) => !p.classList.contains('dccgg-multi'));
-                return !!plain && getComputedStyle(plain).textAlign === 'center';
-            }));
-        check('…while a paragraph of more than one sentence still reads left',
-            await v.page.$$eval('.dccgg-item-body p', (ps) => {
-                const multi = ps.find((p) => p.classList.contains('dccgg-multi'));
-                return !multi || getComputedStyle(multi).textAlign === 'left';
-            }));
+        const paras = await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-body p',
+            (ps) => ps.map((p) => ({ multi: p.classList.contains('dccgg-multi'),
+                align: getComputedStyle(p).textAlign, t: p.textContent.trim().slice(0, 30) })));
+        // The fixture HAS a multi-sentence paragraph, deliberately: without
+        // one this pair could only ever pass.
+        check('a paragraph of more than one sentence is marked as one',
+            paras.filter((p) => p.multi).length === 1, JSON.stringify(paras));
+        check('…and reads left while the single-sentence ones stay centred',
+            paras.every((p) => p.align === (p.multi ? 'left' : 'center')), JSON.stringify(paras));
+        await shut(v);
+    }
+
+    console.log('\nG4. The guarantees the first mutation run found untested');
+    {
+        // --- no jump on Back ---------------------------------------------
+        // Measured as a LANDMARK's position frame by frame. window.scrollY
+        // reads 0 for the whole time the body is pinned, so it reports a
+        // jump where nothing visible moved and success where it has not.
+        const v = await open({ height: 700 });
+        await v.page.evaluate(() => { document.body.style.paddingBottom = '2000px'; });
+        await v.page.evaluate(() => window.scrollTo(0, 300));
+        await v.page.waitForTimeout(400);
+        await v.page.tap('.dccgg-tile[data-key="checkout"]');
+        await v.page.waitForTimeout(800);
+        const drift = await v.page.evaluate(() => new Promise((resolve) => {
+            const mark = document.querySelector('.dccgg-app-shell');
+            const seen = [];
+            const t0 = performance.now();
+            const tick = () => {
+                seen.push(Math.round(mark.getBoundingClientRect().top));
+                if (performance.now() - t0 < 1500) { requestAnimationFrame(tick); }
+                else { resolve(Math.max(...seen) - Math.min(...seen)); }
+            };
+            requestAnimationFrame(tick);
+            document.querySelector('.dccgg-detail:not([hidden]) .dccgg-back').click();
+        }));
+        check('closing a sheet moves nothing the guest can see', drift === 0, 'drift=' + drift + 'px');
+        check('…and the guide owns scroll restoration, so the browser cannot override it',
+            await v.page.evaluate(() => history.scrollRestoration) === 'manual');
+        await shut(v);
+    }
+    {
+        // --- the pressed state, and its release ---------------------------
+        const v = await open();
+        const tile = await v.page.$('.dccgg-tile');
+        const box = await tile.boundingBox();
+        const pt = [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+        const cdp = await v.page.context().newCDPSession(v.page);
+        const pressing = () => v.page.$eval('.dccgg-tile', (e) => e.classList.contains('is-pressing'));
+
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
+        await v.page.waitForTimeout(60);
+        check('a tile answers the finger while it is still down', await pressing());
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
+            touchPoints: [{ x: pt[0].x, y: pt[0].y - 40 }] });
+        await v.page.waitForTimeout(60);
+        check('…and lets go the moment the finger moves — a scroll is not a tap',
+            !(await pressing()));
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await v.page.waitForTimeout(400);
+
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
+        await v.page.waitForTimeout(60);
+        await v.page.evaluate(() => window.scrollBy(0, 40));
+        await v.page.waitForTimeout(120);
+        check('…and lets go when the page scrolls under it', !(await pressing()));
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+        check('a tile does not wait on the browser\'s double-tap delay',
+            await v.page.$eval('.dccgg-tile', (e) => getComputedStyle(e).touchAction) === 'manipulation');
+        await shut(v);
+    }
+    {
+        // --- the bar must not flash before the observer has decided -------
+        // Loaded with the guide already scrolled out of view, which is what a
+        // deep link or a restored scroll position gives a guest.
+        const v = await open({ height: 600 });
+        await v.page.evaluate(() => {
+            const after = document.createElement('div');
+            after.style.height = '3000px';
+            document.querySelector('.elementor-widget').after(after);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+        await v.page.waitForTimeout(800);
+        check('the bar never appears when the guide is off screen from the start',
+            !(await shown(v.page, '.dccgg-app-tabs')));
         await shut(v);
     }
 

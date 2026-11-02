@@ -204,9 +204,6 @@ MUTANTS = [
      "        const show = (on) => {"),
     ('the bar no longer steps aside for an open sheet', CSS,
      "html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {\n    display: none;\n}", ""),
-    ('the hide loses to the bar\'s own rule, as it did once before', CSS,
-     "html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {",
-     "html.dccgg-detail-open .dccgg-app-tabs {"),
     ('the offscreen marker stops hiding anything', CSS,
      '.dccgg-app-tabs.dccgg-app-tabs[hidden],\n.dccgg-app-tabs.dccgg-app-tabs[data-dccgg-offscreen="1"] {\n    display: none;\n}', ""),
     ('the Front Desk tab loses its direct handler with the bar out of the root', APP,
@@ -233,8 +230,6 @@ MUTANTS = [
     ('the tiles go back to left-aligned', CSS,
      "    text-align: center;\n    align-items: center;\n    /* No double-tap-to-zoom wait",
      "    text-align: left;\n    align-items: flex-start;\n    /* No double-tap-to-zoom wait"),
-    ('the sheet text is no longer centred', CSS,
-     ".dccgg-stage.dccgg-stage--app .dccgg-item-body {\n    text-align: center;\n}", ""),
     ('every paragraph is centred, multi-sentence ones included', APP,
      "            if (isMulti(el.textContent)) { el.classList.add('dccgg-multi'); }", ""),
     ('one long sentence is treated as many', APP,
@@ -248,6 +243,12 @@ MUTANTS = [
 ]
 
 EQUIVALENT = [
+    ('the doubled class on the open-sheet hide rule',
+     "measured: html.dccgg-detail-open .dccgg-app-tabs is (0,2,1), which already "
+     "outranks the bar's own (0,2,0), so the single-class form behaves "
+     "identically. The doubling is consistency with the rest of the file, not "
+     "necessity, and the CSS comment was corrected to say so rather than "
+     "claiming a specificity it does not need."),
     ('the three !is_public_mode guards on the Front Desk pill and tab',
      "measured: with ALL THREE removed, the public app shell still renders no "
      "pill and no Front Desk tab. apply_public_mode() writes "
