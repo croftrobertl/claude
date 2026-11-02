@@ -304,7 +304,7 @@ check('…and is the time alone when there is nothing to count',
     \DCCGG\Widget::app_tile_summary($sec(['section_role' => 'checkout']), 0, '11:00') === '11:00 AM');
 check('the rendered guide carries the real lines, not placeholders',
     strpos($appHtml, '>2 networks<') !== false
-    && strpos($appHtml, '>11:00 AM · 4 steps<') !== false
+    && strpos($appHtml, '>11:00 AM · 5 steps<') !== false
     && strpos($appHtml, '>Coffee · Games<') !== false);
 
 echo "\nE. Public mode, and the secrets\n";

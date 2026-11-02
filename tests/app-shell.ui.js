@@ -720,6 +720,27 @@ const check = (name, cond, detail) => {
                     });
                 check(`${layout} at ${width}: no title touches its controls`,
                     worst.over <= 0, `${worst.over}px on "${worst.t}"`);
+                // The other half of the same promise, and the half two
+                // mutants walked through: a title must stay INSIDE its track
+                // and the row inside its box. Without this, a centre track
+                // that refuses to give way simply pushes the row wider, and
+                // a word with nowhere to break simply spills — neither of
+                // which the overlap check above can see.
+                const spill = await v.page.$$eval(
+                    '.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) => {
+                        let worstSpill = 0, who = '';
+                        rows.forEach((row) => {
+                            const t = row.querySelector('.dccgg-item-title-text');
+                            if (!t) { return; }
+                            const a = Math.ceil(t.scrollWidth - t.clientWidth);
+                            const b = Math.ceil(row.scrollWidth - row.clientWidth);
+                            const d = Math.max(a, b);
+                            if (d > worstSpill) { worstSpill = d; who = (t.textContent || '').trim(); }
+                        });
+                        return { worstSpill, who };
+                    });
+                check(`${layout} at ${width}: nothing spills out of its track`,
+                    spill.worstSpill <= 1, `${spill.worstSpill}px on "${spill.who}"`);
                 await shut(v);
             }
         }

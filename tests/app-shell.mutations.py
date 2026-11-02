@@ -239,9 +239,11 @@ MUTANTS = [
     ('the centre track stops giving way, so the sides are pushed out', CSS,
      "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
      "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);"),
-    ('a word longer than the track spills instead of breaking', CSS,
-     "    text-wrap: balance;\n    /* The backstop for a single word longer than the track — a wrapped line\n       is recoverable, a word sitting on top of the read-aloud button is not. */\n    overflow-wrap: break-word;",
-     "    text-wrap: balance;"),
+    ('a word longer than the track can neither hyphenate nor break', CSS,
+     "    hyphens: auto;\n    overflow-wrap: break-word;", "    hyphens: auto;"),
+    ('…nor hyphenate at all', CSS, "    hyphens: auto;\n", ""),
+    ('the narrow-width gap is given back, so the longest word no longer fits', CSS,
+     "@media (max-width: 480px) {\n    .dccgg-item-title {\n        gap: 6px;\n    }\n}", ""),
 ]
 
 EQUIVALENT = [

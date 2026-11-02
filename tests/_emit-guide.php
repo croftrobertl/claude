@@ -95,6 +95,11 @@ function dccgg_all_on(): array {
         // v0.27.0: a paragraph of MORE THAN ONE SENTENCE. Without one in the
         // fixture, "a multi-sentence paragraph still reads left" passed
         // whether or not anything marked one — a test that can only pass.
+        // v0.27.1: ONE LONG WORD, longer than the centre track can be at 320.
+        // Without it nothing exercises hyphenation or the overflow backstop,
+        // and the mutants for both pass by having nothing to break.
+        ['_id' => 'c5', 'item_section' => 'checkout', 'item_title' => 'Troubleshooting',
+         'item_content' => '<p>Ask the Front Desk.</p>', 'item_checkable' => 'yes'],
         ['_id' => 'c4', 'item_section' => 'checkout', 'item_title' => 'Bins',
          'item_content' => '<p>Wheel the bin to the kerb. Collection is Tuesday morning.</p>',
          'item_checkable' => 'yes'],
