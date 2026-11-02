@@ -1255,6 +1255,47 @@ Rob sees it (the overlay rows; sources named on the sheets).
   exempt) and `test-check-key.php` prove it; `tools/test-preview.js` drives
   the real rendered admin page with the real home page in its frame.
 
+- **4.14.4: Rob's Thanksgiving and Christmas corrections (picks A1, B1,
+  C1, D2, final 2026-11-02).** Built on 4.14.3; the Untouched test runs
+  against 4.14.3 (`ebab72e`) with ONLY those two themes exempt.
+  - **Thanksgiving A1:** no scene. The tom and poults walk the foot of the
+    screen as before; the cranes and their moon left Thanksgiving (they stay
+    the Anniversary's) and their whole scene left the engine (`crPaint`,
+    `crGet`, `crPlanFor`, `fullMoonGet`, the idle pre-draw, the guide's
+    picture): engine.min.js 198,113 → 193,417. `VIGS.thanksgiving` is `[]`,
+    which `test-timing.js` reads as "no scene". The heron flyer is common to
+    every theme and unchanged (on live it yields to Hero Effects' heron).
+  - **B1:** the background layer is `leafbg`, the theme's OWN four drawn
+    leaves (leafm, leafm2, leafs, leafo) at 12-16 px, through `kitG.spr`
+    (the engine passes `sprite`; the Theme guide passes its own decoder and
+    repaints when the images load). `subtle_defaults()` and
+    `SUBTLE_FALLBACK` both say `leafbg`; the ovals ('leaves') stay for
+    Fall Fishing, Patriot Day and Veterans Day.
+  - **The fixes:** the maple's stem is the photo's short stub (both maples:
+    leafm2 recolours leafm); the corn is multicolored, its 75 kernels
+    GENERATED in the pack (`tgKernels`, one digit per kernel into
+    `KC_PAL`), byte-identical to the approved drawing (test-holidays pins
+    its md5); the cornucopia's horn is full in the body and curls to a
+    point (`tgHorn`, a centreline through points, sampled by length).
+    `tgNest` now accepts a sprite that is a function.
+  - **Christmas C1:** `giftdrop` is a SKY scene flying the approved team
+    (`sledRig`, no moon) at `gdPlan.y` = the menu bar's / dial's / menu
+    button's bottom + 8 + the team's band (it passes BEHIND the title's
+    letters, cut out in front, where it must), with a gentle dip, never a
+    lift; three presents (`GD_KINDS` red, blue, green, gold ribbon) on
+    parachutes (`gdChute`) land at the picture's foot clear of the wreath
+    (`gdPlanFor`, measured in idle time with the sleigh's other work), a
+    soft shadow under each, no ripple. The cut-out `sleigh` sprite is gone
+    (one Santa). Without the Christmas pack both Christmas scenes drop out.
+  - **D2:** the falling `gift` is gold paper with dots and a red ribbon;
+    every present is `xGift(paper, ribbon, pattern)` in the pack.
+  - **Ornaments:** a theme row's `'ev' => 1` gives each new piece the
+    variant least on screen (`evenKey`); only the Christmas balls carry it,
+    so every other theme's variants keep their random pick.
+  - `tools/test-holidays.js` replaces `test-thanksgiving-scene.js` (its
+    reduced-motion and /submit-booking/ checks moved in); the clips and
+    sheets are `tools/holiday-clip.js` and `tools/holiday-sheet.js`.
+
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1687,7 +1728,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-thanksgiving-scene.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.2 for 4.14.3), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.3 for 4.14.4), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

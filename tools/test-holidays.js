@@ -31,7 +31,7 @@ function ok(c, label, detail) {
   if (c) { pass++; console.log(`    PASS  ${label}`); }
   else { fail++; problems.push(`${label} — ${detail}`); console.log(`    FAIL  ${label} — ${detail}`); }
 }
-const JS = `${ROOT}/dcc-seasons/assets/js`;
+const JS = process.env.DCC_ASSETS || `${ROOT}/dcc-seasons/assets/js`;
 const QUIET = '.dcc-wx-banner{display:none!important}';
 const KEEP_BOX = '#site-header-main, .site-header-bottom-fixed, .dcc-sun-dial, .menu-burger';
 /* the corn Rob approved on the 4.14.4 sheet, as drawn then (a literal tile) */
