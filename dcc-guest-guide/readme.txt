@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.0
+Stable tag: 0.27.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,11 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.1 =
+* A long item title no longer runs under the checkbox, the emoji or the
+  read-aloud button. It wraps inside its own column and stays centred, on
+  both the grid and app-shell layouts. Stylesheet only: no markup changes.
 
 = 0.27.0 =
 * The app shell's tab bar is moved to the document body, so a transformed

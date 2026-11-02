@@ -1379,7 +1379,21 @@ body.dccgg-detail-open {
     margin: 0 0 8px;
     font-size: 1.15em;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* v0.27.1: the side tracks may never be narrower than what is in them.
+       They used to be plain `1fr`, and `1fr` has an automatic minimum of
+       zero once its item carries min-width:0 — so when the centre track took
+       its max-content width, both side tracks collapsed and the LEAD's
+       content (the checkbox and the emoji, which have a real width) spilled
+       out of its zero-width track and ran under the centred title.
+       Measured on live before the fix, at 320 on both /guest/ and /test/:
+       ten of Rob's own titles overlapped, worst "Checkout Time" by 30px.
+       Always the lead side, never the tail, and never above 320.
+       `minmax(min-content, 1fr)` keeps the two sides equal while there is
+       room — so the title stays centred, which is the whole point of the
+       three-slot row — and stops them collapsing when there is not.
+       The centre is minmax(0, auto) so it can give way and WRAP rather than
+       push the sides out of the way. */
+    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
     align-items: center;
     gap: 10px;
     color: var(--dccgg-text);
@@ -1396,6 +1410,13 @@ body.dccgg-detail-open {
     grid-column: 2;
     min-width: 0;
     text-align: center;
+    /* Rob's preference on a wrapped title: even lines rather than one long
+       and one short. Ignored by engines that do not know it, which simply
+       wrap as before. */
+    text-wrap: balance;
+    /* The backstop for a single word longer than the track — a wrapped line
+       is recoverable, a word sitting on top of the read-aloud button is not. */
+    overflow-wrap: break-word;
 }
 .dccgg-item-title-tail {
     grid-column: 3;

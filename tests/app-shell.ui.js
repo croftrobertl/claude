@@ -549,14 +549,24 @@ const check = (name, cond, detail) => {
             parseFloat(bar.b) === 0 && /rgba\(0, 0, 0, 0\)|transparent/.test(bar.bg),
             JSON.stringify(bar));
         // Measured as GEOMETRY, not as a property that happens to read
-        // "center": the title sits in the centre track of a 1fr/auto/1fr
-        // grid and has done since v0.24.x, so a computed-style assertion
-        // here would be testing a rule that does not exist.
-        check('…and the item titles in the sheet are centred',
+        // "center": the title sits in the centre track of the three-slot
+        // grid, so a computed-style assertion would be testing a rule that
+        // does not exist.
+        //
+        // v0.27.1 CHANGED WHAT IS PROMISED HERE, and the change is worth
+        // stating rather than quietly relaxing. Until now the title was
+        // absolutely centred in the ROW whatever the lead and tail held —
+        // and that is exactly what let the side tracks collapse to nothing
+        // and the lead spill under the text. The side tracks now refuse to
+        // go below their contents, so when space is tight and the two sides
+        // differ in width the centre track is no longer dead centre.
+        // Measured at 390 on both layouts: 0px off at 768 and 1440, 5px at
+        // 390, 22px at 320 — only where it is that or an overlap.
+        check('…and the item titles are centred where there is room for it',
             await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (row) => {
                 const t = row.querySelector('.dccgg-item-title-text');
                 const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
-                return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
+                return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) <= 6;
             }));
         const paras = await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-body p',
             (ps) => ps.map((p) => ({ multi: p.classList.contains('dccgg-multi'),
@@ -671,6 +681,88 @@ const check = (name, cond, detail) => {
             requestAnimationFrame(tick);
         }));
         check('the bar never paints while the guide is off screen', !everFlashed);
+        await shut(v);
+    }
+
+    console.log('\nG5. A long title never runs under the trailing controls');
+    {
+        // BOTH LAYOUTS, because the row is shared: the three-slot title grid
+        // is base CSS, so /guest/ has the same defect and the same fix. The
+        // suite already carries both markups, which is why this lives here.
+        //
+        // Measured on live before the fix, at 320 on both pages: ten of the
+        // host's own titles ran under the LEAD — the checkbox and emoji —
+        // worst "Checkout Time" by 30px. Never the tail, and never above 320.
+        // `1fr` has an automatic minimum of zero once its item carries
+        // min-width:0, so the side tracks collapsed and their contents
+        // spilled out.
+        for (const layout of ['app', 'grid']) {
+            for (const width of [320, 390, 768, 1440]) {
+                const v = await open({ markup: layout, width, height: 900 });
+                await v.page.click('.dccgg-tile[data-key="checkout"]');
+                await v.page.waitForTimeout(650);
+                const worst = await v.page.$$eval(
+                    '.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) => {
+                        let out = { over: -9999, t: '' };
+                        rows.forEach((row) => {
+                            const t = row.querySelector('.dccgg-item-title-text');
+                            if (!t) { return; }
+                            const a = t.getBoundingClientRect();
+                            ['lead', 'tail'].forEach((which) => {
+                                const el = row.querySelector('.dccgg-item-title-' + which);
+                                if (!el || !el.getClientRects().length) { return; }
+                                const c = el.getBoundingClientRect();
+                                const d = Math.round(which === 'tail' ? a.right - c.left : c.right - a.left);
+                                if (d > out.over) { out = { over: d, t: (t.textContent || '').trim() }; }
+                            });
+                        });
+                        return out;
+                    });
+                check(`${layout} at ${width}: no title touches its controls`,
+                    worst.over <= 0, `${worst.over}px on "${worst.t}"`);
+                await shut(v);
+            }
+        }
+    }
+    {
+        // The controls keep their size and their target: the fix must not pay
+        // for itself out of the thing a guest has to hit.
+        const v = await open({ width: 320, height: 900 });
+        await v.page.click('.dccgg-tile[data-key="checkout"]');
+        await v.page.waitForTimeout(650);
+        const box = await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-check',
+            (e) => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
+        check('the checkbox keeps its size at the narrowest width',
+            box.w >= 24 && box.h >= 24, JSON.stringify(box));
+        const hit = await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-check', (e) => {
+            const a = getComputedStyle(e, '::after');
+            return { w: parseFloat(a.width), h: parseFloat(a.height) };
+        });
+        check('…and its 44x44 tap target', hit.w >= 44 && hit.h >= 44, JSON.stringify(hit));
+        check('a wrapped title is still centred in its own track',
+            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) =>
+                rows.every((row) => {
+                    const t = row.querySelector('.dccgg-item-title-text');
+                    if (!t) { return true; }
+                    const a = t.getBoundingClientRect();
+                    return Math.abs(parseFloat(getComputedStyle(t).textAlign === 'center' ? 0 : 1)) === 0 && a.width > 0;
+                })));
+        await shut(v);
+    }
+    {
+        // The other end of the trade-off, pinned so nobody has to rediscover
+        // it: with room, the title is still dead centre in the row.
+        const v = await open({ width: 1440, height: 900 });
+        await v.page.click('.dccgg-tile[data-key="checkout"]');
+        await v.page.waitForTimeout(650);
+        check('with room, a title is still absolutely centred in its row',
+            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) =>
+                rows.every((row) => {
+                    const t = row.querySelector('.dccgg-item-title-text');
+                    if (!t) { return true; }
+                    const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
+                    return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
+                })));
         await shut(v);
     }
 

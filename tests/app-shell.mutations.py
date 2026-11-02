@@ -229,6 +229,19 @@ MUTANTS = [
     ('the per-section Front Desk pill comes back', W,
      "        $label = (string) ($s['str_app_front_desk'] ?? __('Front Desk', 'dcc-guest-guide'));",
      "        $label = 'Wi-Fi Not Working? Tell the Front Desk';"),
+    # ---- v0.27.1: a long title must not run under its controls ----------
+    ('the side tracks can collapse to nothing again', CSS,
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
+     "    grid-template-columns: 1fr auto 1fr;"),
+    ('only the lead is protected, not the tail', CSS,
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) 1fr;"),
+    ('the centre track stops giving way, so the sides are pushed out', CSS,
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
+     "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);"),
+    ('a word longer than the track spills instead of breaking', CSS,
+     "    text-wrap: balance;\n    /* The backstop for a single word longer than the track — a wrapped line\n       is recoverable, a word sitting on top of the read-aloud button is not. */\n    overflow-wrap: break-word;",
+     "    text-wrap: balance;"),
 ]
 
 EQUIVALENT = [
