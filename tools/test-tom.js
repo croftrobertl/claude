@@ -111,8 +111,11 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
 
   console.log('\n  --- the check link: ?dcc_scene=now ---');
   const QUEUE = 'window.DCCMoments = { register: function () {}, _q: [] };';
-  for (const now of [true, false]) {
-    const cfg = base(); if (now) { cfg.sceneNow = true; }
+  /* 4.14.4: Thanksgiving has no scene (Rob's A1), so the link is proven on
+   * Christmas, which has two; on Thanksgiving it has nothing to play */
+  for (const now of [true, false, 'tg']) {
+    const cfg = now === 'tg' ? base() : config(['--theme=christmas', '--placement=content', '--layering=front', '--density=16', '--diag']);
+    if (now) { cfg.sceneNow = true; }
     const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), { viewport: { width: 390, height: 700 }, init: QUEUE });
     try {
       await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 20000 });
@@ -121,9 +124,11 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
         for (let i = 0; i < 30 * 40; i++) { s.tick(1000 / 30, 1); }
         return { log: s.vigLog.map(v => ({ name: v.name, start: v.start, end: v.end })), ready: window.DCCSeasonsEngine.moment ? null : null, now: s.tom.sceneNow };
       });
-      if (now) {
+      if (now === 'tg') {
+        ok(r.log.length === 0, 'on Thanksgiving, which has no scene since 4.14.4, it plays nothing', JSON.stringify(r.log));
+      } else if (now) {
         const L = r.log;
-        ok(L.length >= 2 && L[0].name === 'cranemoon' && Math.abs(L[0].start - 1) < 0.1, `with it: the scene starts at 1 s of visible time (${L.length ? L[0].start.toFixed(2) : '-'} s), queue or not`, JSON.stringify(L));
+        ok(L.length >= 2 && /^(sleighmoon|giftdrop)$/.test(L[0].name) && Math.abs(L[0].start - 1) < 0.1, `with it: the scene starts at 1 s of visible time (${L.length ? L[0].start.toFixed(2) : '-'} s), queue or not`, JSON.stringify(L));
         ok(L.length >= 2 && Math.abs(L[1].start - L[0].end - 3) < 0.1, `and again 3 s after it ends (${L.length > 1 ? (L[1].start - L[0].end).toFixed(2) : '-'} s)`, JSON.stringify(L));
       } else {
         ok(r.log.length === 0 && r.now === false, 'without it, under the moments queue nothing starts on its own (the queue owns the timing)', JSON.stringify(r.log));
