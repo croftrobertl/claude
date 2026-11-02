@@ -108,9 +108,9 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
       require '${tmp}';
       echo json_encode([\\DCC_Seasons\\Themes::themes(), \\DCC_Seasons_Base\\Themes::themes(), \\DCC_Seasons\\Themes::subtle_defaults(), \\DCC_Seasons_Base\\Themes::subtle_defaults()]);`],
       { cwd: ROOT, encoding: 'utf8' }));
-    const changed = Object.keys(both[1]).filter(k => k !== 'christmas' && JSON.stringify(both[0][k]) !== JSON.stringify(both[1][k]));
+    const changed = Object.keys(both[1]).filter(k => k !== 'christmas' && k !== 'thanksgiving' && JSON.stringify(both[0][k]) !== JSON.stringify(both[1][k]));   /* Thanksgiving: Rob's 4.14.4 corrections (test-holidays.js) */
     ok(!changed.length && Object.keys(both[0]).length === Object.keys(both[1]).length,
-      `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.14.1`, changed.join(','));
+      `Halloween and the other ${Object.keys(both[1]).length - 2} themes are byte-identical to 4.14.1`, changed.join(','));
     const subCh = Object.keys(both[3]).filter(k => k !== 'christmas' && k !== 'thanksgiving' && both[2][k] !== both[3][k]);
     ok(!subCh.length && both[2].thanksgiving === 'leafbg', "and so are their background layers (but Thanksgiving's, Rob's B1 in 4.14.4)", subCh.join(','));
     const gs = f => execFileSync('git', ['show', `${BASE}:dcc-seasons/assets/js/${f}`], { cwd: ROOT, encoding: 'utf8' });
