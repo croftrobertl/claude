@@ -88,6 +88,8 @@ function strip(src) {
   cut('\t\tvar GD_KINDS = ', '\t\t\tcx.stroke();\n\t\t}\n', false);
   cut('\t\t\tleafbg: {', '\t\t\t\t}\n\t\t\t},\n', false);
   cut('\t\tfunction evenKey(ks) {', '\t\t\treturn pick(best);\n\t\t}\n', false);
+  /* the sky canvas and the heron's poses warmed in idle time, Thanksgiving only */
+  cut("\t\tif (themeKey === 'thanksgiving' && skyPic && heroPool.some(", '\t\t\t}, { timeout: 2000 });\n\t\t}\n', false);
   /* Thanksgiving's tom and poults (Rob's 4.14.4 fixes): the walk step, the
    * poults' drawing and the accent turn it no longer needs, old and new */
   const cutTo = (from, before) => { const i = t.indexOf(from); if (i < 0) { return; } const j = t.indexOf(before, i + from.length); if (j < 0) { throw new Error('end missing: ' + before); } t = t.slice(0, i) + t.slice(j); };

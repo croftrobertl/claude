@@ -345,11 +345,21 @@
 					p.y += p.vy * dt; p.ph += p.sp * dt;
 					p.x += sin(p.ph) * 14 * dt; p.rot += p.rv * dt * (0.6 + 0.4 * sin(p.ph));
 				},
+				/* each leaf rasterised ONCE to a small bitmap: an SVG image drawn
+				 * at a size that changes every frame (they turn) is re-rasterised
+				 * by the browser on every draw — measured 5-24 ms stalls at 4x CPU */
+				bm: {},
 				draw: function (p) {
-					var im = kitG.spr && kitG.spr(p.k), g = kitG.cx;
-					if (!im || !im.ready) { return; }
+					var b = this.bm[p.k], g = kitG.cx;
+					if (!b) {
+						var im = kitG.spr && kitG.spr(p.k);
+						if (!im || !im.ready) { return; }
+						b = D.createElement('canvas'); b.width = 40; b.height = MT.max(1, MT.round(40 * im.ratio));
+						var bg = b.getContext('2d'); if (!bg) { return; }
+						bg.drawImage(im.img, 0, 0, b.width, b.height); b.ratio = im.ratio; this.bm[p.k] = b;
+					}
 					g.translate(p.x, p.y); g.rotate(p.rot); g.scale(1, 0.75 + 0.25 * cos(p.ph * 1.7));
-					g.drawImage(im.img, -p.r / 2, -p.r * im.ratio / 2, p.r, p.r * im.ratio);
+					g.drawImage(b, -p.r / 2, -p.r * b.ratio / 2, p.r, p.r * b.ratio);
 				}
 			},
 			/* Fall — leaves drifting down, tumbling as they go. */
@@ -7002,6 +7012,18 @@
 		 * the sleigh's four flick heights and the moon, in idle time at the
 		 * header picture's size. */
 		if (themeKey === 'christmas' && !footMode) { wrInit(); }
+		/* 4.14.4: Thanksgiving has no scene since Rob's A1, so its first sky
+		 * actor is the heron flyer. The cranes' idle work used to make the
+		 * sky canvas ahead of time; without it the heron's first frame made
+		 * it (15-21 ms at 4x CPU, over the 8 ms bar). Make it in idle time,
+		 * and warm one draw of each pre-drawn heron pose. */
+		if (themeKey === 'thanksgiving' && skyPic && heroPool.some(function (k) { return SKY_HERO[k]; })) {
+			(W.requestIdleCallback || function (f) { setTimeout(f, 50); })(function () {
+				inSky(function () {});
+				var c = D.createElement('canvas'), g; c.width = c.height = 2; g = c.getContext('2d');
+				if (g) { for (var k in hnCache) { g.drawImage(hnCache[k].c, 0, 0, 1, 1); } }
+			}, { timeout: 2000 });
+		}
 		if ((vigList.indexOf('sleighmoon') >= 0 || vigList.indexOf('giftdrop') >= 0) && ART.xm) {
 			var sdTodo = [-1], sdI;
 			for (sdI = 0; sdI < SD_HANDS; sdI++) { sdTodo.push('s' + sdI); }

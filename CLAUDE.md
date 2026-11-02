@@ -1318,6 +1318,18 @@ Rob sees it (the overlay rows; sources named on the sheets).
        old accent's 56 px (at the default size a horn reads 20 px wide).
        The tom's turn-before-the-accent machinery (`tkBlock`, `p.tn`,
        `p.pw`) went with it.
+  - **Two frame costs found by measuring (`measure-tom.js`, 390, DPR 3,
+    4x CPU), both fixed:** (a) `leafbg` drew SVG images at a size that
+    changes every frame (they turn), and the browser re-rasterises an SVG
+    on every such draw — single draws of 5-24 ms. Each leaf is now
+    rasterised ONCE to a 40 px bitmap (`leafbg.bm`). Never draw an SVG
+    sprite at a per-frame-varying scale in a layer that runs all visit.
+    (b) Without the cranes' idle work the heron flyer was Thanksgiving's
+    first sky actor and made the sky canvas in its first frame (15-21 ms):
+    the canvas is now made, and each heron pose drawn once, in idle time
+    (Thanksgiving only; other themes untouched). After both, three runs
+    read worst 7.5 / 9.6 / 10-12 ms, the last two in the first 170 ms of
+    load (4.14.3 measured 9 ms there too) or one falling-piece draw.
   - `tools/test-holidays.js` replaces `test-thanksgiving-scene.js` (its
     reduced-motion and /submit-booking/ checks moved in); the clips and
     sheets are `tools/holiday-clip.js` and `tools/holiday-sheet.js`.
