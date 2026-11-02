@@ -612,7 +612,7 @@ span.mphbac-staff-ico::before {
    Beside the cottage number. A long press on the name (or a right-click)
    opens one button. The name must not select text or raise iOS's callout
    while it is held; scrolling the grid past it still works. Each carries a
-   white sign as well (0.49.0: a broom on red, a check on green), so the two
+   white sign as well (0.50.1: an X on red, a check on green), so the two
    never rely on colour alone. */
 .mphbac-staff-rowlabel.has-ready {
     cursor: pointer;
@@ -631,9 +631,11 @@ span.mphbac-staff-ico::before {
     height: 17px;
     margin-left: 6px;
     border-radius: 50%;
-    /* NOT READY (0.49.0, Rob's pick D): a white broom on red — "needs
-       cleaning". Inline SVG, so no request and no icon font. */
-    background: #d93025 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='10.25' y='3' width='3.5' height='8' rx='1.2' fill='white'/%3E%3Cpath d='M6 13.5a2.5 2.5 0 0 1 2.5-2.5h7a2.5 2.5 0 0 1 2.5 2.5V21H6z' fill='white'/%3E%3Cpath d='M9.5 16.5v4.5M12 16.5v4.5M14.5 16.5v4.5' stroke='%23d93025' stroke-width='1.4'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    /* NOT READY (0.50.1, Rob): a white X on red, the twin of the Ready
+       check — the same 24-unit grid, the same stroke and round caps, centred
+       by geometry (the strokes cross at 12,12). The 0.49.0 broom was hard to
+       read at phone size. Inline SVG, so no request and no icon font. */
+    background: #d93025 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 8L16 16M16 8L8 16' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
     box-shadow: 0 0 0 2px #ffffff;
     vertical-align: -1px;
 }

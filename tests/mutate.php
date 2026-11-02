@@ -3535,7 +3535,7 @@ $mutations = [
      ".mphbac-staff-ready.is-ready {\n    background: #1e8e3e; --was: url(",
      'ready-0500-test.js'],
     // ---- 0.49.0 (Rob's pick D: a broom on red, a centred check on green) ----
-    ["0.49.0 icons: red is a plain dot again (no broom)", 'assets/css/staff.css',
+    ["0.50.1 icons: red is a plain dot (no X)", 'assets/css/staff.css',
      "    background: #d93025 url(\"data:image/svg+xml,",
      "    background: #d93025; --was: url(\"data:image/svg+xml,",
      'ready-0500-test.js'],
@@ -3673,6 +3673,20 @@ $mutations = [
     ["0.50.0 ui: a button below 44px", 'assets/css/staff.css',
      "    min-width: 116px;\n    min-height: 48px;",
      "    min-width: 116px;\n    min-height: 30px;",
+     'ready-0500-test.js'],
+
+    // ---- 0.50.1 (Rob: Not Ready is a white X) ----
+    ["0.50.1 icons: the broom back", 'assets/css/staff.css',
+     "%3Cpath d='M8 8L16 16M16 8L8 16' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round'/%3E",
+     "%3Crect x='10.25' y='3' width='3.5' height='8' rx='1.2' fill='white'/%3E%3Cpath d='M6 13.5a2.5 2.5 0 0 1 2.5-2.5h7a2.5 2.5 0 0 1 2.5 2.5V21H6z' fill='white'/%3E",
+     'ready-0500-test.js'],
+    ["0.50.1 icons: the X off centre", 'assets/css/staff.css',
+     "%3Cpath d='M8 8L16 16M16 8L8 16'",
+     "%3Cpath d='M5 6L13 14M13 6L5 14'",
+     'ready-0500-test.js'],
+    ["0.50.1 icons: the X thinner than the check (not a matched pair)", 'assets/css/staff.css',
+     "%3Cpath d='M8 8L16 16M16 8L8 16' fill='none' stroke='white' stroke-width='3.2'",
+     "%3Cpath d='M8 8L16 16M16 8L8 16' fill='none' stroke='white' stroke-width='1.6'",
      'ready-0500-test.js'],
 
 ];

@@ -3935,3 +3935,14 @@ writes), browser/ready-0500-test.js (the calendar inside a transformed
 ancestor below a 640px header, page scrolled; the lowest row, #36, held at
 390, 768 and 1440). The 0.48.0 suites were removed: they asserted the rule
 this replaces ("only the latest checkout can be marked").
+
+## 0.50.1 — Not Ready is a white X (Rob, 2026-11-02)
+
+0.50.0 is live and confirmed on Rob's phone. The broom was hard to tell at
+phone size: Not Ready is now a white X on the same 17px #d93025 circle with the
+2px white ring — path M8 8L16 16 M16 8L8 16 in the 24-unit grid, crossing at
+12,12, so centred by geometry. Stroke 3.2, round caps: the CHECK's own width
+(the WD's note said 2.6, believing that to be the check's; the check, kept
+exactly as built, is 3.2, so the X matches it — the pair is the point).
+Nothing else changed. Tests: ready-0500-test.js measures the X centred within
+1px on the rendered pixels, and compares its stroke with the check's.

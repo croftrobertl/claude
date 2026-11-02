@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.50.0
+Stable tag: 0.50.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.50.1 =
+* **Not Ready is now a white X on the red circle (Rob).** The broom was hard to tell at phone size. The X is the twin of the Ready check: the same circle, white ring and stroke, centred. Nothing else changes. Nothing is written on install, activation or upgrade.
 
 = 0.50.0 =
 * **Mark any cottage, any time (Rob's pick).** Hold any cottage's name on the staff calendar — with a guest in it or not, with a sign or not — to mark it Ready or Not Ready. The newer of the two decides: a guest's checkout (automatic Not Ready, which clears after 14 days) or your last mark (which never expires). A cottage never marked and with no recent checkout shows no sign. The popup offers the opposite of the current state, or both when there is none.

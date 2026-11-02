@@ -222,12 +222,15 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     const icon = id => p.evaluate(sel => { const d = document.querySelector(sel + ' .mphbac-staff-ready'); const c = getComputedStyle(d);
       return { img: decodeURIComponent(c.backgroundImage), bg: c.backgroundColor, w: d.getBoundingClientRect().width, label: d.getAttribute('aria-label') }; }, label(id));
     const red = await icon(T.b22);
-    check('NOT READY is a white BROOM on red, reads "Not ready"', red.bg === 'rgb(217, 48, 37)' && /rect x='10\.25' y='3'/.test(red.img) && red.label === 'Not ready' && red.w === 17, red);
+    check('NOT READY is a white X on red (0.50.1, Rob), reads "Not ready"', red.bg === 'rgb(217, 48, 37)' && /M8 8L16 16M16 8L8 16/.test(red.img) && !/rect x='10\.25'/.test(red.img) && red.label === 'Not ready' && red.w === 17, red);
+
     await longPress(p, label(T.b22)); await tap(p, 'Ready'); await p.waitForTimeout(900);
     const green = await icon(T.b22);
+    const sw = img => (img.match(/stroke-width='([\d.]+)'/) || [])[1];
+    check('THE X IS THE CHECK\'S TWIN: the same stroke width (' + sw(green.img) + ') and round caps',
+      sw(red.img) && sw(red.img) === sw(green.img) && /stroke-linecap='round'/.test(red.img) && /stroke-linecap='round'/.test(green.img), [sw(red.img), sw(green.img)]);
     check('READY is a white CHECK on green, reads "Ready"', green.bg === 'rgb(30, 142, 62)' && /M6\.5 12\.5l3\.75 3\.75L17\.5 9/.test(green.img) && green.label === 'Ready' && green.w === 17, green);
-    const png = await p.locator(label(T.b22) + ' .mphbac-staff-ready').screenshot();
-    const ctr = await p.evaluate(async b64 => {
+    const measure = async id => { const png = await p.locator(label(id) + ' .mphbac-staff-ready').screenshot(); return p.evaluate(async b64 => {
       const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode();
       const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const x = c.getContext('2d'); x.drawImage(i, 0, 0);
       const d = x.getImageData(0, 0, c.width, c.height).data; let n = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
@@ -236,9 +239,12 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
         if (Math.hypot(px - c.width / 2, py - c.height / 2) > c.width / 2 - 2) continue;
         n++; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); } }
       return { w: c.width, h: c.height, midX: (x0 + x1) / 2, midY: (y0 + y1) / 2, n };
-    }, png.toString('base64'));
-    check('...and the check is CENTRED in its circle (its box\'s middle within 1px of the circle\'s)',
-      ctr.n > 10 && Math.abs(ctr.midX - (ctr.w - 1) / 2) <= 1 && Math.abs(ctr.midY - (ctr.h - 1) / 2) <= 1, ctr);
+    }, png.toString('base64')); };
+    const centred = m => m.n > 10 && Math.abs(m.midX - (m.w - 1) / 2) <= 1 && Math.abs(m.midY - (m.h - 1) / 2) <= 1;
+    const ctr = await measure(T.b22);
+    check('...and the check is CENTRED in its circle (its box\'s middle within 1px of the circle\'s)', centred(ctr), ctr);
+    const xc = await measure(T.b23);
+    check('...and so is the X on a Not Ready cottage (#23)', (await signs(p))[T.b23] === 'notready' && centred(xc), xc);
     await longPress(p, label(T.b22)); await tap(p, 'Not Ready'); await p.waitForTimeout(900);
   }
 
