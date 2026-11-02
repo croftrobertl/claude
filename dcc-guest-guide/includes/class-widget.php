@@ -1867,8 +1867,6 @@ final class Widget extends Widget_Base
             'str_app_tab_canal'       => [__('Tab — Canal', 'dcc-guest-guide'), __('Canal', 'dcc-guest-guide')],
             'str_app_tab_front_desk'  => [__('Tab — Front Desk', 'dcc-guest-guide'), __('Front Desk', 'dcc-guest-guide')],
             'str_app_front_desk'      => [__('Front Desk pill', 'dcc-guest-guide'), __('Front Desk', 'dcc-guest-guide')],
-            /* translators: %s: the section title, e.g. "Wi-Fi". */
-            'str_app_section_fd'      => [__('Front Desk pill inside a section', 'dcc-guest-guide'), __('%s Not Working? Tell the Front Desk', 'dcc-guest-guide')],
             'str_app_close_sheet'     => [__('Close sheet (screen readers)', 'dcc-guest-guide'), __('Close', 'dcc-guest-guide')],
         ];
         // v0.26.1: no packaged default. An Elementor control's default is
@@ -4116,29 +4114,24 @@ final class Widget extends Widget_Base
      * data-report-section, which the guest bundle's delegated listener already
      * drives. One flow, one dialog, one place where a report can go wrong.
      *
-     * $context is the section title for the pill shown inside a section, and
-     * '' for the one under the hero.
+     * v0.27.0 removed the per-section variant, the one that named the section
+     * and asked whether it was working, at the foot of every sheet. Rob's words: tacky, and it
+     * invites a guest to ask before they look for the answer that is already
+     * on the screen in front of them. Removed from the plugin rather than
+     * switched off on one widget, so it cannot come back by a toggle. The
+     * Front Desk stays reachable from the hero pill and the tab bar.
      */
-    private function render_app_front_desk_pill(array $s, string $context = ''): void
+    private function render_app_front_desk_pill(array $s): void
     {
         if (($s['enable_problem_report'] ?? '') !== 'yes') {
             return;
         }
-        if ($context === '') {
-            $label = (string) ($s['str_app_front_desk'] ?? __('Front Desk', 'dcc-guest-guide'));
-            $class = 'dccgg-report-pill dccgg-report-pill--hero dccgg-more-report';
-        } else {
-            $tpl   = (string) ($s['str_app_section_fd'] ?? __('%s Not Working? Tell the Front Desk', 'dcc-guest-guide'));
-            $label = sprintf($tpl, $context);
-            $class = 'dccgg-report-pill dccgg-report-pill--section dccgg-more-report';
-        }
+        $label = (string) ($s['str_app_front_desk'] ?? __('Front Desk', 'dcc-guest-guide'));
         ?>
-        <button type="button" class="<?php echo esc_attr($class); ?>" data-report-section="<?php echo esc_attr($context); ?>">
+        <button type="button" class="dccgg-report-pill dccgg-report-pill--hero dccgg-more-report" data-report-section="">
             <span class="dccgg-report-pill-ico" aria-hidden="true">🛎️</span>
             <span class="dccgg-report-pill-label"><?php echo esc_html($label); ?></span>
-            <?php if ($context === '') : ?>
-                <span class="dccgg-report-pill-chev" aria-hidden="true">›</span>
-            <?php endif; ?>
+            <span class="dccgg-report-pill-chev" aria-hidden="true">›</span>
         </button>
         <?php
     }
@@ -4535,7 +4528,6 @@ final class Widget extends Widget_Base
         // class on .dccgg-root never reaches it. The app shell's sheet styling
         // therefore has to be stamped on the stage itself.
         $is_app      = ($s['menu_layout'] ?? '') === 'app';
-        $app_public  = self::is_public_mode($s);
         $canal_key   = $is_app ? trim((string) ($s['app_tab_canal_key'] ?? '')) : '';
         if ($is_app && $canal_key === '') { $canal_key = self::app_map_key($sections); }
         $map_url     = $is_app ? trim((string) ($s['app_map_url']['url'] ?? '')) : '';
@@ -4678,9 +4670,6 @@ final class Widget extends Widget_Base
                             </a>
                         <?php endif; ?>
                         <?php if ($role === 'checkout' && ($s['enable_checkout_review'] ?? '') === 'yes') : $this->render_review_prompt($s, $title); endif; ?>
-                        <?php // The contextual pill, at the foot of the section — where a
-                        // guest who has read it and is still stuck actually is.
-                        if ($is_app && !$app_public) { $this->render_app_front_desk_pill($s, $title); } ?>
                     </div>
                 </div>
             <?php endforeach; ?>

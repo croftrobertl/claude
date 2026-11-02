@@ -220,8 +220,65 @@
 
     // -- The tab bar ------------------------------------------------------
 
+    /**
+     * Move the tab bar to <body>, and show it only while the guide is on
+     * screen.
+     *
+     * TWO separate faults, both reported from Rob's phone on /test/.
+     *
+     * The bar is `position: fixed`, and on that page it rendered at y=5938
+     * inside an 844px viewport — part-way up, with blank space beneath it.
+     * Measured cause: `article.post-17685` carries a transform, which makes
+     * it the containing block for every fixed descendant. A transform on a
+     * theme's own article element is not ours to remove, so the bar leaves
+     * the subtree instead. Its CSS is anchored on the bar itself for exactly
+     * this reason — a `.dccgg-root …` rule would stop matching the moment it
+     * moved, which is the same portal trap the stage has.
+     *
+     * And /test/ carries the Wildlife widget below the guide, so a bar fixed
+     * to the viewport floated over it and read as one navigation shared by
+     * two plugins that are strictly separate. It now shows only while the
+     * guide root is intersecting the viewport.
+     */
+    function portalTabs(root) {
+        const bar = root.querySelector('.dccgg-app-tabs');
+        if (!bar || bar.__dccggPortaled) { return bar; }
+        bar.__dccggPortaled = true;
+        // The back-pointer every delegated handler uses to tell whose bar
+        // this is once it is no longer inside the root.
+        bar.__dccggRoot = root;
+        const marker = document.createComment('dccgg-app-tabs-anchor');
+        bar.parentNode.insertBefore(marker, bar);
+        document.body.appendChild(bar);
+
+        // Hidden until we know: a bar that flashes over the page below while
+        // the observer makes up its mind is the complaint, in miniature.
+        bar.dataset.dccggOffscreen = '1';
+        const show = (on) => {
+            if (on) { delete bar.dataset.dccggOffscreen; }
+            else { bar.dataset.dccggOffscreen = '1'; }
+        };
+        let obs = null;
+        if (typeof IntersectionObserver === 'function') {
+            obs = new IntersectionObserver((entries) => {
+                entries.forEach((e) => show(e.isIntersecting));
+            });
+            obs.observe(root);
+        } else {
+            show(true);   // no observer, no scoping — better than no bar.
+        }
+
+        (root.__dccggDisposers || (root.__dccggDisposers = [])).push(() => {
+            if (obs) { obs.disconnect(); }
+            if (marker.parentNode) { marker.parentNode.insertBefore(bar, marker); marker.remove(); }
+            else if (bar.parentNode === document.body) { bar.remove(); }
+        });
+        return bar;
+    }
+
     function wireTabs(root, config, app) {
-        const tabs = root.querySelectorAll('.dccgg-app-tab');
+        const bar = portalTabs(root);
+        const tabs = (bar || root).querySelectorAll('.dccgg-app-tab');
         if (!tabs.length) { return; }
         const mark = (active) => tabs.forEach((t) => {
             if (t === active) { t.setAttribute('aria-current', 'page'); }
@@ -229,10 +286,21 @@
         });
         tabs.forEach((tab) => {
             const act = tab.dataset.appTab;
-            // Front Desk is NOT handled here. It carries .dccgg-more-report,
-            // and the guest bundle's delegated listener opens the one report
-            // dialog — the same flow as every other way in.
-            if (act === 'report') { return; }
+            // Front Desk is bound DIRECTLY now. It used to ride the guest
+            // bundle's delegated .dccgg-more-report listener, and that
+            // listener asks `root.contains(el)` — which stopped being true
+            // the moment the bar moved to <body>. `__dccggOpenReport` is the
+            // hook that bundle already publishes for exactly this kind of
+            // caller (v0.9.7.21), so there is still ONE report dialog and one
+            // way into it.
+            if (act === 'report') {
+                tab.addEventListener('click', () => {
+                    if (typeof root.__dccggOpenReport === 'function') {
+                        root.__dccggOpenReport('', '', tab);
+                    }
+                });
+                return;
+            }
             tab.addEventListener('click', () => {
                 if (act === 'stay') {
                     // No "close the sheet" branch, deliberately. The bar is
@@ -280,6 +348,19 @@
      */
     function wireSheetHistory(root, app) {
         if (typeof MutationObserver !== 'function' || !window.history || !history.pushState) { return; }
+        // THE BROWSER MUST NOT RESTORE SCROLL FOR OUR OWN ENTRY.
+        //
+        // Closing a sheet rewinds the history entry the open pushed, and on a
+        // history navigation the browser applies its own saved scroll offset
+        // — which is not the one core just restored. Measured on live /test/
+        // at 390: close from scrollY 756 and the page ends at 0, every time.
+        // "Jumps to the top" is this, not only the theme's smooth scrolling.
+        //
+        // 'manual' says we own it, which we do: hideDetailModal() puts the
+        // guest back where they were, instantly, in the same tick.
+        try {
+            if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+        } catch (_) { /* some embedded webviews throw on the setter */ }
         let pushed = false;
         let popping = false;
         const isOpen = () => document.documentElement.classList.contains('dccgg-detail-open');
@@ -318,6 +399,67 @@
      * first for the same gesture. Nothing to build.
      */
 
+    /**
+     * Answer the finger at once.
+     *
+     * v0.24.2 put the tap colour on touchEND on purpose: a finger that rests
+     * and then scrolls cannot be told from a tap while it is still down. That
+     * reasoning holds, so this adds a *separate* pressed state on touchstart
+     * and takes it off again the moment the finger moves or the page scrolls.
+     * The guest gets an answer immediately; a scroll still never paints one.
+     */
+    function wirePressFeedback(root) {
+        let pressed = null;
+        const release = () => {
+            if (pressed) { pressed.classList.remove('is-pressing'); pressed = null; }
+        };
+        root.addEventListener('touchstart', (e) => {
+            const tile = e.target.closest('.dccgg-tile');
+            if (!tile || !root.contains(tile)) { return; }
+            release();
+            pressed = tile;
+            tile.classList.add('is-pressing');
+        }, { passive: true });
+        ['touchmove', 'touchend', 'touchcancel'].forEach((type) => {
+            root.addEventListener(type, release, { passive: true });
+        });
+        bindGlobal(root, window, 'scroll', release, { passive: true });
+    }
+
+    /**
+     * Rob's alignment rule, applied to the text inside a sheet.
+     *
+     * Titles are centred by CSS. A PARAGRAPH is centred too unless it runs to
+     * more than one sentence, which is the same test the Cottage Selector and
+     * the Front Desk privacy note use — it reads the paragraph's own text, so
+     * a host who rewrites one gets the right alignment without anyone
+     * touching CSS.
+     */
+    const isMulti = (text) => /[.!?]["\u201D']?\s+\S/.test(String(text == null ? '' : text));
+    function markMultiSentence(root) {
+        root.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li').forEach((el) => {
+            if (isMulti(el.textContent)) { el.classList.add('dccgg-multi'); }
+        });
+    }
+
+    /**
+     * Warm the first sheet while the guest is still reading the hub.
+     *
+     * Every panel is already in the DOM — the server renders them all and
+     * hides them — so there is nothing to fetch. What is NOT done until the
+     * first open is decoding the images inside them, on the main thread, at
+     * the moment the guest is waiting. This does that in idle time instead.
+     */
+    function preloadFirstDetail(root) {
+        const run = () => {
+            root.querySelectorAll('.dccgg-detail img').forEach((img) => {
+                if (img.decode) { img.decode().catch(() => {}); }
+            });
+        };
+        if (typeof requestIdleCallback === 'function') { requestIdleCallback(run, { timeout: 4000 }); }
+        else { setTimeout(run, 1200); }
+    }
+
     // -- Entry point ------------------------------------------------------
 
     (window.DCCGG_CHUNK = window.DCCGG_CHUNK || {}).app = function (root, config) {
@@ -332,6 +474,9 @@
         paintGreeting(root, app);
         wireNow(root, config, app);
         wireTabs(root, config, app);
+        wirePressFeedback(root);
+        markMultiSentence(root);
+        preloadFirstDetail(root);
         wireSheetHistory(root, app);
     };
 }());

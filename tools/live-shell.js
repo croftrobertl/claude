@@ -29,7 +29,14 @@ const A = ROOT + '/dcc-guest-guide/assets/';
 const CACHE = '/tmp/live';
 const { frontEndJs, chunkBootTag, routeChunks } = require(ROOT + '/tests/_bundles');
 
-const LIVE_HTML = fs.readFileSync(CACHE + '/guest.html', 'utf8');
+const PAGES = {
+    guest: { url: 'https://doracanalcourt.com/guest/', html: CACHE + '/guest.html', css: CACHE + '/combined.css' },
+    // v0.27.0: /test/ IS the app layout on live, with the Wildlife widget on
+    // the same page — which is the whole subject of the tab-bar complaint.
+    // Loaded as-is, markup and all, so the real stacking context is measured
+    // rather than modelled.
+    test: { url: 'https://doracanalcourt.com/test/', html: CACHE + '/test.html', css: CACHE + '/test.css' },
+};
 const CSS = fs.readFileSync(A + 'css/widget.css', 'utf8');
 const JS = frontEndJs(A, true);
 
@@ -46,7 +53,10 @@ function markup(caseName) {
  * rather than in the HTML string because .dccgg-root is deeply nested and a
  * regex that matches a balanced div is a regex that will one day not.
  */
-async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1', extraCss = '', stay = null, weather = WX, keepReal = false } = {}) {
+async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1', extraCss = '',
+    stay = null, weather = WX, keepReal = false, page: which = 'guest', inject = true, throttle = null } = {}) {
+    const PAGE = PAGES[which] || PAGES.guest;
+    const LIVE_HTML = fs.readFileSync(PAGE.html, 'utf8');
     const ctx = await browser.newContext({
         viewport: { width, height }, isMobile: width < 700, hasTouch: width < 700,
         deviceScaleFactor: 2, timezoneId: 'America/Chicago',
@@ -68,14 +78,24 @@ async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1
         }
         if (u.startsWith('https://doracanalcourt.com/wp-content/cache/speedycache/') && u.endsWith('.css')) {
             return r.fulfill({ status: 200, contentType: 'text/css',
-                body: fs.readFileSync(CACHE + '/combined.css', 'utf8') });
+                body: fs.readFileSync(PAGE.css, 'utf8') });
         }
-        if (u === 'https://doracanalcourt.com/guest/') {
+        if (u === PAGE.url) {
             return r.fulfill({ status: 200, contentType: 'text/html', body: LIVE_HTML });
         }
         const local = CACHE + '/assets/' + Buffer.from(u).toString('base64url').slice(0, 60);
         if (fs.existsSync(local)) {
             return r.fulfill({ status: 200, body: fs.readFileSync(local) });
+        }
+        // The plugin's own scripts, from the real site. A page measured "as
+        // shipped" has to run the shipped code — but when the WORKING tree is
+        // being injected they must be blocked, or the live build initialises
+        // the root first, stamps data-dccgg-init, and the injected build
+        // skips it. That is how the first /test/ verification came back
+        // showing no change at all.
+        if (/\/wp-content\/plugins\/dcc-guest-guide\/assets\/js\/.*\.js/.test(u)) {
+            return inject ? r.fulfill({ status: 200, contentType: 'application/javascript', body: '' })
+                : r.continue();
         }
         // Real fonts, from the real site: a still in a fallback serif is not a
         // still of this page. Everything else heavy is stubbed.
@@ -98,20 +118,40 @@ async function openLive(browser, { width = 390, height = 844, caseName = 'app-a1
     });
     // The site's own assets come from the cache; everything else is blocked so
     // a still cannot be held up by a third party.
-    await page.goto('https://doracanalcourt.com/guest/', { waitUntil: 'domcontentloaded' });
+    if (throttle) {
+        const cdp = await ctx.newCDPSession(page);
+        await cdp.send('Network.enable');
+        await cdp.send('Network.emulateNetworkConditions', Object.assign(
+            { offline: false, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8 },
+            throttle.network || {}));
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttle.cpu || 4 });
+    }
+    await page.goto(PAGE.url, { waitUntil: 'domcontentloaded' });
 
     // Swap in a freshly rendered guide, in the app layout. keepReal leaves the
     // page's OWN guide markup alone, which is how the live content's own
     // components — the conditions card, the section arrows, the host's real
     // icons — get measured rather than a fixture's.
-    if (!keepReal) await page.evaluate(({ html, sel }) => {
-        const el = document.querySelector(sel);
+    // `inject: false` means "exactly as live serves it", which rules the
+    // swap out too — and the /guest/ widget id does not exist on /test/.
+    if (!keepReal && inject) await page.evaluate(({ html, sel }) => {
+        // By id where that id exists, otherwise whatever element on this page
+        // holds the guide — /test/ is a different widget instance entirely.
+        const el = document.querySelector(sel)
+            || (document.querySelector('.dccgg-root') || {}).closest?.('.elementor-widget');
         if (!el) { throw new Error('widget element not found on the live page'); }
         el.className = el.className.replace(/dccgg-layout-\w+/, 'dccgg-layout-app');
         el.innerHTML = html;
     }, { html: markup(caseName), sel: WIDGET_SEL });
 
     // The plugin's working copy, after the site's bundle — what a deploy does.
+    // `inject: false` leaves the page exactly as live serves it, which is how
+    // the SHIPPED version is measured rather than the working tree.
+    if (!inject) {
+        await page.waitForTimeout(900);
+        await page.mouse.move(1, 1);
+        return { ctx, page, errors };
+    }
     await page.addStyleTag({ content: CSS });
     if (extraCss) { await page.addStyleTag({ content: extraCss }); }
     await page.addScriptTag({ content: 'window.dccggChunks={base:"https://dccgg.test/a/",ver:"dev",min:false};' });

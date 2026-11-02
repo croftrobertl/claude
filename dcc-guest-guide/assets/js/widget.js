@@ -1730,9 +1730,21 @@
         state.closeTimer = setTimeout(() => {
             document.documentElement.classList.remove('dccgg-detail-open');
             document.body.classList.remove('dccgg-detail-open');
-            // Unpin and put the page back exactly where the guest left it.
+            // Unpin and put the page back exactly where the guest left it —
+            // WITHOUT animating. The theme sets `html { scroll-behavior:
+            // smooth }` (measured on live, 2026-11-02), so this restore used
+            // to play as a visible jump to the top of the page followed by a
+            // scroll back down: unpinning puts the page at 0, and the smooth
+            // behaviour then animated the way back. `behavior: 'instant'` is
+            // the spec's opt-out; the inline override is for engines that
+            // ignore it, and is put back afterwards so nothing else changes.
+            const de = document.documentElement;
+            const prevBehavior = de.style.scrollBehavior;
+            de.style.scrollBehavior = 'auto';
             document.body.style.top = '';
-            window.scrollTo(0, lockedScrollY);
+            try { window.scrollTo({ top: lockedScrollY, left: 0, behavior: 'instant' }); }
+            catch (_) { window.scrollTo(0, lockedScrollY); }
+            de.style.scrollBehavior = prevBehavior;
             if (state.overlay) state.overlay.hidden = true;
             if (state.stageMarker && state.stageMarker.parentNode) {
                 state.stageMarker.parentNode.insertBefore(state.stage, state.stageMarker);

@@ -5202,8 +5202,54 @@ dialog.dccgg-wrapper::backdrop {
     min-height: 118px;
     border: 1px solid color-mix(in srgb, var(--dccgg-app-ink) 14%, transparent);
     border-radius: var(--dccgg-app-radius);
+    /* v0.27.0, Rob's standing rule: centred in every tile and card. */
+    text-align: center;
+    align-items: center;
+    /* No double-tap-to-zoom wait before the click. The page's viewport meta
+       is `user-scalable=yes`, so a mobile browser keeps double-tap zoom alive
+       and holds every tap for ~300ms to see whether a second one follows.
+       That delay is a large part of a tap that "did nothing". */
+    touch-action: manipulation;
+}
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-content {
+    align-items: center;
+    text-align: center;
+}
+/* The pressed state, the instant the finger lands. v0.24.2 deliberately
+   waited for touchEND, because a finger that rests and then scrolls cannot be
+   told from a tap while it is still down — so this is removed again on the
+   first move or scroll, which keeps that reason intact and still answers the
+   guest straight away. */
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile.is-pressing {
+    transform: scale(0.975);
+    filter: brightness(0.97);
+}
+
+/* Items inside a sheet. Titles always centred; a paragraph of MORE THAN ONE
+   SENTENCE stays left, which is the same rule the Cottage Selector uses and
+   the same one the Front Desk privacy note follows. The class is put on by
+   the app chunk from the paragraph's own text. */
+.dccgg-stage.dccgg-stage--app .dccgg-item-title,
+.dccgg-stage.dccgg-stage--app .dccgg-item-head {
+    justify-content: center;
+    text-align: center;
+}
+.dccgg-stage.dccgg-stage--app .dccgg-item-body {
+    text-align: center;
+}
+.dccgg-stage.dccgg-stage--app .dccgg-item-body .dccgg-multi {
     text-align: left;
-    align-items: flex-start;
+}
+
+/* ---- 6. the Reset button, with no second border round it ----
+   The progress bar is a pill with its own border and background, and with
+   the count hidden (v0.26.1) it had become a large empty capsule wrapped
+   round one small button. */
+.dccgg-stage.dccgg-stage--app .dccgg-checklist-progress {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    max-width: none;
 }
 .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-title {
     font-size: 1.22em;
@@ -5227,7 +5273,14 @@ dialog.dccgg-wrapper::backdrop {
    is already at the bottom of that box, so it never lifted off the end of the
    page. Measured at 390, it sat at y=833 in an 844 viewport only because the
    page happened to be that long. */
-.dccgg-root.dccgg-root .dccgg-app-tabs {
+/* ANCHORED ON THE BAR ITSELF, not on the root, because v0.27.0 moves it to
+   <body>. Measured on live /test/ at 390: `article.post-17685` carries a
+   transform, which makes it the containing block for any fixed descendant —
+   so the bar rendered at y=5938 inside an 844px viewport, part-way up the
+   page with blank space under it, exactly as Rob saw. A transform on an
+   ancestor is not ours to remove, so the bar leaves the subtree instead.
+   (0,2,0) here and (0,4,0) on the buttons, which is what beats the kit. */
+.dccgg-app-tabs.dccgg-app-tabs {
     position: fixed;
     left: 0;
     right: 0;
@@ -5244,10 +5297,18 @@ dialog.dccgg-wrapper::backdrop {
 /* (0,4,1), because the bar's own rule above is (0,3,0) and a weaker hide
    loses to it — which is exactly what happened when this file moved to
    (0,4,0) and the bar started floating over the open sheet again. */
-html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
+html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {
     display: none;
 }
-.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab {
+/* v0.27.0: and only while the guide is on screen. The bar belongs to this
+   widget, not to the page — on /test/ it floated over the Wildlife widget
+   below and read as one shared navigation for two plugins that are strictly
+   separate. An IntersectionObserver on the guide root sets this. */
+.dccgg-app-tabs.dccgg-app-tabs[hidden],
+.dccgg-app-tabs.dccgg-app-tabs[data-dccgg-offscreen="1"] {
+    display: none;
+}
+.dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab.dccgg-app-tab {
     flex: 1 1 0;
     min-height: 54px;
     display: flex;
@@ -5263,23 +5324,27 @@ html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
     cursor: pointer;
     opacity: 0.72;
 }
-.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab[aria-current="page"] {
+.dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab.dccgg-app-tab[aria-current="page"] {
     opacity: 1;
     background: rgba(255, 255, 255, 0.14);
 }
-.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab-ico {
+.dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab-ico {
     font-size: 20px;
     line-height: 1;
 }
 /* 14px FIXED: the floor the brief sets, and em would let a theme undercut it. */
-.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab-label {
+.dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab-label {
     font-size: 14px;
     font-weight: 700;
     line-height: 1.2;
+    text-align: center;
+    /* One line where it fits: "Front Desk" broken across two lines made that
+       tab taller than its neighbours and read as a different kind of control. */
+    white-space: nowrap;
 }
 @media (hover: hover) and (pointer: fine) {
-    .dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab:hover,
-    .dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab:focus-visible {
+    .dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab.dccgg-app-tab:hover,
+    .dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab.dccgg-app-tab:focus-visible {
         opacity: 1;
         background: rgba(255, 255, 255, 0.2);
     }
@@ -5299,7 +5364,7 @@ html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
         margin-left: auto;
         margin-right: auto;
     }
-    .dccgg-root.dccgg-root .dccgg-app-tabs {
+    .dccgg-app-tabs.dccgg-app-tabs {
         left: 50%;
         right: auto;
         width: 460px;
@@ -5359,10 +5424,9 @@ html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
    selector list or an :is() with a public class, or the splitter would carry
    a guest-only rule into the public bundle.
 
-   Two hosts again: the hero pill lives in the root, the contextual one lives
-   in the stage, and the stage is portaled to <body>. */
-.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill,
-.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill {
+   ONE host since v0.27.0: the hero. The contextual per-section pill is gone
+   from the plugin entirely. */
+.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -5380,18 +5444,11 @@ html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
     text-align: left;
     cursor: pointer;
 }
-.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill--section {
-    width: calc(100% - 32px);
-    margin: 18px auto 8px;
-    font-size: 1em;
-}
-.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-ico,
-.dccgg-stage.dccgg-stage .dccgg-report-pill .dccgg-report-pill-ico {
+.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-ico {
     font-size: 20px;
     line-height: 1;
 }
-.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-label,
-.dccgg-stage.dccgg-stage .dccgg-report-pill .dccgg-report-pill-label {
+.dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-label {
     flex: 1 1 auto;
 }
 .dccgg-root.dccgg-root .dccgg-report-pill .dccgg-report-pill-chev {
@@ -5401,9 +5458,7 @@ html.dccgg-detail-open .dccgg-root.dccgg-root .dccgg-app-tabs {
 }
 @media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill:hover,
-    .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill:focus-visible,
-    .dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill:hover,
-    .dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill:focus-visible {
+    .dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill:focus-visible {
         filter: brightness(1.08);
     }
 }

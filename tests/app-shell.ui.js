@@ -471,15 +471,82 @@ const check = (name, cond, detail) => {
         await v.page.keyboard.press('Escape');
         await v.page.waitForTimeout(300);
 
+        // v0.27.0: no pill inside a section any more. Rob's words — tacky,
+        // and it invites a guest to ask before they look for the answer
+        // already on the screen.
         await v.page.tap('.dccgg-tile[data-key="internet"]');
         await v.page.waitForTimeout(650);
-        const inSheet = await text(v.page,
-            '.dccgg-detail[data-key="internet"] .dccgg-report-pill--section .dccgg-report-pill-label');
-        check('the pill inside a section names that section',
-            inSheet === 'Internet Not Working? Tell the Front Desk', inSheet);
-        check('…and carries the section as the report\'s context',
-            await v.page.$eval('.dccgg-detail[data-key="internet"] .dccgg-report-pill--section',
-                (e) => e.dataset.reportSection) === 'Internet');
+        check('a section carries no Front Desk pill of its own',
+            (await v.page.$$('.dccgg-detail[data-key="internet"] .dccgg-report-pill')).length === 0);
+        check('…and the whole guide has exactly one, under the hero',
+            (await v.page.$$('.dccgg-report-pill')).length === 1);
+        await shut(v);
+    }
+
+    console.log('\nG2. The tab bar belongs to the guide, not to the page');
+    {
+        const v = await open();
+        // It is moved to <body>: a transformed ancestor on the host page
+        // makes `position: fixed` resolve against that ancestor instead of
+        // the viewport, which on live /test/ put the bar at y=5938 in an
+        // 844px window. Measured there 2026-11-02.
+        check('the bar is lifted out of the widget, to <body>',
+            await v.page.$eval('.dccgg-app-tabs', (e) => e.parentElement.tagName) === 'BODY');
+        check('…and still sits on the bottom edge of the viewport',
+            await v.page.$eval('.dccgg-app-tabs', (e) => {
+                const r = e.getBoundingClientRect();
+                return Math.abs(r.bottom - window.innerHeight) < 2;
+            }));
+        check('…and is on screen while the guide is', await shown(v.page, '.dccgg-app-tabs'));
+
+        // Put something tall below the guide, the way /test/ carries the
+        // Wildlife widget, and scroll past it.
+        await v.page.evaluate(() => {
+            const after = document.createElement('div');
+            after.style.height = '2400px';
+            after.id = 'below-the-guide';
+            document.querySelector('.elementor-widget').after(after);
+        });
+        await v.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await v.page.waitForTimeout(600);
+        check('…and gone once the guest has scrolled past the guide',
+            !(await shown(v.page, '.dccgg-app-tabs')));
+        await v.page.evaluate(() => window.scrollTo(0, 0));
+        await v.page.waitForTimeout(600);
+        check('…and back when the guide is again', await shown(v.page, '.dccgg-app-tabs'));
+
+        // The Front Desk tab lost its delegated listener when the bar moved
+        // out of the root; it is bound directly now and must still open the
+        // one report dialog.
+        await v.page.tap('.dccgg-app-tab[data-app-tab="report"]');
+        await v.page.waitForTimeout(600);
+        check('the Front Desk tab still opens the report from outside the root',
+            await shown(v.page, '.dccgg-report-dialog'));
+        await shut(v);
+    }
+
+    console.log('\nG3. Centred, and no second border round Reset');
+    {
+        const v = await open();
+        check('a tile centres its content',
+            await v.page.$eval('.dccgg-tile', (e) => getComputedStyle(e).textAlign) === 'center');
+        check('…and a tab label is centred on one line',
+            await v.page.$eval('.dccgg-app-tab-label',
+                (e) => getComputedStyle(e).whiteSpace) === 'nowrap');
+        const labels = await v.page.$$eval('.dccgg-app-tab-label',
+            (els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
+        check('…so every tab label is the same height, none wrapped to two lines',
+            new Set(labels).size === 1, JSON.stringify(labels));
+        await v.page.tap('.dccgg-tile[data-key="checkout"]');
+        await v.page.waitForTimeout(700);
+        const bar = await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-checklist-progress',
+            (e) => { const c = getComputedStyle(e); return { b: c.borderTopWidth, bg: c.backgroundColor }; });
+        check('Reset has no second pill drawn round it',
+            parseFloat(bar.b) === 0 && /rgba\(0, 0, 0, 0\)|transparent/.test(bar.bg),
+            JSON.stringify(bar));
+        check('…and the item titles in the sheet are centred',
+            await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title',
+                (e) => getComputedStyle(e).justifyContent) === 'center');
         await shut(v);
     }
 

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.2
+Stable tag: 0.27.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,18 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.0 =
+* The app shell's tab bar is moved to the document body, so a transformed
+  ancestor can no longer push it up the page, and it shows only while the
+  guide is on screen rather than floating over whatever follows it.
+* Tiles, cards and the text inside a sheet are centred; a paragraph of more
+  than one sentence still reads left.
+* The per-section "Not Working? Tell the Front Desk" pill is removed.
+* Closing a sheet returns the guest to exactly where they were, with no jump.
+* A tile answers the moment it is pressed, and no longer waits on the
+  browser's double-tap delay.
+* The checkout Reset button has no second border drawn round it.
 
 = 0.26.2 =
 * Hero: the live "Tavares Now" conditions now sit inside the frosted card.

@@ -86,9 +86,18 @@ check('nor does the pop-up header',
     strpos($appHtml, "render_more_menu(\$s, 'popup'") === false
     && substr_count($appHtml, 'dccgg-more-summary--fd') === 0
     && substr_count($gridHtml, 'dccgg-more-summary--fd') > 0);
-check('the pill is there in their place, once per section plus once under the hero',
-    substr_count($appHtml, 'dccgg-report-pill--hero') === 1
-    && substr_count($appHtml, 'dccgg-report-pill--section') === 9);
+// v0.27.0: ONE pill, under the hero. The per-section
+// "%s Not Working? Tell the Front Desk" is gone from the plugin, not hidden
+// on one widget — Rob's words: tacky, and it invites a guest to ask before
+// they look for the answer already on the screen.
+check('there is one Front Desk pill, under the hero',
+    substr_count($appHtml, 'dccgg-report-pill--hero') === 1);
+check('…and not one inside any section',
+    strpos($appHtml, 'dccgg-report-pill--section') === false
+    && strpos($css, 'dccgg-report-pill--section') === false);
+check('…and the string that built it is gone from the panel too',
+    strpos($widget, 'str_app_section_fd') === false
+    && strpos($widget, 'Not Working?') === false);
 check('the app layout is one SELECT value, not a second switch',
     preg_match("/'app'\s*=>\s*__\('App shell/", $widget) === 1);
 check('flip falls back to stage in the app layout — a sheet needs the stage',
@@ -377,11 +386,17 @@ foreach (preg_split('/\}/', (string) $stripped) as $chunk) {
 }
 check('every pill selector is one the splitter recognises as guest-only',
     $mixed === [], implode(' | ', $mixed));
+// v0.27.0: anchored on the BAR, because it is moved to <body>. A
+// `.dccgg-root …` rule would stop matching the moment it moved.
 check('the tab bar is re-asserted stateless at (0,4,0), beating the kit',
-    strpos($css, '.dccgg-root.dccgg-root .dccgg-app-tabs .dccgg-app-tab {') !== false);
-check('…and the pill on both hosts, because the stage is portaled to <body>',
-    strpos($css, '.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill,') !== false
-    && strpos($css, '.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill') !== false);
+    strpos($css, '.dccgg-app-tabs.dccgg-app-tabs .dccgg-app-tab.dccgg-app-tab {') !== false);
+check('…and no tab-bar rule is anchored on the root it leaves',
+    !preg_match('/\.dccgg-root[^{,]*\.dccgg-app-tab/', $css));
+// v0.27.0: ONE host. The pill lives under the hero and nowhere else, so the
+// stage no longer needs a copy of its rules.
+check('…and the pill, on the one host it still has',
+    strpos($css, '.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-report-pill {') !== false
+    && strpos($css, '.dccgg-stage.dccgg-stage .dccgg-detail .dccgg-report-pill') === false);
 check('the tab label is 14px fixed, not em',
     preg_match('/\.dccgg-app-tab-label \{[^}]*font-size: 14px;/s', $css) === 1);
 check('both sun times are asked of the weather proxy, and the cache key moved',
