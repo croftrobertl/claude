@@ -3886,3 +3886,14 @@ dot state kept in a file between requests, every SQL statement logged).
 kept the 14 days. Caches purged; pages, the 8 calendar feeds and the 403 gate
 checked. Still to confirm: the hold-and-tap on a real phone on live /staff/
 (Rob).
+
+## 0.49.0 — the cleaning signs: a broom and a centred check (Rob's pick D, 2026-11-02)
+
+The WD's icon sheet (A red ✕, B stop sign, C thumbs down, D broom; Ready a
+centred check in all four): Rob picked D. .mphbac-staff-ready is now a 17px
+circle (was a 13px dot) drawn with an inline-SVG background: a white broom on
+#d93025 for Not Ready, a white check on #1e8e3e for Ready (path M6.5 12.5
+l3.75 3.75 L17.5 9, its box centred in the 24 grid — the "now centered" of the
+sheet; the old ::after tick sat high and left). No markup, script or rule
+change: same role=img + aria-label, same long press and popup. The relayed
+prompt itself did not reach this session; only the sheet and the pick did.

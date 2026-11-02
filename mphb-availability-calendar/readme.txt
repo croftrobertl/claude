@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.48.0
+Stable tag: 0.49.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.49.0 =
+* **New Ready / Not Ready signs on the staff calendar (Rob's pick D).** Not Ready is now a white broom on a red circle ("needs cleaning"); Ready is a white check, centred, on a green circle. Both are a little larger (17px) and still read "Not ready" / "Ready" to screen readers. Nothing else changes: the same long press, the same popup, the same rules. Nothing is written on install, activation or upgrade.
 
 = 0.48.0 =
 * **The cleaning dot on the staff calendar (Rob's request).** On the day a guest checks out of a cottage, a red dot appears beside its name (confirmed stays from every channel, direct and imported; dock blocks, cancelled and pending bookings don't count; the day is Eastern time). Hold the name (about half a second), or right-click it on a computer, and tap **Ready**: the dot turns green, and stays green until the next checkout turns it red again. If it is already green the same popup offers **Not Ready**, to undo a mis-tap. The dot changes the moment it is tapped; if saving fails it goes back and says so. An unmarked checkout stays red for 14 days. Each change is recorded quietly with its time.

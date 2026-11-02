@@ -108,7 +108,11 @@ function snap(string $html): string {
  * passed).
  */
 function undated(string $html): string {
-    return preg_replace('/D&quot;:&quot;[a-z-]+&quot;/', 'D&quot;:&quot;S&quot;', $html);
+    $html = preg_replace('/D&quot;:&quot;[a-z-]+&quot;/', 'D&quot;:&quot;S&quot;', $html);
+    // ...and HOW MANY days: a cottage page embeds whole months from the
+    // current one, so the count moves with the calendar (October and November
+    // are not November and December). Found on 2026-11-02.
+    return preg_replace('/(?:&quot;D&quot;:&quot;S&quot;,?)+/', 'DAYS', $html);
 }
 /**
  * 0.47.4's additions to a public widget's data-config, removed: the embedded

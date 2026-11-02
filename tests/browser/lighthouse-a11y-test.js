@@ -89,6 +89,10 @@ const LIVE_THEME = '<style>:root{--e-global-color-text:#7A7A7A;--e-global-color-
   const open = async ({ month = false, legacy = false, inherit = true, w = 1280, labels = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: 1000 }, deviceScaleFactor: 1 });
     const p = await ctx.newPage();
+    // The fixture's own day (config.today 2026-10-13): the widget refreshes
+    // today from the clock, so an unpinned run in November drew November
+    // (found 2026-11-02).
+    await p.clock.setFixedTime(new Date('2026-10-13T16:00:00Z'));
     p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
     let html = H.page({ body: body(legacy) }).replace('</head>', LIVE_THEME + '</head>');
     if (inherit) html = html.replace('class="mphbac-root"', 'class="mphbac-root mphbac-inherit-theme"');

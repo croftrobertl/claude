@@ -162,8 +162,26 @@ async function tapButton(p) {
     d1 = await dots(p);
     check('...and confirmed: the save answered 200 and the dot stays green', p.__ready.length === 1 && p.__ready[0].status === 200 && d1[1071] === 'green', p.__ready);
     check('...the request carried the cottage, the checkout date and nothing about the guest', /room_type_id=1071/.test(p.__ready[0].body) && /checkout=\d{4}-\d{2}-\d{2}/.test(p.__ready[0].body) && /ready=1/.test(p.__ready[0].body) && !/name|guest/i.test(p.__ready[0].body), p.__ready[0].body);
-    const g = await p.evaluate(sel => { const d = document.querySelector(sel + ' .mphbac-staff-ready'); return [getComputedStyle(d, '::after').content, d.getAttribute('aria-label')]; }, label(1071));
-    check('green carries a tick too (not colour alone), and reads "Ready"', g[0] !== 'none' && g[1] === 'Ready', g);
+    const icon = sel => p.evaluate(s2 => { const d = document.querySelector(s2 + ' .mphbac-staff-ready'); const c = getComputedStyle(d);
+      return { img: c.backgroundImage, bg: c.backgroundColor, w: d.getBoundingClientRect().width, label: d.getAttribute('aria-label') }; }, sel);
+    const g = await icon(label(1071)), rr = await icon(label(1069));
+    check('READY (0.49.0): a white CHECK on green, reads "Ready"', g.bg === 'rgb(30, 142, 62)' && /M6\.5 12\.5l3\.75 3\.75L17\.5 9/.test(decodeURIComponent(g.img)) && g.label === 'Ready', g);
+    check('NOT READY (0.49.0, Rob\'s pick D): a white BROOM on red, reads "Not ready" — neither relies on colour alone',
+      rr.bg === 'rgb(217, 48, 37)' && /rect x='10\.25' y='3'/.test(decodeURIComponent(rr.img)) && rr.label === 'Not ready', rr);
+    // THE CHECK IS CENTRED: the white pixels' middle, measured on the drawn dot.
+    const png = await p.locator(label(1071) + ' .mphbac-staff-ready').screenshot({ scale: 'device' });
+    const ctr = await p.evaluate(async b64 => {
+      const i = new Image(); i.src = 'data:image/png;base64,' + b64; await i.decode();
+      const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const x = c.getContext('2d'); x.drawImage(i, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data; let sx = 0, sy = 0, n = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+      for (let k = 0; k < d.length; k += 4) { if (d[k] > 220 && d[k + 1] > 220 && d[k + 2] > 220) {
+        const px = (k / 4) % c.width, py = Math.floor(k / 4 / c.width);
+        if (Math.hypot(px - c.width / 2, py - c.height / 2) > c.width / 2 - 2) continue;   // the white ring outside the circle
+        sx += px; sy += py; n++; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); } }
+      return { w: c.width, h: c.height, boxMidX: (x0 + x1) / 2, boxMidY: (y0 + y1) / 2, n };
+    }, png.toString('base64'));
+    check('...and the check is CENTRED in its circle: its box\'s middle within 1px of the circle\'s',
+      ctr.n > 10 && Math.abs(ctr.boxMidX - (ctr.w - 1) / 2) <= 1 && Math.abs(ctr.boxMidY - (ctr.h - 1) / 2) <= 1, ctr);
     p.__holdReady = 0;
 
     console.log('\n-- 3. undo: hold again, Not Ready --');
@@ -283,7 +301,7 @@ async function tapButton(p) {
       const d = l.querySelector('.mphbac-staff-ready').getBoundingClientRect(), r = l.getBoundingClientRect();
       return { inside: d.left >= r.left && d.right <= r.right && d.top >= r.top && d.bottom <= r.bottom, w: d.width, lh: r.height };
     }));
-    check(`${w}px: every dot sits inside its name cell, 13px, the cell at least 44px tall to hold`, m.length > 0 && m.every(x => x.inside && x.w === 13 && x.lh >= 44), m);
+    check(`${w}px: every sign sits inside its name cell, 17px, the cell at least 44px tall to hold`, m.length > 0 && m.every(x => x.inside && x.w === 17 && x.lh >= 44), m);
     if (w < 1000) await longPress(p, label(1071)); else await p.click(label(1071), { button: 'right' });
     await p.waitForTimeout(150);
     const pp = await popup(p);

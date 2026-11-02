@@ -611,8 +611,9 @@ span.mphbac-staff-ico::before {
 /* ---- THE CLEANING DOT (0.48.0, Rob): red = not ready, green = ready ----
    Beside the cottage number. A long press on the name (or a right-click)
    opens one button. The name must not select text or raise iOS's callout
-   while it is held; scrolling the grid past it still works. Green carries a
-   tick as well, so the two never rely on colour alone. */
+   while it is held; scrolling the grid past it still works. Each carries a
+   white sign as well (0.49.0: a broom on red, a check on green), so the two
+   never rely on colour alone. */
 .mphbac-staff-rowlabel.has-ready {
     cursor: pointer;
     -webkit-touch-callout: none;
@@ -625,27 +626,20 @@ span.mphbac-staff-ico::before {
     outline-offset: -3px;
 }
 .mphbac-staff-ready {
-    position: relative;
     display: inline-block;
-    width: 13px;
-    height: 13px;
+    width: 17px;
+    height: 17px;
     margin-left: 6px;
     border-radius: 50%;
-    background: #d93025;
+    /* NOT READY (0.49.0, Rob's pick D): a white broom on red — "needs
+       cleaning". Inline SVG, so no request and no icon font. */
+    background: #d93025 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='10.25' y='3' width='3.5' height='8' rx='1.2' fill='white'/%3E%3Cpath d='M6 13.5a2.5 2.5 0 0 1 2.5-2.5h7a2.5 2.5 0 0 1 2.5 2.5V21H6z' fill='white'/%3E%3Cpath d='M9.5 16.5v4.5M12 16.5v4.5M14.5 16.5v4.5' stroke='%23d93025' stroke-width='1.4'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
     box-shadow: 0 0 0 2px #ffffff;
-    vertical-align: 1px;
+    vertical-align: -1px;
 }
-.mphbac-staff-ready.is-ready { background: #1e8e3e; }
-.mphbac-staff-ready.is-ready::after {
-    content: "";
-    position: absolute;
-    left: 4px;
-    top: 1.5px;
-    width: 3px;
-    height: 6.5px;
-    border: solid #ffffff;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+/* READY: a white check, centred in the green circle. */
+.mphbac-staff-ready.is-ready {
+    background: #1e8e3e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.5 12.5l3.75 3.75L17.5 9' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 .mphbac-staff-readypop {
     position: fixed;
