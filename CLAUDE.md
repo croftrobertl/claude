@@ -1292,6 +1292,32 @@ Rob sees it (the overlay rows; sources named on the sheets).
   - **Ornaments:** a theme row's `'ev' => 1` gives each new piece the
     variant least on screen (`evenKey`); only the Christmas balls carry it,
     so every other theme's variants keep their random pick.
+  - **Rob's phone review (the Director, 2026-11-02), also in 4.14.4:**
+    1. *The fan was clipped when he bent.* The feeding poses reach y -14
+       (and the feet 105.3, the head 132): `TK_BOX` is now his measured
+       extent, `[-3, -16, 134, 107]`. His SIZE is set by 4.14.3's box
+       (`TK_REF` 107 tall, `TK_REFW` 133 wide; `TK_R` scales the cache, the
+       draw and the poults' cache by the ratio), measured identical: 1.3634
+       display px per unit before and after. `TK_R` must read the box only
+       when the Thanksgiving pack is there — unguarded it threw on every
+       other theme (the Untouched test now has that mutation).
+    2. *The poults moonwalked.* The gap behind him opened at 0.6/s, faster
+       than he walks, so they went backward over the ground while their
+       cycle ran forward; while he fed they glided in the feeding pose. Now
+       each poult has its own phase (`p.kq`), advanced by ITS OWN ground
+       covered (his advance less the change in its offset); the gap opens
+       no faster than half his pace and closes no faster than 1.2x; a poult
+       that has caught up stands on its own frame and feeds (`p.kf`;
+       `tkPose` keeps the stopped frame instead of snapping to frame 0).
+       test-holidays catches every drawn poult and tom pose, maps each
+       planted foot to the page through the draw's transform, and requires
+       it to hold within 1.5 px (the 12 drawn frames' step) and no cycle to
+       step backward.
+    3. *The cornucopia left the corner:* no Thanksgiving accent; it falls
+       (`'b' => 'drop'`, the pie's weight) at `'sz' => [40, 46]`, about the
+       old accent's 56 px (at the default size a horn reads 20 px wide).
+       The tom's turn-before-the-accent machinery (`tkBlock`, `p.tn`,
+       `p.pw`) went with it.
   - `tools/test-holidays.js` replaces `test-thanksgiving-scene.js` (its
     reduced-motion and /submit-booking/ checks moved in); the clips and
     sheets are `tools/holiday-clip.js` and `tools/holiday-sheet.js`.

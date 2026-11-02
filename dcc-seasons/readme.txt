@@ -201,6 +201,11 @@ Rob's Thanksgiving and Christmas corrections (his picks A1, B1, C1, D2).
   parachutes, landing clear of the wreath with no ripple. The falling
   gift is gold paper with dots and a red ribbon. Each new ornament takes
   the color least on screen, so red, gold and blue all appear.
+* From Rob's look on his phone: the tom's fan is never clipped when he
+  bends to feed (every pose's canvas is his real extent; he is the same
+  size); the poults' feet stay planted (each walks by the ground it
+  covers, never backward); and the cornucopia leaves its corner to fall
+  with the pieces, as often as the pie.
 
 = 4.14.3 =
 The Preview tab, for reviewing a whole theme. Nothing a guest sees changes:
