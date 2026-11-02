@@ -58,7 +58,7 @@ async function bootWith(cfg, initScript, width = 390) {
     const url = new URL(route.request().url());
     if (url.hostname === 'dcc.test' && url.pathname === '/') return route.fulfill({ contentType: 'text/html; charset=utf-8', body: html });
     const f = path.join(ASSETS, path.basename(url.pathname));
-    if (/^[a-z.]+\.js$/.test(path.basename(url.pathname)) && fs.existsSync(f)) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(f, 'utf8') });
+    if (/^[a-z.-]+\.js$/.test(path.basename(url.pathname)) && fs.existsSync(f)) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(f, 'utf8') });
     return route.fulfill({ status: 404, body: '' });
   });
   await page.goto('http://dcc.test/', { waitUntil: 'load' });
