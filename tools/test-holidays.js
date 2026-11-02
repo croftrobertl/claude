@@ -61,6 +61,12 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
     const horn = T.cornucopia();
     ok(/^130 88\|/.test(horn) && (horn.match(/stroke="#E6CFA0"|stroke="#C99A5E"/g) || []).length === 33, 'the cornucopia is the fuller horn (33 weave rows)', horn.slice(0, 20));
     ok(horn.includes('dccTgC3n'), "and its ear is the multicolored corn", 'nest');
+    ok(!/\n\t\tthanksgiving: \['cornucopia'/.test(eng), 'the cornucopia is no longer a corner accent (Rob, 4.14.4)', 'ACCENTS');
+    const tgRows = JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1); function __($s,$d=null){return $s;} function esc_html__($s,$d=null){return $s;} function apply_filters($t,$v){return $v;}
+      require '${ROOT}/dcc-seasons/includes/class-schedule.php'; require '${ROOT}/dcc-seasons/includes/class-themes.php';
+      echo json_encode(\\DCC_Seasons\\Themes::themes()['thanksgiving']['ambient']['particles']);`], { cwd: ROOT, encoding: 'utf8' }));
+    const cr = tgRows.find(r => r.s === 'cornucopia') || {}, pr = tgRows.find(r => r.s === 'pie') || {};
+    ok(cr.b === 'drop' && (cr.w || 1) === (pr.w || 1), 'it falls with the pieces, weighted as the pie', JSON.stringify(cr));
   }
 
   console.log('\n  --- Christmas: the picks, in the source ---');
