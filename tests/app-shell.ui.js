@@ -51,20 +51,24 @@ const MARKUP = { app: emit('app-a1'), 'app-public': emit('app-public'),
  *   .elementor-kit-331 h2 { font-size: 20px }      (0,1,1)
  *   .elementor-kit-331 button { border-width: 0 }  (0,1,1)
  *
+ * v0.27.0 adds `html { scroll-behavior: smooth }`, which the theme also sets
+ * and which is half of why closing a sheet used to animate back down the
+ * page. Without it in here, a restore that animates looks instant.
+ *
  * The first rendered the hero's welcome at 20px instead of the intended
  * size, and the second stripped the tiles' border so they read as flat
  * icons on a white page. Both beat a single plugin class, and neither was
  * in this block, so the suite passed while the real page was wrong.
  */
-const KIT = `html{font-weight:700}
+const KIT = `html{font-weight:700;scroll-behavior:smooth}
  body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0;padding:0 16px}
  .elementor-kit-331 h1,.elementor-kit-331 h2,.elementor-kit-331 h3{font-size:20px}
  .elementor-kit-331 button{font-family:Pavanam,sans-serif;font-size:18px;font-weight:900;line-height:50px;padding:0 18px;border-width:0}
  .elementor-kit-331 button:hover,.elementor-kit-331 button:focus,.elementor-kit-331 button:active{background-color:#F08080}
  .dccgg-item-report .fas{display:inline-block;width:14px}`;
-const pageFor = (markup) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
+const pageFor = (markup, spacer = 0) => `<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style><style>${KIT}</style></head>
-<body class="elementor-kit-331"><div class="site"><div class="content"><div class="entry">
+<body class="elementor-kit-331"><div style="height:${spacer}px"></div><div class="site"><div class="content"><div class="entry">
 <div class="elementor-widget ${markup === MARKUP.grid ? 'dccgg-layout-grid' : 'dccgg-layout-app'}" data-id="2afb24b">${markup}</div></div></div></div>
 ${chunkBootTag(SRC)}<script>${JS}</script></body></html>`;
 
@@ -111,7 +115,7 @@ const check = (name, cond, detail) => {
      */
     const open = async ({
         markup = 'app', now = MIDSTAY, tz = 'Asia/Tokyo', query = '',
-        weather = WEATHER, width = 390, height = 844, extraCss = '',
+        weather = WEATHER, width = 390, height = 844, extraCss = '', spacer = 0,
     } = {}) => {
         const ctx = await browser.newContext({ viewport: { width, height },
             isMobile: width < 700, hasTouch: width < 700, timezoneId: tz });
@@ -132,7 +136,7 @@ const check = (name, cond, detail) => {
             r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
         });
         await page.route('https://dccgg.test/g**', (r) =>
-            r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(MARKUP[markup]) }));
+            r.fulfill({ status: 200, contentType: 'text/html', body: pageFor(MARKUP[markup], spacer) }));
         await page.goto('https://dccgg.test/g' + query, { waitUntil: 'load' });
         if (extraCss) { await page.addStyleTag({ content: extraCss }); }
         await page.waitForTimeout(700);
@@ -607,11 +611,19 @@ const check = (name, cond, detail) => {
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
         await v.page.waitForTimeout(60);
         check('a tile answers the finger while it is still down', await pressing());
+        // Sideways, and with the page pinned so it cannot scroll. A finger
+        // dragged UP scrolls the page, which fires the scroll listener and
+        // releases the tile anyway — so the first version of this case
+        // passed with the touchmove handler deleted, testing the other
+        // branch by accident.
+        await v.page.evaluate(() => { document.documentElement.style.overflow = 'hidden'; });
+        const scrollBefore = await v.page.evaluate(() => window.scrollY);
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
-            touchPoints: [{ x: pt[0].x, y: pt[0].y - 40 }] });
-        await v.page.waitForTimeout(60);
-        check('…and lets go the moment the finger moves — a scroll is not a tap',
-            !(await pressing()));
+            touchPoints: [{ x: pt[0].x + 40, y: pt[0].y }] });
+        await v.page.waitForTimeout(80);
+        check('…and lets go the moment the finger moves, with no scroll to do it',
+            !(await pressing()) && (await v.page.evaluate(() => window.scrollY)) === scrollBefore);
+        await v.page.evaluate(() => { document.documentElement.style.overflow = ''; });
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
         await v.page.waitForTimeout(400);
 
@@ -628,18 +640,32 @@ const check = (name, cond, detail) => {
     }
     {
         // --- the bar must not flash before the observer has decided -------
-        // Loaded with the guide already scrolled out of view, which is what a
-        // deep link or a restored scroll position gives a guest.
-        const v = await open({ height: 600 });
-        await v.page.evaluate(() => {
-            const after = document.createElement('div');
-            after.style.height = '3000px';
-            document.querySelector('.elementor-widget').after(after);
-            window.scrollTo(0, document.body.scrollHeight);
-        });
-        await v.page.waitForTimeout(800);
-        check('the bar never appears when the guide is off screen from the start',
-            !(await shown(v.page, '.dccgg-app-tabs')));
+        // The guide starts BELOW THE FOLD, so the observer's first answer is
+        // "not on screen". Scrolling it out of view after load would not test
+        // this at all: by then the bar has been shown once already, and the
+        // mutant that starts it visible would pass.
+        //
+        // Sampled every frame from before the chunk runs, because what is
+        // wrong with starting visible is a flash, and a flash is gone by the
+        // time anything asks.
+        const v = await open({ height: 600, spacer: 2000 });
+        const everFlashed = await v.page.evaluate(() => new Promise((resolve) => {
+            const t0 = performance.now();
+            let flashed = false;
+            const tick = () => {
+                const bar = document.querySelector('.dccgg-app-tabs');
+                const root = document.querySelector('.dccgg-app-shell');
+                if (bar && root) {
+                    const r = root.getBoundingClientRect();
+                    const offscreen = r.bottom < 0 || r.top > window.innerHeight;
+                    if (offscreen && bar.getClientRects().length) { flashed = true; }
+                }
+                if (performance.now() - t0 < 1500) { requestAnimationFrame(tick); }
+                else { resolve(flashed); }
+            };
+            requestAnimationFrame(tick);
+        }));
+        check('the bar never paints while the guide is off screen', !everFlashed);
         await shut(v);
     }
 

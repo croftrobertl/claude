@@ -224,8 +224,6 @@ MUTANTS = [
      "            root.addEventListener(type, release, { passive: true });\n        });", ""),
     ('a scroll leaves the tile looking pressed', APP,
      "        bindGlobal(root, window, 'scroll', release, { passive: true });", ""),
-    ('tiles wait on the double-tap delay again', CSS,
-     "    touch-action: manipulation;\n}\n.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-content {", "}\n.dccgg-root.dccgg-root.dccgg-app-shell .dccgg-tile-content {"),
 
     ('the tiles go back to left-aligned', CSS,
      "    text-align: center;\n    align-items: center;\n    /* No double-tap-to-zoom wait",
@@ -265,7 +263,17 @@ EQUIVALENT = [
      "inventing a test that failed on 51px would be testing the decoration "
      "rather than the floor."),
 ]
-UNREACHABLE = []
+UNREACHABLE = [
+    ('removing touch-action: manipulation from the tiles',
+     "measured, clean and mutant alike: getComputedStyle(tile).touchAction reports "
+     "'manipulation' with the declaration and without it. Chromium already treats "
+     "an interactive element as manipulation on a page carrying a device-width "
+     "viewport, so in THIS browser the declaration changes nothing and no test "
+     "here can tell the two apart. It is kept because the browser it is for is "
+     "mobile Safari, which honours user-scalable=yes and holds a tap ~300ms for "
+     "double-tap zoom — and WebKit is not installable in this container (see the "
+     "note from v0.24.2). Unverified on a real iPhone; said so in the report."),
+]
 
 def run(cmd, plugin_dir):
     env = dict(os.environ, DCCGG_PLUGIN_DIR=plugin_dir, DCCGG_UI_SOURCE='1',
