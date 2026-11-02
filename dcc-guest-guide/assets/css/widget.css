@@ -1414,9 +1414,24 @@ body.dccgg-detail-open {
        and one short. Ignored by engines that do not know it, which simply
        wrap as before. */
     text-wrap: balance;
-    /* The backstop for a single word longer than the track — a wrapped line
-       is recoverable, a word sitting on top of the read-aloud button is not. */
+    /* If a word still cannot fit, break it WITH A HYPHEN. Measured at 320:
+       the centre track is 144px and the longest word in the host's checkout
+       list, "Kitchenware", wants 152 — so without this it broke mid-word as
+       "Kitchenwar / e", which is worse to read than the overlap it replaced.
+       overflow-wrap stays as the last resort for something hyphenation
+       cannot help with, such as a pasted URL. */
+    hyphens: auto;
     overflow-wrap: break-word;
+}
+/* Those 8px, bought back. The row's gap is 10px either side of the title;
+   at phone widths 6px is still a clear separation and gives the centre
+   track 8px more, which is the difference between "Kitchenware" sitting on
+   one line and being hyphenated. Measured, not guessed: every other title
+   in the host's content already fits in the narrower track. */
+@media (max-width: 480px) {
+    .dccgg-item-title {
+        gap: 6px;
+    }
 }
 .dccgg-item-title-tail {
     grid-column: 3;
