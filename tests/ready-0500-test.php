@@ -85,8 +85,8 @@ check('EVERY listed cottage has an entry (8), each a state, a source and a time 
 check('a DIRECT stay out today: Not Ready, automatic', $sign(22) === 'notready auto', $sign(22));
 check('an IMPORTED (iCal) stay out today: Not Ready, automatic', $sign(23) === 'notready auto', $sign(23));
 check('a DOCK BLOCK out today does nothing (the stay before it is 20 days back: past RED_DAYS)', $sign(31) === 'none', $sign(31));
-check('a CANCELLED and a PENDING booking out today do nothing; a cottage with a guest IN it and no checkout: no sign',
-    $sign(32) === 'none' && $sign(33) === 'none' && $sign(34) === 'none', [$sign(32), $sign(33), $sign(34)]);
+check('a CANCELLED and a PENDING booking out today do nothing; a cottage with a guest IN it: Occupied (0.51.0 — was no sign)',
+    $sign(32) === 'none' && $sign(33) === 'none' && $sign(34) === 'occupied occupied', [$sign(32), $sign(33), $sign(34)]);
 check('THE AUTOMATIC NOT READY CLEARS AFTER RED_DAYS (14): out 13 days ago still Not Ready; 14 days ago, no sign',
     $sign(35) === 'notready auto' && $sign(36) === 'none', [$sign(35), $sign(36)]);
 check('its time is the START of the checkout day, Eastern', $at(22) === $T(0) && $at(35) === $T(-13), [$at(22), $T(0)]);
@@ -106,8 +106,8 @@ check('a new guest IN the cottage changes nothing until their checkout day', $si
 echo "\n-- 3. ANY COTTAGE, ANY TIME — and a manual mark never expires --\n";
 $r = Staff_Ready::save(34, false, $at(34));
 check('NOT READY on a cottage with a guest in it and no sign: allowed — Not Ready, manual', $r === false && $sign(34) === 'notready manual', $sign(34));
-$mark(34, false, $T(-60));
-check('A MANUAL NOT READY NEVER EXPIRES: marked 60 days ago, nothing since — still Not Ready', $sign(34) === 'notready manual', $sign(34));
+$mark(33, false, $T(-60));
+check('A MANUAL NOT READY NEVER EXPIRES: marked 60 days ago, nothing since — still Not Ready (a cottage with no guest in: an occupied one shows Occupied, ready-0510-test.php)', $sign(33) === 'notready manual', $sign(33));
 $mark(33, true, $T(-40));
 check('a manual Ready from 40 days ago, no checkout since: still Ready (green stays until the next checkout)', $sign(33) === 'ready manual', $sign(33));
 $mark(36, true, $T(-40));

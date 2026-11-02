@@ -277,7 +277,8 @@ foreach ($cases as $case => $w) {
             'photoNote'];                                     // 0.47.5: the line under View Photo ID removed (Rob)
         $new = ['lyTag', 'lyName', 'lyDates', 'lyHead', 'stVsDatesSr', 'stColCottage', 'stColNights', 'stColOcc', 'stColVs', 'stTipVsOcc',
             'readyBtn', 'notReadyBtn', 'dotRed', 'dotGreen', 'readyPop', 'readyFailed',    // 0.48.0: the cleaning dot (Rob)
-            'readyChanged'];                                                                // 0.50.0: a stale page's save refused
+            'readyChanged',                                                                 // 0.50.0: a stale page's save refused
+            'dotOccupied'];                                                                 // 0.51.0: a guest is in (the gray sign)
         $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat'];
         $same = static function (array $x, array $y): bool { sort($x); sort($y); return $x === $y; };
         $changed = array_keys(array_filter($b, static fn($v, $k) => array_key_exists($k, $a) && $a[$k] !== $v, ARRAY_FILTER_USE_BOTH));

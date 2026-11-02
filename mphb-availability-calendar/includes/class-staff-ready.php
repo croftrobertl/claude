@@ -18,6 +18,15 @@ if (!defined('ABSPATH')) {
  * Never marked and no checkout within RED_DAYS → no sign (Rob's pick).
  * Any cottage can be marked at any time, a guest in it or not.
  *
+ * OCCUPIED (0.51.0, Rob): while a guest is in — a stay the staff calendar
+ * draws, check-in ≤ today < check-out (site time), not a dock block or a
+ * cancelled booking — the cottage shows Occupied (a gray sign). It sits on
+ * top of the automatic state and of any mark made before the stay began: only
+ * a mark made AFTER the guest's check-in time on the arrival day (MotoPress's
+ * own setting) replaces it, until that guest's checkout. On a TURNOVER day
+ * (a checkout on the new guest's arrival day) the checkout governs: Not Ready
+ * until marked Ready; the new stay shows Occupied from the next morning.
+ *
  * STORAGE IS THE PLUGIN'S OWN, NEVER MOTOPRESS'S: one non-autoloaded option
  * per cottage, mphbac_ready_<type id> = ['v' => 2, 'manual' => ['ready' =>
  * bool, 'at' => unix time] | null, 'log' => [[unix time, 0|1], ...]]. The log
@@ -43,6 +52,7 @@ final class Staff_Ready
     public const READY = 'ready';
     public const NOT_READY = 'notready';
     public const NONE = 'none';
+    public const OCCUPIED = 'occupied';
 
     public static function option_name(int $type_id): string
     {
@@ -59,25 +69,47 @@ final class Staff_Ready
     public static function state(): array
     {
         $checkouts = self::latest_checkouts();
+        $stays = self::current_stays();
+        $checkin = self::checkin_seconds();
         $out = [];
         foreach (Data_Provider::list_room_types() as $t) {
             $id = (int) $t['id'];
-            $out[(string) $id] = self::decide($checkouts[$id] ?? null, self::manual($id));
+            $out[(string) $id] = self::decide($checkouts[$id] ?? null, self::manual($id), $stays[$id] ?? null, $checkin);
         }
         return $out;
     }
 
     /**
-     * THE RULE. $checkout: Y-m-d or null; $manual: ['ready', 'at'] or null.
+     * THE RULE. $checkout: the latest checkout (Y-m-d) or null; $manual:
+     * ['ready', 'at'] or null; $stay_in: the arrival day (Y-m-d) of the stay
+     * the cottage is in today, or null; $checkin_secs: MotoPress's check-in
+     * time, in seconds after midnight.
      *
      * @return array{state:string, source:string, at:int}
      */
-    public static function decide(?string $checkout, ?array $manual): array
+    public static function decide(?string $checkout, ?array $manual, ?string $stay_in = null, int $checkin_secs = 0): array
     {
         $tz = Data_Provider::timezone();
         $auto_at = $checkout !== null ? (new \DateTimeImmutable($checkout, $tz))->getTimestamp() : null;
         $man_at = $manual !== null ? (int) $manual['at'] : null;
         $at = max((int) $auto_at, (int) $man_at);
+
+        // OCCUPIED (0.51.0). A turnover — a checkout on the stay's arrival
+        // day — leaves that day to the checkout; Occupied starts next morning.
+        if ($stay_in !== null) {
+            $arrival = new \DateTimeImmutable($stay_in, $tz);
+            $occ_from = ($checkout === $stay_in) ? $arrival->modify('+1 day') : $arrival;
+            if (Data_Provider::today() >= $occ_from) {
+                $at = max($at, $occ_from->getTimestamp());
+                $stay_start = $arrival->getTimestamp() + $checkin_secs;
+                if ($man_at !== null && $man_at > $stay_start) {
+                    // A mark made during this stay replaces Occupied.
+                    $during = !empty($manual['ready']) ? self::READY : self::NOT_READY;
+                    return ['state' => $during, 'source' => 'manual', 'at' => $at];
+                }
+                return ['state' => self::OCCUPIED, 'source' => 'occupied', 'at' => $at];
+            }
+        }
         if ($man_at !== null && ($auto_at === null || $man_at >= $auto_at)) {
             return ['state' => !empty($manual['ready']) ? self::READY : self::NOT_READY, 'source' => 'manual', 'at' => $at];
         }
@@ -151,6 +183,93 @@ final class Staff_Ready
             }
         }
         return $out;
+    }
+
+    /**
+     * The arrival day of the stay each cottage is in today: type id => Y-m-d.
+     * "In": check-in ≤ today < check-out, site time. Every status the staff
+     * calendar draws (Staff::VISIBLE_STATUSES, as filtered) — never a
+     * cancelled booking — and never a dock block. A cottage with two such
+     * stays (a data error) takes the later arrival.
+     *
+     * @return array<int, string>
+     * @throws Staff_Read_Failed
+     */
+    public static function current_stays(): array
+    {
+        global $wpdb;
+        $statuses = (array) apply_filters('mphbac_staff_statuses', Staff::VISIBLE_STATUSES);
+        $statuses = array_values(array_filter(array_map('strval', $statuses), static fn($s) => $s !== '' && $s !== 'cancelled'));
+        if (!$statuses) {
+            return [];
+        }
+        $today = Data_Provider::today()->format('Y-m-d');
+        $ph = implode(',', array_fill(0, count($statuses), '%s'));
+        $sql = "SELECT bk.ID AS booking_id,
+                       rtid.meta_value AS room_type_id,
+                       ci.meta_value AS checkin
+                FROM {$wpdb->posts} rr
+                INNER JOIN {$wpdb->postmeta} rid
+                        ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id'
+                INNER JOIN {$wpdb->posts} bk
+                        ON bk.ID = rr.post_parent AND bk.post_type = 'mphb_booking'
+                INNER JOIN {$wpdb->postmeta} ci
+                        ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date'
+                INNER JOIN {$wpdb->postmeta} co
+                        ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date'
+                INNER JOIN {$wpdb->postmeta} rtid
+                        ON rtid.post_id = CAST(rid.meta_value AS UNSIGNED)
+                       AND rtid.meta_key = 'mphb_room_type_id'
+                WHERE rr.post_type = 'mphb_reserved_room'
+                  AND bk.post_status IN ($ph)
+                  AND ci.meta_value <= %s
+                  AND co.meta_value > %s
+                ORDER BY ci.meta_value DESC, bk.ID DESC";
+        $rows = $wpdb->get_results($wpdb->prepare($sql, array_merge($statuses, [$today, $today])));
+        if ($wpdb->last_error !== '') {
+            error_log('MPHBAC staff: stay query failed: ' . $wpdb->last_error);
+            throw new Staff_Read_Failed('staff stay query failed');
+        }
+        $rows = is_array($rows) ? $rows : [];
+        $ids = array_values(array_unique(array_map(static fn($r) => (int) $r->booking_id, $rows)));
+        if ($ids) {
+            update_meta_cache('post', $ids);
+        }
+        $out = [];
+        foreach ($rows as $r) {
+            $type_id = (int) $r->room_type_id;
+            if ($type_id <= 0 || isset($out[$type_id]) || Staff_Data::is_dock_block((int) $r->booking_id)) {
+                continue;
+            }
+            $ci = substr((string) $r->checkin, 0, 10);
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $ci)) {
+                $out[$type_id] = $ci;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * MotoPress's check-in time (Accommodation → Settings), in seconds after
+     * midnight: its own getter where it answers, else the option it reads
+     * (mphb_check_in_time, "11:00" by MotoPress's own default).
+     */
+    public static function checkin_seconds(): int
+    {
+        $parts = null;
+        try {
+            if (function_exists('MPHB')) {
+                $parts = \MPHB()->settings()->dateTime()->getCheckInTime(true);
+            }
+        } catch (\Throwable $e) {
+            $parts = null;
+        }
+        if (!is_array($parts)) {
+            $parts = explode(':', (string) get_option('mphb_check_in_time', '11:00'));
+        }
+        $h = max(0, min(23, (int) ($parts[0] ?? 11)));
+        $m = max(0, min(59, (int) ($parts[1] ?? 0)));
+        return $h * 3600 + $m * 60;
     }
 
     /**

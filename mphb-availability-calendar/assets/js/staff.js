@@ -149,8 +149,8 @@
         }
 
         // ---- the cleaning sign (0.48.0; any cottage, any time 0.50.0, Rob) ----
-        // Red broom = Not Ready, green check = Ready, nothing = never marked
-        // and no recent checkout. The server decides each cottage's state —
+        // Red X = Not Ready, green check = Ready, gray person = Occupied (a
+        // guest in, 0.51.0), nothing = never marked and no recent checkout. The server decides each cottage's state —
         // the NEWER of its latest checkout (automatic Not Ready) and its last
         // manual mark (Staff_Ready) — and sends every cottage's with each
         // board answer, with `at`, the time of the event behind it. A long
@@ -168,7 +168,7 @@
             var next = {};
             Object.keys(t).forEach(function (k) {
                 var v = t[k];
-                if (v && (v.state === 'ready' || v.state === 'notready' || v.state === 'none')) {
+                if (v && (v.state === 'ready' || v.state === 'notready' || v.state === 'occupied' || v.state === 'none')) {
                     next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0 };
                 }
             });
@@ -187,7 +187,8 @@
         function paintDot(label) {
             var st = stateOf(label.getAttribute('data-type'));
             var dot = label.querySelector('.mphbac-staff-ready');
-            // Every cottage name can be held and marked, sign or no sign.
+            // Every cottage name can be held and marked, sign or no sign. On an
+            // Occupied cottage the popup offers both, as with no sign.
             label.classList.add('has-ready');
             label.setAttribute('tabindex', '0');
             label.setAttribute('role', 'button');
@@ -203,8 +204,12 @@
                 dot.setAttribute('role', 'img');
                 (label.querySelector('.mphbac-staff-rownum') || label).appendChild(dot);
             }
-            var words = st.state === 'ready' ? (S.dotGreen || 'Ready') : (S.dotRed || 'Not ready');
+            var words = st.state === 'ready' ? (S.dotGreen || 'Ready')
+                : st.state === 'occupied' ? (S.dotOccupied || 'Occupied')
+                : (S.dotRed || 'Not ready');
             dot.classList.toggle('is-ready', st.state === 'ready');
+            // OCCUPIED (0.51.0): a guest is in — the gray sign.
+            dot.classList.toggle('is-occupied', st.state === 'occupied');
             dot.setAttribute('aria-label', words);
             label.setAttribute('aria-label', (label.getAttribute('data-name') || '') + ': ' + words);
         }

@@ -100,7 +100,7 @@ async function open(browser, width, opts = {}) {
 const label = id => `.mphbac-staff-rowlabel[data-type="${id}"]`;
 const signs = p => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-rowlabel[data-type]')].map(l => {
   const d = l.querySelector('.mphbac-staff-ready');
-  return [l.dataset.type, d ? (d.classList.contains('is-ready') ? 'ready' : 'notready') : 'none'];
+  return [l.dataset.type, d ? (d.classList.contains('is-ready') ? 'ready' : d.classList.contains('is-occupied') ? 'occupied' : 'notready') : 'none'];
 })));
 const popup = p => p.evaluate(() => {
   const pop = document.querySelector('.mphbac-staff-readypop');
@@ -150,8 +150,16 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     const d = await signs(p);
     check('Not Ready (broom) where a guest checked out: #22 direct and #23 Airbnb today, #33 three days ago',
       d[T.b22] === 'notready' && d[T.b23] === 'notready' && d[T.b33] === 'notready', d);
-    check('NO SIGN on a never-marked cottage with no recent checkout: #31 (a dock block), #32 (cancelled), #34 (pending), #35 (15 days), #36 (a guest in it)',
-      ['b31', 'b32', 'b34', 'b35', 'b36'].every(k => d[T[k]] === 'none'), d);
+    check('NO SIGN on a never-marked cottage with no recent checkout: #31 (a dock block), #32 (cancelled), #34 (pending), #35 (15 days)',
+      ['b31', 'b32', 'b34', 'b35'].every(k => d[T[k]] === 'none'), d);
+    check('OCCUPIED (0.51.0): #36, a guest in it, shows the gray sign', d[T.b36] === 'occupied', d);
+    const g = await p.evaluate(sel => { const s = document.querySelector(sel + ' .mphbac-staff-ready'); const c = getComputedStyle(s);
+      return { bg: c.backgroundColor, img: decodeURIComponent(c.backgroundImage), w: s.getBoundingClientRect().width, va: c.verticalAlign, ring: c.boxShadow,
+        label: document.querySelector(sel).getAttribute('aria-label'), x: getComputedStyle(document.querySelector('.mphbac-staff-rowlabel[data-type="1071"] .mphbac-staff-ready')).verticalAlign }; }, label(T.b36));
+    check('...a white PERSON on gray #5f6368, the same 17px circle, white ring and vertical-align as the X and the check',
+      g.bg === 'rgb(95, 99, 104)' && /circle cx='12' cy='8\.6' r='3\.1'/.test(g.img) && /M6\.6 18\.2a5\.4 5\.2 0 0 1 10\.8 0z/.test(g.img)
+      && g.w === 17 && g.va === g.x && /rgb\(255, 255, 255\) 0px 0px 0px 2px/.test(g.ring), g);
+    check('...and a screen reader hears "Cottage 36: Occupied"', g.label === 'Cottage 36: Occupied', g.label);
     const names = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-rowlabel[data-type]')].map(l => [l.getAttribute('role'), l.tabIndex, l.getAttribute('aria-label')]));
     check('EVERY cottage name (8) can be held: each a button, reachable by keyboard', names.length === 8 && names.every(([r, t]) => r === 'button' && t === 0), names);
     check('...a screen reader hears the state ("Cottage 22: Not ready"), or just the cottage when it has none ("Cottage 32")',
@@ -175,7 +183,7 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     check('IT NAMES ITS COTTAGE, centred above the buttons: "#36 Sunshine"', pp.name === '#36 Sunshine', pp.name);
     const nameCss = await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-readyname')).textAlign);
     check('...centred', nameCss === 'center', nameCss);
-    check('NO STATE YET, SO BOTH: "Ready" and "Not Ready", each a large tap target, on screen',
+    check('OCCUPIED, SO BOTH: "Ready" and "Not Ready", each a large tap target, on screen',
       JSON.stringify(pp.buttons) === '["Ready","Not Ready"]' && pp.sizes.every(([w, h]) => h >= 44 && w >= 100) && pp.inView, pp);
     check('no text selected by the hold', lp.selection === '', lp.selection);
     // Chromium drops the iOS-only -webkit-touch-callout from computed style:
@@ -188,9 +196,9 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     await tap(p, 'Not Ready');
     await p.waitForTimeout(80);
     const now = (await signs(p))[T.b36];
-    check('NOT READY ON AN OCCUPIED COTTAGE: the broom appears at once, before the server answers', now === 'notready' && p.__ready.length === 0, now);
+    check('NOT READY ON AN OCCUPIED COTTAGE: the X replaces gray at once, before the server answers', now === 'notready' && p.__ready.length === 0, now);
     await p.waitForTimeout(900);
-    check('...and is saved (200)', p.__ready.length === 1 && p.__ready[0].status === 200 && /ready=0/.test(p.__ready[0].body) && /seen=\d+/.test(p.__ready[0].body), p.__ready);
+    check('...and is saved (200) — and it stays Not Ready (a mark made after the stay\'s check-in time replaces Occupied)', p.__ready.length === 1 && p.__ready[0].status === 200 && /ready=0/.test(p.__ready[0].body) && /seen=\d+/.test(p.__ready[0].body), p.__ready);
     p.__holdReady = 0;
     if (OUT) {
       fs.mkdirSync(OUT, { recursive: true });
@@ -373,6 +381,26 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     const stored = JSON.parse(fs.readFileSync(STATE, 'utf8'));
     check('what was stored is the plugin\'s own options only (mphbac_ready_<cottage>): a mark, its time, the log — no guest data',
       Object.keys(stored).every(k => /^mphbac_ready_\d+$/.test(k)) && !/name|guest|booking|Ann|Air/i.test(JSON.stringify(stored)), Object.keys(stored));
+  }
+
+  if (OUT) {
+    // THE 0.51.0 STILLS (390px): the column with all three signs, and the
+    // popup on a gray cottage. A fresh state: #35 marked Ready first.
+    fs.unlinkSync(STATE);
+    const seen = JSON.parse(ajax('action=mphbac_staff_month&nonce=nonce&from=2026-01-01&to=2026-12-31').body).data.turnover[T.b35].at;
+    ajax(`action=mphbac_staff_ready&nonce=nonce&room_type_id=${T.b35}&ready=1&seen=${seen}`);
+    const { ctx: c4, p: z } = await open(browser, 390, { scale: 2 });
+    const d4 = await signs(z);
+    check('(stills) the column shows all three: #22 Not Ready, #35 Ready, #36 Occupied', d4[T.b22] === 'notready' && d4[T.b35] === 'ready' && d4[T.b36] === 'occupied', d4);
+    await centre(z, T.b33);
+    const col = await z.locator('.mphbac-staff-chart').boundingBox();
+    await z.screenshot({ path: path.join(OUT, 'column-390.png'), clip: { x: 0, y: Math.max(0, col.y - 4), width: 390, height: Math.min(470, col.height + 8) } });
+    await centre(z, T.b36);
+    await longPress(z, label(T.b36));
+    const pz = await popup(z);
+    check('(stills) the popup on the gray #36 offers both', pz.open && JSON.stringify(pz.buttons) === '["Ready","Not Ready"]', pz.buttons);
+    await z.screenshot({ path: path.join(OUT, 'popup-gray-390.png') });
+    await c4.close();
   }
 
   await browser.close();

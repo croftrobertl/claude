@@ -612,7 +612,8 @@ span.mphbac-staff-ico::before {
    Beside the cottage number. A long press on the name (or a right-click)
    opens one button. The name must not select text or raise iOS's callout
    while it is held; scrolling the grid past it still works. Each carries a
-   white sign as well (0.50.1: an X on red, a check on green), so the two
+   white sign as well (0.50.1: an X on red, a check on green; 0.51.0: a
+   person on gray while a guest is in), so the signs
    never rely on colour alone. */
 .mphbac-staff-rowlabel.has-ready {
     cursor: pointer;
@@ -638,6 +639,11 @@ span.mphbac-staff-ico::before {
     background: #d93025 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 8L16 16M16 8L8 16' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
     box-shadow: 0 0 0 2px #ffffff;
     vertical-align: -1px;
+}
+/* OCCUPIED (0.51.0, Rob's pick B): a white person on gray — a guest is in.
+   The same circle, ring and grid as the X and the check. */
+.mphbac-staff-ready.is-occupied {
+    background: #5f6368 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8.6' r='3.1' fill='white'/%3E%3Cpath d='M6.6 18.2a5.4 5.2 0 0 1 10.8 0z' fill='white'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 /* READY: a white check, centred in the green circle. */
 .mphbac-staff-ready.is-ready {

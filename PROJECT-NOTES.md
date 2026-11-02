@@ -3946,3 +3946,29 @@ phone size: Not Ready is now a white X on the same 17px #d93025 circle with the
 exactly as built, is 3.2, so the X matches it — the pair is the point).
 Nothing else changed. Tests: ready-0500-test.js measures the X centred within
 1px on the rendered pixels, and compares its stroke with the check's.
+
+## 0.51.0 — Occupied, the gray sign (Rob's pick B, 2026-11-02)
+
+**The rule** (Staff_Ready::decide, a third input): the stay the cottage is in
+today — Staff_Ready::current_stays(): ci ≤ today < co, every status the staff
+calendar draws (Staff::VISIBLE_STATUSES as filtered, so pending counts),
+never cancelled, never a dock block; the latest arrival if two. Occupied
+applies from the arrival day — or, on a TURNOVER (the latest confirmed
+checkout falls on the arrival day), from the next morning, the checkout
+governing the turnover day. While it applies: a manual mark made strictly
+AFTER the arrival day's check-in time (MotoPress's mphb_check_in_time, via
+its getter; "11:00" default) shows (Ready / Not Ready) until that guest's
+checkout; otherwise Occupied. `at` includes the start of the first Occupied
+day, so a page from the turnover day is stale the next morning. Option shape
+unchanged.
+
+**The sign:** .mphbac-staff-ready.is-occupied — #5f6368 with a white person
+(circle cx 12 cy 8.6 r 3.1 + the shoulders path), the same 17px circle, ring
+and vertical-align. Spoken "Cottage 23: Occupied" (string dotOccupied). The
+popup on a gray cottage offers both. No legend, help text or title lists the
+signs, so nothing else needed updating.
+
+**Tests:** ready-0510-test.php prints the case table (21 cases) and checks
+every row; the boundary (14:59 / 15:00 / 15:01 against a 15:00 check-in);
+ready-0500-test.php/js updated (#36 is Occupied at load; a cottage with a
+guest in no longer shows "no sign").
