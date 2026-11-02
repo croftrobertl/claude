@@ -101,6 +101,7 @@ class Settings {
     public static function subtle_effects(): array {
         return [
             'leaves'     => __('Leaves drifting down (fall)', 'dcc-seasons'),
+            'leafbg'     => __('Drawn autumn leaves, small and far (Thanksgiving)', 'dcc-seasons'),
             'blossom'    => __('Blossom petals (spring)', 'dcc-seasons'),
             'dragonheat' => __('Dragonflies over a heat shimmer (summer)', 'dcc-seasons'),
             'hearts'     => __('Hearts', 'dcc-seasons'),

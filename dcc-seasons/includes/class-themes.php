@@ -268,7 +268,9 @@ class Themes {
                     'particles' => [
                         // The three glass balls (Rob's pick A), one kind with
                         // three variations, on the ornaments' long threads.
-                        ['s' => ['ballred', 'ballgold', 'ballblue'], 'b' => 'hang', 'fx' => 'glint', 'w' => 2, 'hl' => [0.08, 0.55]],
+                        // 4.14.4 (Rob): every color must appear — 'ev' gives
+                        // each new ball the color least on screen.
+                        ['s' => ['ballred', 'ballgold', 'ballblue'], 'b' => 'hang', 'fx' => 'glint', 'w' => 2, 'hl' => [0.08, 0.55], 'ev' => 1],
                         ['s' => 'holly', 'b' => 'hang', 'hl' => [0.08, 0.55]],
                         // The candy cane hangs from its own hook, as the balls do.
                         ['s' => 'candycane', 'b' => 'hang', 'hl' => [0.08, 0.5], 'sz' => [26, 32]],
@@ -774,8 +776,10 @@ class Themes {
              * leaves behind them. REMOVED, not swapped for another effect —
              * '' is the engine's own idiom for no background layer, as
              * classic uses. Only this theme's mapping changes; Fall Fishing,
-             * Patriot Day and Veterans Day keep the leaves effect. */
-            'thanksgiving' => '',
+             * Patriot Day and Veterans Day keep the leaves effect.
+             * 4.14.4 (Rob's B1): the background layer is back, as the theme's
+             * OWN four drawn leaves, small and clear (leafbg), not the ovals. */
+            'thanksgiving' => 'leafbg',
             'veterans_day' => 'leaves',
             'anniversary'  => '',   /* Rob's pick A, 2026-10-30: nothing behind the pieces */
             // Winter — no snow anywhere (4.2.0). Each is Rob's pick.

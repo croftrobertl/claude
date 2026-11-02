@@ -85,8 +85,12 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
       `the sweetgum has five lobes (${veins} veins), not the eight-pointed star`, sg.slice(0, 60));
     /* the seven 4.13.1 photo redraws still in the set (each carries its
      * own dccTg gradient id); the turkey is the drawn tom since 4.13.2 */
-    const RE7 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', corn: 'dccTgC3', acorn: 'dccTgK1', cranberry: 'dccTgR1' };
+    /* the corn is generated in code since 4.14.4 (multicolored, Rob):
+     * run it, as leafm2 is run below */
+    const cornSrc = (src.match(/\n\t\tcorn: (function \(\) \{[^\n]*?\}),/) || [])[1];
+    const RE7 = { leafo: 'dccTgO1', leafs: 'dccTgS1', gourd1: 'dccTgP1', gourd3: 'dccTgA1', acorn: 'dccTgK1', cranberry: 'dccTgR1' };
     const bad7 = Object.entries(RE7).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
+    if (!cornSrc || !/tgKernels\(\)/.test(cornSrc) || !/dccTgC1/.test(cornSrc)) { bad7.push('corn'); }
     ok(!bad7.length, 'the seven photo redraws are 4.13.1\'s', bad7.join(' ') || 'all seven');
     ok(spr('turkey') === '1 1|' && /function tkPaint\(/.test(src) && /function kpPaint\(/.test(src), 'the turkey key names the drawn tom (tkPaint) and his poults (kpPaint), not a picture', spr('turkey').slice(0, 20));
     /* the pie in its tin, from the USDA photo, and nothing rising off it */
@@ -112,58 +116,13 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
       'leafm2, run, is orange-gold (every recolour matched)', m2.slice(0, 200));
   }
 
-  console.log('\n  --- the crane is B, with the primaries picked out ---');
+  console.log("\n  --- the cranes left Thanksgiving (Rob's A1, 4.14.4) ---");
   {
     const src = require('./engine-src').engineSource(`${ROOT}/dcc-seasons/assets/js/engine.js`);
-    const fn = src.slice(src.indexOf('function crPaint'), src.indexOf('function crGet'));
-    /* B's greys, not A's: Rob compared them side by side and chose B. */
-    ok(fn.includes("'#9BA3A8'"), "the body is B's grey, not A's", 'crPaint');
-    ok(fn.includes("'#6E767C'"), "the far wing and tertials are B's darker grey", 'crPaint');
-    ok(fn.includes("'#5A6268'"), 'the primaries are picked out, which is what B means', 'crPaint');
-    ok(!fn.includes("'#8C949A'") && !fn.includes("'#636B71'"), "none of A's greys survive", 'crPaint');
-  }
-
-  for (const w of [390, 1280]) {
-    console.log(`\n  --- the scene, ${w}px ---`);
-    const cfg = config(['--theme=thanksgiving', '--placement=content', '--layering=front', '--density=16', '--diag']);
-    cfg.vigOnly = 'cranemoon'; cfg.vigFirst = 600; cfg.vigGap = 1e9;
-    cfg.heroFirst = [1e9, 1e9 + 1]; cfg.heroEvery = [1e9, 1e9 + 1]; cfg.forceHour = 12;
-    const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), {
-      viewport: { width: w, height: w < 768 ? 700 : 800 }, dsf: 2,
-    });
-    const pg = ses.page;
-    const errs = []; pg.on('pageerror', e => errs.push(e.message));
-    try {
-      await pg.addStyleTag({ content: QUIET });
-      await pg.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 20000 });
-      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.vig === 'cranemoon', null, { timeout: 25000 });
-      await pg.waitForTimeout(700);
-      const r = await pg.evaluate(() => {
-        const s = window.DCCSeasonsEngine._state, st = s.vigSt;
-        return { sky: s.sky.vigSky, pic: s.sky.pic, n: st && st.n, L: st && st.L, MR: st && st.MR,
-          mx: st && st.mx, w: s.sky.w, cranes: s.cranes, hero: s.hero };
-      });
-      ok(r.sky === true && r.pic === true, 'it plays in the header picture, on the sky canvas', JSON.stringify(r));
-      ok(r.n === 5, `a V of five (${r.n})`, String(r.n));
-      ok(!r.hero, 'and there is no crane flyer — the cranes are the scene only', String(r.hero));
-      ok(r.cranes.frames === 24, `twelve beats pre-drawn lit and dark (${r.cranes.frames})`, String(r.cranes.frames));
-      ok(r.cranes.moon === true, 'the full moon is pre-drawn too', JSON.stringify(r.cranes));
-      /* off centre, on the side the V flies into (4.13.1 keeps 0.30/0.70);
-       * the keep-clear proof is test-thanksgiving-scene.js on the real page */
-      ok(Math.abs(r.mx / r.w - 0.5) > 0.08, `the moon sits off centre, where the V flies (${(r.mx / r.w).toFixed(2)} of the width)`, String(r.mx));
-      /* 4.13.1: PALE — a full moon high in the sky, the engine's own
-       * painter ungraded (4.13.0's burnt orange is a horizon moon) */
-      const hue = await pg.evaluate(() => {
-        const s = window.DCCSeasonsEngine._state, st = s.vigSt;
-        const c = s.witch.canvas, g = c.getContext('2d');
-        const dp = Math.min(devicePixelRatio || 1, 2);
-        const d = g.getImageData(Math.round(st.mx * dp), Math.round(st.my * dp), 1, 1).data;
-        return { r: d[0], g: d[1], b: d[2], a: d[3] };
-      });
-      ok(hue.a > 200 && hue.r - hue.b < 70 && hue.g > 120,
-        `the moon is pale cream, not 4.13.0's orange (rgb ${hue.r},${hue.g},${hue.b})`, JSON.stringify(hue));
-      ok(!errs.length, 'no page errors', errs.join(' | '));
-    } finally { await ses.close(); }
+    ok(/\n\t\tthanksgiving: \[\],/.test(src), 'Thanksgiving has no scene: the tom walks the foot of the screen', 'VIGS');
+    ok(!/cranemoon|function crPaint|crPlanFor|fullMoonGet/.test(src), 'and the crane scene, its painter, its plan and its moon are gone from the engine', 'cranemoon');
+    ok(/function dc3Paint|art-crane|danceBox/.test(src), "the Anniversary's crane (the crane pack) is untouched by it", 'crane pack');
+    /* the scene on the real page, and the background leaves: test-holidays.js */
   }
 
   console.log(`\n${pass} passed · ${fail} failed`);

@@ -111,16 +111,18 @@ const php = code => JSON.parse(execFileSync('php', ['-r', `define('ABSPATH',1);
     const changed = Object.keys(both[1]).filter(k => k !== 'christmas' && JSON.stringify(both[0][k]) !== JSON.stringify(both[1][k]));
     ok(!changed.length && Object.keys(both[0]).length === Object.keys(both[1]).length,
       `Halloween, Thanksgiving and the other ${Object.keys(both[1]).length - 1} themes are byte-identical to 4.14.1`, changed.join(','));
-    const subCh = Object.keys(both[3]).filter(k => k !== 'christmas' && both[2][k] !== both[3][k]);
-    ok(!subCh.length, 'and so are their background layers', subCh.join(','));
+    const subCh = Object.keys(both[3]).filter(k => k !== 'christmas' && k !== 'thanksgiving' && both[2][k] !== both[3][k]);
+    ok(!subCh.length && both[2].thanksgiving === 'leafbg', "and so are their background layers (but Thanksgiving's, Rob's B1 in 4.14.4)", subCh.join(','));
     const gs = f => execFileSync('git', ['show', `${BASE}:dcc-seasons/assets/js/${f}`], { cwd: ROOT, encoding: 'utf8' });
     const prevEng = ['engine.js', 'art-crane.js', 'art-thanksgiving.js', 'art-anniversary.js'].map(gs).join('\n');
     const body = (t, name) => { const i = t.indexOf(`\t\t\t${name}: { actors`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t\t\t} },', i)); };
-    for (const sc of ['witchmoon', 'cranemoon', 'giftdrop']) {
+    for (const sc of ['witchmoon']) {
       ok(body(src, sc) && body(src, sc) === body(prevEng, sc), `the ${sc} scene is unchanged from 4.14.1`, sc);
     }
+    /* 4.14.4 (Rob's A1, C1): the cranes left Thanksgiving; the gift drop flies the team (test-holidays.js) */
+    ok(!body(src, 'cranemoon') && /sledRig\(st, st\.x, st\.y, cut\)/.test(body(src, 'giftdrop')), 'the crane scene is gone and the gift drop flies the drawn team (4.14.4)', 'giftdrop');
     const fnBody = (t, name) => { const i = t.indexOf(`function ${name}(`); return i < 0 ? '' : t.slice(i, t.indexOf('\n\t}\n', i)); };
-    for (const f of ['witchBody', 'crPaint', 'moonPaint', 'hnFly']) {
+    for (const f of ['witchBody', 'moonPaint', 'hnFly']) {
       ok(fnBody(src, f) && fnBody(src, f) === fnBody(prevEng, f), `${f} is unchanged from 4.14.1`, f);
     }
   }

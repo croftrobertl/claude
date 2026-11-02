@@ -197,7 +197,7 @@ ok(count($map) === count($themes), 'the map covers exactly the themes that exist
 /* Christmas's bokeh came off in 4.14.0 (Rob's B), as Thanksgiving's ovals
  * did in 4.13.0: both resolve to none. */
 $exceptions = ['valentines' => 'hearts', 'new_years' => 'confetti', 'halloween' => 'embers',
-               'july4' => 'sparks', 'christmas' => '', 'thanksgiving' => ''];
+               'july4' => 'sparks', 'christmas' => '', 'thanksgiving' => 'leafbg'];
 $wrong = [];
 foreach ($exceptions as $theme => $want) {
     if (($map[$theme] ?? null) !== $want) { $wrong[] = "$theme=" . ($map[$theme] ?? 'none'); }

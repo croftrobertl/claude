@@ -516,14 +516,13 @@
 		ballgold: function () { return xBall('#FFF0B0', '#E0B32A', '#8C6410'); },
 		ballblue: function () { return xBall('#9ED0FF', '#2B7BD6', '#0F3F7A'); },
 		/* 4.14.4: one drawing of a wrapped present, its paper and ribbon as
-		 * arguments (xGift). 'gift' is the falling piece as before; the
-		 * sleigh's drop carries the solid red, green and blue papers. */
-		gift: function () { return xGift(['#2A77C9', '#1864AB', '#114A80', '#3C8DE0', '#1F6BB8', '#0F3F6C'], GOLD, ''); },
+		 * arguments (xGift). The falling 'gift' is Rob's D2, gold paper with
+		 * pale dots and a red ribbon; the sleigh drops the plain red, blue and
+		 * green papers with gold ribbon (his C1), so the two never match. */
+		gift: function () { return xGift(['#E2B23E', '#CF9C2A', '#A47618', '#EBC255', '#D3A232', '#7A5810'], ['#D23A3A', '#B72727', '#7E1A1A', '#F08A8A'], '<pattern id="pp" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".75" fill="#F6F0DC"/><circle cx="3.7" cy="3.7" r=".75" fill="#F6F0DC"/></pattern>'); },
 		giftred: function () { return xGift(['#D23A3A', '#B72727', '#8A1C1C', '#E04848', '#BE2C2C', '#6E1414'], GOLD, ''); },
+		giftblue: function () { return xGift(['#2A77C9', '#1864AB', '#114A80', '#3C8DE0', '#1F6BB8', '#0F3F6C'], GOLD, ''); },
 		giftgreen: function () { return xGift(['#2F8A4A', '#237439', '#175528', '#3A9C57', '#2A7F44', '#123F20'], GOLD, ''); },
-		giftf1: function () { return xGift(['#F1E6CF', '#E8DAB9', '#CDB98F', '#F4EAD6', '#E2D2AE', '#8C7A56'], ['#3A9C57', '#2F8A4A', '#1E6634', '#8FD0A0'], '<pattern id="pp" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><rect width="1.5" height="4" fill="#C23030"/></pattern>'); },
-		giftf2: function () { return xGift(['#E2B23E', '#CF9C2A', '#A47618', '#EBC255', '#D3A232', '#7A5810'], ['#D23A3A', '#B72727', '#7E1A1A', '#F08A8A'], '<pattern id="pp" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".75" fill="#F6F0DC"/><circle cx="3.7" cy="3.7" r=".75" fill="#F6F0DC"/></pattern>'); },
-		giftf3: function () { return xGift(['#2F7A46', '#25683A', '#174F28', '#36864F', '#2A7040', '#123F20'], GOLD, '<pattern id="pp" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="2" fill="#B72727" opacity=".85"/><rect width="2" height="6" fill="#B72727" opacity=".6"/><rect y="4" width="6" height=".5" fill="#E8D9A8" opacity=".8"/><rect x="4" width=".5" height="6" fill="#E8D9A8" opacity=".7"/></pattern>'); },
 		pine: '32 42|<defs><linearGradient id="t" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3FA85B"/><stop offset=".55" stop-color="#2B8A3E"/><stop offset="1" stop-color="#1D6B30"/></linearGradient></defs><rect x="13.5" y="35" width="5" height="6" rx="1" fill="#6F4E37"/><path d="M16 22 L30 36 Q27 37 24.5 35.6 Q22 37.4 19.5 36 Q16 37.8 12.5 36 Q10 37.4 7.5 35.6 Q5 37 2 36 Z" fill="url(#t)"/><path d="M16 14 L27 26 Q24.5 27 22.5 25.8 Q19.5 27.4 16 26 Q12.5 27.4 9.5 25.8 Q7.5 27 5 26 Z" fill="url(#t)"/><path d="M16 14 L27 26 Q24.5 27 22.5 25.8 Q19.5 27.4 16 26 Q12.5 27.4 9.5 25.8 Q7.5 27 5 26 Z" fill="#0E3A2A" opacity=".08"/><path d="M16 7 L24 17 Q22 18 20 17 Q18 18.4 16 17.4 Q14 18.4 12 17 Q10 18 8 17 Z" fill="url(#t)"/><path d="M16 2.5 L21 10 Q19.6 10.8 18 10 Q16 11 14 10 Q12.4 10.8 11 10 Z" fill="url(#t)"/><g fill="#0E3A2A" opacity=".16"><path d="M16 14 L22 20.6 L10 20.6 Z"/><path d="M16 22 L24 30.6 L8 30.6 Z"/></g><path d="M16 0.6 L17.2 3.4 L20.2 3.6 L17.9 5.4 L18.6 8.3 L16 6.8 L13.4 8.3 L14.1 5.4 L11.8 3.6 L14.8 3.4 Z" fill="#FFD43B"/><path d="M16 1.6 L16.8 3.6 L15.2 3.6 Z" fill="#FFF2A8"/>',
 		/* the candy cane (Rob's B): red, white and green painted onto the
 		 * stroke, so the stripes wrap the hook and end cleanly at the tip */

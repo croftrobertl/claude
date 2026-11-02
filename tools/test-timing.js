@@ -58,7 +58,7 @@ async function run(theme, later, hour) {
   const keys = Object.keys(config(['--theme=halloween']).themes).filter(k => !ONLY || k === ONLY);
   const scenesOf = require('fs').readFileSync(require('path').join(__dirname, '../dcc-seasons/assets/js/engine.js'), 'utf8');
   const vigsBlock = scenesOf.slice(scenesOf.indexOf('var VIGS = {'), scenesOf.indexOf('};', scenesOf.indexOf('var VIGS = {')));
-  const hasScene = k => new RegExp(`\\b${k}: \\[`).test(vigsBlock);
+  const hasScene = k => new RegExp(`\\b${k}: \\[['a-z]`).test(vigsBlock);   /* an empty list (Thanksgiving since 4.14.4) is no scene */
   const runs = [];
   for (const k of keys) {
     runs.push([k, false, 12]);

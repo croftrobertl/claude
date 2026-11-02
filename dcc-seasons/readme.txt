@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.14.3
+Stable tag: 4.14.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,20 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.14.4 =
+Rob's Thanksgiving and Christmas corrections (his picks A1, B1, C1, D2).
+* Thanksgiving: the maple leaves' stems are short, the Indian corn is
+  multicolored, and the cornucopia's horn is full and curls to a point.
+  The tom and poults keep walking the foot of the screen; the cranes and
+  their moon leave Thanksgiving (they stay the Anniversary's), and their
+  scene is gone from the engine. Behind the pieces, the theme's own
+  drawn leaves fall, small and clear.
+* Christmas: the gift drop flies the approved Santa and four reindeer and
+  drops three presents (red, blue and green paper, gold ribbon) on
+  parachutes, landing clear of the wreath with no ripple. The falling
+  gift is gold paper with dots and a red ribbon. Each new ornament takes
+  the color least on screen, so red, gold and blue all appear.
 
 = 4.14.3 =
 The Preview tab, for reviewing a whole theme. Nothing a guest sees changes:

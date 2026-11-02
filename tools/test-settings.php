@@ -135,7 +135,7 @@ foreach (['sunglow', 'goldlight', 'mardiconfetti', 'orangeblossom'] as $e) {
     ok(isset($fx[$e]), "the named choice '$e' exists");
 }
 // Christmas has none since 4.14.0 (Rob's B: the bokeh came off, as Thanksgiving's ovals did).
-$want = ['snowbird' => 'sunglow', 'mlk' => 'goldlight', 'mardi_gras' => 'mardiconfetti', 'presidents' => 'orangeblossom', 'christmas' => '', 'thanksgiving' => ''];
+$want = ['snowbird' => 'sunglow', 'mlk' => 'goldlight', 'mardi_gras' => 'mardiconfetti', 'presidents' => 'orangeblossom', 'christmas' => '', 'thanksgiving' => 'leafbg'];
 foreach ($want as $t => $e) {
     ok($map[$t] === $e, "$t defaults to $e (Rob's pick)", "got {$map[$t]}");
 }

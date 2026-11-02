@@ -161,7 +161,18 @@
 		var cx = c.getContext('2d');
 		if (!cx) { return c; }
 		try {
-			kit = E.subtleKit({ cx: cx, vw: W, vh: H });
+			/* a drawn-sprite effect (4.14.4, Thanksgiving's leaves) reads the
+			 * sprites through spr; the preview repaints once they decode */
+			var imgs = {}, again = 0;
+			kit = E.subtleKit({ cx: cx, vw: W, vh: H, spr: function (k) {
+				var o = imgs[k], raw = E.svgs[k];
+				if (o || !raw) { return o || null; }
+				var doc = E.svgDoc(raw), m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(doc);
+				o = imgs[k] = { img: new Image(), ready: false, ratio: m ? m[2] / m[1] : 1 };
+				o.img.onload = function () { o.ready = true; if (!again) { again = setTimeout(function () { again = 0; paint(); }, 30); } };
+				o.img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(doc);
+				return o;
+			} });
 			eff = kit[key];
 		} catch (e) { eff = null; }
 		if (!eff) { return c; }
@@ -179,12 +190,16 @@
 		/* Brighter than on the site, where it sits under the page at the
 		 * owner's intensity: a thumbnail has to show the shapes. */
 		var a = Math.min(1, eff.a * 2.4);
-		for (i = 0; i < ps.length; i++) {
-			cx.save();
-			cx.globalAlpha = Math.min(1, a * ps[i].al);
-			eff.draw(ps[i]);
-			cx.restore();
+		function paint() {
+			cx.clearRect(0, 0, W, H);
+			for (i = 0; i < ps.length; i++) {
+				cx.save();
+				cx.globalAlpha = Math.min(1, a * ps[i].al);
+				eff.draw(ps[i]);
+				cx.restore();
+			}
 		}
+		paint();
 		return c;
 	}
 

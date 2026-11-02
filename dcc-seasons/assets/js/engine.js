@@ -131,9 +131,8 @@
 		duckhen: '46 30|<path d="M9 19Q11 13 20 13L33 13Q40 13 43 8Q45 15 41 20Q35 27 21 27Q11 27 9 19Z" fill="#8C6A44"/><path d="M18 17l3 2 3-2M25 18l3 2 3-2M20 22l3 2 3-2M28 22l3 2 3-2M14 21l3 2 3-2" stroke="#5E4329" stroke-width="1" fill="none"/><path d="M30 15.6L38 15L37 17.4L30 18Z" fill="#4C6EF5"/><path d="M30 15.6L38 15M30 18L37 17.4" stroke="#F8F9FA" stroke-width=".6"/><path d="M9 13Q8 17 11 19L16 15Q13 13 12 10Z" fill="#9C7B52"/><circle cx="10.4" cy="9.4" r="5.4" fill="#B08C5F"/><path d="M7.4 5.2Q10.6 3.6 13.6 5Q12 5.8 10.2 6Q8.6 6 7.4 5.2Z" fill="#6B4F33"/><path d="M5.8 9.2Q9 8.8 14.6 10" stroke="#6B4F33" stroke-width=".55" fill="none"/><circle cx="8.6" cy="8.9" r=".95" fill="%g"/><path d="M5.6 10L.6 11.2Q.4 13 2 13.2L5.8 12.2Z" fill="#B8A23C"/><circle cx="1.2" cy="12" r=".6" fill="%g"/>',
 		duckling: '20 16|<ellipse cx="11" cy="10.4" rx="7.4" ry="5" fill="#6B4F33"/><path d="M6 12Q11 15.4 16 12Q11 13 6 12Z" fill="#E9C46A"/><path d="M16 8.6L19.4 7.4L18.4 10Z" fill="#6B4F33"/><circle cx="6" cy="6" r="3.8" fill="#E9C46A"/><path d="M2.6 4.6Q5 1.4 8.6 3Q9.6 4.6 9 6Q6 4.4 2.6 4.6Z" fill="#6B4F33"/><path d="M2.8 6.4L9.4 6" stroke="#6B4F33" stroke-width=".7"/><circle cx="4.8" cy="6.2" r=".8" fill="%g"/><path d="M2.6 6.8L.2 7.6L2.6 8.4Z" fill="#495057"/>',
 		witchsil: '92 66|<g fill="#1B1B24" stroke="#9C36B5" stroke-width=".7" paint-order="stroke"><path d="M10 48L74 44" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M72 44L90 36L88 44L91 50L72 47Z"/><path d="M38 30Q52 31 58 45L46 46Z"/><path d="M32 30H44L48 47H30Z"/><path d="M33 47L27 56H20V53H26L29 47Z"/><path d="M36 33L27 46" stroke="#1B1B24" stroke-width="3" stroke-linecap="round"/><path d="M39 21Q50 22 52 32Q46 27 40 28Z"/><circle cx="36" cy="24" r="6"/><path d="M30.5 24L27 26L31 27Z"/><ellipse cx="38" cy="18.5" rx="11" ry="2.4" transform="rotate(-8 38 18.5)"/><path d="M31 18L41 16L50 2L44 3Z"/><ellipse cx="68" cy="40" rx="5.5" ry="3.6"/><circle cx="63.5" cy="36.4" r="3.2"/><path d="M61.4 34.6L61.8 30.8L64 33.4ZM65 33.4L66.6 30.4L67 34.6Z"/><path d="M73 40Q78 34 75.5 29" stroke="#1B1B24" stroke-width="1.6" fill="none"/></g><path d="M32 16.6L41 15L41.8 13.6L33 15Z" fill="#9C36B5"/><circle cx="62.6" cy="36" r=".8" fill="%k"/><circle cx="35" cy="23.5" r=".9" fill="%k"/>',
-		/* — christmas — (4.14.1: its pieces are in art-christmas.js; the
-		 * sleigh stays here for the gift drop) */
-		sleigh: '122 46|<path d="M44 24 L62 28" stroke="%i" stroke-width="1.6" fill="none"/><g fill="%p"><path d="M16 18 Q28 13 40 18 Q45 20 45 26 Q45 32 39 32 L20 32 Q14 32 14 26 Q14 20 16 18 Z"/><path d="M16 22 Q9 21 6 15 Q4 10 9 9 Q14 8 16 13 Z"/><path d="M44 20 L50 12 L48 22 Z"/></g><path d="M11 9 L9 2 M9 4 L4 2 M9 6 L3 6 M14 9 L16 1 M16 3 L21 1" stroke="%i" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="6" cy="13" r="1.8" fill="%e"/><circle cx="13" cy="12" r="1" fill="%g"/><path d="M20 32 L17 44 M26 32 L29 44 M36 32 L33 44 M41 32 L45 43" stroke="%i" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M100 8 Q112 12 110 26 L104 26 Q106 16 98 13 Z" fill="%n"/><path d="M62 20 L104 20 Q110 20 110 26 L110 34 L64 34 Q59 30 60 24 Z" fill="%n"/><rect x="72" y="11" width="13" height="10" rx="1" fill="%c"/><path d="M78.5 11 L78.5 21 M72 16 L85 16" stroke="%k" stroke-width="1.4"/><rect x="88" y="14" width="9" height="7" rx="1" fill="%a"/><path d="M58 38 L112 38" stroke="%f" stroke-width="2.4"/><path d="M58 38 Q52 38 53 33 Q55 30 59 32" stroke="%f" stroke-width="2.4" fill="none"/><path d="M64 34 L64 38 M94 34 L94 38" stroke="%f" stroke-width="2"/>',
+		/* — christmas — (its pieces are in art-christmas.js; since 4.14.4 the
+		 * gift drop flies the drawn team, so the old sleigh sprite is gone) */
 		/* — patriotic & winter visitors — */
 		flagcloth: '40 26|<line x1="2" y1="0" x2="2" y2="26" stroke="%i" stroke-width="2"/><path d="M4 2q9 3 17-1 8-4 17 1v16q-9-4-17 0-8 4-17-1Z" fill="%d"/><path d="M4 2q9 3 17-1 8-4 17 1v3q-9-4-17 0-8 4-17-1Zm0 8q9 4 17 0 8-4 17 0v4q-9-4-17 0-8 4-17-1Z" fill="#B22234"/><path d="M4 2q7 2 13 0v9q-6 3-13-1Z" fill="#3C3B6E"/><g fill="%d"><circle cx="8" cy="5" r="1"/><circle cx="13" cy="5" r="1"/><circle cx="10" cy="8" r="1"/></g>',
 		ribbon: '26 40|<path d="M8 2C4 10 6 20 16 34l6-4C14 20 12 10 15 2Z" fill="#B22234"/><path d="M18 2c4 8 2 18-8 32l-6-4C12 20 14 10 11 2Z" fill="#3C3B6E"/><path d="M11 2h4l-2 8Z" fill="%d"/>',
@@ -332,6 +331,27 @@
 	 * their own var g for gradients). --- */
 	function subtleKit(kitG) {
 		var SUBTLE = {
+			/* 4.14.4 (Rob's B1): Thanksgiving's own four drawn leaves, small and
+			 * clear, far behind the pieces, drifting down and turning. kitG.spr
+			 * gives the sprite (the engine's, or the Theme guide's own). */
+			leafbg: {
+				n: 12, a: 0.62, ks: ['leafm', 'leafm2', 'leafs', 'leafo'],
+				seed: function (p, first) {
+					p.x = rnd(0, kitG.vw); p.y = first ? rnd(0, kitG.vh) : rnd(-60, -20);
+					p.r = rnd(12, 16); p.vy = rnd(9, 16); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.4, 0.9); p.rot = rnd(0, TAU); p.rv = rnd(-0.5, 0.5); p.k = pick(this.ks);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 14 * dt; p.rot += p.rv * dt * (0.6 + 0.4 * sin(p.ph));
+				},
+				draw: function (p) {
+					var im = kitG.spr && kitG.spr(p.k), g = kitG.cx;
+					if (!im || !im.ready) { return; }
+					g.translate(p.x, p.y); g.rotate(p.rot); g.scale(1, 0.75 + 0.25 * cos(p.ph * 1.7));
+					g.drawImage(im.img, -p.r / 2, -p.r * im.ratio / 2, p.r, p.r * im.ratio);
+				}
+			},
 			/* Fall — leaves drifting down, tumbling as they go. */
 			leaves: {
 				n: 11, a: 0.28, cl: ['#C1440E', '#E07A2F', '#B8860B', '#8B5A2B', '#A2562B'],
@@ -573,7 +593,7 @@
 		mlk: ['doveflight'],
 		fall_fishing: ['fullcast', 'dragonlands'],
 		halloween: ['witchmoon'],
-		thanksgiving: ['cranemoon'],
+		thanksgiving: [],   /* 4.14.4 (Rob's A1): the tom walks the foot of the screen; no scene in the header */
 		/* 4.14.0: Santa's team across the moon, by day as well as by night */
 		christmas: ['sleighmoon', 'giftdrop'],
 		new_years: ['corkpop'],
@@ -647,7 +667,7 @@
 	var HERO_GLYPHS = { rainbow: '☘' };
 	var HERO_ART = { heron: 'heron', eagle: 'eagleup', osprey: 'ospreyup', witch: 'witchsil', bass: 'bassleap', manatee: 'manatee', rainbow: 'rainbow' };
 	var SCENE_ART = {
-		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch', cranemoon: 'crane',
+		flotilla: 'pontoon', fullcast: 'bass', dragonlands: 'dragonfly', dragonlotus: 'dragonfly', witchmoon: 'witch',
 		gatorglide: 'gator', floatdrift: 'floatie', mulletskip: 'mullet', hibfloat: 'hibiscus', anhinga: 'anhingadry',
 		ospreycatch: 'ospreyup', cranes: 'sandhill', limpkinsnail: 'limpkin', giftdrop: 'gift', sleighmoon: 'santa',
 		corkpop: 'bottle', arrival: 'flamup', flagfly: 'flagcloth', doveflight: 'dove', stilts: 'stilts', kayaker: 'kayak',
@@ -1146,99 +1166,6 @@
 	 * the engine simulates live (gravity, air drag), so they trail behind
 	 * her through the dive and the swoop. WITCH_CAPE / WITCH_HAIR are their anchors. */
 	var WITCH_CAPE = [[-3, -22], [2.5, -17.5]], WITCH_CAPE_K = 4, WITCH_HAIR = [[-1.5, -29], [0.2, -27], [-0.8, -25]];
-		/* ---- 4.13.0: the Thanksgiving cranes and their full moon ----
-	 *
-	 * Built to witchmoon's standard and sharing its machinery: one
-	 * phone-based size factor, every frame pre-drawn once at idle, the
-	 * header's letters cut out of what it draws, and the birds going
-	 * DARK as they cross the disc, which is the whole picture.
-	 *
-	 * A sandhill crane is drawn from the field marks that identify one:
-	 * the neck straight OUT rather than tucked (that is what tells it
-	 * from a heron at a glance), legs trailing well past the tail, long
-	 * wings with a wrist and splayed primaries, a red crown. Rob picked
-	 * the darker wing tips and a V of five.
-	 */
-	var CR_FR = 12;                 /* beat frames, as the witch has 12 */
-	var CR_BOX = [-0.70, -0.52, 0.70, 0.36];   /* the bird's extent, in L */
-	function crPaint(g, L, w, dark) {
-		var up = sin(w * TAU);
-		var body = dark ? '#241A12' : '#9BA3A8';
-		var dk   = dark ? '#1B130D' : '#6E767C';
-		g.lineJoin = 'round'; g.lineCap = 'round';
-		/* legs, trailing and slightly below — they must stay clear of the
-		 * wing at the level part of the beat, which is why they sit lower
-		 * than the first drawing had them (Rob) */
-		g.strokeStyle = dark ? '#1B130D' : '#4A4F53'; g.lineWidth = L * 0.022;
-		for (var s0 = 0; s0 < 2; s0++) {
-			g.beginPath();
-			g.moveTo(-L * 0.16, L * 0.055 + s0 * L * 0.010);
-			g.quadraticCurveTo(-L * 0.38, L * 0.082 + s0 * L * 0.012, -L * 0.58, L * 0.100 + s0 * L * 0.014);
-			g.stroke();
-		}
-		g.lineWidth = L * 0.016;
-		g.beginPath();
-		g.moveTo(-L * 0.58, L * 0.100); g.lineTo(-L * 0.645, L * 0.112);
-		g.moveTo(-L * 0.58, L * 0.114); g.lineTo(-L * 0.645, L * 0.126);
-		g.stroke();
-		function wing(side, back) {
-			/* the wing sweeps BACK from the shoulder: wrist forward of the
-			 * tip, primaries trailing. Drawn the other way it reads as a
-			 * hand, or as a bird flying backwards. */
-			var lift = up * L * 0.34, sp = L * 0.62;
-			var wrX = side * sp * 0.50 - L * 0.05, wrY = -lift * 0.74 - L * 0.03;
-			var tpX = side * sp * 0.96 - L * 0.20, tpY = -lift - up * L * 0.08;
-			g.beginPath();
-			g.moveTo(L * 0.03, -L * 0.045);
-			g.quadraticCurveTo(side * sp * 0.26 + L * 0.02, wrY - L * 0.055, wrX, wrY);
-			g.quadraticCurveTo(side * sp * 0.78 - L * 0.06, tpY - L * 0.045, tpX, tpY);
-			g.quadraticCurveTo(side * sp * 0.56 - L * 0.16, tpY + L * 0.125, wrX - L * 0.10, wrY + L * 0.120);
-			g.quadraticCurveTo(side * sp * 0.18 - L * 0.12, wrY + L * 0.150, -L * 0.07, L * 0.050);
-			g.closePath();
-			g.fillStyle = back ? dk : body;
-			g.fill();
-			/* Rob's pick: the primaries picked out, darker */
-			g.strokeStyle = dark ? dk : '#5A6268'; g.lineWidth = L * 0.020;
-			for (var f = 0; f < 4; f++) {
-				var t0 = 0.86 - f * 0.05;
-				g.beginPath();
-				g.moveTo(tpX * t0, tpY + L * (0.015 + f * 0.020));
-				g.quadraticCurveTo(tpX * (1.02 - f * 0.01) - side * L * 0.04, tpY + L * (0.05 + f * 0.035),
-					tpX * (1.00 - f * 0.05) - side * L * 0.10, tpY + L * (0.10 + f * 0.055));
-				g.stroke();
-			}
-		}
-		wing(1, true);
-		g.fillStyle = body;
-		g.beginPath();
-		g.moveTo(L * 0.20, -L * 0.012);
-		g.quadraticCurveTo(L * 0.10, -L * 0.090, -L * 0.02, -L * 0.082);
-		g.quadraticCurveTo(-L * 0.16, -L * 0.070, -L * 0.26, -L * 0.020);
-		g.quadraticCurveTo(-L * 0.16, L * 0.070, -L * 0.02, L * 0.080);
-		g.quadraticCurveTo(L * 0.11, L * 0.078, L * 0.20, -L * 0.012);
-		g.closePath(); g.fill();
-		g.fillStyle = dk;              /* the drooping tertials over the tail */
-		g.beginPath();
-		g.moveTo(-L * 0.17, -L * 0.048);
-		g.quadraticCurveTo(-L * 0.29, -L * 0.022, -L * 0.31, L * 0.030);
-		g.quadraticCurveTo(-L * 0.23, L * 0.028, -L * 0.15, L * 0.050);
-		g.closePath(); g.fill();
-		g.strokeStyle = body; g.lineWidth = L * 0.052;
-		g.beginPath();
-		g.moveTo(L * 0.15, -L * 0.025);
-		g.quadraticCurveTo(L * 0.30, -L * 0.050, L * 0.405, -L * 0.062);
-		g.stroke();
-		g.fillStyle = body;
-		g.beginPath(); g.ellipse(L * 0.435, -L * 0.066, L * 0.044, L * 0.036, -0.1, 0, TAU); g.fill();
-		g.strokeStyle = dark ? '#1B130D' : '#3F4448'; g.lineWidth = L * 0.019;
-		g.beginPath(); g.moveTo(L * 0.470, -L * 0.062); g.lineTo(L * 0.585, -L * 0.048); g.stroke();
-		if (!dark) {
-			g.fillStyle = '#C62828';
-			g.beginPath(); g.ellipse(L * 0.442, -L * 0.092, L * 0.030, L * 0.017, -0.15, 0, TAU); g.fill();
-		}
-		wing(-1, false);
-	}
-
 	var WITCH_BOX = [-56, -56, 58, 17];
 	var WC = { ink: '#16131D', dress: '#1E1928', dress2: '#2A2236', purple: '#9C36B5', purple2: '#6E2A86', skin: '#E2CDB6', skin2: '#C4AA90',
 		hat: '#17141E', band: '#9C36B5', gold: '#E2B23E', wood: '#6B4A2E', wood2: '#4A321F', twine: '#B89A62', straw: ['#C9A55A', '#B38F48', '#D8B96E', '#A07E3E'],
@@ -1479,15 +1406,6 @@
 			g.strokeStyle = '#3E2A1C'; g.lineWidth = mx2(1, 1.4 * s); g.lineCap = 'round';
 			X.reins(g, [[21 * s, -16.5 * s, 0], [L * 1.25 + 44 * k, -L * 0.04 - 30 * k, 8 * k]], -1, 0);
 			g.scale(s, s); X.sack(g); X.sleigh(g); X.santa(g, 0);
-			g.restore();
-		},
-		/* 4.13.0: the Theme guide paints the REAL crane, the same painter the
-		 * scene uses, so the picture can never drift from what guests see. */
-		crane: function (g, w, h) {
-			var b = CR_BOX, L = mn(w / (b[2] - b[0] + 0.3), h / (b[3] - b[1] + 0.3));
-			g.save();
-			g.translate(w / 2 - (b[0] + b[2]) / 2 * L, h / 2 - (b[1] + b[3]) / 2 * L);
-			crPaint(g, L, 0.22, false);
 			g.restore();
 		},
 		heron: function (g, w, h) {
@@ -2591,6 +2509,16 @@
 		 * and palms stand where they grew, one page could draw five
 		 * ornaments and no gifts. Picking against the quota keeps every
 		 * page within one of Rob's counts while the choice stays random. */
+		/* 4.14.4 (Rob: every ornament color must appear): a piece marked 'ev'
+		 * takes the variant least on screen, ties at random, so three hanging
+		 * balls are red, gold and blue. Only marked pieces: every other
+		 * theme's variants keep their random pick. */
+		function evenKey(ks) {
+			var n = ks.map(function () { return 0; }), i, j, lo = INF, best = [];
+			for (i = 0; i < parts.length; i++) { j = ks.indexOf(parts[i].sKey); if (j >= 0 && !parts[i].dormant) { n[j]++; } }
+			for (i = 0; i < ks.length; i++) { if (n[i] < lo) { lo = n[i]; best = [ks[i]]; } else if (n[i] === lo) { best.push(ks[i]); } }
+			return pick(best);
+		}
 		function pickSpec(self) {
 			mixShares();
 			/* Two tiers: first the sprites below their exact share, then those
@@ -2708,7 +2636,7 @@
 		/* The subtle layer's effects live in subtleKit() (outer scope) so the
 		 * admin Theme guide draws its previews with the SAME code. The
 		 * getters keep the canvas and its size live across resizes. */
-		var SUBTLE = subtleKit({ get cx() { return cx; }, get vw() { return vw; }, get vh() { return vh; } });
+		var SUBTLE = subtleKit({ get cx() { return cx; }, get vw() { return vw; }, get vh() { return vh; }, spr: function (k) { return sprite(k); } });
 
 		/* Mirrors Themes::subtle_defaults() for configs cached before a key
 		 * changed; keep the two in step. '' means NO background layer —
@@ -2716,7 +2644,7 @@
 		 * does too, because it drops real drawn leaves in front instead. */
 		var SUBTLE_FALLBACK = {
 			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
-			halloween: 'embers', thanksgiving: '', anniversary: '', christmas: '',
+			halloween: 'embers', thanksgiving: 'leafbg', anniversary: '', christmas: '',
 			new_years: 'confetti', snowbird: 'sunglow', mlk: 'goldlight',
 			mardi_gras: 'mardiconfetti', valentines: 'hearts', presidents: 'orangeblossom',
 			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
@@ -3239,7 +3167,7 @@
 			p.pop = 0;
 			p.ox = 0; p.oy = 0;
 			p.dormant = false;
-			p.sKey = Array.isArray(sp.s) ? (CFG.variants ? sp.s[(sp.rr = (sp.rr || 0) + 1) % sp.s.length] : pick(sp.s)) : sp.s;   /* the Preview tab shows every variant in turn */
+			p.sKey = Array.isArray(sp.s) ? (CFG.variants ? sp.s[(sp.rr = (sp.rr || 0) + 1) % sp.s.length] : (sp.def.ev ? evenKey(sp.s) : pick(sp.s))) : sp.s;   /* the Preview tab shows every variant in turn */
 			p.shim = (rand() * 2) | 0;
 			p.trail = null;
 			/* Depth layer: FAR = 60% scale, 50% speed, 60% opacity. Only
@@ -4115,7 +4043,7 @@
 		 * While a sky actor runs, inSky() points the drawing state (cv, cx,
 		 * vw, vh, waterY, ground, lastDpr) at the sky canvas, so every scene
 		 * and flyer works in the picture's own coordinates unchanged. --- */
-		var SKY_VIG = { witchmoon: 1, cranemoon: 1, sleighmoon: 1, doveflight: 1, flagfly: 1, corkpop: 1, annivdance: 1 };
+		var SKY_VIG = { witchmoon: 1, sleighmoon: 1, giftdrop: 1, doveflight: 1, flagfly: 1, corkpop: 1, annivdance: 1 };
 		/* the flyers that cross the sky; the bass and the manatee are on the
 		 * water, the rainbow in a corner */
 		var SKY_HERO = { heron: 1, eagle: 1, witch: 1, osprey: 1 };   /* the sleigh flyer is gone since 4.14.0 */
@@ -4986,52 +4914,6 @@
 		 * a resize changes its radius. */
 		var moonC = null, wcFrames = [], wcPts = null, wcScr = null, wcStats = { frames: 0, ms: 0, bytes: 0 };
 		function moonR() { return MT.round(41 * witchK()); }
-		/* The crane's caches and sizes live in start(), because they read
-		 * the viewport; the painter itself is at module scope beside the
-		 * witch's, so the Theme guide's ART_DRAW can call it. */
-		var crCache = {}, crStats = { ms: 0, bytes: 0 };
-		function craneK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.45, (vh - 24) / 150)); }
-		/* 4.13.1 (Rob's pick A, "high and small"): the size comes from the
-		 * room the header leaves (crPlanFor), never more than the 4.13.0 size */
-		function craneL() { return crPlan && crPlan.L ? crPlan.L : MT.round(34 * craneK()); }
-		/* Every beat, lit and dark, pre-drawn once. Two sets rather than the
-		 * witch's live silhouette pass: a crane is small, so caching both is
-		 * cheaper than putting a scratch canvas in the frame loop, and it is
-		 * the same answer to the same question. */
-		function crGet(i, dark) {
-			var L = craneL(), key = (dark ? 'd' : 'l') + i + '@' + L;
-			if (crCache[key]) { return crCache[key]; }
-			var t0 = nowMs(), dp = mn(W.devicePixelRatio || 1, 2), b = CR_BOX;
-			var c = D.createElement('canvas');
-			c.width = MT.ceil((b[2] - b[0]) * L * dp); c.height = MT.ceil((b[3] - b[1]) * L * dp);
-			var g = c.getContext('2d');
-			if (g) { g.setTransform(dp, 0, 0, dp, -b[0] * L * dp, -b[1] * L * dp); crPaint(g, L, i / CR_FR, dark); }
-			crStats.ms += nowMs() - t0; crStats.bytes += c.width * c.height * 4;
-			return (crCache[key] = { c: c, ox: b[0] * L, oy: b[1] * L, w: (b[2] - b[0]) * L, h: (b[3] - b[1]) * L });
-		}
-		function crBuild() { for (var i = 0; i < CR_FR; i++) { crGet(i, false); crGet(i, true); } }
-		/* November's full moon (4.13.1): the engine's OWN painter, ungraded —
-		 * the same real face as Halloween's moon. High in the sky, above the
-		 * title, a full moon is pale cream; the burnt orange of 4.13.0 is the
-		 * colour of a moon near the horizon, and it was miscalled a harvest
-		 * moon (that is September's). Rob's rule: the moon is a real full
-		 * moon. November's falls on 24 Nov 2026, Thanksgiving week. */
-		var hmC = null;
-		function fullMoonR() { return crPlan && crPlan.R ? crPlan.R : MT.round(58 * craneK()); }
-		function fullMoonGet() {
-			var r = fullMoonR();
-			if (hmC && hmC.r === r) { return hmC; }
-			var t0 = nowMs(), dc = mn(W.devicePixelRatio || 1, 2), half = MT.ceil(r * 1.3);
-			var c = D.createElement('canvas');
-			c.width = c.height = MT.ceil(2 * half * dc);
-			var g = c.getContext('2d');
-			if (g) {
-				g.scale(dc, dc); g.translate(half, half);
-				moonPaint(g, r);
-			}
-			crStats.ms += nowMs() - t0; crStats.bytes += c.width * c.height * 4;
-			return (hmC = { c: c, r: r, half: half });
-		}
 		/* Where the scene may draw (4.13.1): the band of sky between the
 		 * menu bar and the page title, kept KC px clear of the keep-clear
 		 * set — the title's and tagline's LETTERS (a Range per text node)
@@ -5040,7 +4922,7 @@
 		 * dcc_seasons_keep_clear). Measured in IDLE time and every 10 s while
 		 * the page is open, never in a frame. The V and the moon (with its
 		 * glow) are sized to fit the band; with no room the scene declines. */
-		var KC = 8, crPlan = null;
+		var KC = 8;
 		var KC_TEXT = CFG.keepText == null ? '#header-page-title, [data-dcc-keep-clear-text]' : CFG.keepText;
 		var KC_BOX = CFG.keepBox == null ? '#site-header-main, .site-header-bottom-fixed, .dcc-sun-dial, .menu-burger, [data-dcc-keep-clear]' : CFG.keepBox;
 		function kcRects() {
@@ -5064,26 +4946,6 @@
 			}
 			for (i = 0; i < be.length; i++) { if (seen(be[i])) { add(box, be[i].getBoundingClientRect()); } }
 			return { txt: txt, box: box };
-		}
-		function crPlanFor() {
-			var k = kcRects(), top = INF, i;
-			for (i = 0; i < k.txt.length; i++) { top = mn(top, k.txt[i][1]); }
-			if (top >= INF) { top = vh * 0.45; }
-			var bt = 0;
-			for (i = 0; i < k.box.length; i++) { if (k.box[i][3] <= top + 2) { bt = mx2(bt, k.box[i][3]); } }
-			bt += KC;
-			var bb = mn(top, vh) - KC, h = bb - bt, full = MT.round(34 * craneK());
-			/* the V spans 2.18 L top to bottom (two ranks of 0.3 L, the
-			 * wings, the bob); the moon and its glow 2.5 R */
-			var L = mn(full, MT.floor(h / 2.2)), R = mn(MT.round(58 * craneK()), MT.floor(h / 2.5));
-			var pl = { vw: vw, vh: vh, ox: cvOX, oy: cvOY, at: nowMs(), bt: bt, bb: bb, k: k };
-			if (L < 12 || R < 10) { pl.none = 1; return pl; }
-			pl.L = L; pl.R = R; pl.full = full;
-			pl.my = MT.round((bt + bb) / 2);
-			pl.vy = bt + 1.17 * L + (h - 2.18 * L) / 2;
-			pl.mxR = MT.round(clamp(vw * 0.70, R * 1.25 + KC, vw - R * 1.25 - KC));
-			pl.mxL = MT.round(clamp(vw * 0.30, R * 1.25 + KC, vw - R * 1.25 - KC));
-			return pl;
 		}
 
 		/* 4.13.5: where the Anniversary's pair dances (Rob's 10 A): under
@@ -5138,6 +5000,30 @@
 		 * reindeer half over the rim is dark inside it and lit outside. */
 		var SD_POSES = 24, SD_HANDS = 4, SD_BOX = [-53, -75, 64, 53], SL_BOX = [-57, -70, 57, 29];
 		var sdCache = {}, sdStats = { ms: 0, bytes: 0, sprites: 0, live: 0 }, sdIdle = false, smC = null, sledLast = null;
+		/* 4.14.4: the gift drop's plan (where the team flies and where the
+		 * three presents land) and its parachute, a red canopy with a pale
+		 * centre panel and four shrouds, drawn at the present's origin */
+		var GD_KINDS = ['giftred', 'giftblue', 'giftgreen'], gdPlan = null, gdLast = null;
+		function gdPlanFor() {
+			var L = sledL(), kc = kcRects(), dl = L * 0.5, kk = dl / 60, top = 0, j, x;
+			/* the team's band above its line, as sledMoon measures it; the
+			 * team clears the menu bar, the dial and the menu button, and passes
+			 * BEHIND the title's letters (cut out in front) where it must */
+			var up = 0.40 * dl + 76 * kk + 0.12 * L;
+			for (j = 0; j < kc.box.length; j++) { if (kc.box[j][1] < vh * 0.4) { top = mx2(top, kc.box[j][3]); } }
+			var spots = [], tx = [], wl = wrBox ? wrBox[0] - 14 : INF, wr = wrBox ? wrBox[2] + 14 : -INF;
+			for (x = vw * 0.1; x <= vw * 0.9; x += 4) { if (x < wl || x > wr) { spots.push(x); } }
+			for (j = 0; j < 3; j++) { tx.push(spots[MT.round((j + 0.5) / 3 * (spots.length - 1))]); }
+			return { vw: vw, vh: vh, ox: cvOX, oy: cvOY, L: L, tx: tx, y: top + KC + up };
+		}
+		function gdChute(cw, o) {
+			cx.fillStyle = '#C92A2A';
+			cx.beginPath(); cx.moveTo(-cw, -24); cx.quadraticCurveTo(0, -24 - 15 * o, cw, -24); cx.quadraticCurveTo(cw * 0.5, -21, 0, -23); cx.quadraticCurveTo(-cw * 0.5, -21, -cw, -24); cx.fill();
+			cx.fillStyle = 'rgba(246,244,238,.85)';
+			cx.beginPath(); cx.moveTo(-cw * 0.33, -23.2); cx.quadraticCurveTo(0, -24 - 15.3 * o, cw * 0.33, -23.2); cx.quadraticCurveTo(0, -22.5, -cw * 0.33, -23.2); cx.fill();
+			cx.strokeStyle = 'rgba(120,90,40,.75)'; cx.lineWidth = 0.7;
+			cx.beginPath(); cx.moveTo(-cw, -24); cx.lineTo(-4, -8); cx.moveTo(cw, -24); cx.lineTo(4, -8); cx.moveTo(-cw * 0.33, -23); cx.lineTo(-2, -8); cx.moveTo(cw * 0.33, -23); cx.lineTo(2, -8); cx.stroke();
+		}
 		function sledK() { return mn(clamp(vw / 390, 0.82, 1.3), mx2(0.45, (vh - 24) / 300)); }
 		function sledL() { return MT.round(78 * sledK()); }   /* the sleigh's length */
 		function sledR() { return MT.round(54 * sledK()); }   /* the moon's radius */
@@ -6421,96 +6307,6 @@
 				st.moonA = a;
 				return st.t2 > gone + 0.8;
 			} },
-			/* 4.13.0 — Thanksgiving's signature scene: a V of five sandhill
-			 * cranes crosses the full moon (high and small, pale, since
-			 * 4.13.1 — Rob's pick A). Rob picked the moon, the
-			 * bird, the five. It is the scene ONLY: there is no crane flyer,
-			 * because a theme's signature character appears once. */
-			cranemoon: { actors: 2, run: function (st, dt) {
-				if (!st.on) {
-					st.on = 1; st.t2 = 0; st.dir = (DEBUG && CFG.vigDir) ? CFG.vigDir : sgn();
-					/* 4.13.1: HIGH AND SMALL (Rob's pick A). The plan was
-					 * measured in idle time; only a resize since then measures
-					 * here. No room in the band: the scene declines. */
-					if (!crPlan || crPlan.vw !== vw || crPlan.vh !== vh || crPlan.ox !== cvOX || crPlan.oy !== cvOY) { crPlan = crPlanFor(); }
-					if (crPlan.none) { return true; }
-					st.L = crPlan.L; st.MR = crPlan.R;
-					/* on the side the skein is heading for, so the birds fly
-					 * INTO it, in the band between the menu bar and the title */
-					st.mx = st.dir > 0 ? crPlan.mxR : crPlan.mxL;
-					st.my = crPlan.my;
-					st.vy = crPlan.vy;
-					st.n = 5;
-					st.T = clamp(vw / (34 * craneK() * 7.0), 3.4, 7.2);   /* the crossing, as 4.13.0 timed it */
-					st.in = 0.45;                                 /* the moon is up first */
-					st.boxes = [];
-				}
-				st.t2 += dt;
-				var tc = st.t2 - st.in, gone = st.in + st.T;
-				var a = st.t2 < 0.5 ? st.t2 / 0.5 : (st.t2 > gone ? clamp(1 - (st.t2 - gone) / 0.8, 0, 1) : 1);
-				var mo = fullMoonGet(), dp = mn(W.devicePixelRatio || 1, 2);
-				cx.save();
-				cx.globalAlpha = clamp(a, 0, 1);
-				/* the glow, then the disc on WHOLE device pixels — at a
-				 * fractional position the browser resamples every pixel of it
-				 * every frame */
-				var gl = cx.createRadialGradient(st.mx, st.my, st.MR * 0.95, st.mx, st.my, st.MR * 1.25);
-				gl.addColorStop(0, 'rgba(255,246,222,0.30)'); gl.addColorStop(1, 'rgba(255,246,222,0)');
-				cx.fillStyle = gl;
-				cx.beginPath(); cx.arc(st.mx, st.my, st.MR * 1.25, 0, TAU); cx.fill();
-				cx.drawImage(mo.c, MT.round((st.mx - mo.half) * dp) / dp, MT.round((st.my - mo.half) * dp) / dp, mo.half * 2, mo.half * 2);
-				cx.restore();
-				var cut = [[st.mx - mo.half, st.my - mo.half, mo.half * 2, mo.half * 2]];
-				if (DEBUG) { st.boxes = [[st.mx - st.MR * 1.25, st.my - st.MR * 1.25, st.mx + st.MR * 1.25, st.my + st.MR * 1.25]]; }
-				if (tc > 0 && tc < st.T) {
-					var u = tc / st.T, L = st.L, half = (st.n - 1) / 2, gapX = L * 0.80, gapY = L * 0.30;
-					/* level across the band, in from off one edge until the last
-					 * bird of the V has left the other */
-					var tail = 0.7 * L + half * gapX;
-					var x0 = st.dir > 0 ? -0.7 * L : vw + 0.7 * L, x1 = st.dir > 0 ? vw + tail : -tail;
-					var cxp = x0 + (x1 - x0) * u;
-					var cyp = st.vy, bank = 0;
-					var ca = MT.cos(bank), sa = sin(bank);
-					var minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
-					for (var i = 0; i < st.n; i++) {
-						var k = i - half, sgY = k < 0 ? -1 : 1, d = MT.abs(k);
-						var ph = (u * 6.0 + d * 0.17) % 1;
-						var bob = sin(ph * TAU) * L * 0.05;
-						/* the V opens AWAY from the way it flies */
-						var lx = -d * gapX * st.dir, ly = sgY * d * gapY + bob;
-						var bx = cxp + lx * ca - ly * sa, by = cyp + lx * sa + ly * ca;
-						/* dark over the disc, with a short crossfade at the rim
-						 * so a bird never blinks from grey to black */
-						var dd = MT.sqrt((bx - st.mx) * (bx - st.mx) + (by - st.my) * (by - st.my));
-						var dark = clamp((st.MR + L * 0.12 - dd) / (L * 0.5), 0, 1);
-						var fr = (MT.floor(ph * CR_FR) % CR_FR + CR_FR) % CR_FR;
-						cx.save();
-						cx.translate(bx, by); cx.rotate(bank);
-						if (st.dir < 0) { cx.scale(-1, 1); }   /* facing the way it flies */
-						if (dark < 1) {
-							var li = crGet(fr, false);
-							cx.globalAlpha = 1 - dark;
-							cx.drawImage(li.c, li.ox, li.oy, li.w, li.h);
-						}
-						if (dark > 0) {
-							var dk = crGet(fr, true);
-							cx.globalAlpha = dark;
-							cx.drawImage(dk.c, dk.ox, dk.oy, dk.w, dk.h);
-						}
-						cx.restore();
-						if (DEBUG) { st.boxes.push([bx - CR_BOX[2] * L, by + CR_BOX[1] * L, bx + CR_BOX[2] * L, by + CR_BOX[3] * L]); }
-						if (bx < minx) { minx = bx; } if (bx > maxx) { maxx = bx; }
-						if (by < miny) { miny = by; } if (by > maxy) { maxy = by; }
-					}
-					cut.push([minx - L, miny - L, (maxx - minx) + 2 * L, (maxy - miny) + 2 * L]);
-				}
-				/* behind the header's text — the menu row sits inside the
-				 * picture on a computer, and the cranes must pass behind it */
-				hdrCut(cut, st.t2);
-				st.fgB = cut;      /* and behind the header picture's foreground */
-				st.moonA = a;
-				return st.t2 > gone + 0.8;
-			} },
 			/* ---- 4.2.0: Summer on the Canal and Florida Keys scenes. Each
 			 * picked by Rob from rendered frame strips; the approved art and
 			 * story, at the sizes he saw. Everything on the water is clipped
@@ -6771,38 +6567,64 @@
 				if (snail) { dspr('applesnail', st.x + (face ? 1 : -1) * W2 * 0.49, fy - W2 * 56 / 46 * 0.24, 9, false, 0, a); }
 				return false;
 			} },
-			/* Christmas: sleigh crosses high and drops a parachuting gift */
+			/* 4.14.4 (Rob's C1): Santa's team, the approved painters with no
+			 * moon, crosses the header picture under the menu, the dial and the
+			 * menu button and over the title, and drops THREE presents (red, blue
+			 * and green paper, gold ribbon). Each opens a parachute, drifts down
+			 * clear of the wreath and settles at the picture's foot on a soft
+			 * shadow, then fades. No ripple (Rob's standing rule). The band and
+			 * the landing spots are measured in idle time (gdPlanFor, with the
+			 * sleigh's other idle work); only a resize since then measures here. */
 			giftdrop: { actors: 3, run: function (st, dt) {
-				if (!st.on) { st.on = 1; st.dir = sgn(); st.sx = st.dir > 0 ? -130 : vw + 130; st.gy = -30; st.gd = false; st.t2 = 0; st.ph = 0; st.land = 0; }
-				st.t2 += dt; st.ph += dt * 2;
-				st.sx += st.dir * 95 * dt;
-				var sleighOn = (st.dir > 0 && st.sx < vw + 140) || (st.dir < 0 && st.sx > -140);
-				if (sleighOn) { dspr('sleigh', st.sx, vh * 0.14 + sin(st.ph) * 4, 110, st.dir > 0); }
-				if (!st.gd && ((st.dir > 0 && st.sx > vw / 2) || (st.dir < 0 && st.sx < vw / 2))) {
-					st.gd = true; st.gx = st.sx; st.gy = vh * 0.17;
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.dir = (DEBUG && CFG.vigDir) ? CFG.vigDir : sgn(); st.gt = rnd(0, 1); st.darkN = 0;
+					if (!gdPlan || gdPlan.vw !== vw || gdPlan.vh !== vh || gdPlan.ox !== cvOX || gdPlan.oy !== cvOY) { gdPlan = gdPlanFor(); }
+					st.L = gdPlan.L; st.MR = 1; st.mx = st.my = -1e5;
+					st.ahead = st.L * 2.9; st.behind = st.L * 0.62;
+					st.T = clamp((vw + st.ahead + st.behind) / (st.L * 2.2), 3.6, 9.5);
+					st.fl = -1; st.flAt = rnd(0.9, 1.6); st.y0 = gdPlan.y; st.g = []; st.k = 0;
+					st.tx = st.dir < 0 ? gdPlan.tx.slice().reverse() : gdPlan.tx;
+					gdLast = st;
 				}
-				if (st.gd && !st.land) {
-					st.gy += 55 * dt;
-					st.gx += sin(st.ph * 1.4) * 14 * dt;
-					/* It lands ON THE WATER LINE: there is no snow pile to land on
-					 * since 4.2.0, and a ripple marks the touchdown. */
-					var target = waterY - 8;
-					/* parachute */
-					cx.save(); cx.globalAlpha = VA;
-					cx.fillStyle = '#E03131';
-					cx.beginPath(); cx.arc(st.gx, st.gy - 22, 14, MT.PI, 0); cx.closePath(); cx.fill();
-					cx.strokeStyle = '#B8860B'; cx.lineWidth = 1;
-					cx.beginPath();
-					cx.moveTo(st.gx - 13, st.gy - 21); cx.lineTo(st.gx - 5, st.gy - 6);
-					cx.moveTo(st.gx + 13, st.gy - 21); cx.lineTo(st.gx + 5, st.gy - 6);
-					cx.stroke(); cx.restore();
-					dspr('gift', st.gx, st.gy, 20);
-					if (st.gy >= target) { st.land = st.t2; st.gy = target; addRipple(st.gx, waterY, true); }
-				} else if (st.land) {
-					dspr('gift', st.gx, st.gy, 20);
-					if (st.t2 - st.land > 3) { return true; }
+				st.t2 += dt; st.gt += dt * 1.25;
+				var cut = [], u = st.t2 / st.T, i, live = 0, n = st.tx.length;
+				if (u < 1) {
+					if (st.fl < 0) { st.flAt -= dt; if (st.flAt <= 0) { st.fl = 0; } }
+					else { st.fl += dt / 0.9; if (st.fl >= 1) { st.fl = -1; st.flAt = rnd(2.4, 3.8); } }
+					var x0 = st.dir > 0 ? -st.ahead : vw + st.ahead, x1 = st.dir > 0 ? vw + st.behind : -st.behind;
+					st.x = x0 + (x1 - x0) * u; st.y = st.y0 + sin(u * MT.PI) * st.L * 0.12;   /* a gentle dip, never up into the menu */
+					/* over the back of the sleigh, a little before it passes each spot */
+					while (st.k < n) {
+						var ax = st.tx[st.k] - st.dir * vw * 0.06;
+						if ((st.dir > 0 && st.x < ax) || (st.dir < 0 && st.x > ax)) { break; }
+						st.g.push({ x: st.x, y: st.y + st.L * 0.05, tx: st.tx[st.k], vx: st.dir * st.L * 0.6, vy: -10, t: 0, s: GD_KINDS[st.k % 3], ph: rnd(0, TAU), land: 0, rot: rnd(-0.3, 0.3) });
+						st.k++;
+					}
+					sledRig(st, st.x, st.y, cut);
 				}
-				return !sleighOn && !st.gd;
+				var foot = vh - 14;
+				for (i = 0; i < st.g.length; i++) {
+					var g = st.g[i], open = clamp((g.t - 0.3) / 0.35, 0, 1);
+					g.t += dt;
+					if (!g.land) {
+						g.vy = lerp(g.vy + 160 * dt, 58, open); g.vx *= 1 - dt * (0.6 + open * 2.2);
+						g.x += (g.vx + (g.tx - g.x) * 0.9 * open + sin(g.t * 1.6 + g.ph) * 8 * open) * dt; g.y += g.vy * dt;
+						g.rot = lerp(g.rot, sin(g.t * 1.6 + g.ph) * 0.12, dt * 3);
+						if (g.y >= foot) { g.y = foot; g.land = g.t; }
+					}
+					var a = g.land ? clamp(1 - (g.t - g.land - 2.2) / 0.8, 0, 1) : 1;
+					if (a <= 0) { continue; }
+					live++;
+					cx.save(); cx.globalAlpha = VA * a; cx.translate(g.x, g.y);
+					if (open > 0 && !g.land) { cx.rotate(g.rot); gdChute(15 * open, open); }
+					if (g.land) { cx.fillStyle = 'rgba(22,30,28,.28)'; cx.beginPath(); cx.ellipse(0, 9, 11, 2.2, 0, 0, TAU); cx.fill(); }
+					cx.restore();
+					dspr(g.s, g.x, g.y, 18, false, g.land ? 0 : g.rot, a);
+					cut.push([g.x - 20, g.y - 46, 40, 60]);
+				}
+				hdrCut(cut, st.t2);
+				st.fgB = cut;
+				return u >= 1 && st.k >= n && !live;
 			} },
 			/* 4.14.0 — Santa's team crosses the moon, by day as well as by night
 			 * (Rob). The engine's own moon, ungraded, on the side the team flies
@@ -7165,7 +6987,7 @@
 		/* no header picture: no sky scene (4.10.7) */
 		if (!skyPic) { vigList = vigList.filter(function (n) { return !SKY_VIG[n]; }); }
 		/* 4.14.1: Santa's painters are art-christmas.js's; without it, no Santa */
-		if (!ART.xm) { vigList = vigList.filter(function (n) { return n !== 'sleighmoon'; }); }
+		if (!ART.xm) { vigList = vigList.filter(function (n) { return n !== 'sleighmoon' && n !== 'giftdrop'; }); }
 		/* The witch and her moon are pre-drawn in idle time after load (4.10.0). */
 		if (vigList.indexOf('witchmoon') >= 0) {
 			var wcTodo = [-1], wcI;
@@ -7185,60 +7007,11 @@
 			var wcLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			wcLater(wcIdle);
 		}
-		/* The cranes and their full moon, the same way (4.13.0): every
-		 * beat lit AND dark, plus the moon, pre-drawn in idle time at the
-		 * header picture's size, so a crossing is one drawImage per bird per
-		 * frame and nothing is painted during the scene. */
-		if (vigList.indexOf('cranemoon') >= 0) {
-			var crTodo = ['p', -1], crI;
-			for (crI = 0; crI < CR_FR; crI++) { crTodo.push(crI); }
-			crTodo.push('w', 'h');
-			/* one throwaway draw of each canvas, so no first drawImage lands
-			 * in the scene's first frame (4.14.0 measured 8.5 ms each at 4x) */
-			var crWarm = function () {
-				var c = D.createElement('canvas'); c.width = c.height = 2;
-				var g = c.getContext('2d'), k;
-				if (!g) { return; }
-				for (k in crCache) { g.drawImage(crCache[k].c, 0, 0, 1, 1); }
-				if (hmC) { g.drawImage(hmC.c, 0, 0, 1, 1); }
-			};
-			/* keep the plan and the header's letters fresh while the page is
-			 * open, in idle time, so the scene never measures in a frame
-			 * (4.13.0 measured 22 ms on that first frame at 4x CPU) */
-			var crKeep = function () {
-				if (!D.hidden && skyPic && (!vig || vig.name !== 'cranemoon')) {
-					inSky(function () {
-						var was = crPlan && crPlan.L;
-						crPlan = crPlanFor(); hdrBuild();
-						if (crPlan.L && crPlan.L !== was) { crBuild(); fullMoonGet(); crWarm(); }
-					});
-				}
-				setTimeout(function () { crLater(crKeep); }, 10000);
-			};
-			var crIdle = function (dl) {
-				var t0 = nowMs();
-				if (!skyPic) { return; }
-				if (!vw) { crLater(crIdle); return; }   /* not sized yet */
-				inSky(function () {
-					do {
-						var k = crTodo.shift();
-						if (k === 'p') { crPlan = crPlanFor(); }
-						else if (k === -1) { if (!crPlan.none) { fullMoonGet(); } }
-						else if (k === 'w') { crWarm(); }
-						else if (k === 'h') { hdrBuild(); setTimeout(function () { crLater(crKeep); }, 10000); }
-						else if (k != null) { if (!crPlan.none) { crGet(k, false); crGet(k, true); } }
-					} while (crTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
-				});
-				if (crTodo.length) { crLater(crIdle); }
-			};
-			var crLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
-			crLater(crIdle);
-		}
 		/* Santa's team the same way (4.14.0): every pose lit, far and dark,
 		 * the sleigh's four flick heights and the moon, in idle time at the
 		 * header picture's size. */
 		if (themeKey === 'christmas' && !footMode) { wrInit(); }
-		if (vigList.indexOf('sleighmoon') >= 0 && ART.xm) {
+		if ((vigList.indexOf('sleighmoon') >= 0 || vigList.indexOf('giftdrop') >= 0) && ART.xm) {
 			var sdTodo = [-1], sdI;
 			for (sdI = 0; sdI < SD_HANDS; sdI++) { sdTodo.push('s' + sdI); }
 			for (sdI = 0; sdI < SD_POSES; sdI++) { sdTodo.push('l' + sdI, 'f' + sdI, 'd' + sdI); }
@@ -7251,12 +7024,13 @@
 				var g = c.getContext('2d'), k;
 				if (!g) { return; }
 				for (k in sdCache) { if (sdCache[k].c) { g.drawImage(sdCache[k].c, 0, 0, 1, 1); } }
+				GD_KINDS.forEach(function (q) { var im = sprite(q); if (im.ready) { g.drawImage(im.img, 0, 0, 1, 1); } });
 				if (smC) { g.drawImage(smC.c, 0, 0, 1, 1); }
 			};
 			/* keep the header's letters fresh in idle time while the page is
 			 * open, so the scene never measures them in a frame */
 			var sdHdr = function (dl) {
-				if (!D.hidden && skyPic && (!vig || vig.name !== 'sleighmoon')) { inSky(hdrBuild); }
+				if (!D.hidden && skyPic && (!vig || (vig.name !== 'sleighmoon' && vig.name !== 'giftdrop'))) { inSky(function () { hdrBuild(); gdPlan = gdPlanFor(); }); }
 				setTimeout(function () { sdLater(sdHdr); }, 10000);
 			};
 			var sdIdleFn = function (dl) {
@@ -7270,7 +7044,7 @@
 							var k = sdTodo.shift();
 							if (k === -1) { smGet(); }
 							else if (k === 'w') { sdWarm(); }
-							else if (k === 'h') { hdrBuild(); setTimeout(function () { sdLater(sdHdr); }, 10000); }
+							else if (k === 'h') { hdrBuild(); gdPlan = gdPlanFor(); setTimeout(function () { sdLater(sdHdr); }, 10000); }
 							else if (k != null) { sdGet(k.charAt(0), +k.slice(1)); }
 						} while (sdTodo.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 4 : nowMs() - t0 < 6));
 					});
@@ -7793,7 +7567,6 @@
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },
 				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },
-				get cranes() { return { stats: crStats, frames: Object.keys(crCache).length, moon: !!hmC, L: craneL(), MR: fullMoonR(), plan: crPlan }; },
 				get heron() { return { stats: hnStats, cached: Object.keys(hnCache).length, st: hero && hero.kind === 'heron' ? (hero.land ? hero.st : 0) : -1, legs: hero && hero.legs, sa: hero && hero.sa }; },
 				get evening() { return evening; },
 				get frameAvg() { return frameAvg; },
