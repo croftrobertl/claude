@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.55.1 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.56.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -601,6 +601,9 @@
      is stable for the life of that widget on that page; the index fallback covers
      the shortcode pop-up and any markup Elementor did not place. */
   function cmpKey(root) {
+    // The page widget's pop-up (0.56.0) IS that widget, so it keeps the widget's
+    // own list: picks ticked in the page before this release still come back.
+    if (root._dccsCmpKey) { return root._dccsCmpKey; }
     var scope = root.closest ? root.closest('[data-id]') : null;
     var id = scope && scope.dataset ? scope.dataset.id : '';
     if (!id) {
@@ -657,6 +660,8 @@
     // The mini-entry modal opens on the landing screen (matching the main Selector's
     // first section); the highlight still applies once the guest reaches results.
     if (config.openStage === 'landing') { state.stage = 'landing'; }
+    // The page widget's pop-up opens straight into the mode the guest chose.
+    else if (config.openStage === 'mode') { state.stage = 'q'; }
     else if (hasCriteria) { state.stage = 'results'; }
     else if (p.has('mode') || p.has('compare')) { state.stage = 'q'; }
     state.step = 0;
@@ -1079,6 +1084,12 @@
       ? '<button type="button" class="dccs-back dccs-primary">' + navAffix(config, 'back', '\u2190', 'left') + esc(S.wiz_back) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
     html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + navAffix(config, 'next', '\u2192', 'right') + '</button>';
+    // The small line under a disabled Next (0.56.0, Rob). Gone the moment an answer
+    // is picked (the step re-renders). aria-hidden: the disabled button's own name
+    // already carries the hint, so a screen reader is not told twice.
+    if (!canNext && !isDates && S.next_pick) {
+      html += '<p class="dccs-next-pick" aria-hidden="true">' + esc(S.next_pick) + '</p>';
+    }
     html += '</div></div>';
     return html;
   }
@@ -1687,6 +1698,13 @@
     if (!root.dataset.dccsUid) { root.dataset.dccsUid = 'dccs' + (++UID); }
 
     var state = buildState(config, root);
+    // A pop-up's widget is rebuilt on every open; its STATE is not (0.56.0, Rob):
+    // the answers, the step and the count survive close and reopen for the rest of
+    // the visit. The opener hands the same holder each time (memory only, nothing
+    // stored), so a reopen resumes exactly where the guest left off.
+    var keep = root._dccsKeep || null;
+    if (keep && keep.state) { state = keep.state; }
+    if (keep) { keep.state = state; }
     state.config = config;   // wizardTrack needs it to decide on the dates step
     state.uid = root.dataset.dccsUid;   // ids for aria-controls
 
@@ -1931,6 +1949,11 @@
       }
       // --- landing screen: choose a mode and leave the landing ---
       if (cl.contains('dccs-landing-choice')) {
+        // The page widget opens the mode in a pop-up (0.56.0, Rob) — the same one
+        // the cottage pages use. Its landing stays where it is behind it.
+        if (config.modesInPopup && !root.classList.contains('dccs-in-modal')) {
+          openModePopup(root, config, t.dataset.mode, t); return;
+        }
         // Entering a mode from the landing is the FIRST entry of this visit, not a
         // switch between modes, so the guest's remembered compare picks come back
         // here. Without this the feature could never work: every page load starts
@@ -1959,6 +1982,7 @@
         // quietly leave the ticks behind, to reappear on the next page.
         state = defaultState(config);
         state.config = config; state.uid = root.dataset.dccsUid;
+        if (keep) { keep.state = state; }
         cmpSave(root, []);
         rerender(); focusStep(); return;
       }
@@ -2229,9 +2253,42 @@
     return { outer: outer, inner: inner };
   }
 
+  /**
+   * The page widget's modes in a pop-up (0.56.0, Rob): the same overlay as the
+   * cottage pages' Mini Entry: fixed, above the site's Seasons layer, its own
+   * scroll, focus trapped, Escape and the close button close it, background scroll
+   * locked, focus back on the chosen button. One kept state per widget: reopening the SAME mode
+   * resumes it; choosing the other mode starts that one fresh (modes are
+   * independent tools, as when switching inside the widget).
+   */
+  function openModePopup(outer, config, mode, trigger) {
+    var keep = outer._dccsKeep || (outer._dccsKeep = {});
+    if (keep.state && keep.state.mode !== mode) { keep.state = null; }
+    var cfg = JSON.parse(JSON.stringify(config));
+    cfg.modesInPopup = false;   // the pop-up's widget never opens another pop-up
+    cfg.startMode = mode;
+    cfg.openStage = 'mode';
+    var host = elementorScopeHost(outer);
+    var S = config.strings || {};
+    var o = buildOverlay(trigger, S[MODE_LABEL[mode]] || S.heading, host ? host.inner : null);
+    if (host) { o.overlay._dccsHost = host.outer; }
+    var inner = el('<div class="dccs-root dccs-in-modal"></div>');
+    inner._dccsKeep = keep;
+    inner._dccsCmpKey = cmpKey(outer);
+    inner.dataset.config = JSON.stringify(cfg);
+    o.content.appendChild(inner);
+    initSelector(inner);
+    // Focus moves INTO the pop-up: onto the step's heading (or the results'), so a
+    // screen reader starts at the question; the ✕ when there is no heading.
+    var h = inner.querySelector('.dccs-step-q, .dccs-results-h');
+    if (h && h.focus) { try { h.focus({ preventScroll: true }); } catch (e) { h.focus(); } } else { o.focusClose(); }
+    return o;
+  }
+
   function openModal(entry, trigger, mount) {
     var config = entry.modalConfig;
     if (!config) { return; }
+    config.modesInPopup = false;   // already in a pop-up
 
     // Open on the landing screen — the popup's first section mirrors the main Selector.
     // The cottage stays highlighted once the guest reaches results.
@@ -2246,6 +2303,8 @@
     var o = buildOverlay(trigger, config.strings && config.strings.heading, host ? host.inner : null);
     if (host) { o.overlay._dccsHost = host.outer; }
     var inner = el('<div class="dccs-root dccs-in-modal"></div>');
+    // The answers survive close and reopen (0.56.0): one kept state per Mini Entry.
+    inner._dccsKeep = mount._dccsKeep || (mount._dccsKeep = {});
     // Apply the palette/spacing as INLINE custom properties so the pop-up shows the
     // right colours even when SpeedyCache's "remove unused CSS" defers the stylesheets
     // (inline props win over, and are never stripped with, those sheets).

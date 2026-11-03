@@ -17,39 +17,39 @@ msgstr ""
 msgid "%d Cottages Match"
 msgstr ""
 
-#: includes/class-config.php:138
+#: includes/class-config.php:140
 msgid "%d sq ft"
 msgstr ""
 
-#: includes/class-config.php:163
+#: includes/class-config.php:165
 msgid "(opens in a new tab)"
 msgstr ""
 
-#: includes/class-config.php:220
+#: includes/class-config.php:222
 msgid "1 Dog ≤20 lb"
 msgstr ""
 
-#: includes/class-config.php:108
+#: includes/class-config.php:110
 msgid "1-2"
 msgstr ""
 
-#: includes/class-config.php:107
+#: includes/class-config.php:109
 msgid "1-Bedroom"
 msgstr ""
 
-#: includes/class-config.php:118
+#: includes/class-config.php:120
 msgid "1-Bedroom Separation"
 msgstr ""
 
-#: includes/class-config.php:182
+#: includes/class-config.php:184
 msgid "1-Bedroom Suite"
 msgstr ""
 
-#: includes/class-config.php:109
+#: includes/class-config.php:111
 msgid "3-4"
 msgstr ""
 
-#: includes/class-config.php:119
+#: includes/class-config.php:121
 msgid "4+ Dining Comfort"
 msgstr ""
 
@@ -73,7 +73,7 @@ msgstr ""
 msgid "Adds an optional dates step. Cottages booked for those dates are still shown, ranked below the free ones and clearly marked. Requires the MPHB Availability Calendar plugin to be active."
 msgstr ""
 
-#: includes/class-settings-page.php:265
+#: includes/class-settings-page.php:267
 msgid "Advanced"
 msgstr ""
 
@@ -168,16 +168,16 @@ msgstr ""
 msgid "Apply text"
 msgstr ""
 
-#: includes/class-settings-page.php:258
+#: includes/class-settings-page.php:260
 msgid "Ask for dates and check availability"
 msgstr ""
 
 #: includes/class-selector-widget.php:255
-#: includes/class-settings-page.php:256
+#: includes/class-settings-page.php:258
 msgid "Availability"
 msgstr ""
 
-#: includes/class-settings-page.php:271
+#: includes/class-settings-page.php:273
 msgid "Availability AJAX action"
 msgstr ""
 
@@ -185,7 +185,7 @@ msgstr ""
 msgid "Availability calendar page"
 msgstr ""
 
-#: includes/class-config.php:207
+#: includes/class-config.php:209
 msgid "Available for Your Dates"
 msgstr ""
 
@@ -272,15 +272,15 @@ msgid "Badge: Work desk"
 msgstr ""
 
 #: includes/class-selector-widget.php:205
-#: includes/class-settings-page.php:268
+#: includes/class-settings-page.php:270
 msgid "Badges per cottage"
 msgstr ""
 
-#: includes/class-config.php:129
+#: includes/class-config.php:131
 msgid "Bed"
 msgstr ""
 
-#: includes/class-config.php:208
+#: includes/class-config.php:210
 msgid "Booked for Your Dates"
 msgstr ""
 
@@ -320,7 +320,7 @@ msgstr ""
 msgid "Buttons & menus"
 msgstr ""
 
-#: includes/class-settings-page.php:273
+#: includes/class-settings-page.php:275
 msgid "Calendar page URL"
 msgstr ""
 
@@ -328,7 +328,7 @@ msgstr ""
 msgid "Capacity note (party-size question)"
 msgstr ""
 
-#: includes/class-settings-page.php:250
+#: includes/class-settings-page.php:252
 msgid "Capacity note link"
 msgstr ""
 
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Check-out must be after check-in."
 msgstr ""
 
-#: includes/class-config.php:210
+#: includes/class-config.php:212
 msgid "Checking availability…"
 msgstr ""
 
@@ -393,14 +393,14 @@ msgid "Colors"
 msgstr ""
 
 #: includes/class-config.php:44
-#: includes/class-config.php:164
+#: includes/class-config.php:166
 #: includes/class-selector-widget.php:180
 #: includes/class-selector-widget.php:196
-#: includes/class-settings-page.php:295
+#: includes/class-settings-page.php:297
 msgid "Compare"
 msgstr ""
 
-#: includes/class-config.php:88
+#: includes/class-config.php:90
 msgid "Compare %d Cottages"
 msgstr ""
 
@@ -491,7 +491,7 @@ msgstr ""
 msgid "DCC Cottage Selector"
 msgstr ""
 
-#: includes/class-settings-page.php:282
+#: includes/class-settings-page.php:284
 msgid "DCC Cottage Selector %s. Defaults match the live site."
 msgstr ""
 
@@ -507,11 +507,11 @@ msgstr ""
 msgid "Default background for the navigation & action buttons, kept distinct from the answer buttons."
 msgstr ""
 
-#: includes/class-settings-page.php:266
+#: includes/class-settings-page.php:268
 msgid "Defaults here match the live site's settings. Change them only with a reason."
 msgstr ""
 
-#: includes/class-settings-page.php:253
+#: includes/class-settings-page.php:255
 msgid "Defaults to the Cottage 34 page. Leave empty and the note renders as plain text with no link."
 msgstr ""
 
@@ -523,15 +523,15 @@ msgstr ""
 msgid "Design source"
 msgstr ""
 
-#: includes/class-config.php:134
+#: includes/class-config.php:136
 msgid "Desk / Workspace"
 msgstr ""
 
-#: includes/class-config.php:113
+#: includes/class-config.php:115
 msgid "Deskspace"
 msgstr ""
 
-#: includes/class-config.php:133
+#: includes/class-config.php:135
 msgid "Dining Table"
 msgstr ""
 
@@ -559,11 +559,11 @@ msgstr ""
 msgid "Dora Canal Court"
 msgstr ""
 
-#: includes/class-config.php:83
+#: includes/class-config.php:85
 msgid "Edit"
 msgstr ""
 
-#: includes/class-config.php:84
+#: includes/class-config.php:86
 msgid "Edit Answers"
 msgstr ""
 
@@ -581,7 +581,7 @@ msgstr ""
 msgid "Element spacing"
 msgstr ""
 
-#: includes/class-settings-page.php:321
+#: includes/class-settings-page.php:323
 msgid "Enabled"
 msgstr ""
 
@@ -593,11 +593,11 @@ msgstr ""
 msgid "Export text"
 msgstr ""
 
-#: includes/class-config.php:204
+#: includes/class-config.php:206
 msgid "Fee Details"
 msgstr ""
 
-#: includes/class-settings-page.php:248
+#: includes/class-settings-page.php:250
 msgid "Fee links"
 msgstr ""
 
@@ -605,16 +605,16 @@ msgstr ""
 msgid "Fee-details link text"
 msgstr ""
 
-#: includes/class-config.php:132
+#: includes/class-config.php:134
 msgid "Floor"
 msgstr ""
 
-#: includes/class-config.php:196
+#: includes/class-config.php:198
 msgid "Great because it offers"
 msgstr ""
 
-#: includes/class-config.php:141
-#: includes/class-config.php:180
+#: includes/class-config.php:143
+#: includes/class-config.php:182
 msgid "Ground Floor"
 msgstr ""
 
@@ -622,7 +622,7 @@ msgstr ""
 msgid "Guests"
 msgstr ""
 
-#: includes/class-config.php:202
+#: includes/class-config.php:204
 msgid "Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged a nightly fee."
 msgstr ""
 
@@ -650,7 +650,7 @@ msgstr ""
 msgid "Hidden while “Match site theme colors” is on."
 msgstr ""
 
-#: includes/class-config.php:125
+#: includes/class-config.php:127
 msgid "High"
 msgstr ""
 
@@ -673,7 +673,7 @@ msgstr ""
 msgid "How many matches the results screen lists. The highlighted cottage from a deep link is shown in addition to these."
 msgstr ""
 
-#: includes/class-config.php:112
+#: includes/class-config.php:114
 msgid "How much does %s matter?"
 msgstr ""
 
@@ -713,7 +713,7 @@ msgstr ""
 msgid "Landing choice: Weigh priorities"
 msgstr ""
 
-#: includes/class-config.php:131
+#: includes/class-config.php:133
 msgid "Layout"
 msgstr ""
 
@@ -721,11 +721,11 @@ msgstr ""
 msgid "Layout & spacing"
 msgstr ""
 
-#: includes/class-config.php:176
+#: includes/class-config.php:178
 msgid "Layout: 1-Bedroom"
 msgstr ""
 
-#: includes/class-config.php:178
+#: includes/class-config.php:180
 msgid "Layout: Studio"
 msgstr ""
 
@@ -754,7 +754,7 @@ msgstr ""
 msgid "Left of text"
 msgstr ""
 
-#: includes/class-config.php:99
+#: includes/class-config.php:101
 msgid "Less Square Footage"
 msgstr ""
 
@@ -766,11 +766,11 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: includes/class-settings-page.php:270
+#: includes/class-settings-page.php:272
 msgid "Longest stay to look up (nights)"
 msgstr ""
 
-#: includes/class-config.php:123
+#: includes/class-config.php:125
 msgid "Low"
 msgstr ""
 
@@ -779,7 +779,7 @@ msgid "Match a Cottage Selector that has \"Share this design\" turned on. Save t
 msgstr ""
 
 #: includes/class-selector-widget.php:206
-#: includes/class-settings-page.php:269
+#: includes/class-settings-page.php:271
 msgid "Match reasons per cottage"
 msgstr ""
 
@@ -803,7 +803,7 @@ msgstr ""
 msgid "Maximum width"
 msgstr ""
 
-#: includes/class-config.php:124
+#: includes/class-config.php:126
 msgid "Medium"
 msgstr ""
 
@@ -839,7 +839,7 @@ msgstr ""
 msgid "Modes"
 msgstr ""
 
-#: includes/class-config.php:114
+#: includes/class-config.php:116
 msgid "More Room"
 msgstr ""
 
@@ -855,12 +855,12 @@ msgstr ""
 msgid "Next button"
 msgstr ""
 
-#: includes/class-config.php:151
+#: includes/class-config.php:153
 msgid "Next cottages"
 msgstr ""
 
-#: includes/class-config.php:104
-#: includes/class-config.php:221
+#: includes/class-config.php:106
+#: includes/class-config.php:223
 msgid "No"
 msgstr ""
 
@@ -868,31 +868,31 @@ msgstr ""
 msgid "No Dates Yet"
 msgstr ""
 
-#: includes/class-config.php:95
+#: includes/class-config.php:97
 msgid "No Desk"
 msgstr ""
 
-#: includes/class-config.php:171
+#: includes/class-config.php:173
 msgid "No Perfect Matches"
 msgstr ""
 
-#: includes/class-config.php:96
+#: includes/class-config.php:98
 msgid "No Pull-Out Couch"
 msgstr ""
 
-#: includes/class-config.php:94
+#: includes/class-config.php:96
 msgid "No Screened Porch"
 msgstr ""
 
-#: includes/class-config.php:115
+#: includes/class-config.php:117
 msgid "No Stairway"
 msgstr ""
 
-#: includes/class-config.php:93
+#: includes/class-config.php:95
 msgid "No table for 4"
 msgstr ""
 
-#: includes/class-config.php:212
+#: includes/class-config.php:214
 msgid "None of your matches are free for those dates. They are listed below so you can pick other dates."
 msgstr ""
 
@@ -903,7 +903,7 @@ msgstr ""
 msgid "Normal"
 msgstr ""
 
-#: includes/class-config.php:91
+#: includes/class-config.php:93
 msgid "Not Pet-Friendly"
 msgstr ""
 
@@ -911,19 +911,19 @@ msgstr ""
 msgid "Not Sure Yet"
 msgstr ""
 
-#: includes/class-config.php:98
+#: includes/class-config.php:100
 msgid "Not a 1-Bedroom"
 msgstr ""
 
-#: includes/class-config.php:97
+#: includes/class-config.php:99
 msgid "Not a Studio"
 msgstr ""
 
-#: includes/class-config.php:168
+#: includes/class-config.php:170
 msgid "Note: Cottages %s have identical layouts & features"
 msgstr ""
 
-#: includes/class-settings-page.php:259
+#: includes/class-settings-page.php:261
 msgid "OFF by default. This is the only runtime request this plugin makes, and it needs the MPHB Availability Calendar plugin active to answer it. A failed lookup never blanks the results."
 msgstr ""
 
@@ -939,8 +939,16 @@ msgstr ""
 msgid "On"
 msgstr ""
 
-#: includes/class-config.php:203
+#: includes/class-settings-page.php:247
+msgid "On by default: choosing a mode opens it in the same pop-up the cottage pages use, at every screen width. Off opens it in the page."
+msgstr ""
+
+#: includes/class-config.php:205
 msgid "One dog up to 20 lbs, Cottage 34 only, $50 per night, pre-approval required."
+msgstr ""
+
+#: includes/class-settings-page.php:246
+msgid "Open the quiz and Compare Mode in a pop-up"
 msgstr ""
 
 #: includes/class-settings-page.php:234
@@ -959,7 +967,7 @@ msgstr ""
 msgid "Optional. Give us dates and we will only recommend cottages that are free."
 msgstr ""
 
-#: includes/class-settings-page.php:251
+#: includes/class-settings-page.php:253
 msgid "Optional. Leave empty and the note renders as plain text with no link."
 msgstr ""
 
@@ -985,7 +993,7 @@ msgstr ""
 msgid "Paste a text code from a Cottage Selector, then click Apply…"
 msgstr ""
 
-#: includes/class-settings-page.php:252
+#: includes/class-settings-page.php:254
 msgid "Pet note link"
 msgstr ""
 
@@ -997,24 +1005,28 @@ msgstr ""
 msgid "Pet policy note (pet question)"
 msgstr ""
 
-#: includes/class-config.php:116
-#: includes/class-config.php:179
+#: includes/class-config.php:118
+#: includes/class-config.php:181
 msgid "Pet-Friendly"
 msgstr ""
 
-#: includes/class-config.php:137
+#: includes/class-config.php:139
 msgid "Pets"
 msgstr ""
 
-#: includes/class-config.php:143
+#: includes/class-config.php:145
 msgid "Pick 2+ cottages to compare their features side by side."
+msgstr ""
+
+#: includes/class-config.php:83
+msgid "Pick One to Continue"
 msgstr ""
 
 #: includes/class-selector-widget.php:745
 msgid "Positive highlight"
 msgstr ""
 
-#: includes/class-config.php:150
+#: includes/class-config.php:152
 msgid "Previous cottages"
 msgstr ""
 
@@ -1058,7 +1070,7 @@ msgstr ""
 msgid "Priority: Workspace"
 msgstr ""
 
-#: includes/class-config.php:121
+#: includes/class-config.php:123
 msgid "Private, Screened-In Porch"
 msgstr ""
 
@@ -1078,15 +1090,15 @@ msgstr ""
 msgid "Publish this widget's full design + text under a name so Mini Entry widgets can mirror it."
 msgstr ""
 
-#: includes/class-config.php:135
+#: includes/class-config.php:137
 msgid "Pull-Out Couch"
 msgstr ""
 
-#: includes/class-config.php:120
+#: includes/class-config.php:122
 msgid "Pull-Out Couch Flexibility"
 msgstr ""
 
-#: includes/class-config.php:140
+#: includes/class-config.php:142
 msgid "Queen"
 msgstr ""
 
@@ -1157,7 +1169,7 @@ msgstr ""
 msgid "Quick Pick"
 msgstr ""
 
-#: includes/class-settings-page.php:293
+#: includes/class-settings-page.php:295
 msgid "Quick finder"
 msgstr ""
 
@@ -1165,7 +1177,7 @@ msgstr ""
 msgid "Radius"
 msgstr ""
 
-#: includes/class-config.php:167
+#: includes/class-config.php:169
 msgid "Ranked #%d for You"
 msgstr ""
 
@@ -1173,7 +1185,7 @@ msgstr ""
 msgid "Reset button"
 msgstr ""
 
-#: includes/class-config.php:165
+#: includes/class-config.php:167
 msgid "Restart"
 msgstr ""
 
@@ -1198,7 +1210,7 @@ msgstr ""
 msgid "Results heading"
 msgstr ""
 
-#: includes/class-config.php:82
+#: includes/class-config.php:84
 msgid "Review Your Answers"
 msgstr ""
 
@@ -1218,20 +1230,20 @@ msgstr ""
 msgid "Right of text"
 msgstr ""
 
-#: includes/class-config.php:122
+#: includes/class-config.php:124
 msgid "Room for 3-4 Guests"
 msgstr ""
 
-#: includes/class-config.php:136
-#: includes/class-config.php:183
+#: includes/class-config.php:138
+#: includes/class-config.php:185
 msgid "Screened Porch"
 msgstr ""
 
-#: includes/class-config.php:139
+#: includes/class-config.php:141
 msgid "Seats %d"
 msgstr ""
 
-#: includes/class-config.php:142
+#: includes/class-config.php:144
 msgid "Second Floor"
 msgstr ""
 
@@ -1239,11 +1251,11 @@ msgstr ""
 msgid "Secondary accent"
 msgstr ""
 
-#: includes/class-config.php:149
+#: includes/class-config.php:151
 msgid "See All"
 msgstr ""
 
-#: includes/class-config.php:209
+#: includes/class-config.php:211
 msgid "See Open Dates"
 msgstr ""
 
@@ -1292,7 +1304,7 @@ msgstr ""
 msgid "Show “pick 2” tip"
 msgstr ""
 
-#: includes/class-config.php:145
+#: includes/class-config.php:147
 msgid "Showing %1$d-%2$d of %3$d"
 msgstr ""
 
@@ -1313,23 +1325,23 @@ msgstr ""
 msgid "Site-wide defaults for every Cottage Selector and Mini Entry on the site. An individual widget overrides a default only where its own Elementor control has been deliberately set; clearing that control hands the decision back to this page."
 msgstr ""
 
-#: includes/class-config.php:130
+#: includes/class-config.php:132
 msgid "Size"
 msgstr ""
 
-#: includes/class-config.php:105
+#: includes/class-config.php:107
 msgid "Skip"
 msgstr ""
 
-#: includes/class-config.php:148
+#: includes/class-config.php:150
 msgid "Sleeps %d"
 msgstr ""
 
-#: includes/class-config.php:128
+#: includes/class-config.php:130
 msgid "Sleeps (Max)"
 msgstr ""
 
-#: includes/class-config.php:100
+#: includes/class-config.php:102
 msgid "Sleeps 2 Max"
 msgstr ""
 
@@ -1345,15 +1357,15 @@ msgstr ""
 msgid "Step bar thickness"
 msgstr ""
 
-#: includes/class-config.php:106
+#: includes/class-config.php:108
 msgid "Studio"
 msgstr ""
 
-#: includes/class-config.php:117
+#: includes/class-config.php:119
 msgid "Studio Simplicity"
 msgstr ""
 
-#: includes/class-config.php:166
+#: includes/class-config.php:168
 msgid "Submit"
 msgstr ""
 
@@ -1382,7 +1394,7 @@ msgstr ""
 msgid "Text alignment"
 msgstr ""
 
-#: includes/class-settings-page.php:272
+#: includes/class-settings-page.php:274
 msgid "The action name the MPHB Availability Calendar answers on. Do not change unless that plugin changes it."
 msgstr ""
 
@@ -1394,7 +1406,7 @@ msgstr ""
 msgid "This cottage"
 msgstr ""
 
-#: includes/class-config.php:144
+#: includes/class-config.php:146
 msgid "Tip: check at least 2 cottages, then tap “Compare”."
 msgstr ""
 
@@ -1428,8 +1440,8 @@ msgstr ""
 msgid "Upcoming step color"
 msgstr ""
 
-#: includes/class-config.php:92
-#: includes/class-config.php:181
+#: includes/class-config.php:94
+#: includes/class-config.php:183
 msgid "Upstairs"
 msgstr ""
 
@@ -1441,11 +1453,11 @@ msgstr ""
 msgid "Use the theme's global colors instead of the built-in palette."
 msgstr ""
 
-#: includes/class-config.php:158
+#: includes/class-config.php:160
 msgid "View"
 msgstr ""
 
-#: includes/class-config.php:155
+#: includes/class-config.php:157
 msgid "View Cottage"
 msgstr ""
 
@@ -1459,7 +1471,7 @@ msgstr ""
 msgid "View cottage button (narrow screens)"
 msgstr ""
 
-#: includes/class-config.php:211
+#: includes/class-config.php:213
 msgid "We could not check availability just now — these are ranked without it."
 msgstr ""
 
@@ -1467,7 +1479,7 @@ msgstr ""
 msgid "Weigh Priorities"
 msgstr ""
 
-#: includes/class-settings-page.php:294
+#: includes/class-settings-page.php:296
 msgid "Weigh priorities"
 msgstr ""
 
@@ -1488,7 +1500,7 @@ msgstr ""
 msgid "When were you thinking of staying?"
 msgstr ""
 
-#: includes/class-settings-page.php:274
+#: includes/class-settings-page.php:276
 msgid "Where a guest is sent to pick other dates when their choice is booked."
 msgstr ""
 
@@ -1504,7 +1516,7 @@ msgstr ""
 msgid "Wizard review heading"
 msgstr ""
 
-#: includes/class-config.php:177
+#: includes/class-config.php:179
 msgid "Work Desk"
 msgstr ""
 
@@ -1512,8 +1524,8 @@ msgstr ""
 msgid "Writes the pasted Selector wording into this widget’s own text fields, then edit freely. For the visual design, right-click the Selector → Copy, then right-click this widget → Paste Style."
 msgstr ""
 
-#: includes/class-config.php:103
-#: includes/class-config.php:217
+#: includes/class-config.php:105
+#: includes/class-config.php:219
 msgid "Yes"
 msgstr ""
 
@@ -1525,7 +1537,7 @@ msgstr ""
 msgid "You do not have permission to view these settings."
 msgstr ""
 
-#: includes/class-config.php:154
+#: includes/class-config.php:156
 msgid "Your Top Matches"
 msgstr ""
 
@@ -1533,11 +1545,11 @@ msgstr ""
 msgid "Your closest matches are shown at the end."
 msgstr ""
 
-#: includes/class-config.php:173
+#: includes/class-config.php:175
 msgid "Your next best match is below. Changing the choices in red will bring more matches."
 msgstr ""
 
-#: includes/class-config.php:172
+#: includes/class-config.php:174
 msgid "Your next best matches are below. Changing the choices in red will bring more matches."
 msgstr ""
 
@@ -1545,43 +1557,43 @@ msgstr ""
 msgid "Zero-match note"
 msgstr ""
 
-#: includes/class-config.php:186
+#: includes/class-config.php:188
 msgid "a dedicated desk for getting work done"
 msgstr ""
 
-#: includes/class-config.php:192
+#: includes/class-config.php:194
 msgid "a dining table that seats four"
 msgstr ""
 
-#: includes/class-config.php:195
+#: includes/class-config.php:197
 msgid "a private screened-in porch"
 msgstr ""
 
-#: includes/class-config.php:193
+#: includes/class-config.php:195
 msgid "a pull-out couch for two extra guests"
 msgstr ""
 
-#: includes/class-config.php:191
+#: includes/class-config.php:193
 msgid "a separate bedroom for privacy"
 msgstr ""
 
-#: includes/class-config.php:190
+#: includes/class-config.php:192
 msgid "a simple, open studio layout"
 msgstr ""
 
-#: includes/class-config.php:188
+#: includes/class-config.php:190
 msgid "a warm welcome for your pet"
 msgstr ""
 
-#: includes/class-config.php:189
+#: includes/class-config.php:191
 msgid "easy ground-floor access, no stairs"
 msgstr ""
 
-#: includes/class-config.php:194
+#: includes/class-config.php:196
 msgid "room for up to four (the extra two on a pull-out couch, for a nightly fee)"
 msgstr ""
 
-#: includes/class-config.php:187
+#: includes/class-config.php:189
 msgid "the most square footage of the bunch"
 msgstr ""
 

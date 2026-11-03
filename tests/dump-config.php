@@ -19,4 +19,8 @@ echo json_encode(\DCCS\Config::build([], [
     'enabledModes' => ['quick', 'weights', 'compare'],
     'showHeading'  => true,
     'remember'     => true,
+    // The suite drives the modes INLINE: that is exactly the flow the pop-up's own
+    // widget runs (it never opens a pop-up itself). Block 107 mounts the page
+    // widget with the pop-up on (the site default since 0.56.0) and tests it there.
+    'modesInPopup' => false,
 ]));

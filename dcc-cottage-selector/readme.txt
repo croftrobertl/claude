@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.55.1
+Stable tag: 0.56.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.56.0 =
+* The page widget (home and /cottages/) opens Matching Quiz and Compare Mode in the same pop-up the cottage pages use, at every width: centered, its own scroll, above the site's falling-leaves layer, background scroll locked, Escape and the close button close it, focus returns to the button. New site setting (on by default): DCC > Cottage Selector > "Open the quiz and Compare Mode in a pop-up".
+* Answers, the current step and the match count now survive closing and reopening a pop-up for the rest of the visit, in the page widget and on the cottage pages. Compare picks keep the page widget's own list.
+* Before an answer is picked, Next is gray (#d7dde7, text #5b6676) with "Pick One to Continue" under it; both change the moment an answer is picked.
 
 = 0.55.1 =
 * The cottage-page pop-up no longer spends a row on its close button: the button sits beside the mode button (44x44, "Close"), stays on screen while the pop-up scrolls, and the quiz gets the space.

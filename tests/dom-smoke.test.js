@@ -706,8 +706,11 @@ function configWith(overrides) {
   enter(root, 'quick');
   answerNext(root, 'either');                                 // Back + Next both present
   const nav = root.querySelector('.dccs-wizard-nav');
-  ok('wizard nav holds Back + Next as its only two children',
-    !!nav && nav.children.length === 2 && !!nav.querySelector('.dccs-back') && !!nav.querySelector('.dccs-next'));
+  // 0.56.0: before an answer the row also carries the "Pick One to Continue" line —
+  // a paragraph, not a control — so count the BUTTONS.
+  ok('wizard nav holds Back + Next as its only two buttons',
+    !!nav && nav.querySelectorAll('button').length === 2 && !!nav.querySelector('.dccs-back') && !!nav.querySelector('.dccs-next')
+    && Array.prototype.every.call(nav.children, c => c.tagName === 'BUTTON' || c.classList.contains('dccs-next-pick')));
   // jsdom has no CSS cascade, so verify the responsive rules in the stylesheet source.
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   // 0.27.0 supersedes the old nowrap + equal-halves pairing. At the spec's 20px
@@ -3923,6 +3926,98 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   const vhRules = rules.filter(r => /\d\s*vh\b/.test(r.body));
   ok('106/3: every viewport-tall size has a small/dynamic-viewport twin after its vh fallback',
     vhRules.length >= 3 && vhRules.every(r => /\d\s*(svh|dvh)\b/.test(r.body) && r.body.search(/\d\s*(svh|dvh)\b/) > r.body.search(/\d\s*vh\b/)));
+})();
+
+// ==== 0.56.0 =======================================================================
+// ---- 107. The page widget opens its modes in the pop-up; answers survive; the gray Next ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const POP = configWith({ modesInPopup: true });
+  const mountPage = (w) => {
+    // A real page widget: Elementor's wrapper with data-id, so the pick key is the widget's.
+    const wrap = w.document.createElement('div'); wrap.className = 'elementor elementor-1005';
+    wrap.innerHTML = '<div class="elementor-element elementor-element-5be94a3" data-id="5be94a3"><div class="dccs-root"></div></div>';
+    w.document.body.appendChild(wrap);
+    const r = wrap.querySelector('.dccs-root'); r.dataset.config = POP; w.DCCS.bootAll(w.document); return r;
+  };
+  const w = freshDom(); const outer = mountPage(w);
+  const modal = () => w.document.querySelector('.dccs-modal');
+  const inner = () => modal() && modal().querySelector('.dccs-root.dccs-in-modal');
+  const trigger = outer.querySelector('.dccs-landing-choice[data-mode="quick"]');
+  trigger.click();
+  ok('107/1: choosing Matching Quiz opens the pop-up (the shared overlay)', !!modal() && modal().getAttribute('role') === 'dialog' && modal().getAttribute('aria-modal') === 'true');
+  ok('107/1: ...with the quiz in it, on its first question', !!inner() && !!inner().querySelector('.dccs-wizard[data-stage="q"]') && /\b1\b/.test(progress(inner())));
+  ok('107/1: the page widget stays on its landing behind it (nothing grows the page)', !!outer.querySelector('.dccs-landing') && !outer.querySelector('.dccs-wizard'));
+  ok('107/1: the pop-up\'s widget never opens a pop-up itself', JSON.parse(inner().dataset.config).modesInPopup === false);
+  ok('107/1: background scroll is locked', w.document.body.style.overflow === 'hidden');
+  ok('107/1: focus moved INTO the pop-up (onto the question)', modal().contains(w.document.activeElement) && w.document.activeElement.classList.contains('dccs-step-q'));
+  ok('107/1: the close button sits in the bare pop-up\'s bar, beside the mode button (control: same overlay as the Minis)',
+    modal().classList.contains('dccs-modal-bare') && !!modal().querySelector('.dccs-modal-closebar .dccs-modal-close'));
+  // Answer, advance, and remember what the guest saw.
+  clickAnswer(inner(), '2'); clickNext(inner()); clickAnswer(inner(), 'yes');
+  const before = { prog: progress(inner()), q: inner().querySelector('.dccs-step-q').textContent, count: inner().querySelector('.dccs-count').firstChild.textContent,
+    active: (inner().querySelector('.dccs-chip.is-active') || {}).dataset };
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('107/1: Escape closes it', !modal());
+  ok('107/1: ...focus returns to the button that opened it, and scrolling is unlocked', w.document.activeElement === trigger && w.document.body.style.overflow !== 'hidden');
+  trigger.click();
+  const after = { prog: progress(inner()), q: inner().querySelector('.dccs-step-q').textContent, count: inner().querySelector('.dccs-count').firstChild.textContent,
+    active: (inner().querySelector('.dccs-chip.is-active') || {}).dataset };
+  ok('107/1: reopening resumes: same step, same question, same count, same picked answer',
+    after.prog === before.prog && after.q === before.q && after.count === before.count && !!after.active && after.active.value === 'yes' && /\b2\b/.test(after.prog));
+  modal().querySelector('.dccs-modal-close').click();
+  ok('107/1: the close button closes it too', !modal());
+  // Compare Mode: a different mode starts fresh; its picks use the WIDGET's own list.
+  w.sessionStorage.clear();
+  outer.querySelector('.dccs-landing-choice[data-mode="compare"]').click();
+  ok('107/1: Compare Mode opens in the pop-up too', !!inner() && !!inner().querySelector('.dccs-cmp-list'));
+  ['22', '34'].forEach(id => { const b = inner().querySelector('input[data-cmp="' + id + '"]'); b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true })); });
+  ok('107/1: its picks are kept under the page widget\'s key (not a separate :modal list)', w.sessionStorage.getItem('dccs:cmp:5be94a3') === JSON.stringify(['22', '34']) && w.sessionStorage.getItem('dccs:cmp:5be94a3:modal') === null);
+  modal().querySelector('.dccs-modal-close').click();
+  outer.querySelector('.dccs-landing-choice[data-mode="compare"]').click();
+  ok('107/1: ...and they are still ticked after close and reopen', ['22', '34'].every(id => inner().querySelector('input[data-cmp="' + id + '"]').checked));
+  modal().querySelector('.dccs-modal-close').click();
+  outer.querySelector('.dccs-landing-choice[data-mode="quick"]').click();
+  ok('107/1: switching modes starts the other one fresh (modes are independent tools)', /\b1\b/.test(progress(inner())) && !inner().querySelector('.dccs-chip.is-active'));
+  modal().querySelector('.dccs-modal-close').click();
+  {
+    // Control: with the setting OFF the page widget opens the mode in the page, as before.
+    const w2 = freshDom(); const r2 = mountSelector(w2, configWith({ modesInPopup: false })); enter(r2, 'quick');
+    ok('107/1: with the setting off the quiz opens in the page (control)', !w2.document.querySelector('.dccs-modal') && !!r2.querySelector('.dccs-wizard'));
+  }
+  {
+    // The cottage-page Mini: its answers survive too now.
+    const w3 = freshDom();
+    const node = w3.document.createElement('div'); node.className = 'dccs-entry';
+    node.dataset.entry = JSON.stringify({ current: '34', selectorUrl: '', modalConfig: JSON.parse(POP) });
+    node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+    w3.document.body.appendChild(node); w3.DCCS.bootAll(w3.document);
+    const mi = () => w3.document.querySelector('.dccs-modal .dccs-root.dccs-in-modal');
+    node.querySelector('.dccs-entry-btn').click();
+    ok('107/1: the Mini still opens on its landing (control)', !!mi().querySelector('.dccs-landing'));
+    mi().querySelector('.dccs-landing-choice[data-mode="quick"]').click();
+    ok('107/1: ...and its own landing choice stays INSIDE the pop-up (no second pop-up)', w3.document.querySelectorAll('.dccs-modal').length === 1 && !!mi().querySelector('.dccs-wizard'));
+    clickAnswer(mi(), 'either'); clickNext(mi());
+    const p1 = progress(mi());
+    w3.document.querySelector('.dccs-modal-close').click();
+    node.querySelector('.dccs-entry-btn').click();
+    ok('107/1: the Mini resumes where the guest left off after close and reopen', progress(mi()) === p1 && /\b2\b/.test(p1));
+  }
+
+  // ---- 2. the disabled Next: gray, with "Pick One to Continue" until an answer is picked ----
+  const r4 = mountSelector(freshDom()); enter(r4, 'quick');
+  const pick = () => r4.querySelector('.dccs-wizard-nav .dccs-next-pick');
+  ok('107/2: before an answer, Next is disabled and the line reads "Pick One to Continue"', r4.querySelector('.dccs-next').disabled && !!pick() && pick().textContent === S.next_pick && S.next_pick === 'Pick One to Continue');
+  ok('107/2: ...the line is hidden from screen readers (the button\'s own name already says it)', pick().getAttribute('aria-hidden') === 'true' && /—/.test(r4.querySelector('.dccs-next').getAttribute('aria-label')));
+  clickAnswer(r4, 'either');
+  ok('107/2: the moment an answer is picked the line is gone and Next is enabled', !pick() && r4.querySelector('.dccs-next').disabled === false);
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; css.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+  const D = '.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled]';
+  const dis = rules.find(r => r.sel.indexOf(D) !== -1);
+  ok('107/2: a disabled Next is gray #d7dde7 with #5b6676 text, fully opaque', !!dis && /background:\s*#d7dde7/i.test(dis.body) && /color:\s*#5b6676/i.test(dis.body) && /opacity:\s*1\b/.test(dis.body));
+  ok('107/2: ...and stays gray on hover and focus (no coral on a button that does nothing)', !!dis && dis.sel.indexOf(D + ':hover') !== -1 && dis.sel.indexOf(D + ':focus-visible') !== -1);
+  ok('107/2: an enabled Next keeps the site blue (control: the gray rule is [disabled]-only)', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-primary') !== -1 && /var\(--dccs-btn-bg/.test(r.body)));
 })();
 
 (async function runDeferred() {

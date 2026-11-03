@@ -79,6 +79,8 @@ final class Config
             'wiz_back'          => __('Back', 'dcc-cottage-selector'),
             'wiz_next'          => __('Next', 'dcc-cottage-selector'),
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
+            // The small line under a disabled Next (0.56.0, Rob).
+            'next_pick'         => __('Pick One to Continue', 'dcc-cottage-selector'),
             'review_heading'    => __('Review Your Answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit Answers', 'dcc-cottage-selector'),
@@ -288,6 +290,9 @@ final class Config
             'showHeading'  => (bool) $st['show_heading'],
             'showReview'   => (bool) $st['show_review'],
             'showCompareTip' => (bool) $st['show_compare_tip'],
+            // 0.56.0: open the modes in a pop-up (the page widget; a pop-up's own
+            // widget never opens another — selector.js forces it off there).
+            'modesInPopup'   => (bool) $st['modes_popup'],
             'capacityFeeUrl' => $st['capacity_fee_url'],
             'petFeeUrl'      => $st['pet_fee_url'],
             // How many matches the results screen lists, how many badges a card

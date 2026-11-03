@@ -469,6 +469,21 @@
   cursor: pointer; white-space: nowrap; overflow-wrap: normal;
 }
 .dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+/* The quiz's Next before an answer is picked (0.56.0, Rob): a flat GRAY, not the
+   pale blue that read as broken — and no hover change, since it does nothing yet.
+   (0,5,0) beats the spec button's blue and its coral hover alike. #5b6676 on
+   #d7dde7 is ~4.2:1; a disabled control is exempt from the contrast minimum, and
+   the line below it, on white, is 5.8:1. */
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled],
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled]:hover,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled]:focus-visible {
+  opacity: 1; background: #d7dde7; color: #5b6676; cursor: not-allowed; box-shadow: none;
+}
+/* "Pick One to Continue" — under Next, while it is disabled. Takes the row's full
+   width so it sits on its own line, right-aligned under the button. */
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-pick {
+  flex: 0 0 100%; margin: -2px 0 0; text-align: right; font-size: 0.85rem; font-weight: 600; color: #5b6676;
+}
 
 /* Review list */
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }

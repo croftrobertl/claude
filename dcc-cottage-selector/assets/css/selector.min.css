@@ -250,6 +250,14 @@
   cursor: pointer; white-space: nowrap; overflow-wrap: normal;
 }
 .dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled],
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled]:hover,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next[disabled]:focus-visible {
+  opacity: 1; background: #d7dde7; color: #5b6676; cursor: not-allowed; box-shadow: none;
+}
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-pick {
+  flex: 0 0 100%; margin: -2px 0 0; text-align: right; font-size: 0.85rem; font-weight: 600; color: #5b6676;
+}
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
 .dccs-root.dccs-root .dccs-review-list li {
   display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--dccs-border);

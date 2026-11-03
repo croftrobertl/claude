@@ -243,6 +243,8 @@ final class Settings_Page
             __('An extra screen listing the answers before the matches.', 'dcc-cottage-selector'));
         self::checkbox_row('show_compare_tip', __('Show the “pick 2” tip', 'dcc-cottage-selector'), $s,
             __('Off by default: the Compare subheader already says to pick two or more.', 'dcc-cottage-selector'));
+        self::checkbox_row('modes_popup', __('Open the quiz and Compare Mode in a pop-up', 'dcc-cottage-selector'), $s,
+            __('On by default: choosing a mode opens it in the same pop-up the cottage pages use, at every screen width. Off opens it in the page.', 'dcc-cottage-selector'));
         echo '</tbody></table>';
 
         echo '<h2>' . esc_html__('Fee links', 'dcc-cottage-selector') . '</h2>';

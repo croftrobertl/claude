@@ -51,6 +51,10 @@ final class Settings
             'show_heading'      => true,
             'show_review'       => false,
             'show_compare_tip'  => false,
+            // 0.56.0 (Rob): the page widget opens Matching Quiz and Compare Mode in
+            // the same pop-up the cottage pages use, at every width. A NEW key, so a
+            // live row (which lacks it) picks up this default on the next read.
+            'modes_popup'       => true,
 
             // --- Links under the question notes (empty = no link rendered) ---
             'capacity_fee_url'  => '',
@@ -158,6 +162,7 @@ final class Settings
         $out['show_heading']     = $bool($in['show_heading'] ?? null);
         $out['show_review']      = $bool($in['show_review'] ?? null);
         $out['show_compare_tip'] = $bool($in['show_compare_tip'] ?? null);
+        $out['modes_popup']      = $bool($in['modes_popup'] ?? null);
 
         $out['capacity_fee_url'] = $url($in['capacity_fee_url'] ?? null);
         $out['pet_fee_url']      = $url($in['pet_fee_url'] ?? null);

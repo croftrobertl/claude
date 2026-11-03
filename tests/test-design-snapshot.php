@@ -371,6 +371,8 @@ namespace {
         'results_count' => 8, 'badges_max' => 3, 'reasons_max' => 3,
         'start_mode' => 'quick', 'enabled_modes' => ['quick', 'compare'],
         'show_heading' => true, 'show_review' => false, 'show_compare_tip' => false,
+        // 0.56.0 (Rob): a NEW key, absent from live's row, so the default reaches live.
+        'modes_popup' => true,
         // 0.53.3: the ONE default that is not live's stored value (live stores '').
         'capacity_fee_url' => '', 'pet_fee_url' => '/accommodation/cottage-34/',
         'avail_enable' => false, 'avail_max_nights' => 95,
