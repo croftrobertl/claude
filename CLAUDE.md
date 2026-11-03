@@ -1354,6 +1354,25 @@ Rob sees it (the overlay rows; sources named on the sheets).
   only the Anniversary exempt and the engine and every other pack BYTE-
   identical. Review images: `tools/anniv-review.js` (DCC_BEFORE = the old
   pack). The zip and the version bump wait for Rob's picks.
+- **4.14.5 is BUILT (2026-11-03, md5 fb9d1eab…): Rob approved all nine
+  round-1 items.** Two notes, both color: the date band ("the gold looks
+  tacky and the text is hard to read") and the figures ("I don't like the
+  gold"). The color round for **4.14.6** (live by end of 10 Nov) recolors
+  ONLY those two; the rings, toast, crystal and year crystal stay gold.
+  `tools/anniv-colors.js` holds the candidates from the site's measured
+  colors (coral #F08080, main blue #0F6DBF, button blue #0A50B2, navy
+  #0A3D62, cream ≤ #F6F4EE) and the WCAG bars: numerals vs their band
+  ≥ 4.5:1; the piece's best tone vs the header photo (five patches, L
+  .13-.28, worst taken), white and the navy footer ≥ 3:1; the figures'
+  FACE ≥ 3:1 on white and footer (which pins its luminance to ~.23-.30,
+  hence coral a step deeper and blue a step lighter), face or edge ≥ 3:1
+  on the photo. The gold date measured 1.6:1. `tools/anniv-color-review.js`
+  renders and scores; `anniv-build.js --date=<key> --pct=<key> --out=` builds
+  a candidate (the shipped pack takes Rob's pick as `COLOR`, null = gold);
+  `holiday-clip.js --weight=key:w` raises a piece for a review clip;
+  `tools/test-color-candidate.js --date= --pct=` is the Untouched proof
+  against 4.14.5 (`685f44c`): every other file and sprite identical, the
+  two pieces' geometry identical, every other theme's pixels identical.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no

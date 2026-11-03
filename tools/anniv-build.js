@@ -22,7 +22,14 @@ const fs = require('fs');
 const path = require('path');
 const { P } = require('./anniv-pieces');
 const { rings } = require('./anniv-rings');   /* 4.13.5: the rings LINKED (Rob, 2026-10-30) */
-const OUT = path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js', 'art-anniversary.js');
+const argv = (k) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : null; };
+const OUT = argv('out') || path.join(__dirname, '..', 'dcc-seasons', 'assets', 'js', 'art-anniversary.js');
+/* The color round (for 4.14.6): Rob's pick for the date band and the
+ * figures, a key of tools/anniv-colors.js DATE / PCT, or null for 4.14.5's
+ * gold. --date= / --pct= override them for a review build (--out= a
+ * scratch copy); the shipped pack is built from the two constants. */
+const COLOR = { date: argv('date') || null, pct: argv('pct') || null };
+const AC = require('./anniv-colors');
 
 const one = s => s.replace(/\n/g, '');
 const body = s => one(s.slice(s.indexOf('|') + 1));
@@ -58,13 +65,13 @@ const src = `/* DCC Seasons — the Anniversary's art (4.13.5): the picks from t
 		var d = new Date(day()), y = d.getUTCFullYear(), on = Date.UTC(y, 10, 11), wed = (on - Date.UTC(2011, 10, 11)) / YR;
 		return [y - 2011, Math.round(100 * wed / ((on - Date.UTC(1989, 2, 26)) / YR)), Math.round(100 * wed / ((on - Date.UTC(1986, 2, 25)) / YR))];
 	}
-	function pct(t, n) { t = t + '%'; return ${pctA("dccAnP' + n + '")}; }
+	function pct(t, n) { t = t + '%'; return ${COLOR.pct ? `n === 2 ? '${AC.pctSprite(AC.PCT[COLOR.pct], "' + t + '", 'dccAnP2', 2)}' : '${AC.pctSprite(AC.PCT[COLOR.pct], "' + t + '", 'dccAnP1', 1)}'` : pctA("dccAnP' + n + '")}; }
 	var S = {
 		anheart: '${one(P.heartA)}',
 		anrings: '${one(rings('dccAnR'))}',
 		ancrystal: '${one(P.crystalA)}',
 		antoast: '${one(P.toastA)}',
-		andate: '${one(P.dateA)}',
+		andate: '${COLOR.date ? AC.dateSprite(AC.DATE[COLOR.date], 'dccAnD1') : one(P.dateA)}',
 		anyear: function () { return '20 28|${yearA}<text x="10" y="21" font-family="Georgia,serif" font-size="8.4" font-weight="700" fill="#2F5F7C" text-anchor="middle">' + figs()[0] + '</text>'; },
 		anpct1: function () { return pct(figs()[1], 1); },
 		anpct2: function () { return pct(figs()[2], 2); }

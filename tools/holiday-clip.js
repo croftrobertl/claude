@@ -5,7 +5,7 @@
  * clock (30 fps), as an MP4 (and a mid-clip still).
  *
  *   node tools/holiday-clip.js --theme=christmas --scene=giftdrop --out="Seasons - 4.14.4 gift drop 3"
- *        [--secs=6] [--width=390] [--knobs='{"optGifts":3}'] [--skip=1.5] [--pieces=0] [--seed=14]
+ *        [--secs=6] [--width=390] [--knobs='{"optGifts":3}'] [--skip=1.5] [--pieces=0] [--seed=14] [--weight=andate:8]
  *
  * --scene forces one scene (vigOnly) at --at seconds; --pieces=0 holds the
  * falling pieces back; --skip ticks that many seconds before recording.
@@ -25,6 +25,12 @@ const H = { 390: 844, 768: 1024, 1440: 900 }[W] || 844;
   cfg.heroFirst = [1e9, 1e9 + 1]; cfg.heroEvery = [1e9, 1e9 + 1];
   if (SCENE) { cfg.vigOnly = SCENE; cfg.vigFirst = AT * 1000; cfg.vigGap = 1e9; } else { cfg.vigFirst = 1e9; }
   Object.assign(cfg, KNOBS);
+  /* --weight=key:w,key:w raises pieces' weights for a review clip only, so
+   * the piece under review shows within the clip's seconds */
+  for (const kv of (arg('weight', '') || '').split(',').filter(Boolean)) {
+    const [k, w] = kv.split(':'); const r = cfg.themes[THEME].ambient.particles.find(q => q.s === k);
+    if (!r) { throw new Error('no piece ' + k); } r.w = +w;
+  }
   const ses = await open(rt.page({ config: cfg, extraHead: '<style>.dcc-wx-banner{display:none!important} div[style*="2147482000"]{display:none!important}</style>' }), { ...rt.opts(W), viewport: { width: W, height: H }, dsf: 2, init: `Math.random = (() => { let a = ${+arg('seed', 14)}; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();` });
   const pg = ses.page;
   await pg.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 20000 });
