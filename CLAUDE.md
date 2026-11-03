@@ -1415,7 +1415,9 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `tools/measure-calm.js --page=contact|cottages|quiz|typing`,
   `tools/calm-reel.js`, pages in `tools/calm-pages.js` from the plugins'
   vendored files in `tests/calm/`.
-- **4.15.1 = the Anniversary color pick** (the Director, 2026-11-03,
+- **4.15.1 = the Anniversary color pick: Rob chose date D (`creamBlue`) and
+  figures B (`coralDeep`), 2026-11-03; built from `dbfda4e` in a separate
+  work tree (`6fa0a3e`, md5 61f09a3a…) and merged in.** (the Director, 2026-11-03,
   after 4.15.0 went live; live by end of 10 Nov): only the date band and the
   figures change color, on 4.15.0. Review: `build/Seasons - 4.15.1 color
   review/` (the 4.14.6 candidates re-rendered on 4.15.0, with a 6 s clip of
@@ -1434,16 +1436,19 @@ Rob sees it (the overlay rows; sources named on the sheets).
     stop after 7-11 s of walking, then 15-22 s between stops (`tkGap`), at
     least 6 s after his turn; three feeds (`tkFeed`: two jabs, one, three)
     and never the same one twice running (`tkNextV`, `p.fv`). The slow
-    strut and the third-in turn are unchanged. Measured (test-calm, seed
-    14): 2 stops at 390, 4 at 1440; on screen 26.9 s at 390 (was 43.4) and
-    84.9 s at 1440 (was 141). Poults keep their plain lowering.
+    strut and the third-in turn are unchanged. The walk before a stop
+    counts only while he is at least 1.5 sizes inside the edge, so he never
+    stops half off screen. Measured (test-calm, seed 14): 1 stop at 390, 3
+    at 1440; on screen 26.4 s at 390 (was 43.4) and 81.4 s at 1440 (was
+    141). Poults keep their plain lowering. `tools/tom-reel.js` films 6 s
+    round his Nth stop.
   - A poult released after his turn walks only the ground it really covers
     (`ka = adv - (gN - kO)`): with no feed straight after the turn the old
     snap showed as a 1.58 px foot slide (test-holidays).
   - Tests: `test-calm.js` (DCC_CALM_MUT=noclip|noturn|flip|repeat|often|
-    hold; the stop count, the no-repeat read from the DRAWN jabs, 15 s
+    edge|hold; the stop count, stops wholly on screen, the no-repeat read from the DRAWN jabs, 15 s
     between stops, the no-pause checks), `test-untouched.js` against
-    `dbfda4e` with Thanksgiving exempt.
+    4.15.1 (`6fa0a3e`) with Thanksgiving exempt.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1876,7 +1881,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.0 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

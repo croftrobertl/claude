@@ -3707,7 +3707,9 @@
 						if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }
 						if (p.leg === 2 && (p.dir > 0 ? p.x > vw + p.size * 4.6 : p.x < -p.size * 4.6)) { p.leg = 3; p.alpha = 0; p.gone = vt; break; }
 					}
-					p.ft -= dt;
+					/* 4.15.2: the walk before a stop counts only while he is well on
+					 * screen, so he never stops half off the edge */
+					if (!CALM || (p.x > p.size * 1.5 && p.x < vw - p.size * 1.5)) { p.ft -= dt; }
 					{
 						/* 4.14.4 (Rob: the poults moonwalked): each poult's walk
 						 * cycle advances by the ground IT covers — his advance less

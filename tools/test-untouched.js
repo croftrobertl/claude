@@ -1,7 +1,7 @@
 'use strict';
 /**
  * DCC Seasons — the Untouched test, for 4.15.2 (the tom feeds less; the
- * busy pause removed) against 4.15.0, live: Thanksgiving exempt, every other
+ * busy pause removed) against 4.15.1 (4.15.0 + the Anniversary colors): Thanksgiving exempt, every other
  * theme drawn with calm ON (what guests get, occluders included) and
  * pixel-identical. Before that, for 4.15.0 (Calmer Seasons) against
  * 4.14.5; before that, for 4.14.5 (the Anniversary's round 1:
@@ -33,7 +33,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'dbfda4e';   /* 4.15.0, Calmer Seasons, live (4.15.0's run: BASE 685f44c, calm:false) */
+const BASE = '6fa0a3e';   /* 4.15.1 = 4.15.0 + the Anniversary's colors (4.15.0's run: BASE 685f44c, calm:false) */
 const NEW = ['thanksgiving'];   /* 4.15.2: the tom's feeding stops */
 /* 4.15.0 (Calmer Seasons) changes the ENGINE: the occluders, the pause and
  * the walkers' turn-back, all behind CFG.calm, plus the removal of the
@@ -92,7 +92,7 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme is 4.15.0's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme is 4.15.1's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - NEW.length} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
@@ -100,7 +100,7 @@ function folder(files, drop) {
 
   console.log('\n  --- 2. the text: the loader, the egg, every pack ---');
   const same = {}, base = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.15.0`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.15.1`, f); }
 
   console.log('\n  --- 3. the pixels: every theme, calm on, both builds ---');
   const now = {}, was = {};

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.15.1
+Stable tag: 4.15.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,16 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.15.2 =
+Occlusion alone, and a tom who eats less (Rob).
+* The pieces no longer fade while a guest types or uses the Cottage
+  Selector: they keep passing behind what guests read and tap, exactly as
+  in 4.15.0. data-dcc-seasons-busy no longer does anything.
+* The tom stops to feed far less often (about every 15-22 s of walking
+  instead of every 2-3 s), only when he is wholly on screen, and never
+  feeds the same way twice running. His slow strut and turn are
+  unchanged.
 
 = 4.15.1 =
 The Anniversary's colors (Rob's picks): the date band is cream with the

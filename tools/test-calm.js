@@ -22,7 +22,7 @@
  *     Time on screen reported.
  *
  *   node tools/test-calm.js [--only=occ|pause|walk]
- *   DCC_CALM_MUT=noclip|noturn|flip|repeat|often|hold (a copy of the engine, one line broken)
+ *   DCC_CALM_MUT=noclip|noturn|flip|repeat|often|edge|hold (a copy of the engine, one line broken)
  */
 const fs = require('fs');
 const os = require('os');
@@ -46,6 +46,7 @@ if (MUT) {
     noturn: ["if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }", ''],
     repeat: ['return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3;', 'return v < 0 ? MT.floor(rand() * 3) % 3 : v;'],
     often: ["return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22);", 'return rnd(1.6, 3.0);'],
+    edge: ['if (!CALM || (p.x > p.size * 1.5 && p.x < vw - p.size * 1.5)) { p.ft -= dt; }', 'p.ft -= dt;'],
     hold: ['if (p.leg === 3) { p.alpha = 0; break; }', "if (p.leg === 3) { p.alpha = 0; break; } if (p.leg === 0 && D.querySelector('.dccs-modal') && (p.dir > 0 ? p.x < 0 : p.x > vw)) { break; }"],
     flip: ['var sq = p.leg === 1 ? 0.3 + 0.7 * abs(cos(MT.PI * p.tq)) : 1;', 'var sq = 1;'],
   }[MUT];
@@ -168,7 +169,7 @@ async function inkRun(pg, n) {
           boxes = []; S.tick(1000 / 30, 1);
           const t = S.calm.tom[0]; if (!t) { break; }
           if (t.leg !== 3 && t.leg !== 1 && t.fs !== 1) { walkS += 1 / 30; }
-          if (t.fs === 1 && prevFs !== 1) { feeds.push({ f, fv: t.fv, jabs: 0, inJab: false, walkS }); }
+          if (t.fs === 1 && prevFs !== 1) { const tb = boxes.find(b => !/^k/.test(b.k)); feeds.push({ f, fv: t.fv, jabs: 0, inJab: false, walkS, inView: !!tb && tb.L >= 0 && tb.R <= w }); }
           if (t.fs === 1 && feeds.length) { const F = feeds[feeds.length - 1], j = boxes.some(b => b.k === 'pj'); if (j && !F.inJab) { F.jabs++; } F.inJab = j; }
           prevFs = t.fs;
           const vis = boxes.some(b => b.R > 0 && b.L < w);
@@ -207,6 +208,7 @@ async function inkRun(pg, n) {
       const J = r.feeds.map(x => x.jabs), maxN = 1 + Math.floor(Math.max(0, r.walkS - 7) / 15);
       ok(r.feeds.length >= 1 && r.feeds.length <= maxN, `${w}: ${r.feeds.length} feeding stop(s) in ${r.walkS.toFixed(1)} s of walking (at most ${maxN}; 4.15.0 stopped every 1.6-3 s)`, JSON.stringify(r.feeds));
       ok(J.every(j => j >= 1 && j <= 3) && J.every((j, i) => i === 0 || j !== J[i - 1]), `${w}: jabs per feed ${J.join(', ') || '-'}: never the same feed twice running`, JSON.stringify(r.feeds));
+      ok(r.feeds.every(x => x.inView), `${w}: every stop with him wholly on screen (never half off the edge)`, JSON.stringify(r.feeds.map(x => x.inView)));
       ok(r.feeds.every((x, i) => i === 0 || x.walkS - r.feeds[i - 1].walkS >= 14.9), `${w}: at least 15 s of walking between stops`, JSON.stringify(r.feeds.map(x => x.walkS.toFixed(1))));
       console.log(`      ${w}: on screen ${((r.lastOn - r.firstOn + 1) / 30).toFixed(1)} s (${r.onFrames} frames with any of the three drawn)`);
       await ses.close();
