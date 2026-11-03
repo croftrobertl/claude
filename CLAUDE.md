@@ -1442,11 +1442,17 @@ Rob sees it (the overlay rows; sources named on the sheets).
     at 1440; on screen 26.4 s at 390 (was 43.4) and 81.4 s at 1440 (was
     141). Poults keep their plain lowering. `tools/tom-reel.js` films 6 s
     round his Nth stop.
+  - **Walkers are never occluded** (Rob, 2026-11-03): the tom and poults
+    cross text IN FRONT of it; `drawP` skips `occClip` for `forage`. Only
+    the falling pieces and the background layer are cut. 4.15.0 cut his
+    fan with a rectangular notch where he passed a line of text.
+    `test-calm.js` 1b counts every walker draw made under a clip (none) and
+    checks the pieces still are; mutation `walkclip`.
   - A poult released after his turn walks only the ground it really covers
     (`ka = adv - (gN - kO)`): with no feed straight after the turn the old
     snap showed as a 1.58 px foot slide (test-holidays).
-  - Tests: `test-calm.js` (DCC_CALM_MUT=noclip|noturn|flip|repeat|often|
-    edge|hold; the stop count, stops wholly on screen, the no-repeat read from the DRAWN jabs, 15 s
+  - Tests: `test-calm.js` (DCC_CALM_MUT=noclip|walkclip|noturn|flip|repeat|
+    often|edge|hold; the stop count, stops wholly on screen, the no-repeat read from the DRAWN jabs, 15 s
     between stops, the no-pause checks), `test-untouched.js` against
     4.15.1 (`6fa0a3e`) with Thanksgiving exempt.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact

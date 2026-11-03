@@ -62,7 +62,7 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
         if (f.fs === 1) { drift = Math.max(drift, Math.abs(f.x - x0)); }
         if (f.fs !== 1 && st >= 0) { feeds.push((i - st) / 30); st = -1; }
       }
-      ok(feeds.length >= 2, `he stops to feed, more than once (${feeds.length} times in 90 s)`, feeds.join(','));
+      ok(feeds.length >= 1 && feeds.length <= 6, `he stops to feed, but seldom (${feeds.length} times in 90 s; 4.15.2: every 15-22 s of walking)`, feeds.join(','));
       ok(feeds.every(d => d >= 2.0 && d <= 3.4), `each feed lasts 2.1-3.3 s (${feeds.map(d => d.toFixed(1)).join(', ')})`, feeds.join(','));
       ok(drift === 0, 'and he does not move while he feeds', drift);
       const sp = fr.filter(f => !f.seed).map(f => Math.abs(f.vx));

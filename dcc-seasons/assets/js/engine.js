@@ -4056,7 +4056,7 @@
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
-			if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, b === 'forage' ? p.size * 7 : p.size * (p.sc || 1) * layerS * 1.7 + 6); }
+			if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, p.size * (p.sc || 1) * layerS * 1.7 + 6); }   /* 4.15.2 (Rob): walkers go IN FRONT of text, never cut */
 			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
 			if (b === 'dangle' && p.st !== 4) {
 				cx.strokeStyle = 'rgba(90,90,90,.6)';

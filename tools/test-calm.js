@@ -9,7 +9,8 @@
  *     (fields, buttons, labels, links, headings, text lines) while pieces
  *     still draw around them — and with the clip off (calm:false) the same
  *     frames DO put ink there, so the check can see an overlap. The header
- *     photo is not an occluder.
+ *     photo is not an occluder. The tom and poults (walkers) are NEVER cut:
+ *     they cross text in front of it (4.15.2, Rob).
  *  2. NO PAUSE (4.15.2, Rob: occlusion alone): a focused, typed-into field,
  *     a .dccs-modal, [data-dcc-seasons-busy] and the quiz all leave the
  *     pieces drawing as before.
@@ -22,7 +23,7 @@
  *     Time on screen reported.
  *
  *   node tools/test-calm.js [--only=occ|pause|walk]
- *   DCC_CALM_MUT=noclip|noturn|flip|repeat|often|edge|hold (a copy of the engine, one line broken)
+ *   DCC_CALM_MUT=noclip|walkclip|noturn|flip|repeat|often|edge|hold (a copy of the engine, one line broken)
  */
 const fs = require('fs');
 const os = require('os');
@@ -42,7 +43,8 @@ if (MUT) {
   for (const f of fs.readdirSync(JS)) { fs.copyFileSync(path.join(JS, f), path.join(d, f)); }
   let e = fs.readFileSync(path.join(d, 'engine.js'), 'utf8');
   const M = {
-    noclip: ['if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,', 'if (0) { occClip(p,'],
+    noclip: ["if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,", 'if (0) { occClip(p,'],
+    walkclip: ["if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, p.size * (p.sc || 1) * layerS * 1.7 + 6); }", "if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, b === 'forage' ? p.size * 7 : p.size * (p.sc || 1) * layerS * 1.7 + 6); }"],
     noturn: ["if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }", ''],
     repeat: ['return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3;', 'return v < 0 ? MT.floor(rand() * 3) % 3 : v;'],
     often: ["return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22);", 'return rnd(1.6, 3.0);'],
@@ -113,6 +115,45 @@ async function inkRun(pg, n) {
       ok(r.true.rects > 4, `${name}: ${r.true.rects} occluder rects on screen`, JSON.stringify(r.true));
       ok(r.true.inside === 0 && r.true.outside > 500, `${name}: 120 frames, no ink inside any occluder, ${r.true.outside} inked px around them`, JSON.stringify(r.true));
       ok(r.false.inside > 0, `${name}: with only the clip off (debug occClip:false) the same frames DO ink them (${r.false.inside} px): the check sees an overlap`, JSON.stringify(r.false));
+    }
+  }
+
+  if (!ONLY || ONLY === 'occ') {
+    console.log('\n  --- 1b. walkers are never occluded: the tom and poults cross text in front of it ---');
+    for (const w of [390, 1440]) {
+      const ses = await boot(o => rt.page(o), w, 'thanksgiving', {}, 14), pg = ses.page;
+      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
+      const r = await pg.evaluate(() => {
+        const S = window.DCCSeasonsEngine._state; S.manual(true);
+        const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
+        const cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype;
+        const o = { save: P.save, restore: P.restore, clip: P.clip, di: P.drawImage };
+        /* the clip state of the page canvas, by save depth */
+        let stack = [], cur = false; const st = { walkerDraws: 0, walkerClipped: 0, overText: 0, pieceClipped: 0 };
+        P.save = function () { if (this.canvas === cv) { stack.push(cur); } return o.save.apply(this, arguments); };
+        P.restore = function () { if (this.canvas === cv) { cur = stack.length ? stack.pop() : false; } return o.restore.apply(this, arguments); };
+        P.clip = function () { if (this.canvas === cv) { cur = true; } return o.clip.apply(this, arguments); };
+        P.drawImage = function (src, x, y, ww, hh) {
+          if (this.canvas === cv && ww !== undefined) {
+            const k = key.get(src);
+            if (k) {
+              st.walkerDraws++; if (cur) { st.walkerClipped++; }
+              const m = this.getTransform(), z = cv.width / cv.getBoundingClientRect().width;
+              const xs = [x, x + ww].map(a => (m.a * a + m.e) / z), ys = [y, y + hh].map(a => (m.d * a + m.f) / z);
+              const L = Math.min(...xs), R = Math.max(...xs), T = Math.min(...ys), B = Math.max(...ys);
+              if (S.calm.vis.some(v => v[0] < R && v[2] > L && v[1] < B && v[3] > T)) { st.overText++; }
+            } else if (cur) { st.pieceClipped++; }
+          }
+          return o.di.apply(this, arguments);
+        };
+        for (let f = 0; f < 30 * 150; f++) { S.tick(1000 / 30, 1); const t = S.calm.tom[0]; if (t && t.leg === 3) { break; } }
+        Object.assign(P, { save: o.save, restore: o.restore, clip: o.clip, drawImage: o.di });
+        return st;
+      });
+      ok(r.overText > 30, `${w}: the tom or a poult is drawn over an occluder's rect in ${r.overText} draws (the check has something to see)`, JSON.stringify(r));
+      ok(r.walkerDraws > 100 && r.walkerClipped === 0, `${w}: ${r.walkerDraws} walker draws, none clipped: no notch at any moment`, JSON.stringify(r));
+      ok(r.pieceClipped > 0, `${w}: the falling pieces ARE still cut (${r.pieceClipped} clipped draws)`, JSON.stringify(r));
+      await ses.close();
     }
   }
 

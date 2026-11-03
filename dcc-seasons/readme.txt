@@ -197,6 +197,8 @@ Occlusion alone, and a tom who eats less (Rob).
   instead of every 2-3 s), only when he is wholly on screen, and never
   feeds the same way twice running. His slow strut and turn are
   unchanged.
+* The tom and his poults walk in front of text: only the falling pieces
+  and the background layer pass behind it, so his fan is never notched.
 
 = 4.15.1 =
 The Anniversary's colors (Rob's picks): the date band is cream with the
