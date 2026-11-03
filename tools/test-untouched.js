@@ -137,7 +137,7 @@ function folder(files, drop) {
     const hm = hashes(dm, ['halloween']);
     ok(JSON.stringify(hm.halloween) !== JSON.stringify(ho.halloween), 'a Halloween sprite resized in the engine fails proof 3 (the pixels)', JSON.stringify(hm.halloween));
     /* 4.15.2: the occluder clip lost (it must stay exactly as 4.15.0's): the pixels must see it */
-    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace('if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,', 'if (0) { occClip(p,') }), []);
+    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace("if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,", 'if (0) { occClip(p,') }), []);
     const hl = hashes(dl, ['halloween']);
     ok(JSON.stringify(hl.halloween) !== JSON.stringify(ho.halloween), 'the occluder clip removed fails proof 3', JSON.stringify(hl));
     /* (the crane draws on Florida Keys only in its cranes scene, which the
