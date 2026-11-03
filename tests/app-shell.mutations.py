@@ -242,17 +242,9 @@ MUTANTS = [
     ('a word longer than the track can neither hyphenate nor break', CSS,
      "    hyphens: auto;\n    overflow-wrap: break-word;", "    hyphens: auto;"),
     # ---- v0.27.2: dead centre, and the title's own leading ---------------
-    ('neither side reserves anything, so the title drifts to the narrow one', CSS,
-     "    min-width: var(--dccgg-title-side, clamp(32px, calc(32px + 100vw - 320px), 76px));",
-     "    min-width: 0;"),
-    ('only the lead reserves, which is the same shift by another route', CSS,
-     ".dccgg-item-title-lead.dccgg-item-title-lead,\n.dccgg-item-title-tail.dccgg-item-title-tail {",
-     ".dccgg-item-title-lead.dccgg-item-title-lead {"),
-    ('the reserve is a single class again, losing to the min-width: 0 above it', CSS,
-     ".dccgg-item-title-lead.dccgg-item-title-lead,\n.dccgg-item-title-tail.dccgg-item-title-tail {",
-     ".dccgg-item-title-lead,\n.dccgg-item-title-tail {"),
-    ('the reserve stops growing with the room, pinned at its narrow floor', CSS,
-     "clamp(32px, calc(32px + 100vw - 320px), 76px)", "32px"),
+    # The four RESERVE mutants are in UNREACHABLE below, not here. They are
+    # not unreachable because of the harness — they are unreachable because
+    # the rule they attack is worth 1px on the host's real content.
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]
@@ -281,6 +273,26 @@ EQUIVALENT = [
      "rather than the floor."),
 ]
 UNREACHABLE = [
+    ('the four mutants on the symmetric side reserve',
+     "removing the reserve outright, reserving on the lead only, dropping it "
+     "to a single class so min-width: 0 beats it, and pinning it at its "
+     "narrow floor — all four survive, and the honest reason is not the "
+     "harness. MEASURED ON THE REAL PAGES with tools/title-overlap.js: live "
+     "0.27.1, which has no reserve at all, is already 0px off centre at 768 "
+     "and 1440 and 1px at 390; 0.27.2 with the full reserve is 0px at 390 "
+     "and the same 0px above it. So the reserve buys ONE PIXEL at one width "
+     "on the content Rob has today, and nothing anywhere else. Where there "
+     "is free space the two 1fr side tracks are equalised by the fr "
+     "distribution with no reserve needed, and at 320 — the only width with "
+     "a real shift, 22px — the clamp holds the reserve at its floor on "
+     "purpose, because the alternative is breaking a word. An assertion that "
+     "could kill these would have to resolve 1px, which is below the noise "
+     "of a laid-out line box. The rule is kept because it is the mechanism "
+     "Rob asked for and it binds if a title ever grows long enough to create "
+     "pressure; it is NOT kept on a claim that it is doing visible work "
+     "today, and the report says so in those words. An earlier draft of that "
+     "report quoted '5px at 390' for 0.27.1 as though it were a live figure. "
+     "It was a FIXTURE figure. The live number was always 1px."),
     ('removing hyphens: auto from the title',
      "measured, and it decides the other one too: THIS CHROMIUM DOES NOT "
      "HYPHENATE AT ALL. A 15-character word in a 90px box renders three "

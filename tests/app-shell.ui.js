@@ -856,21 +856,17 @@ const check = (name, cond, detail) => {
                     const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
                     return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
                 })));
-        // v0.27.2: and it is centred BECAUSE the two sides reserve the same
-        // width, not because this fixture's lead and tail happen to match.
-        // Without the reserve the sides fall to their own contents and the
-        // title shifts by half the difference.
-        // Measured on the TRACKS, not on the lead and tail boxes: those carry
-        // justify-self start/end, so each shrinks to its own content inside
-        // its track and their widths differ even when the row is centred.
-        // The reserve's promise is about the columns.
-        check('…because both side tracks are the same width',
-            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) =>
-                rows.every((row) => {
-                    const cols = getComputedStyle(row).gridTemplateColumns.split(' ').map(parseFloat);
-                    if (cols.length !== 3 || cols.some(isNaN)) { return false; }
-                    return Math.abs(cols[0] - cols[2]) <= 1;
-                })));
+        // v0.27.2 DELIBERATELY DOES NOT ASSERT THE RESERVE HERE, and the
+        // measurement is the reason. Where there is free space, the two 1fr
+        // side tracks are equalised by the fr distribution alone, with no
+        // reserve at all — so an equality check passes whether the reserve
+        // exists or not, which is a test that cannot fail. Measured on the
+        // real pages: removing the reserve entirely moves the worst title
+        // by 1px at 390 and by nothing at 768 or 1440. The reserve binds
+        // only under pressure the current content does not create. What it
+        // is worth is recorded against the live pages in
+        // tests/app-shell.mutations.py's unreachable list, not pretended at
+        // here.
         await shut(v);
     }
 
