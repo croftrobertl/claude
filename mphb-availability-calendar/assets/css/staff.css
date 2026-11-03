@@ -697,6 +697,13 @@ span.mphbac-staff-ico::before {
     cursor: pointer;
 }
 .mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn.is-undo { background: #d93025; }
+/* 0.52.0: Occupied, the gray of its sign. */
+.mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn.is-occupied { background: #5f6368; }
+/* Stacked when the buttons do not fit beside the name (0.52.0). */
+.mphbac-staff-readypop .mphbac-staff-readybtns.is-stacked {
+    flex-direction: column;
+    align-items: stretch;
+}
 .mphbac-staff-readypop.mphbac-staff-readypop .mphbac-staff-readybtn.mphbac-staff-readybtn:focus-visible {
     outline: 2px solid #0A50B2;
     outline-offset: 2px;

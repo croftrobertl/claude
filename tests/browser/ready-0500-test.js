@@ -204,10 +204,46 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
       fs.mkdirSync(OUT, { recursive: true });
       await longPress(p, label(T.b36));
       const pop = await popup(p);
-      check('(screenshot) held again, a Not Ready cottage offers only "Ready"', JSON.stringify(pop.buttons) === '["Ready"]', pop.buttons);
+      check('(screenshot) held again, mid-stay Not Ready offers "Ready" and "Occupied" (0.52.0)', JSON.stringify(pop.buttons) === '["Ready","Occupied"]', pop.buttons);
       await p.screenshot({ path: path.join(OUT, 'popup-36-390.png') });
       await p.keyboard.press('Escape');
     }
+  }
+
+  console.log('\n-- 2b. 0.52.0: the OCCUPIED button (a guest in) --');
+  {
+    await centre(p, T.b36);
+    await longPress(p, label(T.b36));
+    let pp = await popup(p);
+    check('#36, a guest in, marked Not Ready mid-stay: the popup offers the other two — "Ready" and "Occupied"', JSON.stringify(pp.buttons) === '["Ready","Occupied"]', pp.buttons);
+    const occ = await p.evaluate(() => { const b = [...document.querySelectorAll('.mphbac-staff-readypop button')].find(x => x.textContent === 'Occupied'); const r = b.getBoundingClientRect();
+      return { bg: getComputedStyle(b).backgroundColor, w: Math.round(r.width), h: Math.round(r.height) }; });
+    check('..."Occupied" is gray #5f6368, the same size as the other buttons (48px tall)', occ.bg === 'rgb(95, 99, 104)' && occ.h === 48 && occ.w >= 100, occ);
+    p.__holdReady = 600;
+    await tap(p, 'Occupied');
+    await p.waitForTimeout(80);
+    const mid = (await signs(p))[T.b36];
+    await p.waitForTimeout(900);
+    const last = p.__ready[p.__ready.length - 1];
+    check('TAP OCCUPIED: the gray person shows at once, then the save answers 200 (ready=occupied)', mid === 'occupied' && last.status === 200 && /ready=occupied/.test(last.body) && (await signs(p))[T.b36] === 'occupied', [mid, last]);
+    p.__holdReady = 0;
+    const lbl = await p.evaluate(sel => document.querySelector(sel).getAttribute('aria-label'), label(T.b36));
+    check('...read again as "Cottage 36: Occupied"', lbl === 'Cottage 36: Occupied', lbl);
+    await longPress(p, label(T.b36));
+    pp = await popup(p);
+    check('gray again: the popup offers "Ready" and "Not Ready" (as 0.51.0)', JSON.stringify(pp.buttons) === '["Ready","Not Ready"]', pp.buttons);
+    await tap(p, 'Ready');
+    await p.waitForTimeout(900);
+    await longPress(p, label(T.b36));
+    pp = await popup(p);
+    check('mid-stay Ready: "Not Ready" and "Occupied"', JSON.stringify(pp.buttons) === '["Not Ready","Occupied"]', pp.buttons);
+    await tap(p, 'Not Ready');
+    await p.waitForTimeout(900);
+    await centre(p, T.b22);
+    await longPress(p, label(T.b22));
+    pp = await popup(p);
+    check('NEVER OCCUPIED WITH NO GUEST IN: #22 (checked out today) offers only "Ready"', JSON.stringify(pp.buttons) === '["Ready"]', pp.buttons);
+    await p.keyboard.press('Escape');
   }
 
   console.log('\n-- 3. the popup offers the opposite --');
@@ -224,7 +260,7 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     check('#22, Ready: only "Not Ready"', JSON.stringify(pp.buttons) === '["Not Ready"]', pp.buttons);
     await tap(p, 'Not Ready');
     await p.waitForTimeout(900);
-    check('Not Ready: the broom again, and saved', (await signs(p))[T.b22] === 'notready' && p.__ready.length === 3 && p.__ready.every(x => x.status === 200), p.__ready);
+    check('Not Ready: the X again, and saved (every save this far answered 200)', (await signs(p))[T.b22] === 'notready' && p.__ready.length >= 3 && p.__ready.every(x => x.status === 200), p.__ready);
     // THE SIGNS (0.49.0, Rob's pick D): a white broom on red, a white check on
     // green — never colour alone — and the check centred, measured in pixels.
     const icon = id => p.evaluate(sel => { const d = document.querySelector(sel + ' .mphbac-staff-ready'); const c = getComputedStyle(d);
@@ -317,7 +353,7 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     let at = await placement(q, T.b36), pp = await popup(q);
     check('A RIGHT-CLICK on #36 (lowest row, page scrolled) opens the popup beside it, at its height, named "#36 Sunshine"',
       pp.open && at.beside && at.level && pp.name === '#36 Sunshine', [at, pp.name]);
-    check('...#36 is Not Ready (marked on the phone): it offers "Ready"', JSON.stringify(pp.buttons) === '["Ready"]', pp.buttons);
+    check('...#36 is Not Ready mid-stay (marked on the phone): it offers "Ready" and "Occupied" (0.52.0)', JSON.stringify(pp.buttons) === '["Ready","Occupied"]', pp.buttons);
     if (OUT) await q.screenshot({ path: path.join(OUT, 'popup-36-1440.png') });
     await q.keyboard.press('Escape');
     await q.waitForTimeout(100);
@@ -364,6 +400,19 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     await c3.close();
   }
 
+  console.log('\n-- 7b. 0.52.0: side by side where they fit beside the name, stacked where not --');
+  for (const w of [320, 390]) {
+    const { ctx: c6, p: q } = await open(browser, w);
+    await centre(q, T.b36);
+    await longPress(q, label(T.b36));
+    const pp = await popup(q), at = await placement(q, T.b36);
+    check(`(instrument) ${w}px: #36 offers two buttons`, pp.buttons.length === 2, pp.buttons);
+    const stacked = await q.evaluate(() => document.querySelector('.mphbac-staff-readybtns').classList.contains('is-stacked'));
+    check(`${w}px: the two-button popup on #36 is ${w < 360 ? 'STACKED' : 'side by side'}, beside the name and not over it, its buttons on screen`,
+      stacked === (w < 360) && at.beside && at.level && pp.inView, [stacked, at, pp.sizes]);
+    await c6.close();
+  }
+
   console.log('\n-- 8. the gate, and zero writes to MotoPress --');
   {
     const before = fs.readFileSync(STATE, 'utf8');
@@ -401,6 +450,30 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     check('(stills) the popup on the gray #36 offers both', pz.open && JSON.stringify(pz.buttons) === '["Ready","Not Ready"]', pz.buttons);
     await z.screenshot({ path: path.join(OUT, 'popup-gray-390.png') });
     await c4.close();
+  }
+
+  if (OUT) {
+    // THE 0.52.0 STILLS: #36 (a guest in) held in each of its three states,
+    // at 320 and 390. After the 0.51.0 stills' fresh state, #36 is gray.
+    for (const w of [320, 390]) {
+      const { ctx: c5, p: y } = await open(browser, w, { scale: 2 });
+      const want = { notready: '["Ready","Occupied"]', occupied: '["Ready","Not Ready"]', ready: '["Not Ready","Occupied"]' };
+      for (const [from, tapTo] of [['occupied', 'Ready'], ['ready', 'Not Ready'], ['notready', 'Occupied']]) {
+        await centre(y, T.b36);
+        check(`(stills ${w}px) #36 is ${from}`, (await signs(y))[T.b36] === from, await signs(y));
+        await longPress(y, label(T.b36));
+        const pq = await popup(y);
+        check(`(stills ${w}px) ${from}: offers ${want[from]}, on screen`, JSON.stringify(pq.buttons) === want[from] && pq.inView, pq);
+        const lay = await y.evaluate(() => document.querySelector('.mphbac-staff-readybtns').classList.contains('is-stacked'));
+        const at36 = await placement(y, T.b36);
+        check(`(stills ${w}px) ${from}: ` + (w < 360 ? 'STACKED, so it fits BESIDE the name without covering it' : 'side by side, beside the name'),
+          lay === (w < 360) && at36.beside && at36.level, [lay, at36]);
+        await y.screenshot({ path: path.join(OUT, `popup-${from}-${w}.png`) });
+        await tap(y, tapTo);
+        await y.waitForTimeout(900);
+      }
+      await c5.close();
+    }
   }
 
   await browser.close();

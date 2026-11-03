@@ -158,6 +158,8 @@ final class Staff_Widget
                 'dotGreen'     => __('Ready', 'mphb-availability-calendar'),
                 // 0.51.0: a guest is in (the gray sign).
                 'dotOccupied'  => __('Occupied', 'mphb-availability-calendar'),
+                // 0.52.0: the popup's button that clears a mark back to gray.
+                'occupiedBtn'  => __('Occupied', 'mphb-availability-calendar'),
                 'readyPop'     => __('Cleaning for {cottage}', 'mphb-availability-calendar'),
                 'readyFailed'  => __('Could not save. Please try again.', 'mphb-availability-calendar'),
                 // 0.50.0: a save refused because the cottage changed first.

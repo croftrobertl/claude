@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.51.0
+Stable tag: 0.52.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.52.0 =
+* **An Occupied button (Rob's pick).** While a guest is in a cottage, its popup offers the two signs it isn't showing: on gray, Ready and Not Ready (as before); after a Ready marked during the stay, Not Ready and Occupied; after a Not Ready, Ready and Occupied. Tapping Occupied clears the mark, so the gray person shows again until the guest's checkout. Never offered when no guest is in; checkout mornings and turnover days are unchanged. On a narrow phone the two buttons stack, so the popup still opens beside the cottage's name. Same staff password check and the same refusal when another phone changed the cottage first. Read-only on MotoPress; nothing is written on install, activation or upgrade.
 
 = 0.51.0 =
 * **Occupied: a gray sign while a guest is in (Rob's pick B).** On the staff calendar, a cottage with a guest in it now shows a white person on a gray circle, read aloud as "Cottage 23: Occupied". It sits on top of the automatic state and of any mark made before the stay; a Ready or Not Ready marked after the guest's check-in time on the arrival day replaces it until that guest leaves. On a turnover day the checkout still governs (red until marked Ready); the new stay shows gray the next morning. Holding a gray cottage offers both Ready and Not Ready. Dock blocks and cancelled bookings never count. Read-only on MotoPress; nothing is written on install, activation or upgrade.

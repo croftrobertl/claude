@@ -60,10 +60,12 @@ final class Staff_Ready
     }
 
     /**
-     * Every listed cottage: type id => ['state' => ready|notready|none,
-     * 'source' => auto|manual|'', 'at' => unix time of the newest event].
+     * Every listed cottage: type id => ['state' => ready|notready|occupied|
+     * none, 'source' => auto|manual|occupied|'', 'at' => unix time of the
+     * newest event, 'stay' => true while the Occupied rule governs it (a
+     * guest in, not a turnover day) — the popup then also offers Occupied].
      *
-     * @return array<string, array{state:string, source:string, at:int}>
+     * @return array<string, array{state:string, source:string, at:int, stay:bool}>
      * @throws Staff_Read_Failed
      */
     public static function state(): array
@@ -74,7 +76,8 @@ final class Staff_Ready
         $out = [];
         foreach (Data_Provider::list_room_types() as $t) {
             $id = (int) $t['id'];
-            $out[(string) $id] = self::decide($checkouts[$id] ?? null, self::manual($id), $stays[$id] ?? null, $checkin);
+            $rec = self::record($id);
+            $out[(string) $id] = self::decide($checkouts[$id] ?? null, $rec['manual'], $stays[$id] ?? null, $checkin, $rec['cleared']);
         }
         return $out;
     }
@@ -83,16 +86,18 @@ final class Staff_Ready
      * THE RULE. $checkout: the latest checkout (Y-m-d) or null; $manual:
      * ['ready', 'at'] or null; $stay_in: the arrival day (Y-m-d) of the stay
      * the cottage is in today, or null; $checkin_secs: MotoPress's check-in
-     * time, in seconds after midnight.
+     * time, in seconds after midnight; $cleared_at: when a mark was last
+     * cleared back to Occupied (0.52.0), 0 if never — its time counts, so a
+     * page that saw the mark before it is stale.
      *
-     * @return array{state:string, source:string, at:int}
+     * @return array{state:string, source:string, at:int, stay:bool}
      */
-    public static function decide(?string $checkout, ?array $manual, ?string $stay_in = null, int $checkin_secs = 0): array
+    public static function decide(?string $checkout, ?array $manual, ?string $stay_in = null, int $checkin_secs = 0, int $cleared_at = 0): array
     {
         $tz = Data_Provider::timezone();
         $auto_at = $checkout !== null ? (new \DateTimeImmutable($checkout, $tz))->getTimestamp() : null;
         $man_at = $manual !== null ? (int) $manual['at'] : null;
-        $at = max((int) $auto_at, (int) $man_at);
+        $at = max((int) $auto_at, (int) $man_at, $cleared_at);
 
         // OCCUPIED (0.51.0). A turnover — a checkout on the stay's arrival
         // day — leaves that day to the checkout; Occupied starts next morning.
@@ -105,21 +110,21 @@ final class Staff_Ready
                 if ($man_at !== null && $man_at > $stay_start) {
                     // A mark made during this stay replaces Occupied.
                     $during = !empty($manual['ready']) ? self::READY : self::NOT_READY;
-                    return ['state' => $during, 'source' => 'manual', 'at' => $at];
+                    return ['state' => $during, 'source' => 'manual', 'at' => $at, 'stay' => true];
                 }
-                return ['state' => self::OCCUPIED, 'source' => 'occupied', 'at' => $at];
+                return ['state' => self::OCCUPIED, 'source' => 'occupied', 'at' => $at, 'stay' => true];
             }
         }
         if ($man_at !== null && ($auto_at === null || $man_at >= $auto_at)) {
-            return ['state' => !empty($manual['ready']) ? self::READY : self::NOT_READY, 'source' => 'manual', 'at' => $at];
+            return ['state' => !empty($manual['ready']) ? self::READY : self::NOT_READY, 'source' => 'manual', 'at' => $at, 'stay' => false];
         }
         if ($checkout !== null) {
             $red_from = Data_Provider::today()->modify('-' . (self::RED_DAYS - 1) . ' days')->format('Y-m-d');
             if ($checkout >= $red_from) {
-                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => $at];
+                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => $at, 'stay' => false];
             }
         }
-        return ['state' => self::NONE, 'source' => '', 'at' => $at];
+        return ['state' => self::NONE, 'source' => '', 'at' => $at, 'stay' => false];
     }
 
     /**
@@ -274,8 +279,11 @@ final class Staff_Ready
 
     /**
      * The stored record in its 0.50.0 shape, whatever shape it was saved in.
+     * 0.52.0 adds one key: 'cleared', when a mark was last cleared back to
+     * Occupied (absent = 0). Log entries: [t, 1] Ready, [t, 0] Not Ready,
+     * [t, 2] cleared to Occupied.
      *
-     * @return array{v:int, manual:?array, log:array}
+     * @return array{v:int, manual:?array, log:array, cleared:int}
      */
     private static function record(int $type_id): array
     {
@@ -284,7 +292,7 @@ final class Staff_Ready
         if (($v['v'] ?? 0) === 2) {
             $m = $v['manual'] ?? null;
             return ['v' => 2, 'manual' => is_array($m) && isset($m['at']) ? ['ready' => !empty($m['ready']), 'at' => (int) $m['at']] : null,
-                'log' => is_array($v['log'] ?? null) ? $v['log'] : []];
+                'log' => is_array($v['log'] ?? null) ? $v['log'] : [], 'cleared' => (int) ($v['cleared'] ?? 0)];
         }
         // 0.48/0.49: [checkout => ['ready', 'log' => [[t, 0|1]]]]. Its marks,
         // in time order; Not Ready there only ever undid a Ready (back to the
@@ -299,12 +307,7 @@ final class Staff_Ready
         }
         usort($log, static fn($a, $b) => $a[0] <=> $b[0]);
         $last = $log ? $log[count($log) - 1] : null;
-        return ['v' => 2, 'manual' => $last && $last[1] === 1 ? ['ready' => true, 'at' => $last[0]] : null, 'log' => $log];
-    }
-
-    private static function manual(int $type_id): ?array
-    {
-        return self::record($type_id)['manual'];
+        return ['v' => 2, 'manual' => $last && $last[1] === 1 ? ['ready' => true, 'at' => $last[0]] : null, 'log' => $log, 'cleared' => 0];
     }
 
     /**
@@ -330,5 +333,33 @@ final class Staff_Ready
             throw new \RuntimeException('ready state did not save');
         }
         return $ready;
+    }
+
+    /**
+     * OCCUPIED, tapped (0.52.0, Rob): clear the manual mark so the gray sign
+     * shows again until the guest's checkout. Only while the Occupied rule
+     * governs the cottage (a guest in, not a turnover day); the same stale
+     * refusal as save(). Records when, and logs it ([t, 2]). Returns true, or
+     * null when refused (stale, or no guest in).
+     *
+     * @throws \RuntimeException when the write did not stick
+     */
+    public static function clear(int $type_id, int $seen): ?bool
+    {
+        $current = self::state()[(string) $type_id] ?? null;
+        if ($current === null || empty($current['stay']) || $current['at'] > $seen) {
+            return null;
+        }
+        $rec = self::record($type_id);
+        $now = max(time(), $current['at'] + 1);
+        $rec['manual'] = null;
+        $rec['cleared'] = $now;
+        $rec['log'] = array_slice(array_merge($rec['log'], [[$now, 2]]), -self::LOG_MAX);
+        update_option(self::option_name($type_id), $rec, false);
+        $back = self::record($type_id);
+        if ($back['manual'] !== null || $back['cleared'] !== $now) {
+            throw new \RuntimeException('occupied state did not save');
+        }
+        return true;
     }
 }

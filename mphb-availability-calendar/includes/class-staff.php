@@ -274,11 +274,14 @@ final class Staff
         $seen    = (string) ($_POST['seen'] ?? '');
         $listed  = array_map(static fn($t) => (int) $t['id'], Data_Provider::list_room_types());
         if ($type_id <= 0 || !in_array($type_id, $listed, true)
-            || !in_array($ready, ['0', '1'], true) || !preg_match('/^\d{1,12}$/', $seen)) {
+            || !in_array($ready, ['0', '1', 'occupied'], true) || !preg_match('/^\d{1,12}$/', $seen)) {
             wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar')], 400);
         }
         try {
-            $saved = Staff_Ready::save($type_id, $ready === '1', (int) $seen);
+            // 'occupied' (0.52.0): clear the mark — only while a guest is in.
+            $saved = $ready === 'occupied'
+                ? Staff_Ready::clear($type_id, (int) $seen)
+                : Staff_Ready::save($type_id, $ready === '1', (int) $seen);
             $state = Staff_Ready::state();
         } catch (\Throwable $e) {
             error_log('MPHBAC staff: ready not saved: ' . $e->getMessage());

@@ -169,7 +169,7 @@
             Object.keys(t).forEach(function (k) {
                 var v = t[k];
                 if (v && (v.state === 'ready' || v.state === 'notready' || v.state === 'occupied' || v.state === 'none')) {
-                    next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0 };
+                    next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0, stay: !!v.stay };
                 }
             });
             // A save still on its way keeps the state it showed until it answers.
@@ -182,7 +182,7 @@
             [].forEach.call(gridEl.querySelectorAll('.mphbac-staff-rowlabel[data-type]'), paintDot);
         }
 
-        function stateOf(id) { return ready.map[id] || { state: 'none', at: 0 }; }
+        function stateOf(id) { return ready.map[id] || { state: 'none', at: 0, stay: false }; }
 
         function paintDot(label) {
             var st = stateOf(label.getAttribute('data-type'));
@@ -232,11 +232,14 @@
         pop.appendChild(popBtns);
         document.body.appendChild(pop);
 
+        // want: 'ready' | 'notready' | 'occupied' (0.52.0: clears the mark).
         function button(want) {
             var b = document.createElement('button');
             b.type = 'button';
-            b.className = 'mphbac-staff-readybtn' + (want ? '' : ' is-undo');
-            b.textContent = want ? (S.readyBtn || 'Ready') : (S.notReadyBtn || 'Not Ready');
+            b.className = 'mphbac-staff-readybtn' + (want === 'notready' ? ' is-undo' : want === 'occupied' ? ' is-occupied' : '');
+            b.textContent = want === 'ready' ? (S.readyBtn || 'Ready')
+                : want === 'notready' ? (S.notReadyBtn || 'Not Ready')
+                : (S.occupiedBtn || 'Occupied');
             b.addEventListener('click', function () { chooseReady(want); });
             return b;
         }
@@ -249,8 +252,14 @@
             pop.__seen = st.at;
             popName.textContent = label.getAttribute('data-short') || label.getAttribute('data-name') || '';
             popBtns.textContent = '';
-            if (st.state !== 'ready') popBtns.appendChild(button(true));
-            if (st.state !== 'notready') popBtns.appendChild(button(false));
+            // The choices it is not showing now, from Ready · Not Ready ·
+            // Occupied — Occupied only while a guest is in (0.52.0). Always
+            // two (one outside a stay): the state shown is always one of
+            // the three, and a guest in never leaves it with none.
+            ['ready', 'notready', 'occupied'].forEach(function (k) {
+                if (k !== st.state && (k !== 'occupied' || st.stay)) popBtns.appendChild(button(k));
+            });
+            popBtns.classList.remove('is-stacked');
             pop.setAttribute('aria-label', (S.readyPop || 'Cleaning for {cottage}').replace('{cottage}', label.getAttribute('data-name') || ''));
             // The board's own typeface, now that the popup is not inside it.
             pop.style.fontFamily = getComputedStyle(root).fontFamily;
@@ -259,6 +268,9 @@
             // long press: its lift lands on the name, not on a button.
             var r = label.getBoundingClientRect();
             var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+            // Side by side where they fit beside the name; stacked where not
+            // (a 320px phone), so the popup never covers the name it is for.
+            if (popBtns.children.length > 1 && pop.offsetWidth > vw - r.right - 16) popBtns.classList.add('is-stacked');
             var w = pop.offsetWidth, h = pop.offsetHeight;
             var left = Math.min(r.right + 8, vw - w - 8);
             var top = Math.max(8, Math.min(r.top + r.height / 2 - h / 2, vh - h - 8));
@@ -279,12 +291,12 @@
             closeReady(false);
             if (!id) return;
             var was = stateOf(id);
-            ready.map[id] = { state: want ? 'ready' : 'notready', at: was.at };   // shown at once
+            ready.map[id] = { state: want, at: was.at, stay: was.stay };   // shown at once
             ready.saving[id] = (ready.saving[id] || 0) + 1;
             paintDots();
             var settle = function () { if (--ready.saving[id] <= 0) delete ready.saving[id]; };
             var back = function () { ready.map[id] = was; paintDots(); };
-            post('mphbac_staff_ready', { room_type_id: id, ready: want ? '1' : '0', seen: String(seen || 0) }).then(function (json) {
+            post('mphbac_staff_ready', { room_type_id: id, ready: want === 'ready' ? '1' : want === 'notready' ? '0' : 'occupied', seen: String(seen || 0) }).then(function (json) {
                 settle();
                 if (json && json.success && json.data) { adoptTurnover(json.data.turnover); say(''); return; }
                 back();

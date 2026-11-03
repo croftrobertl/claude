@@ -3972,3 +3972,18 @@ signs, so nothing else needed updating.
 every row; the boundary (14:59 / 15:00 / 15:01 against a 15:00 check-in);
 ready-0500-test.php/js updated (#36 is Occupied at load; a cottage with a
 guest in no longer shows "no sign").
+
+## 0.52.0 — the Occupied button (Rob, 2026-11-03)
+
+While the Occupied rule governs a cottage (a guest in, not a turnover day —
+decide() now returns 'stay' => true there), the popup offers the two states
+it is not showing from Ready · Not Ready · Occupied. Since the state shown is
+always one of the three, it is always two buttons (one outside a stay) —
+never three, as the WD's brief allowed for. Occupied tapped →
+Staff_Ready::clear(): manual = null, a new record key 'cleared' (its time;
+absent = 0 in older records), log [t, 2]; same endpoint (ready=occupied),
+same gate, same 409: `cleared` counts in `at`, so a page that saw the old
+mark is stale. Refused with no guest in and on a turnover day. Checkout
+morning: the checkout is newer, so Not Ready (unchanged). Buttons stack
+(.is-stacked) whenever the row would not fit beside the name — a 320px phone
+— so the popup never covers the name it is for; at 390 they sit side by side.

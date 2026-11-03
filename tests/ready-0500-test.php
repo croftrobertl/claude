@@ -80,7 +80,7 @@ $book([35], -20, -13);                                                 // out 13
 $book([36], -20, -14);                                                 // out 14 days ago
 $s = Staff_Ready::state();
 check('EVERY listed cottage has an entry (8), each a state, a source and a time — and nothing about any guest',
-    array_keys($s) === $types && array_keys($s['22']) === ['state', 'source', 'at']
+    array_keys($s) === $types && array_keys($s['22']) === ['state', 'source', 'at', 'stay']
     && !preg_match('/Guest|Air|DOCK|name/i', json_encode($s)), $s);
 check('a DIRECT stay out today: Not Ready, automatic', $sign(22) === 'notready auto', $sign(22));
 check('an IMPORTED (iCal) stay out today: Not Ready, automatic', $sign(23) === 'notready auto', $sign(23));
