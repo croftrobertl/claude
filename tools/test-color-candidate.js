@@ -22,9 +22,9 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = '685f44c';   /* 4.14.5 */
+const BASE = 'dbfda4e';   /* 4.15.0, live (4.14.6's candidates ran against 685f44c, 4.14.5) */
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-const DATE = arg('date', 'coralNavy'), PCT = arg('pct', 'coralLit');
+const DATE = arg('date', 'creamBlue'), PCT = arg('pct', 'coralDeep');
 const CHANGED = ['andate', 'anpct1', 'anpct2'];
 let pass = 0, fail = 0; const problems = [];
 const ok = (c, l, d) => { if (c) { pass++; console.log('    PASS  ' + l); } else { fail++; problems.push(l + ' — ' + d); console.log('    FAIL  ' + l + ' — ' + d); } };
@@ -57,7 +57,7 @@ function check(candSrc, baseSrc, label) {
 }
 
 (async () => {
-  console.log(`\n  --- the candidate (date ${DATE}, figures ${PCT}) against 4.14.5 (${BASE}) ---`);
+  console.log(`\n  --- the candidate (date ${DATE}, figures ${PCT}) against 4.15.0 (${BASE}) ---`);
   const others = files.filter(f => f !== 'art-anniversary.js');
   for (const f of others) { ok(fs.readFileSync(path.join(candDir, f), 'utf8') === git(`dcc-seasons/assets/js/${f}`), `${f} byte-identical`, f); }
   const candSrc = fs.readFileSync(path.join(candDir, 'art-anniversary.js'), 'utf8'), baseSrc = git('dcc-seasons/assets/js/art-anniversary.js');

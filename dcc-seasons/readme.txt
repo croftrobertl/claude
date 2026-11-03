@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.15.0
+Stable tag: 4.15.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,12 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.15.1 =
+The Anniversary's colors (Rob's picks): the date band is cream with the
+date in deep blue, and the two percentages are coral with a navy shadow.
+The gold is gone from both; their shapes, sizes and motion, and every
+other piece and theme, are unchanged.
 
 = 4.15.0 =
 Calmer Seasons (Rob's picks).

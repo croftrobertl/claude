@@ -28,7 +28,9 @@ const OUT = argv('out') || path.join(__dirname, '..', 'dcc-seasons', 'assets', '
  * figures, a key of tools/anniv-colors.js DATE / PCT, or null for 4.14.5's
  * gold. --date= / --pct= override them for a review build (--out= a
  * scratch copy); the shipped pack is built from the two constants. */
-const COLOR = { date: argv('date') || null, pct: argv('pct') || null };
+/* 4.15.1: Rob's picks (2026-11-03): the date band D (cream band, deep-blue
+ * numerals), the figures B (coral numerals, navy shadow) */
+const COLOR = { date: argv('date') || 'creamBlue', pct: argv('pct') || 'coralDeep' };
 const AC = require('./anniv-colors');
 
 const one = s => s.replace(/\n/g, '');
