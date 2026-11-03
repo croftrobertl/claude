@@ -58,14 +58,15 @@ const block = (sprites, w, title) => `<div class="lab">${title}</div>` +
   const S0 = W0.DCCSeasonsArt.anniversary.svgs;
   await shot(block([url(S0.andate)], 62, 'Now (4.14.5): gold'), 'date 0 gold now.png');
   await shot(block([url(S0.anpct1()), url(S0.anpct2())], 62, 'Now (4.14.5): gold'), 'figures 0 gold now.png');
-  const L = 'ABCD';
+  /* --dl= / --pl= letter the options as a round named them (4.15.1: D and B), --tag= heads each title */
+  const DL = arg('dl', 'ABCD'), PL = arg('pl', 'ABCD'), TAG = arg('tag', '');
   for (let i = 0; i < DATE_K.length; i++) {
     const k = DATE_K[i]; if (!scores.date[k].pass) { throw new Error('date ' + k + ' does not pass'); }
-    await shot(block([url(C.dateSprite(C.DATE[k], 'dccAnD1'))], 62, `${L[i]} · ${C.DATE[k].label}`), `date ${L[i]} ${k}.png`);
+    await shot(block([url(C.dateSprite(C.DATE[k], 'dccAnD1'))], 62, `${TAG}${DL[i]} · ${C.DATE[k].label}`), `date ${DL[i]} ${k}.png`);
   }
   for (let i = 0; i < PCT_K.length; i++) {
     const k = PCT_K[i]; if (!scores.pct[k].pass) { throw new Error('figures ' + k + ' does not pass'); }
-    await shot(block([url(C.pctSprite(C.PCT[k], '40%', 'dccAnP1', 1)), url(C.pctSprite(C.PCT[k], '37%', 'dccAnP2', 2))], 62, `${L[i]} · ${C.PCT[k].label}`), `figures ${L[i]} ${k}.png`);
+    await shot(block([url(C.pctSprite(C.PCT[k], '40%', 'dccAnP1', 1)), url(C.pctSprite(C.PCT[k], '37%', 'dccAnP2', 2))], 62, `${TAG}${PL[i]} · ${C.PCT[k].label}`), `figures ${PL[i]} ${k}.png`);
   }
   fs.writeFileSync(path.join(OUT, 'scores.json'), JSON.stringify(scores, null, 1));
   await br.close();
