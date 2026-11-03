@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.57.0
+Stable tag: 0.57.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,10 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.57.1 =
+* Bulleted lists (Rob's pick, option 1): in the See All cards' highlights, the bullets form one straight column at the left of the card, each item's text is left-aligned beside its bullet, and a wrapped line sits under the text, not under the bullet. In the two-column layout (480px and wider) each column's bullets line up the same way. The no-JavaScript fallback list follows the same rule.
+* The text above the list (the reason and the identical-layout note) stays centered with balanced wrapping. Everything else from 0.57.0 is unchanged.
 
 = 0.57.0 =
 * Rob's text rule: every piece of text in the Selector, its pop-up and the Minis is centered and wraps with balanced lines. Newly centered: the capacity note (it was left-aligned), "Pick One to Continue" (now centered under Next), the step label and match pill, the result and Compare cards' chips and View Cottage, the See All cards (badges, reason, highlights, identical-layout note, View, Compare), the Compare button, the comparison table, the No Perfect Matches sentence and the date labels. Rows that pair two things (step label and pill, Back and Next) keep their row; the text in each is centered.

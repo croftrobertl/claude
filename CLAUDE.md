@@ -574,7 +574,8 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   so both inherited the page's — bold, on the live site — and nothing in this
   repo looked wrong. An inherited value loses to any rule matching the element
   itself, so a plain (0,3,0) declaration settles it wherever the widget is
-  dropped; that is why the fix needed no specificity games. The bullets use
+  dropped; that is why the fix needed no specificity games. (HISTORY until 0.57.1 —
+  see Rob's text rule for today's list geometry:) The bullets use
   `list-style-position: inside` because the page centres the text: with the
   default `outside` the markers stay at a fixed x while each line centres
   independently, stranding every marker a different distance from its own text
@@ -781,8 +782,18 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   a generic `p + p` rule is there too, and loses to every class rule that sets a
   margin. One sentence-pair in ONE `<p>` (No Perfect Matches) is one paragraph. Rows
   that pair things keep their row; "Pick One to Continue" sits in `.dccs-next-col`
-  with Next so it centres under the button. Highlights bullets stay `inside`, so they
-  travel with the centred text. `.dccs-multi` is still emitted, as a hook only.
+  with Next so it centres under the button. `.dccs-multi` is still emitted, as a hook
+  only. **THE ONE EXCEPTION, 0.57.1 (Rob, option 1 of two stills): a BULLETED LIST.**
+  Its bullets form one straight column flush-left in the card, each item's text is
+  LEFT beside its bullet, and wrapped lines sit under the TEXT: markers `outside`,
+  `padding-left: 0` on the list and the 1.2em indent on each `li` — an indent on the
+  `<ul>` exists once, so in the two-column layout (480px+) the second column's
+  bullets would sit in the column gap (measured on Cottage 34 at 1440). Rob turned
+  down option 2 (the list centred in the card as a block). The text ABOVE the list
+  stays centred and balanced. Lists today: `.dccs-highlights` and the noscript list;
+  the review list has no bullets. dom-smoke 108 allows `left` ONLY on those lists'
+  own selectors; the Chromium check measures one x per column and every wrapped
+  line's x equal to its item's text x on all 8 cards at 390/768/1440.
   Measured on live's theme (2026-11-03): 1,569 visible text elements across every
   screen at 390/768/1440, all `center` + `balance`.
 - **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).**
