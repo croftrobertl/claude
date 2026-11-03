@@ -39,6 +39,8 @@ const INIT = `(() => {
   for (const th of themes) {
     const cfg = config(['--theme=' + th, '--placement=content', '--layering=front', '--density=16', '--diag'].concat(process.argv.includes('--min') ? ['--min'] : []));
     cfg.forceHour = 12;
+    /* --knobs={"calm":false}: config knobs for both builds (an older build ignores one it does not know) */
+    Object.assign(cfg, JSON.parse(arg('knobs', '{}')));
     const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), {
       viewport: { width: W, height: W < 768 ? 700 : 800 }, dsf: 2, init: INIT,
     });

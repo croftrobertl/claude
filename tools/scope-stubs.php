@@ -12,7 +12,7 @@
  * @package DCC_Seasons
  */
 
-class WP_Post { public $ID = 0; public $post_name = ''; }
+class WP_Post { public $ID = 0; public $post_name = ''; public $post_status = 'publish'; }
 
 define('ABSPATH', 1);
 define('DCC_SEASONS_VERSION', 'test');
@@ -71,6 +71,20 @@ function is_page($x = '') {
         }
     }
     return false;
+}
+/* 4.15.0, Show On: the queried ID (a page or a cottage page), and the
+ * site's published pages by ID and by slug ($GLOBALS['PAGES']: id => slug). */
+$GLOBALS['PAGES'] = [22 => 'contact', 1005 => 'cottages', 1399 => 'submit-booking', 2393 => 'checkout', 4645 => 'guest', 18102 => 'staff', 18119 => 'explore'];
+function get_queried_object_id() { return ($GLOBALS['REQ']['page'] || $GLOBALS['REQ']['cottage']) ? (int) $GLOBALS['REQ']['id'] : 0; }
+function get_post($id) {
+    $id = (int) $id;
+    if (!isset($GLOBALS['PAGES'][$id])) { return null; }
+    $p = new \WP_Post(); $p->ID = $id; $p->post_name = $GLOBALS['PAGES'][$id]; $p->post_status = 'publish';
+    return $p;
+}
+function get_page_by_path($slug) {
+    $id = array_search((string) $slug, $GLOBALS['PAGES'], true);
+    return $id === false ? null : get_post($id);
 }
 function get_queried_object() {
     if (!$GLOBALS['REQ']['page']) { return null; }

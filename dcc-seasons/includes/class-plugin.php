@@ -386,7 +386,7 @@ final class Plugin {
             return;
         }
         $opt   = Settings::options();
-        $scope = (string) ($opt['scope'] ?? 'all');
+        $scope = implode(', ', array_map('strval', Settings::show_on_list($opt)));
         $why   = '';
         if (empty($opt['enabled'])) {
             $why = __('DCC Seasons is SWITCHED OFF (Master enable). Nothing renders on this site: no config, no scripts, no canvas, no easter egg.', 'dcc-seasons');
@@ -395,7 +395,7 @@ final class Plugin {
         } elseif ($this->is_excluded()) {
             $why = __('This page is hard-excluded (checkout, or the Elementor editor). Exclusions beat every other setting, including a preview.', 'dcc-seasons');
         } else {
-            $why = __('This page is outside "Where effects appear".', 'dcc-seasons');
+            $why = __('This page is not ticked in "Show On".', 'dcc-seasons');
         }
         $yes  = __('yes', 'dcc-seasons');
         $no   = __('no', 'dcc-seasons');
@@ -405,7 +405,7 @@ final class Plugin {
             __('Background layer', 'dcc-seasons')   => empty($opt['subtle']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
             __('Easter egg', 'dcc-seasons')         => empty($opt['egg']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
             __('Hard-excluded page', 'dcc-seasons') => $this->is_excluded() ? $yes : $no,
-            __('Where effects appear', 'dcc-seasons') => $scope,
+            __('Show On', 'dcc-seasons')            => $scope,
             __('This URL in scope', 'dcc-seasons')  => $this->in_scope() ? $yes : $no,
             __('Layering', 'dcc-seasons')           => (string) ($opt['layering'] ?? ''),
             __('Schedule rows', 'dcc-seasons')      => (string) count((array) ($opt['schedule'] ?? [])),
@@ -442,7 +442,7 @@ final class Plugin {
      *                        including an admin preview and a scope of "all"
      * 3. admin preview     — ?dcc_season= bypasses the SCOPE gate, never the
      *                        exclusions
-     * 4. scope             — the owner's "Where effects appear" choice
+     * 4. Show On           — the owner's checklist of pages (4.15.0)
      */
     private function should_load(): bool {
         $opt = Settings::options();
@@ -581,55 +581,42 @@ final class Plugin {
      * why saving the options purges the page cache (see Cache_Purge).
      */
     private function in_scope(): bool {
-        $scope = (string) Settings::options()['scope'];
+        $opt  = Settings::options();
+        $list = Settings::show_on_list($opt);
 
         /**
          * Filter whether the current request is inside the effects scope.
+         *
+         * Since 4.15.0 the scope is the "Show On" checklist (Rob's pick A):
+         * the front page when 'home' is ticked, a page or cottage page when
+         * its ID is ticked, nothing else. The old tiered `scope` setting is
+         * kept in the options row but no longer read, so this filter's
+         * second argument is now the string 'show_on' and the third the
+         * resolved list.
          *
          * Runs alongside — never instead of — dcc_seasons_is_excluded: the
          * hard exclusions are applied first and this filter cannot re-enable
          * effects on the checkout or in the Elementor editor.
          *
          * @param bool   $in_scope
-         * @param string $scope Stored setting:
-         *                      home|no_cottages|pages|not_home|all.
+         * @param string $scope 'show_on'.
+         * @param array  $list  'home' and the ticked post IDs.
          */
-        return (bool) apply_filters('dcc_seasons_in_scope', $this->scope_allows($scope), $scope);
+        return (bool) apply_filters('dcc_seasons_in_scope', $this->shows_here($list), 'show_on', $list);
     }
 
-    /**
-     * The scope matrix. The first four tiers are nested
-     * (home < no_cottages < pages < all), but `not_home` is NOT (4.11.0,
-     * Rob): it is "All pages" with the homepage taken away, so that Seasons
-     * can run on the homepage while the Hero Effects run everywhere else and
-     * the two never stack on one page. Read the column, not the order.
-     *
-     *                              home  no_cottages  pages  not_home  all
-     *   front page / homepage       Y         Y         Y        -      Y
-     *   `page` post type            -         Y         Y        Y      Y
-     *   cottage (mphb_room_type)    -         -         Y        Y      Y
-     *   blog post / other CPT       -         -         -        -      Y
-     *   archives, search, 404,
-     *   blog index                  -         -         -        -      Y
-     *
-     * The hard exclusions (checkout, booking, payment, the Elementor
-     * editor) are applied before this and are unaffected by any tier.
-     */
-    private function scope_allows(string $scope): bool {
+    /** Is THIS request one of the ticked pages? (4.15.0) */
+    private function shows_here(array $list): bool {
         if (is_front_page()) {
-            return $scope !== 'not_home';
+            return in_array('home', $list, true);
         }
-        if ($scope === 'home') {
-            return false;
+        if (is_page() || $this->is_cottage()) {
+            $id = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+            return $id > 0 && in_array($id, $list, true);
         }
-        if ($this->is_cottage()) {
-            return $scope === 'pages' || $scope === 'not_home' || $scope === 'all';
-        }
-        if (is_page()) {
-            return true; // no_cottages, pages, not_home, all
-        }
-        return $scope === 'all';
+        return false;
     }
+
 
     /**
      * Is this a single cottage (MotoPress accommodation) page?

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.14.5
+Stable tag: 4.15.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.15.0 =
+Calmer Seasons (Rob's picks).
+* Show On: Seasons runs only on the pages ticked in DCC → Seasons
+  (Home, Contact and Cottages by default). Every other page, including
+  pages added later and cottage pages, stays plain until ticked. The
+  never-decorate lists still win. This replaces "Where effects appear".
+* The falling pieces and the background layer pass behind buttons,
+  fields, labels, links, headings and lines of text; the header photo is
+  not covered. Mark anything else with data-dcc-seasons-occlude.
+* While a guest is busy (a text field, textarea or select in use, the
+  Cottage Selector's quiz or Compare Mode, any of its pop-ups, or anything
+  marked data-dcc-seasons-busy) the pieces fade out, and drift back 5 s
+  after the last keystroke or when it is done.
+* The tom walks about a third of the way across, turns round, and walks
+  back off the side he came from. He finishes his walk when a guest is
+  busy, and never enters then.
 
 = 4.14.5 =
 The Anniversary (11 November), held to the house style (approved by Rob).

@@ -49,7 +49,8 @@ class Settings {
      * is not part of the nesting; it sits after 'pages' because that is
      * where Rob asked for it, and because the Hero Effects mu-plugin
      * (3.14.0) lists the identical option in the same place. The matrix
-     * each one covers lives on Plugin::scope_allows().
+     * each one covered lived on Plugin::scope_allows(); since 4.15.0 the
+     * "Show On" checklist (show_on) is the gate and these are not read.
      *
      * @return array<string, string>
      */
@@ -367,10 +368,64 @@ class Settings {
      * stored value equal to it (Plugin::maybe_purge_after_upgrade) and never
      * writes it back as a "missing key", and options() merges it in.
      */
-    public const TRACKED_DEFAULTS = ['tap_selector', 'tap_count'];
+    public const TRACKED_DEFAULTS = ['tap_selector', 'tap_count', 'show_on'];
+
+    /**
+     * "Show On" (4.15.0, Rob's pick A, 2026-11-03): Seasons runs ONLY on the
+     * pages ticked here. Every other page is off until ticked — pages made
+     * later and cottage pages included. Tokens: 'home' (the front page,
+     * whatever it is) and post IDs (pages and cottage pages).
+     *
+     * The DEFAULT is Rob's pick: Home, Contact (page 22) and Cottages (page
+     * 1005). An ID changes when a page is rebuilt or restored and a stale
+     * ID fails silently, so each default ID carries its slug: if the ID is
+     * not that published page any more, the page at that slug is used
+     * instead (show_on_list()). A list the owner saves is taken as saved.
+     */
+    public const SHOW_ON_SLUGS = [22 => 'contact', 1005 => 'cottages'];
+
+    /** 'home' first, then unique positive IDs in ascending order. */
+    public static function show_on_norm($v): array {
+        $home = false;
+        $ids  = [];
+        foreach ((array) $v as $t) {
+            if ($t === 'home') { $home = true; continue; }
+            if (is_int($t) || (is_string($t) && ctype_digit($t))) {
+                $n = (int) $t;
+                if ($n > 0) { $ids[$n] = $n; }
+            }
+        }
+        sort($ids);
+        return $home ? array_merge(['home'], array_values($ids)) : array_values($ids);
+    }
+
+    /** The default list with each ID checked against its slug. */
+    public static function show_on_default(): array {
+        $out = [];
+        foreach (self::show_on_norm(self::defaults()['show_on']) as $t) {
+            if ($t === 'home' || !isset(self::SHOW_ON_SLUGS[$t])) { $out[] = $t; continue; }
+            $slug = self::SHOW_ON_SLUGS[$t];
+            $p = function_exists('get_post') ? get_post($t) : null;
+            if ($p && ($p->post_status ?? 'publish') === 'publish' && (string) ($p->post_name ?? '') === $slug) { $out[] = $t; continue; }
+            $q = function_exists('get_page_by_path') ? get_page_by_path($slug) : null;
+            $out[] = ($q && !empty($q->ID)) ? (int) $q->ID : $t;
+        }
+        return self::show_on_norm($out);
+    }
+
+    /** The pages Seasons may run on: the saved list, else the default. */
+    public static function show_on_list(array $opt): array {
+        if (!array_key_exists('show_on', $opt) || $opt['show_on'] === self::defaults()['show_on']) {
+            return self::show_on_default();
+        }
+        return self::show_on_norm($opt['show_on']);
+    }
 
     /** True when a stored value of a tracked key is just its default. */
     public static function is_default_value(string $key, $value): bool {
+        if ($key === 'show_on') {
+            return is_array($value) && self::show_on_norm($value) === self::show_on_default();
+        }
         $d = self::defaults()[$key] ?? null;
         if (is_int($d)) {
             return is_numeric($value) && (int) $value === $d;
@@ -403,7 +458,10 @@ class Settings {
             'ambient'         => 1,
             'egg'             => 1,
             'layering'        => 'behind',
-            'scope'           => 'all',
+            'scope'           => 'all',   /* kept, no longer read: "Show On" below is the gate (4.15.0) */
+            /* Rob's pick (4.15.0): Home, Contact, Cottages. A TRACKED_DEFAULT:
+             * stored only when the owner's ticks differ. See SHOW_ON_SLUGS. */
+            'show_on'         => ['home', 22, 1005],
             'placement'       => 'footer',
             /* Rob, 2026-10-10: the title in the homepage banner, tapped 4
              * times. The old default could not work on this site: Bravada
@@ -499,6 +557,39 @@ class Settings {
         return apply_filters('dcc_seasons_options', $opt);
     }
 
+    /**
+     * The Show On checklist (4.15.0): Home, then every published page, then
+     * every published cottage page. The old scope value rides along hidden
+     * so it is kept for a rollback (it is no longer read).
+     */
+    private static function render_show_on(array $opt): void {
+        $name = self::OPTION;
+        $list = self::show_on_list($opt);
+        $front = (int) get_option('page_on_front', 0);
+        $rows = [['home', __('Home (front page)', 'dcc-seasons')]];
+        $pages = function_exists('get_pages') ? (array) get_pages(['post_status' => 'publish', 'sort_column' => 'post_title']) : [];
+        foreach ($pages as $pg) {
+            if ((int) $pg->ID === $front) { continue; }
+            $rows[] = [(int) $pg->ID, $pg->post_title !== '' ? $pg->post_title : '#' . $pg->ID, (string) $pg->post_name];
+        }
+        $cottages = function_exists('get_posts') ? (array) get_posts(['post_type' => 'mphb_room_type', 'post_status' => 'publish', 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC']) : [];
+        echo '<input type="hidden" name="' . esc_attr($name) . '[show_on_sent]" value="1">';
+        echo '<input type="hidden" name="' . esc_attr($name) . '[scope]" value="' . esc_attr((string) ($opt['scope'] ?? 'all')) . '">';
+        echo '<fieldset class="dcc-seasons-showon" style="max-height:18em;overflow:auto;border:1px solid #c3c4c7;padding:6px 10px;background:#fff">';
+        echo '<legend class="screen-reader-text">' . esc_html__('Show On', 'dcc-seasons') . '</legend>';
+        $box = function ($val, string $label, string $hint = '') use ($name, $list) {
+            echo '<label style="display:block;margin:2px 0"><input type="checkbox" name="' . esc_attr($name) . '[show_on][]" value="' . esc_attr((string) $val) . '"' . (in_array($val, $list, true) ? ' checked' : '') . '> ' . esc_html($label) . ($hint !== '' ? ' <code>/' . esc_html($hint) . '/</code>' : '') . '</label>';
+        };
+        foreach ($rows as $r) { $box($r[0], $r[1], $r[2] ?? ''); }
+        if ($cottages) {
+            echo '<p style="margin:8px 0 2px;font-weight:600">' . esc_html__('Cottage pages', 'dcc-seasons') . '</p>';
+            foreach ($cottages as $c) { $box((int) $c->ID, $c->post_title !== '' ? $c->post_title : '#' . $c->ID, (string) $c->post_name); }
+        }
+        echo '</fieldset>';
+        echo '<p class="description">' . esc_html__('Seasons runs only on the pages ticked here. Every other page, including pages added later and cottage pages, stays plain until you tick it. Pages that are never decorated (the booking flow, the Elementor editor, the Guest Guide and the never-decorate lists below) stay off even when ticked. This replaces the old "Where effects appear" choice.', 'dcc-seasons') . '</p>';
+        echo '<p class="description">' . esc_html__('Saving purges the page cache automatically. Admin theme previews (?dcc_season=) ignore this list, so you can always preview anywhere.', 'dcc-seasons') . '</p>';
+    }
+
     public static function add_page(): void {
         // Inside a menu already called DCC, "DCC → DCC Seasons" stutters:
         // the menu label is the bare product name, the page title stays
@@ -572,7 +663,7 @@ class Settings {
         // TRACKED_DEFAULTS: a value equal to its default is not stored, so
         // options() supplies it and a later default change reaches the site.
         foreach (self::TRACKED_DEFAULTS as $key) {
-            if (self::is_default_value($key, $out[$key])) {
+            if (array_key_exists($key, $out) && self::is_default_value($key, $out[$key])) {
                 unset($out[$key]);
             }
         }
@@ -583,6 +674,17 @@ class Settings {
 
         $layering        = sanitize_key((string) ($in['layering'] ?? $d['layering']));
         $out['layering'] = in_array($layering, ['behind', 'front'], true) ? $layering : 'behind';
+
+        /* Show On: the ticked pages (4.15.0). The form always sends
+         * show_on_sent, so an empty list (nothing ticked) is a real answer;
+         * a caller that sends neither keeps the default. Equal to the
+         * default is not stored (TRACKED_DEFAULTS). */
+        if (isset($in['show_on_sent']) || isset($in['show_on'])) {
+            $out['show_on'] = self::show_on_norm(isset($in['show_on']) ? (array) $in['show_on'] : []);
+            if (self::is_default_value('show_on', $out['show_on'])) {
+                unset($out['show_on']);
+            }
+        }
 
         // Unknown/absent value falls back to 'all' — today's behavior, so an
         // upgrade from an options array with no `scope` key changes nothing.
@@ -736,17 +838,9 @@ class Settings {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row">
-                            <label for="dcc-seasons-scope"><?php esc_html_e('Where effects appear', 'dcc-seasons'); ?></label>
-                        </th>
+                        <th scope="row"><?php esc_html_e('Show On', 'dcc-seasons'); ?></th>
                         <td>
-                            <select id="dcc-seasons-scope" name="<?php echo esc_attr(self::OPTION); ?>[scope]">
-                                <?php foreach (self::scopes() as $key => $label) : ?>
-                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($opt['scope'], $key); ?>><?php echo esc_html($label); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description"><?php esc_html_e('Pages outside this scope load none of the plugin at all — no script, no config, no styles — so they cost nothing. "All pages except cottage pages" keeps the booking screens calm while the rest of the site stays festive; cottage pages are matched by MotoPress post type, not by URL. "All pages except for homepage" is "All pages" without the front page — pages and cottage pages, never posts — so the homepage can be left to another effect. This covers the ambient particles AND the tap easter egg together, so the egg only fires where effects appear.', 'dcc-seasons'); ?></p>
-                            <p class="description"><?php esc_html_e('Saving purges the page cache automatically — already-cached pages would otherwise keep the old scope. Admin theme previews (?dcc_season=) ignore this setting, so you can always preview anywhere.', 'dcc-seasons'); ?></p>
+                            <?php self::render_show_on($opt); ?>
                         </td>
                     </tr>
                     <tr>
@@ -759,7 +853,7 @@ class Settings {
                                     <option value="<?php echo esc_attr($key); ?>" <?php selected($opt['placement'], $key); ?>><?php echo esc_html($label); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <p class="description"><?php esc_html_e('WHERE on a page the decorations may appear — a different question from "Where effects appear" above, which decides which PAGES load the plugin at all. "Site footer only" keeps them off the body copy entirely: the canvas is mounted inside the footer, sized to it, and nothing is drawn over footer text either. "Across the page content" is the older behaviour, where the canvas spans the content column.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('WHERE on a page the decorations may appear — a different question from "Show On" above, which decides which PAGES load the plugin at all. "Site footer only" keeps them off the body copy entirely: the canvas is mounted inside the footer, sized to it, and nothing is drawn over footer text either. "Across the page content" is the older behaviour, where the canvas spans the content column.', 'dcc-seasons'); ?></p>
                             <p class="description"><?php esc_html_e('If the theme has no footer element the decorations render nowhere rather than falling back into the content; the footer element can be named with the dcc_seasons_footer_host filter.', 'dcc-seasons'); ?></p>
                             <p class="description"><strong><?php esc_html_e('Choosing between them:', 'dcc-seasons'); ?></strong> <?php esc_html_e('"Site footer only" confines everything to one small box at the bottom of the page, which is quiet but easy to miss entirely. "Across the page content" spans the whole column — and note it interacts with Layering below: with "Behind interactive widgets", an opaque section can cover the effects, which is the usual cause of "I set it up and I cannot see anything". "In front of everything" avoids that.', 'dcc-seasons'); ?></p>
                         </td>

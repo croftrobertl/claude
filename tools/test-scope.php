@@ -50,15 +50,84 @@ function loads(array $req, array $opt = []): bool {
     return (bool) $m->invoke($inst);
 }
 
-/* The live configuration, which is what this must be judged against. */
+/* The live configuration (2026-11-03). Since 4.15.0 the gate is the
+ * "Show On" checklist (Rob's pick A); the stored scope value is kept but no
+ * longer read, so it is set here to prove that. exclude_paths carries the
+ * Director's stopgap until he clears it after this release. */
+$STOPGAP = "staff\ntest\nguest\nexplore\nwildlife-guide\npay\nshop\naccount\ndelete\nprivacy\nterms-conditions\ncancellation-refund-policy\naccessibility\nsearch-results\ntransaction-failed";
 $LIVE = ['scope' => 'no_cottages', 'placement' => 'content', 'layering' => 'front'];
+$LIVE_SG = $LIVE + ['exclude_paths' => $STOPGAP];
 
-echo "=== LIVE CONFIG: scope=no_cottages — pages that MUST be decorated ===\n";
-ok(loads(['front' => true, 'path' => '/'], $LIVE), 'home');
-ok(loads(['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'], $LIVE), '/contact/');
-ok(loads(['page' => true, 'id' => 13, 'slug' => 'cottages', 'path' => '/cottages/'], $LIVE), '/cottages/ (the listing page)');
+/* every kind of page the live site has, by ID and slug */
+$SITE = [
+    'home'                 => ['front' => true, 'path' => '/'],
+    '/contact/ (22)'       => ['page' => true, 'id' => 22, 'slug' => 'contact', 'path' => '/contact/'],
+    '/cottages/ (1005)'    => ['page' => true, 'id' => 1005, 'slug' => 'cottages', 'path' => '/cottages/'],
+    '/staff/'              => ['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'],
+    '/test/'               => ['page' => true, 'id' => 3001, 'slug' => 'test', 'path' => '/test/'],
+    '/guest/'              => ['page' => true, 'id' => 4645, 'slug' => 'guest', 'path' => '/guest/'],
+    '/explore/'            => ['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'],
+    '/wildlife-guide/'     => ['page' => true, 'id' => 3002, 'slug' => 'wildlife-guide', 'path' => '/wildlife-guide/'],
+    '/pay/'                => ['page' => true, 'id' => 3003, 'slug' => 'pay', 'path' => '/pay/'],
+    '/shop/'               => ['page' => true, 'id' => 3004, 'slug' => 'shop', 'path' => '/shop/'],
+    '/account/'            => ['page' => true, 'id' => 3005, 'slug' => 'account', 'path' => '/account/'],
+    '/delete/'             => ['page' => true, 'id' => 3006, 'slug' => 'delete', 'path' => '/delete/'],
+    '/privacy/'            => ['page' => true, 'id' => 3007, 'slug' => 'privacy', 'path' => '/privacy/'],
+    '/terms-conditions/'   => ['page' => true, 'id' => 3008, 'slug' => 'terms-conditions', 'path' => '/terms-conditions/'],
+    '/cancellation-refund-policy/' => ['page' => true, 'id' => 3009, 'slug' => 'cancellation-refund-policy', 'path' => '/cancellation-refund-policy/'],
+    '/accessibility/'      => ['page' => true, 'id' => 3010, 'slug' => 'accessibility', 'path' => '/accessibility/'],
+    '/search-results/'     => ['page' => true, 'id' => 3011, 'slug' => 'search-results', 'path' => '/search-results/'],
+    '/transaction-failed/' => ['page' => true, 'id' => 3012, 'slug' => 'transaction-failed', 'path' => '/transaction-failed/'],
+    'a page made tomorrow' => ['page' => true, 'id' => 9999, 'slug' => 'new-page', 'path' => '/new-page/'],
+    'a cottage page'       => ['cottage' => true, 'id' => 1607, 'slug' => 'cottage-34', 'path' => '/accommodation/cottage-34/'],
+    'a blog post'          => ['path' => '/2026/10/a-post/'],
+    'a search'             => ['path' => '/?s=canal'],
+    '/checkout/'           => ['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'],
+    '/submit-booking/'     => ['page' => true, 'id' => 1399, 'slug' => 'submit-booking', 'path' => '/submit-booking/'],
+];
+$ON = ['home', '/contact/ (22)', '/cottages/ (1005)'];
 
-echo "\n=== the booking flow — MUST NOT be decorated, in EVERY scope ===\n";
+echo "=== SHOW ON: the checklist ALONE (stopgap cleared) gives exactly home + contact + cottages ===\n";
+foreach ($SITE as $name => $req) {
+    $want = in_array($name, $ON, true);
+    $got = loads($req, $LIVE + ['exclude_paths' => '', 'exclude_ids' => '']);
+    ok($got === $want, sprintf('%-30s %s', $name, $want ? 'decorated' : 'left alone'), $got ? 'loaded' : 'did not load');
+}
+echo "\n=== and the same with the Director's stopgap still set (nothing changes) ===\n";
+$diff = [];
+foreach ($SITE as $name => $req) { if (loads($req, $LIVE_SG) !== in_array($name, $ON, true)) { $diff[] = $name; } }
+ok($diff === [], 'exactly home + contact + cottages, stopgap or not', implode(', ', $diff));
+
+echo "\n=== the stored scope is no longer read ===\n";
+foreach (['home', 'no_cottages', 'pages', 'not_home', 'all'] as $scope) {
+    $diff = [];
+    foreach ($SITE as $name => $req) { if (loads($req, ['scope' => $scope, 'exclude_paths' => '', 'exclude_ids' => '']) !== in_array($name, $ON, true)) { $diff[] = $name; } }
+    ok($diff === [], "scope=$scope changes nothing", implode(', ', $diff));
+}
+
+echo "\n=== the default follows its pages by SLUG if their IDs change ===\n";
+$keep = $GLOBALS['PAGES'];
+$GLOBALS['PAGES'] = [7022 => 'contact', 7005 => 'cottages'] + array_diff_key($keep, [22 => 1, 1005 => 1]);
+ok(loads(['page' => true, 'id' => 7022, 'slug' => 'contact', 'path' => '/contact/'], $LIVE), '/contact/ rebuilt as page 7022 is still decorated');
+ok(loads(['page' => true, 'id' => 7005, 'slug' => 'cottages', 'path' => '/cottages/'], $LIVE), '/cottages/ rebuilt as page 7005 is still decorated');
+ok(!loads(['page' => true, 'id' => 22, 'slug' => 'old-thing', 'path' => '/old-thing/'], $LIVE), 'and whatever now holds ID 22 is not');
+$GLOBALS['PAGES'] = $keep;
+
+echo "\n=== ticking and unticking ===\n";
+ok(loads($SITE['a cottage page'], $LIVE + ['show_on' => ['home', 22, 1005, 1607]]), 'a cottage page is decorated once ticked');
+ok(loads($SITE['a page made tomorrow'], $LIVE + ['show_on' => ['home', 9999]]), 'a new page is decorated once ticked');
+ok(!loads($SITE['home'], $LIVE + ['show_on' => [22, 1005]]), 'the homepage is left alone once unticked');
+ok(!loads($SITE['/contact/ (22)'], $LIVE + ['show_on' => []]), 'nothing ticked: nothing decorated');
+ok(!loads($SITE['a blog post'], $LIVE + ['show_on' => ['home', 22, 1005]]), 'a post is never decorated (it is not on the list)');
+$sv = Settings::sanitize(['show_on_sent' => 1, 'show_on' => ['home', '22', '1005']]);
+ok(!array_key_exists('show_on', $sv), "ticks equal to Rob's default are not stored (a tracked default)", json_encode($sv['show_on'] ?? null));
+$sv = Settings::sanitize(['show_on_sent' => 1, 'show_on' => ['1005', 'home', '1607', 'x', '-3']]);
+ok(($sv['show_on'] ?? null) === ['home', 1005, 1607], 'other ticks are stored, cleaned and in order', json_encode($sv['show_on'] ?? null));
+$sv = Settings::sanitize(['show_on_sent' => 1]);
+ok(($sv['show_on'] ?? null) === [], 'unticking everything is stored as an empty list', json_encode($sv['show_on'] ?? null));
+ok(Settings::is_default_value('show_on', [1005, 'home', 22]), 'the default in any order is the default');
+
+echo "\n=== the hard exclusions win over the checklist ===\n";
 $flow = [
     [2393, 'checkout', '/checkout/', 'Checkout'],
     [2442, 'payment-request', '/payment-request/', 'Payment Request'],
@@ -70,101 +139,38 @@ $flow = [
     [627, 'booking-submitted', '/booking-submitted/', 'Booking Submitted'],
     [623, 'cancel-booking', '/cancel-booking/', 'Cancel Booking'],
 ];
-foreach (['home', 'no_cottages', 'pages', 'not_home', 'all'] as $scope) {
-    $bad = [];
-    foreach ($flow as [$id, $slug, $path, $name]) {
-        if (loads(['page' => true, 'id' => $id, 'slug' => $slug, 'path' => $path], ['scope' => $scope])) {
-            $bad[] = $name;
-        }
-    }
-    ok($bad === [], "scope=$scope leaves the whole booking flow alone", implode(', ', $bad));
+$ALL = array_merge(['home'], array_column($flow, 0), [4645, 18102, 18103, 18119]);
+$bad = [];
+foreach ($flow as [$id, $slug, $path, $name]) {
+    if (loads(['page' => true, 'id' => $id, 'slug' => $slug, 'path' => $path], $LIVE + ['show_on' => $ALL])) { $bad[] = $name; }
 }
-
-echo "\n=== matched by ID alone, when the slug has been renamed ===\n";
-ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'totally-renamed', 'path' => '/totally-renamed/'], $LIVE),
+ok($bad === [], 'the whole booking flow stays alone even when ticked', implode(', ', $bad));
+ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'totally-renamed', 'path' => '/totally-renamed/'], $LIVE + ['show_on' => $ALL]),
     'checkout stays excluded after a slug rename (ID fallback)');
-echo "=== matched by SLUG alone, when the page has been rebuilt with a new ID ===\n";
-ok(!loads(['page' => true, 'id' => 99999, 'slug' => 'checkout', 'path' => '/checkout/'], $LIVE),
+ok(!loads(['page' => true, 'id' => 99999, 'slug' => 'checkout', 'path' => '/checkout/'], $LIVE + ['show_on' => array_merge($ALL, [99999])]),
     'checkout stays excluded after an ID change (slug fallback)');
-
-echo "\n=== the Guest Guide and the staff board ===\n";
-ok(!loads(['page' => true, 'id' => 4645, 'slug' => 'guest', 'path' => '/guest/'], $LIVE), '/guest/ is not decorated');
-ok(loads(['page' => true, 'id' => 4645, 'slug' => 'guest', 'path' => '/guest/'], $LIVE + ['guide_effects' => 1]),
+ok(!loads(['page' => true, 'id' => 4645, 'slug' => 'guest', 'path' => '/guest/'], $LIVE + ['show_on' => $ALL]), '/guest/ stays alone when ticked');
+ok(loads(['page' => true, 'id' => 4645, 'slug' => 'guest', 'path' => '/guest/'], $LIVE + ['show_on' => $ALL, 'guide_effects' => 1]),
     '/guest/ CAN be re-enabled from settings, without code');
-ok(!loads(['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'], $LIVE), '/staff/ is not decorated');
-ok(!loads(['page' => true, 'id' => 18103, 'slug' => 'rota', 'path' => '/staff/rota/'], $LIVE),
-    'anything BENEATH /staff/ is not decorated either');
+ok(!loads(['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'], $LIVE + ['show_on' => $ALL]), '/staff/ stays alone when ticked');
+ok(!loads(['page' => true, 'id' => 18103, 'slug' => 'rota', 'path' => '/staff/rota/'], $LIVE + ['show_on' => $ALL]), 'anything beneath /staff/ too');
+ok(!loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'], $LIVE + ['show_on' => $ALL]), '/explore/ (excluded ID 18119) stays alone when ticked');
+ok(loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'], $LIVE + ['show_on' => $ALL, 'exclude_ids' => '']), 'clearing the ID field re-enables it');
+ok(!loads(['page' => true, 'id' => 4242, 'slug' => 'anything', 'path' => '/anything/'], $LIVE + ['show_on' => [4242], 'exclude_ids' => '4242, 9999']),
+    'the ID field takes more IDs without a release');
 
-echo "\n=== excluded page IDs (the Wildlife hub, and the field itself) ===\n";
-ok(!loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'], $LIVE),
-    '/explore/ (page 18119) is not decorated');
-ok(!loads(['page' => true, 'id' => 18119, 'slug' => 'renamed-hub', 'path' => '/renamed-hub/'], $LIVE),
-    'it stays excluded after a slug rename — an ID does not move');
-ok(loads(['page' => true, 'id' => 18120, 'slug' => 'explorer', 'path' => '/explorer/'], $LIVE),
-    'a DIFFERENT page with a similar slug is still decorated');
-ok(!loads(['page' => true, 'id' => 4242, 'slug' => 'anything', 'path' => '/anything/'],
-        $LIVE + ['exclude_ids' => '4242, 9999']),
-    'the field takes more IDs without a release');
-ok(loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'],
-        $LIVE + ['exclude_ids' => '']),
-    'clearing the field re-enables the page');
-
-/* ---- The whole matrix, every tier x every kind of request (4.11.0,
- * when 'not_home' made the tiers no longer nested: a column, not an
- * order). 'post' here stands for a blog post or any other post type:
- * not the front page, not a `page`, not a cottage. ---- */
-echo "\n=== the scope matrix: every tier x every kind of page ===\n";
-$kinds = [
-    'front page'        => ['front' => true, 'path' => '/'],
-    '`page` post type'  => ['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'],
-    'cottage page'      => ['cottage' => true, 'path' => '/accommodation/cottage-34/'],
-    'post / other CPT'  => ['path' => '/2026/10/a-post/'],
-    'archive or search' => ['path' => '/?s=canal'],
-];
-$MATRIX = [
-    'home'        => ['front page' => true,  '`page` post type' => false, 'cottage page' => false, 'post / other CPT' => false, 'archive or search' => false],
-    'no_cottages' => ['front page' => true,  '`page` post type' => true,  'cottage page' => false, 'post / other CPT' => false, 'archive or search' => false],
-    'pages'       => ['front page' => true,  '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => false, 'archive or search' => false],
-    'not_home'    => ['front page' => false, '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => false, 'archive or search' => false],
-    'all'         => ['front page' => true,  '`page` post type' => true,  'cottage page' => true,  'post / other CPT' => true,  'archive or search' => true],
-];
-foreach ($MATRIX as $scope => $row) {
-    foreach ($row as $kind => $want) {
-        $got = loads($kinds[$kind], ['scope' => $scope]);
-        ok($got === $want, sprintf('scope=%-11s %-17s %s', $scope, $kind, $want ? 'decorated' : 'left alone'),
-            $got ? 'loaded' : 'did not load');
-    }
-    /* every tier leaves the booking flow alone: checked above for all of
-     * them; here the one page Rob names most often, for the row's sake */
-    ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'], ['scope' => $scope]),
-        sprintf('scope=%-11s %-17s left alone', $scope, 'checkout'));
-}
-
-/* Rob's reason for not_home (4.11.0): Seasons on the homepage, the Hero
- * Effects everywhere else, never both on one page. */
-echo "\n=== not_home is 'All pages' minus the homepage ===\n";
-ok(!loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'the homepage is left alone');
-ok(loads(['page' => true, 'id' => 13, 'slug' => 'cottages', 'path' => '/cottages/'], ['scope' => 'not_home']), 'an ordinary page is decorated');
-ok(loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], ['scope' => 'not_home']), 'a cottage page is decorated');
-ok(!loads(['path' => '/2026/10/a-post/'], ['scope' => 'not_home']), 'a post is not');
-ok(!loads(['path' => '/?s=canal'], ['scope' => 'not_home']), 'a search page is not');
-ok(!loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'], ['scope' => 'not_home']), 'the checkout is not');
-ok(!loads(['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'], ['scope' => 'not_home']), 'the staff board is not');
-/* the same contract as every other tier: the filter can still speak */
-$GLOBALS['FILTERS']['dcc_seasons_in_scope'] = function ($in, $scope) { return $scope === 'not_home' ? true : $in; };
-ok(loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'the dcc_seasons_in_scope filter can still re-enable the homepage');
+echo "\n=== the dcc_seasons_in_scope filter still speaks ===\n";
+$GLOBALS['FILTERS']['dcc_seasons_in_scope'] = function ($in, $scope, $list = null) { return $scope === 'show_on' && is_array($list) ? true : $in; };
+ok(loads($SITE['a blog post'], $LIVE), 'the filter can re-enable a page off the list (it is passed "show_on" and the list)');
+ok(!loads($SITE['/checkout/'], $LIVE), 'but never a hard-excluded page');
+$GLOBALS['FILTERS']['dcc_seasons_in_scope'] = function ($in) { return false; };
+ok(!loads($SITE['home'], $LIVE), 'and it can switch a ticked page off');
 unset($GLOBALS['FILTERS']['dcc_seasons_in_scope']);
-ok(!loads(['front' => true, 'path' => '/'], ['scope' => 'not_home']), 'and removing it puts it back');
+ok(loads($SITE['home'], $LIVE), 'removing it puts it back');
 
-/* The option is a CHOICE, never written for the owner: Rob's rule that his
- * site settings live in plugin defaults, so a default change reaches the
- * site. The packaged default stays 'all'. */
-echo "\n=== not_home is never written by the plugin ===\n";
+/* The scope option is no longer read, and still never written by a hook. */
+echo "\n=== the old scope option is kept, never written by the plugin ===\n";
 ok(Settings::defaults()['scope'] === 'all', "the packaged default is still 'all'", (string) Settings::defaults()['scope']);
-/* Scanned as CODE, comments stripped, as the parent-menu check below is:
- * exactly ONE place may write the scope key — sanitize(), which stores
- * what the owner picked in the form. An activation or upgrade hook that
- * wrote 'not_home' for them would freeze it on the site. */
 $writes = [];
 foreach (glob(__DIR__ . '/../dcc-seasons/**/*.php') + glob(__DIR__ . '/../dcc-seasons/*.php') as $f) {
     $code = '';
@@ -178,14 +184,12 @@ foreach (glob(__DIR__ . '/../dcc-seasons/**/*.php') + glob(__DIR__ . '/../dcc-se
 ok(count($writes) === 1 && $writes[0] === 'class-settings.php',
     'exactly one place writes the scope option (sanitize), and no hook does',
     implode(', ', $writes) ?: 'none');
-
-echo "\n=== cottage pages still follow the scope tier ===\n";
-ok(!loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], $LIVE), 'cottage page absent under no_cottages');
-ok(loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], ['scope' => 'all']), 'cottage page present under all');
+$sv = Settings::sanitize(['scope' => 'no_cottages']);
+ok(($sv['scope'] ?? '') === 'no_cottages', 'a stored scope survives a save (kept for a rollback)');
 
 echo "\n=== the booking exclusion is a SETTING, not a hardcode ===\n";
 ok(loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'],
-        $LIVE + ['exclude_booking' => 0]),
+        $LIVE + ['exclude_booking' => 0, 'show_on' => ['home', 2393]]),
     'unticking "Never decorate booking pages" really does re-enable them');
 
 /* ---- The admin parent menu is owned by dcc-menu.php, not by us. ----
@@ -227,15 +231,15 @@ ok(\DCC_Seasons\Menu::PARENT === 'dcc', "Menu::PARENT is still 'dcc'");
  * homepage on install, with the live layer settings — falling sprites off,
  * background layer on. The page must still load (the engine now has the
  * background, accent, scenes and heroes to draw), on the homepage only. */
-echo "\n=== 4.5.0 rollout: scope=home, ambient=0, subtle=1 ===\n";
-$ROLL = ['scope' => 'home', 'ambient' => 0, 'subtle' => 1, 'egg' => 1, 'placement' => 'content', 'layering' => 'front', 'density' => 16];
+echo "\n=== 4.5.0 rollout (now as Show On: Home only), ambient=0, subtle=1 ===\n";
+$ROLL = ['show_on' => ['home'], 'ambient' => 0, 'subtle' => 1, 'egg' => 1, 'placement' => 'content', 'layering' => 'front', 'density' => 16];
 ok(loads(['front' => true, 'path' => '/'], $ROLL), 'the homepage is decorated');
-ok(!loads(['page' => true, 'id' => 12, 'slug' => 'contact', 'path' => '/contact/'], $ROLL), '/contact/ is not');
-ok(!loads(['page' => true, 'id' => 13, 'slug' => 'cottages', 'path' => '/cottages/'], $ROLL), '/cottages/ is not');
+ok(!loads(['page' => true, 'id' => 22, 'slug' => 'contact', 'path' => '/contact/'], $ROLL), '/contact/ is not');
+ok(!loads(['page' => true, 'id' => 1005, 'slug' => 'cottages', 'path' => '/cottages/'], $ROLL), '/cottages/ is not');
 ok(!loads(['cottage' => true, 'id' => 1065, 'slug' => 'cottage-1', 'path' => '/accommodation/cottage-1/'], $ROLL), 'a cottage page is not');
 ok(!loads(['page' => true, 'id' => 1399, 'slug' => 'submit-booking', 'path' => '/submit-booking/'], $ROLL), 'Submit Booking is not');
-ok(loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 1, 'scope' => 'home']), 'egg off too: the homepage still loads (the engine has layers to draw)');
-ok(!loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 0, 'richness' => 'minimal', 'scope' => 'home']), 'everything off: nothing loads, even on the homepage');
+ok(loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 1, 'show_on' => ['home']]), 'egg off too: the homepage still loads (the engine has layers to draw)');
+ok(!loads(['front' => true, 'path' => '/'], ['ambient' => 0, 'egg' => 0, 'subtle' => 0, 'richness' => 'minimal', 'show_on' => ['home']]), 'everything off: nothing loads, even on the homepage');
 /* config() needs a few more WordPress functions than should_load() does. */
 foreach (['add_query_arg' => 'function add_query_arg($k, $v = null, $u = null) { return (string) $u; }',
           'home_url' => 'function home_url($p = "") { return "https://doracanalcourt.com" . $p; }',

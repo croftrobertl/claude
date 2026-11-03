@@ -99,7 +99,8 @@ function watch(secs) {
           const r = await ses.page.evaluate(watch, 180);
           const tag = `${real ? 'real page' : 'fixture'} ${w}px seed ${seed}`;
           /* 4.14.4 (Rob): the cornucopia falls with the pieces; nothing stands in his way */
-          ok(!r.ar && r.draws > 1000 && r.turns === 0, `${tag}: no corner accent and no turn (${r.draws} draws)`, JSON.stringify(r));
+          /* 4.15.0 (Rob's pick B): no corner accent, and ONE turn — his turn-back a third of the way in */
+          ok(!r.ar && r.draws > 1000 && r.turns <= 1, `${tag}: no corner accent, and at most his one turn-back (${r.turns}; ${r.draws} draws)`, JSON.stringify(r));
           ok(r.jump < 3, `${tag}: a poult never jumps between frames (largest step ${r.jump} px)`, JSON.stringify(r));
           ok(r.maxToms === 1, `${tag}: one tom, never two`, JSON.stringify(r));
         } finally { await ses.close(); }
@@ -116,7 +117,7 @@ function watch(secs) {
       try {
         await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done, null, { timeout: 30000 });
         const r = await ses.page.evaluate(() => { const s = window.DCCSeasonsEngine._state; s.manual(true); let on = 0, mx = 0;
-          for (let i = 0; i < 120; i++) { s.tick(500, 1); const t = s.parts.filter(q => !q.dormant && q.b === 'forage'); mx = Math.max(mx, t.length); if (t[0] && t[0].x > -20 && t[0].x < s.vw + 20) { on++; } } return { on: on / 120, mx }; });
+          for (let i = 0; i < 1800; i++) { s.tick(1000 / 30, 1); const t = s.parts.filter(q => !q.dormant && q.b === 'forage' && q.alpha > 0); mx = Math.max(mx, t.length); if (t[0] && t[0].x > -20 && t[0].x < s.vw + 20) { on++; } } return { on: on / 1800, mx }; });   /* a real minute: one engine step is capped at 50 ms, so 500 ms ticks simulated only 6 s */
         if (r.on > 0) { seen++; } if (r.mx > 1) { two++; } cover += r.on;
       } finally { await ses.close(); }
     }

@@ -1,6 +1,7 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.14.5 (the Anniversary's round 1:
+ * DCC Seasons — the Untouched test, for 4.15.0 (Calmer Seasons) against
+ * 4.14.5; before that, for 4.14.5 (the Anniversary's round 1:
  * its pieces held to the style bible) against 4.14.4, live. The
  * Anniversary is exempt and nothing else: every other theme a guest sees
  * must draw exactly what 4.14.4 draws. 4.14.5 changes only the
@@ -29,8 +30,15 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = '8ed410d';   /* 4.14.4, Rob's Thanksgiving and Christmas corrections (live) */
-const NEW = ['anniversary'];   /* the one theme 4.14.5 changes */
+const BASE = '685f44c';   /* 4.14.5, the Anniversary held to the style bible */
+const NEW = [];   /* 4.15.0 changes no theme's art: its four behaviours are switched off below */
+/* 4.15.0 (Calmer Seasons) changes the ENGINE: the occluders, the pause and
+ * the walkers' turn-back, all behind CFG.calm, plus the removal of the
+ * heron's unreachable landing step. So proof 2 holds everything else byte
+ * for byte, and proof 3 draws every theme with calm:false against 4.14.5:
+ * the same pixels mean nothing else moved. (The four behaviours are
+ * proven by tools/test-calm.js; the gate by tools/test-scope.php.) */
+const KNOBS = JSON.stringify({ calm: false });
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -60,12 +68,12 @@ function themesSame(both) {
 }
 
 /* ---- 2. text ---- */
-const SAME_FILES = ['engine.js', 'ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-christmas.js', 'art-crane.js'];
+const SAME_FILES = ['ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-christmas.js', 'art-crane.js', 'art-anniversary.js'];
 
 /* ---- 3. pixels ---- */
 function hashes(assets, themes) {
   const env = { ...process.env }; if (assets) { env.DCC_ASSETS = assets; } else { delete env.DCC_ASSETS; }
-  return JSON.parse(execFileSync('node', [path.join(__dirname, 'untouched-hash.js'), '--themes=' + themes.join(',')],
+  return JSON.parse(execFileSync('node', [path.join(__dirname, 'untouched-hash.js'), '--themes=' + themes.join(','), '--knobs=' + KNOBS],
     { cwd: ROOT, env, encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'ignore'] }));
 }
 const JS = `${ROOT}/dcc-seasons/assets/js`;
@@ -81,21 +89,20 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme, the Anniversary's row included, is 4.14.4's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme is 4.14.5's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - NEW.length} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
   const both = themesOf(thNew, thOld);
-  ok(JSON.stringify(both[0].anniversary) === JSON.stringify(both[1].anniversary), "the Anniversary's own row is unchanged too (only its drawings change)", 'anniversary');
 
-  console.log('\n  --- 2. the text: the engine, the loader, the egg, every other pack ---');
+  console.log('\n  --- 2. the text: the loader, the egg, every pack ---');
   const same = {}, base = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.14.4`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.14.5`, f); }
 
-  console.log('\n  --- 3. the pixels: every theme but the Anniversary, both builds ---');
+  console.log('\n  --- 3. the pixels: every theme, calm:false, both builds ---');
   const now = {}, was = {};
   for (const f of fs.readdirSync(JS).filter(f => /\.js$/.test(f) && !/\.min\.js$/.test(f))) { now[f] = fs.readFileSync(path.join(JS, f), 'utf8'); }
-  for (const f of SAME_FILES.concat(['art-anniversary.js'])) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
+  for (const f of SAME_FILES.concat(['engine.js'])) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
   for (const f of Object.keys(now)) { if (!(f in was)) { try { was[f] = git(`dcc-seasons/assets/js/${f}`); } catch (e) { /* new since 4.14.4 */ } } }
   const dNew = folder(now, []), dOld = folder(was, []);
   const all = JSON.parse(execFileSync('php', [`${ROOT}/tools/gen-config.php`, '--diag'], { cwd: ROOT, encoding: 'utf8' })).themes;
@@ -107,9 +114,6 @@ function folder(files, drop) {
     ok(!bad.length && !err && hn[k] && hn[k].length === 7, `${k}: the same pixels at all 7 moments (${[...new Set((hn[k] || []).flatMap(h => h.split(' ').slice(2)))].join(', ') || 'sprites only'})`,
       JSON.stringify({ now: hn[k], was: ho[k] }));
   }
-  /* and the exempt theme really did change (the proof is not blind to it) */
-  const ha = hashes(dNew, ['anniversary']), hb = hashes(dOld, ['anniversary']);
-  ok(JSON.stringify(ha.anniversary) !== JSON.stringify(hb.anniversary), "the Anniversary itself draws differently (the change under review is seen)", JSON.stringify(ha.anniversary));
 
   console.log('\n  --- mutations: each one-line break must be caught ---');
   {
@@ -119,8 +123,6 @@ function folder(files, drop) {
     const t1b = themesOf(m1b, thOld);
     ok(m1b !== thNew && JSON.stringify(t1b[0].anniversary) !== JSON.stringify(t1b[1].anniversary), "the Anniversary's mix changed in PHP fails proof 1", 'anheart w');
     const muts = [
-      ['engine.js', s => s.replace(/(\n\t\tbat: '[^']*?)(\d)(")/, (a, p, d, q) => p + ((+d + 1) % 10) + q), 'a Halloween sprite nudged by one digit'],
-      ['engine.js', s => s.replace(', annivdance: 1 };', ', annivdance: 1, witchmoon: 1 };'), 'the sky list changed'],
       ['art-crane.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a crane colour changed (Florida Keys)'],
       ['art-thanksgiving.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a Thanksgiving colour changed'],
       ['art-christmas.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a Christmas colour changed'],
@@ -131,6 +133,10 @@ function folder(files, drop) {
     const dm = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);
     ok(JSON.stringify(hm.halloween) !== JSON.stringify(ho.halloween), 'a Halloween sprite resized in the engine fails proof 3 (the pixels)', JSON.stringify(hm.halloween));
+    /* calm leaking past its switch: the pixels must see it */
+    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace('var CALM = CFG.calm !== false;', 'var CALM = true;') }), []);
+    const hl = hashes(dl, ['thanksgiving', 'halloween']);
+    ok(JSON.stringify(hl.thanksgiving) !== JSON.stringify(ho.thanksgiving) || JSON.stringify(hl.halloween) !== JSON.stringify(ho.halloween), 'the calm behaviours ignoring calm:false fail proof 3', JSON.stringify(hl));
     /* (the crane draws on Florida Keys only in its cranes scene, which the
      * 24 s pixel walk does not reach: proof 2 holds the crane byte for byte) */
   }

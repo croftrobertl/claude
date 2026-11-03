@@ -1,0 +1,361 @@
+/* DCC Contact Form — front-end styles.
+ * Baseline reproduces the live /contact/ form (computed styles). Elementor
+ * Style controls override these via higher-specificity {{WRAPPER}} rules.
+ * Raleway is loaded by the Bravada theme; we only reference it. */
+
+/* The form has an intrinsic max-width so it shrinks to an inline block (like
+ * the old WPForms form) instead of stretching the full page width. Because the
+ * inner inputs are width:100%, the widget has no natural width to shrink to;
+ * this max-width supplies one, letting an Elementor "inline/auto width +
+ * align-self center" widget centre correctly. Tunable via Style → Layout →
+ * Form Max Width (or set it to 100% for full width). */
+.dcc-contact-wrap {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.dcc-contact-form {
+    font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    color: #000;
+    max-width: 100%;
+}
+
+/* ---- Layout ----
+ * Wrapper-scoped selectors so the theme's generic form rules can't flatten the
+ * row. The 50/50 columns are held by max-width, NOT by a calc() flex-basis:
+ * Safari/iOS ignore calc() inside the `flex` shorthand, which made both fields
+ * fall back to full width and stack. max-width caps each column regardless. */
+.dcc-contact-form .dcc-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 0 0 20px;
+}
+.dcc-contact-form .dcc-field {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.dcc-contact-form .dcc-w-50 {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: calc(50% - 10px);
+    max-width: calc(50% - 10px);
+}
+@media (max-width: 600px) {
+    .dcc-contact-form .dcc-w-50 {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}
+
+/* ---- Labels ----
+ * The element-scoped rule overrides Bravada's default form-label color
+ * (rgba(2,0,0,0.58) gray) so labels render true black. */
+.dcc-contact-form label {
+    color: #000;
+}
+.dcc-label {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 20px;
+    line-height: 1.3;
+    text-transform: none;
+}
+.dcc-req {
+    color: #c62828;
+}
+/* Sublabels are visually hidden (.dcc-sr-only); color kept for completeness. */
+.dcc-contact-form .dcc-sublabel {
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 13px;
+}
+
+/* ---- Inputs ---- */
+.dcc-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 50px;
+    padding: 0 14px;
+    font-size: 18px;
+    font-family: inherit;
+    color: #000;
+    background-color: #fff;
+    border: 2px solid #f4da62;
+    border-radius: 30px;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+    line-height: normal;
+}
+.dcc-select {
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23000' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+}
+.dcc-textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 120px;
+    padding: 14px;
+    font-size: 18px;
+    font-family: inherit;
+    color: #000;
+    background-color: #fff;
+    border: 2px solid #f4da62;
+    border-radius: 20px;
+    box-shadow: none;
+    resize: vertical;
+}
+
+.dcc-input::placeholder,
+.dcc-textarea::placeholder {
+    color: rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+/* Visible keyboard focus (accessibility). */
+.dcc-input:focus,
+.dcc-textarea:focus,
+.dcc-submit:focus,
+.dcc-checkbox:focus {
+    outline: 2px solid #006bcf;
+    outline-offset: 2px;
+    border-color: #006bcf;
+}
+
+/* Name field: First + Last on one line. */
+.dcc-name {
+    display: flex;
+    gap: 14px;
+}
+.dcc-name .dcc-subfield {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+@media (max-width: 480px) {
+    .dcc-name { flex-wrap: wrap; }
+    .dcc-name .dcc-subfield { flex: 1 1 100%; }
+}
+
+/* Checkbox */
+.dcc-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+.dcc-checkbox {
+    margin-top: 3px;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+}
+
+/* ---- Errors ---- */
+.dcc-error {
+    display: none;
+    margin-top: 6px;
+    font-size: 14px;
+    color: #c62828;
+}
+.dcc-field.dcc-has-error .dcc-error {
+    display: block;
+}
+.dcc-field.dcc-has-error .dcc-input,
+.dcc-field.dcc-has-error .dcc-textarea {
+    border-color: #c62828;
+}
+.dcc-form-error {
+    display: none;
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #c62828;
+}
+.dcc-form-error.dcc-visible {
+    display: block;
+}
+
+/* ---- Submit button ---- */
+.dcc-actions {
+    margin-top: 4px;
+}
+.dcc-contact-form .dcc-submit,
+.dcc-contact-form button[type="submit"].dcc-submit {
+    display: inline-block;
+    width: auto;
+    min-width: 210px;
+    height: 50px;
+    padding: 0 20px;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 50px;
+    letter-spacing: 0.5px;
+    /* Capitalized as authored ("Send Message"); overrides Bravada's forced
+       uppercase on submit buttons. */
+    text-transform: none;
+    color: #fff;
+    background-color: #006bcf;
+    border: 0;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+/* Hover. The selector list MIRRORS the resting rule above and appends the
+   pseudo-class, giving 0,4,1 against the resting rule's 0,3,1. This is
+   deliberate and load-bearing: a resting rule applies during hover too, so a
+   lower-specificity hover rule (or the site kit's 0,2,1 one) silently loses and
+   the button never changes colour at all. Do not simplify these selectors.
+
+   GATED ON A REAL POINTER. A tap on iOS latches :hover and holds it until the
+   visitor taps something else, so the button stayed coral after being pressed
+   and looked stuck or already-submitted. (0,4,1) is exactly why it won: our own
+   hover rule was beating the resting blue, not the site kit's. Restricting the
+   rule to devices that can actually hover removes it from touch entirely.
+
+   Contrast note: #FFFFFF on #F08080 is 2.59:1, below WCAG AA 4.5:1 for normal
+   text. This is a deliberate site-wide brand decision, not an oversight — the
+   focus ring below is what carries perceivability. */
+@media (hover: hover) and (pointer: fine) {
+    .dcc-contact-form .dcc-submit:hover,
+    .dcc-contact-form button[type="submit"].dcc-submit:hover {
+        background-color: #F08080;
+        color: #FFFFFF;
+    }
+}
+
+/* Touch: re-assert the resting blue for both :hover and :focus.
+   Belt-and-braces over simply dropping our hover rule, because the site kit
+   also paints `.elementor-kit-331 button:focus` coral, and a tap leaves the
+   button focused. That rule is (0,2,1); this one mirrors the resting selectors
+   plus a pseudo-class for (0,4,1), so it wins outright instead of relying on
+   the resting rule's (0,3,1) margin.
+
+   It must come BEFORE the :focus-visible block: on a tablet with a keyboard
+   both can match at equal specificity, and the later rule has to be the focus
+   one so a genuine keyboard focus still gets its indicator. */
+@media (hover: none), (pointer: coarse) {
+    .dcc-contact-form .dcc-submit:hover,
+    .dcc-contact-form button[type="submit"].dcc-submit:hover,
+    .dcc-contact-form .dcc-submit:focus,
+    .dcc-contact-form button[type="submit"].dcc-submit:focus {
+        background-color: #006bcf;
+        color: #fff;
+    }
+}
+
+/* Keyboard focus, OUTSIDE both media queries: it must work on every device. */
+.dcc-contact-form .dcc-submit:focus-visible,
+.dcc-contact-form button[type="submit"].dcc-submit:focus-visible {
+    background-color: #F08080;
+    color: #FFFFFF;
+}
+
+/* Keyboard focus must be perceivable WITHOUT relying on the coral fill, since
+   that fill is low-contrast by design and also appears on plain hover. A white
+   separation ring sits between the button and a dark outline, so the indicator
+   reads against the resting blue, the coral, and the page behind it alike —
+   independent of whatever colour the fill happens to be. */
+.dcc-contact-form .dcc-submit:focus-visible,
+.dcc-contact-form button[type="submit"].dcc-submit:focus-visible {
+    outline: 3px solid #00294d;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+.dcc-submit[disabled] {
+    opacity: 0.7;
+    cursor: default;
+}
+
+/* ---- reCAPTCHA compliance line (badge hidden) ---- */
+.grecaptcha-badge {
+    visibility: hidden;
+}
+.dcc-recaptcha-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+    line-height: 1.5;
+}
+.dcc-recaptcha-note a {
+    color: #006bcf;
+}
+
+/* ---- Confirmation ---- */
+.dcc-form-confirmation {
+    text-align: center;
+    font-size: 18px;
+    padding: 24px 12px;
+    color: #000;
+}
+
+/* ---- Honeypot + screen-reader-only ----
+ * .dcc-alt is the current honeypot wrapper (innocuous class name); .dcc-hp is
+ * kept so HTML cached before the rename stays hidden. */
+.dcc-alt,
+.dcc-hp {
+    position: absolute !important;
+    left: -9999px !important;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+.dcc-sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---- "Send me a copy" opt-in ---- */
+.dcc-copy {
+    margin: 0 0 16px;
+}
+.dcc-copy-label {
+    position: relative;
+    /* Stays `flex` (full row width) as before. Switching to inline-flex would
+       have made the label hug its text and so SHRUNK the horizontal tap area
+       while the point of this change was to grow the vertical one. */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Tap area, per the DCC standard: an INVISIBLE extension, so nothing visible
+   moves or changes size. The row renders about 24px tall, which is well under
+   the 44px minimum; this pseudo-element centres a 44px-tall target over it.
+   Being a child of the label, a tap anywhere on it toggles the checkbox.
+
+   The ~10px it adds above and below sits inside .dcc-copy's own margins, so it
+   cannot reach the last form field above or the submit button below — verified
+   with elementFromPoint at the extremes of the extension in tests/tap-test.js.
+   Width is deliberately NOT extended: the next tappable thing horizontally
+   would be whatever sits beside the row. */
+.dcc-copy-label::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 44px;
+    /* Purely a hit target. */
+    background: transparent;
+    pointer-events: auto;
+}

@@ -196,6 +196,10 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
         let steps = 0, feeds = 0;
         for (let i = 0; i < 30 * 40; i++) {
           fr = []; S.tick(1000 / 30, 1);
+          /* 4.15.0: his turn is a turn in place, not a walk: its frames are
+           * proven by tools/test-calm.js (his feet and the poults stay put) */
+          const tl = S.calm && S.calm.tom[0];
+          if (tl && tl.leg === 1) { for (const k in track) { delete track[k]; } continue; }
           /* draw order: far poult, the tom, near poult */
           const who = fr.map((d, j) => d.k[0] === 'k' ? (j === 0 ? 'k2' : 'k1') : 't');
           fr.forEach((d, j) => {

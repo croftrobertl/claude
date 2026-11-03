@@ -1373,6 +1373,48 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `tools/test-color-candidate.js --date= --pct=` is the Untouched proof
   against 4.14.5 (`685f44c`): every other file and sprite identical, the
   two pieces' geometry identical, every other theme's pixels identical.
+- **4.15.0: Calmer Seasons (Rob's picks, 2026-11-03).** Built on 4.14.5
+  (gold Anniversary; the 4.14.6 colour pick lands on top of whichever is
+  current). Untouched: every theme draws 4.14.5's pixels with `calm:false`.
+  1. **Show On (pick A) is THE gate**: `show_on` = 'home' + page/cottage
+     IDs; default Home, Contact (22), Cottages (1005), each default ID
+     checked against its slug (`SHOW_ON_SLUGS`) so a rebuilt page keeps it.
+     A TRACKED_DEFAULT (stored only when it differs). `Plugin::in_scope()`
+     → `shows_here()`; the old `scope` is kept in the row, never read; the
+     `dcc_seasons_in_scope` filter now gets ('show_on', $list). Hard
+     exclusions still run first. `scope_allows()` is gone; test-scope.php
+     and scope-decide.php (`--show=default|all|home,22`) test the list.
+     The 'dcc-seasons' handle and the wp_enqueue_scripts hook are
+     unchanged (dcc-hero-life 3.17.0 asks wp_script_is on it).
+  2. **Occluders (pick A)**: `occBuild()` (idle time, after a debounced
+     MutationObserver / resize / scroll settle / a 2 s net) measures
+     `OCC_SEL` outside `HDR_SEL` (text by Range LINE rects, controls by box,
+     2 px pad) in DOCUMENT px within ±1.5–2.5 screens; `occFrame()` makes the
+     on-screen rects DISJOINT (an even-odd clip with overlapping holes shows
+     the overlap); `occClip()` clips each sprite that meets one, and the
+     background layer gets one clip for all. Front layering + content
+     placement only. Fixed-position occluders are not followed during a
+     scroll (dropped for size; the site's fixed parts are the header and
+     pop-ups above the canvas). Controls are cut as rectangles, not by
+     their border-radius. Debug `occClip:false` turns only the clip off.
+  3. **Walkers (pick B)**: the tom always enters from an edge, turns about
+     vw/3 in (`p.leg` 0 out, 1 turning, 2 back, 3 gone), the turn a squeeze
+     to 30% and back about his planted feet over `TK_TURN` 0.8 s, his
+     poults turning in place, then standing where they were (`p.pw`) until
+     he has walked back past them. Measured on screen: 40.8 s at 390,
+     110.9 s at 1440. Busy sends him back at the next planted step; he
+     never enters while busy and never fades.
+  4. **Pause (pick A)**: `calmStep()` (polled ~2.5/s) — `.dccs-modal`,
+     `[data-dcc-seasons-busy]`, body.dcc-seasons-busy, or a `.dccs-root`
+     showing a wizard/review/compare/results; or 5 s from the last focus,
+     keystroke or blur of a text field. `calmA` fades pieces and the
+     background layer (0.5 s out, 1.2 s in).
+  Size: the heron's landing STEP (unreachable since 4.10.7) was removed to
+  stay under 4.14.3's 198,113; its rand() draw is kept. Tests:
+  `tools/test-calm.js` (DCC_CALM_MUT=noclip|timer|noturn|flip),
+  `tools/measure-calm.js --page=contact|cottages|quiz|typing`,
+  `tools/calm-reel.js`, pages in `tools/calm-pages.js` from the plugins'
+  vendored files in `tests/calm/`.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1805,7 +1847,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.3 for 4.14.4), `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

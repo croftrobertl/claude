@@ -2733,7 +2733,18 @@
 			cx.restore();
 		}
 		function drawSubtle() {
-			if (!subEff) { return; }
+			if (!subEff || calmA <= 0) { return; }
+			/* 4.15.0: the background layer passes behind the occluders and
+			 * fades with the pieces while a guest is busy: one clip for all */
+			var oc = occVis.length && !(DEBUG && CFG.occClip === false);
+			if (oc) {
+				cx.save(); cx.beginPath(); cx.rect(-2, -2, vw + 4, vh + 4);
+				for (var j = 0; j < occVis.length; j++) { cx.rect(occVis[j][0], occVis[j][1], occVis[j][2] - occVis[j][0], occVis[j][3] - occVis[j][1]); }
+				cx.clip('evenodd');
+			}
+			try { drawSubtle1(); } finally { if (oc) { cx.restore(); } }
+		}
+		function drawSubtle1() {
 			if (subEff.shimmer) { drawShimmer(); }
 			/* Intensity spans roughly half to full effect strength rather
 			 * than scaling linearly from zero: at the 0.6 default the layer
@@ -2742,7 +2753,7 @@
 			 * so much as absent. The sprite-opacity slider still moves it,
 			 * but with a floor — Layer 1 is the baseline face of the site
 			 * and should not vanish because the sprites were turned down. */
-			var a = subEff.a * (0.55 + subIntensity * 0.75) * clamp(alphaBase / 0.35, 0.6, 1.4);
+			var a = subEff.a * (0.55 + subIntensity * 0.75) * clamp(alphaBase / 0.35, 0.6, 1.4) * calmA;
 			for (var i = 0; i < subParts.length; i++) {
 				var p = subParts[i];
 				cx.save();
@@ -2849,6 +2860,176 @@
 		var omNine = [0, 0, 0, 0, 0, 0, 0, 0, 0], omCol = [0, 0, 0];
 		var omFrac = 1, omMs = 0, omBuilds = 0, omAt = -1e9, omStamp = 0, omTimer = 0;
 		function nowMs() { return (W.performance && performance.now) ? performance.now() : +new Date(); }
+
+		/* ---- 4.15.0, Calmer Seasons (Rob's picks, 2026-11-03) ----------------
+		 * 1. OCCLUDERS (pick A): the falling pieces and the walking animals
+		 *    pass BEHIND what a guest reads, fills in or taps. Buttons, fields,
+		 *    labels, links, headings, paragraphs and list items (anything
+		 *    with [data-dcc-seasons-occlude] too) are measured as rectangles
+		 *    — text by its LINES (a Range over its contents), controls by
+		 *    their box — outside the page header (the header photo is not an
+		 *    occluder: pieces fall over it as before). Measured in idle time,
+		 *    never in a frame: after a debounced DOM change, a resize, a
+		 *    scroll that leaves the measured band, and every 2 s as a net.
+		 *    Rects are kept in DOCUMENT px, so a scroll needs no re-measure
+		 *    (a fixed-position occluder is not followed during a scroll: the
+		 *    site's fixed parts are the header, excluded, and pop-ups that sit
+		 *    above the canvas anyway). Each frame the rects on
+		 *    screen are made DISJOINT (an even-odd clip with overlapping
+		 *    holes would show the overlap) and a sprite that meets one is
+		 *    drawn clipped to the canvas minus those holes. Generic: no
+		 *    plugin is named, and nothing in another plugin changes.
+		 *    Front layering in the content only: behind layering is already
+		 *    under the page, and the footer placement clips its own text.
+		 * 2. PAUSE (pick A): pieces fade out over 0.5 s while a guest is busy
+		 *    — a text field, textarea or select focused, the Cottage
+		 *    Selector's quiz, review or Compare Mode on screen, any
+		 *    .dccs-modal open, or anything marked [data-dcc-seasons-busy] —
+		 *    and drift back in 5 s after the last keystroke, the field losing
+		 *    focus or the selector closing. Walkers finish their walk off
+		 *    screen instead of fading.
+		 * CFG.calm === false (debug and the Untouched proof) turns all of it,
+		 * and the walkers' turn-back, off. */
+		var CALM = CFG.calm !== false;
+		var occOn = CALM && !CFG.layer && !footMode;
+		var OCC_SEL = 'button, input:not([type="hidden"]), textarea, select, label, a, h1, h2, h3, h4, h5, h6, p, li, [data-dcc-seasons-occlude]';
+		var OCC_TEXT = { P: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, A: 1, LABEL: 1 };
+		var OCC_PAD = 2;
+		var occDoc = [], occY0 = 0, occY1 = 0, occStamp = 0, occMs = 0, occBuilds = 0, occDue = 0, occAt = 0, occQ = 0;
+		var occVis = [], occVisKey = '';
+		function occPush(out, r, sx, sy) {
+			if (r.width < 1 || r.height < 1) { return; }
+			out.push(r.left - OCC_PAD + sx, r.top - OCC_PAD + sy, r.width + OCC_PAD * 2, r.height + OCC_PAD * 2);
+		}
+		function occBuild() {
+			occQ = 0;
+			if (!occOn || !D.body) { return; }
+			var t0 = nowMs(), sx = W.scrollX || W.pageXOffset || 0, sy = W.scrollY || W.pageYOffset || 0, ih = W.innerHeight || vh;
+			var y0 = sy - ih * 1.5, y1 = sy + ih * 2.5;
+			var els = D.querySelectorAll(OCC_SEL), d2 = [];
+			for (var i = 0; i < els.length; i++) {
+				var el = els[i];
+				if (!el.hasAttribute('data-dcc-seasons-occlude') && el.closest(HDR_SEL)) { continue; }
+				if (el.closest('.dcc-seasons-accent, .dcc-seasons-diag')) { continue; }
+				var b = el.getBoundingClientRect();
+				if (b.width < 1 || b.height < 1) { continue; }
+				if (b.bottom + sy < y0 || b.top + sy > y1) { continue; }
+				if (OCC_TEXT[el.tagName] && !el.hasAttribute('data-dcc-seasons-occlude')) {
+					var rg = D.createRange();
+					rg.selectNodeContents(el);
+					var rs = rg.getClientRects();
+					for (var k = 0; k < rs.length; k++) { occPush(d2, rs[k], sx, sy); }
+					if (el.tagName === 'A' || el.tagName === 'LABEL') { occPush(d2, b, sx, sy); }   /* the whole tap target */
+				} else { occPush(d2, b, sx, sy); }
+			}
+			var cb = cv.getBoundingClientRect();
+			cvRect0 = { left: cb.left, top: cb.top };
+			occDoc = d2; occY0 = y0; occY1 = y1; occStamp++; occBuilds++; occAt = nowMs();
+			occMs = occAt - t0;
+		}
+		function occQueue(ms) {
+			if (!occOn || occQ) { return; }
+			occQ = setTimeout(function () {
+				if (W.requestIdleCallback) { W.requestIdleCallback(occBuild, { timeout: 400 }); } else { occBuild(); }
+			}, ms == null ? 200 : ms);
+		}
+		/* the rects on screen this frame, made disjoint: horizontal bands
+		 * between every rect edge, the covering x-intervals merged in each */
+		function occFrame() {
+			if (!occOn || !occDoc.length) { occVis = []; return occVis; }
+			var sx = W.scrollX || W.pageXOffset || 0, sy = W.scrollY || W.pageYOffset || 0;
+			var cr = cvRect0, key = occStamp + ':' + sx + ':' + sy + ':' + vw + ':' + vh + ':' + cr.left + ':' + cr.top;
+			if (key === occVisKey) { return occVis; }
+			occVisKey = key;
+			if (sy < occY0 + (W.innerHeight || vh) * 0.5 || sy + (W.innerHeight || vh) > occY1 - (W.innerHeight || vh) * 0.5) { occQueue(60); }   /* nearing the band's edge */
+			var R = [], i, a, L = occDoc, ox = -sx - cr.left, oy = -sy - cr.top;
+			for (i = 0; i < L.length; i += 4) {
+				var x = L[i] + ox, y = L[i + 1] + oy, w = L[i + 2], h = L[i + 3];
+				if (x > vw || y > vh || x + w < 0 || y + h < 0) { continue; }
+				R.push([mx2(-1, x), mx2(-1, y), mn(vw + 1, x + w), mn(vh + 1, y + h)]);
+			}
+			var ys = [];
+			for (i = 0; i < R.length; i++) { ys.push(R[i][1], R[i][3]); }
+			ys.sort(function (p1, p2) { return p1 - p2; });
+			var out = [];
+			for (i = 0; i + 1 < ys.length; i++) {
+				var ya = ys[i], yb = ys[i + 1];
+				if (yb - ya < 0.5) { continue; }
+				var iv = [];
+				for (a = 0; a < R.length; a++) { if (R[a][1] <= ya && R[a][3] >= yb) { iv.push([R[a][0], R[a][2]]); } }
+				if (!iv.length) { continue; }
+				iv.sort(function (p1, p2) { return p1[0] - p2[0]; });
+				var m = [iv[0].slice()];
+				for (a = 1; a < iv.length; a++) { var lst = m[m.length - 1]; if (iv[a][0] <= lst[1]) { lst[1] = mx2(lst[1], iv[a][1]); } else { m.push(iv[a].slice()); } }
+				for (a = 0; a < m.length; a++) { out.push([m[a][0], ya, m[a][1], yb]); }
+			}
+			occVis = out;
+			return occVis;
+		}
+		var cvRect0 = { left: 0, top: 0 };
+		/* Draw one sprite behind the occluders it meets. R: how far its
+		 * drawing can reach from p.x, p.y. Returns true when it clipped. */
+		function occClip(p, R) {
+			if (!occVis.length) { return false; }
+			var x0 = p.x - R, x1 = p.x + R, y0 = (p.b === 'dangle' || p.b === 'hang') ? -2 : p.y - R, y1 = p.y + R, hit = null;   /* a thread hangs from the top */
+			for (var i = 0; i < occVis.length; i++) {
+				var o = occVis[i];
+				if (o[0] < x1 && o[2] > x0 && o[1] < y1 && o[3] > y0) { (hit || (hit = [])).push(o); }
+			}
+			if (!hit) { return false; }
+			cx.beginPath();   /* inside drawP's own save(): its restore() lifts the clip */
+			cx.rect(-2, -2, vw + 4, vh + 4);
+			for (i = 0; i < hit.length; i++) { cx.rect(hit[i][0], hit[i][1], hit[i][2] - hit[i][0], hit[i][3] - hit[i][1]); }
+			cx.clip('evenodd');
+			return true;
+		}
+		if (occOn) {
+			if (W.MutationObserver) {
+				try { new W.MutationObserver(function () { occQueue(250); }).observe(D.body || D.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open'] }); } catch (e) { /* no observer: the 2 s net still runs */ }
+			}
+			W.addEventListener('resize', function () { occQueue(150); }, { passive: true });
+			W.addEventListener('scroll', function () { clearTimeout(occDue); occDue = setTimeout(function () { occQueue(0); }, 150); }, { passive: true });
+			setInterval(function () { if (!D.hidden) { occQueue(0); } }, 2000);
+			occQueue(0);
+		}
+
+		/* the pause */
+		var calmA = 1, calmBusy = false, calmFree = 0, calmKey = -1e9, calmPoll = 0, calmPollAt = -1e9, calmPollN = 0;
+		var CALM_TEXT = /^(text|email|tel|number|search|url|password|date|datetime-local|month|week|time)$/i;
+		function calmField(el) {
+			if (!el || el === D.body) { return false; }
+			var tn = el.tagName;
+			return tn === 'TEXTAREA' || tn === 'SELECT' || (tn === 'INPUT' && CALM_TEXT.test(el.type || 'text')) || !!el.isContentEditable;
+		}
+		function calmOpen() {
+			if (D.querySelector('.dccs-modal, [data-dcc-seasons-busy]') || (D.body && D.body.classList.contains('dcc-seasons-busy'))) { return true; }
+			var roots = D.querySelectorAll('.dccs-root');
+			for (var i = 0; i < roots.length; i++) {
+				if (roots[i].firstElementChild && !roots[i].querySelector('.dccs-landing') && roots[i].querySelector('.dccs-wizard, .dccs-review, .dccs-compare, .dccs-results, .dccs-body')) { return true; }
+			}
+			return false;
+		}
+		if (CALM) {
+			var calmTap = function (e) { if (calmField(e.target)) { calmKey = nowMs(); } };
+			D.addEventListener('keydown', calmTap, true);
+			D.addEventListener('input', calmTap, true);
+			D.addEventListener('focusin', function (e) { if (calmField(e.target)) { calmKey = nowMs(); } }, true);
+			D.addEventListener('focusout', function (e) { if (calmField(e.target)) { calmKey = nowMs(); } }, true);
+		}
+		/* once a frame: busy now? and the fade toward it */
+		function calmStep(dt) {
+			if (!CALM) { return; }
+			var t = nowMs();
+			if (t - calmPollAt > 400 || ++calmPollN >= 12) { calmPollAt = t; calmPollN = 0; calmPoll = calmOpen(); }   /* ~2.5 a second */
+			/* calmKey is stamped when a field takes focus, on every keystroke
+			 * in it and when it loses focus: the pieces stay away until 5 s
+			 * after the last of those. A selector or modal on screen holds
+			 * them away while it is open, and 5 s after it closes. */
+			if (calmPoll) { calmFree = t + 5000; }
+			calmBusy = calmPoll || t - calmKey < 5000 || t < calmFree;
+			calmA = calmBusy ? mx2(0, calmA - dt / 0.5) : mn(1, calmA + dt / 1.2);
+		}
+
 		/* Usable = built, and enough of the page open that steering into it
 		 * still leaves room to spread. Below that the honest thing is to seed
 		 * as before rather than crowd every sprite into one gutter. */
@@ -3291,7 +3472,7 @@
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
 				/* 4.13.2 forage (Thanksgiving's tom): walk, stop, feed, walk on */
-				if (b === 'forage') { if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = rnd(1.6, 3.0); p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
+				if (b === 'forage') { if (CALM) { anywhere = 0; p.leg = 0; p.tq = 0; p.ko = null; p.kw = null; p.tsh = 0; } if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = rnd(1.6, 3.0); p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
 			}
 			if (b === 'dart') {
 				spreadPlace(p, vw * 0.1, vw * 0.9, vh * 0.1, vh * 0.66);
@@ -3541,6 +3722,36 @@
 					 * fan up, and walks on. The bob is in the drawing, never in
 					 * p.y. p.gap closes while he feeds so the poults catch up. */
 					if (!tkDone) { break; }   /* waits just off the edge until his poses are drawn */
+					/* 4.15.0 (Rob's pick B): enter, walk about a third of the
+					 * screen at his own pace, TURN (a squeeze through the
+					 * narrow side, about his planted feet, never a flip-cut),
+					 * walk back off the side he came from, and stay gone. A
+					 * busy guest sends him back at once; he never enters
+					 * while one is busy. */
+					if (CALM) {
+						if (p.leg === 3) { p.alpha = 0; break; }
+						var inS = p.dir > 0 ? p.x > -p.size * 1.2 : p.x < vw + p.size * 1.2;
+						if (p.leg === 0 && !inS && calmBusy) { break; }   /* waits off screen */
+						if (p.leg === 1) {
+							p.tq += dt / TK_TURN;
+							if (p.tq >= 0.5 && !p.tflip) {
+								/* the mirror at the narrowest moment: shift him so his feet
+								 * (the pivot) stay on the same spot, and carry the shift in
+								 * the poults' offset so they stay on theirs */
+								var tuF = (p.size * 1.3 * TK_H * p.sc) / TK_REF, sgO = p.dir > 0 ? -1 : 1;
+								p.x += 2 * sgO * TK_PV * tuF; p.tsh = 2 * TK_PV * tuF;
+								/* each poult's offset from him, mirrored with his frame, so it
+								 * stays on its own spot; it waits there (p.kw) until he is past */
+								p.ko = [p.tsh - TK_REFW * tuF * (0.22 + KP_OFF[0] * (p.gap == null ? 1 : p.gap)), p.tsh - TK_REFW * tuF * (0.22 + KP_OFF[1] * (p.gap == null ? 1 : p.gap))];
+								p.kw = [1, 1];
+								p.tflip = 1; p.dir = -p.dir; p.vx = -p.vx;
+							}
+							if (p.tq >= 1) { p.leg = 2; p.tq = 0; p.tflip = 0; p.fs = 0; p.ft = rnd(2.2, 3.0); }
+							break;
+						}
+						if (p.leg === 0 && !p.tn && p.fs !== 1 && ((p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3) || (calmBusy && inS))) { p.tn = 1; }
+						if (p.leg === 2 && (p.dir > 0 ? p.x > vw + p.size * 4.6 : p.x < -p.size * 4.6)) { p.leg = 3; p.alpha = 0; p.gone = vt; break; }
+					}
 					p.ft -= dt;
 					{
 						/* 4.14.4 (Rob: the poults moonwalked): each poult's walk
@@ -3558,8 +3769,11 @@
 							p.x += p.vx * dt;
 							p.wp = (p.wp || 0) + adv / cyc;
 							p.gap = mn(1, g0 + mn(dt * 0.6, 0.5 * adv / span));
-							if (p.fs === 0 && p.ft <= 0) { p.fs = 2; }
-							if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.ft = p.ftS = rnd(2.5, 3.1); }   /* both feet down: he feeds */
+							if (p.tn) { if ((p.wp % 1) < adv / cyc) { p.wp = 0; p.tn = 0; p.leg = 1; p.tq = 0; p.fs = 0; } }   /* both feet down: he turns */
+							else {
+								if (p.fs === 0 && p.ft <= 0) { p.fs = 2; }
+								if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.ft = p.ftS = rnd(2.5, 3.1); }   /* both feet down: he feeds */
+							}
 						} else {
 							p.gap = mx2(0.55, g0 - mn(dt * 0.8, 1.2 * abs(p.vx) * dt / span));
 							if (p.ft <= 0) { p.fs = 0; p.ft = rnd(2.2, 3.0); }
@@ -3567,8 +3781,18 @@
 						if (!p.kq) { p.kq = [0.67, 1.04]; p.kf = [0, 0]; }
 						for (c3 = 0; c3 < 2; c3++) {
 							var ka = adv - TK_REFW * tu * KP_OFF[c3] * (p.gap - g0);   /* its own ground covered: never negative */
+							/* 4.15.0: since his turn a poult stands where it was, feeding,
+							 * until he has walked back past it, then falls in behind; its
+							 * offset is kept HERE and only read by the drawing */
+							var wait = false;
+							if (p.ko) {
+								var gN = (p.tsh || 0) + TK_REFW * tu * (0.22 + KP_OFF[c3] * p.gap);
+								if (p.kw[c3]) { p.ko[c3] += adv; if (p.ko[c3] >= gN) { p.kw[c3] = 0; p.ko[c3] = gN; } else { wait = true; } }
+								else { p.ko[c3] = gN; }
+							}
+							if (wait) { ka = 0; }
 							p.kq[c3] += mx2(0, ka) / kc;
-							p.kf[c3] = (p.fs === 1 && ka < 0.02 * tu) ? p.kf[c3] + dt : 0;   /* stopped beside him: feeding */
+							p.kf[c3] = ((p.fs === 1 || wait) && ka < 0.02 * tu) ? p.kf[c3] + dt : 0;   /* stopped: feeding */
 						}
 					}
 					break;
@@ -3716,9 +3940,13 @@
 					var ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h;
 					var tw = tf.w * ts, th = tf.h * ts, gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts, fy = 10 * s;   /* his feet stand 10px below the walkers' line: they show */
 					var twR = TK_REFW * tf.u * ts;
-					tomPoults(p, s, twR, th, fy, ts, true);
+					var sq = p.leg === 1 ? 0.3 + 0.7 * abs(cos(MT.PI * p.tq)) : 1;   /* 4.15.0: the turn, never thinner than 30% */
+					tomPoults(p, s, twR, th, fy, ts, true, sq);
+					var pv = TK_PV * twR / TK_REFW;   /* his feet, in this draw's px */
+					if (sq < 1) { cx.save(); cx.translate(pv, 0); cx.scale(sq, 1); cx.translate(-pv, 0); }
 					cx.drawImage(tf.c, -tw / 2, fy - gy - th / 2, tw, th);
-					tomPoults(p, s, twR, th, fy, ts, false);
+					if (sq < 1) { cx.restore(); }
+					tomPoults(p, s, twR, th, fy, ts, false, sq);
 					return (flip ? cx.restore() : 0);
 				}
 				var im = sprite(key);
@@ -3737,16 +3965,21 @@
 		 * him is +x), on his ground line, each STEPPING on its own walk
 		 * phase; while he feeds they close up and feed too. The far one is
 		 * drawn behind him, the near one in front. */
-		function tomPoults(p, s, tw, th, gy, ts, far) {
+		function tomPoults(p, s, tw, th, gy, ts, far, sq) {
 			var c = far ? 2 : 1, gap = p.gap == null ? 1 : p.gap, q = p.kq || [0.67, 1.04], kf = p.kf || [0, 0];
 			{
 				var gx = tw * (0.22 + KP_OFF[c - 1] * gap);   /* tw: 4.14.3's box width at his scale */
+				/* 4.15.0: since his turn (his frame is mirrored) a poult keeps
+				 * its place on the ground — in front of him — until he has
+				 * walked back past it */
+				if (p.ko) { gx = p.ko[c - 1] * tw / (TK_REFW * ((p.size * 1.3 * TK_H * p.sc) / TK_REF)); }
 				var f = tkGet(kf[c - 1] > 0 ? tkPose(q[c - 1], KP_FR, 1, kf[c - 1] + 0.3, true) : tkPose(q[c - 1], KP_FR, 0, 0, true)), sc2 = ts;
 				if (!f) { return; }
 				var pw = f.w * sc2, phh = f.h * sc2, py = gy - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * sc2 + (far ? -th * 0.03 : th * 0.02);
-				if (far) { cx.save(); cx.globalAlpha *= 0.94; }
+				var sqz = sq != null && sq < 1;
+				if (far || sqz) { cx.save(); if (far) { cx.globalAlpha *= 0.94; } if (sqz) { cx.translate(gx, 0); cx.scale(sq, 1); cx.translate(-gx, 0); } }   /* it turns with him, about its own feet */
 				cx.drawImage(f.c, gx - pw / 2, py - phh / 2, pw, phh);
-				if (far) { cx.restore(); }
+				if (far || sqz) { cx.restore(); }
 			}
 		}
 
@@ -3863,10 +4096,15 @@
 		function drawP(p, t) {
 			if (p.dormant || p.alpha <= 0 || p.yl < 0.02) { return; }
 			var b = p.b;
+			/* 4.15.0: a walker finishes its walk; everything else fades while
+			 * the guest is busy */
+			var cA = b === 'forage' ? 1 : calmA;
+			if (cA <= 0) { return; }
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
-			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
+			if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, b === 'forage' ? p.size * 7 : p.size * (p.sc || 1) * layerS * 1.7 + 6); }
+			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl) * cA;
 			if (b === 'dangle' && p.st !== 4) {
 				cx.strokeStyle = 'rgba(90,90,90,.6)';
 				cx.lineWidth = 1;
@@ -4205,6 +4443,13 @@
 		var TK_FR = 16, KP_FR = 12, TK_H = 1.55, KP_K = 0.4, tkCache = {}, tkN = 0, tkSz = 0;
 		/* 4.14.4: his size is set by 4.14.3's box (107 units tall, 133 wide),
 		 * so the box can grow to his real extent without shrinking him */
+		var TK_TURN = 0.8;   /* 4.15.0: his turn, in seconds */
+		/* ...about his planted feet: in the standing frame (w0) the rig's feet
+		 * (hips at 74 and 81 units, the stride and stance from the pack) are
+		 * down at 81 + S/2 and 74 + S/2 - S/2/stance; the turn pivots on their
+		 * midpoint, TK_PV units from the drawing's centre (its cache is
+		 * mirrored: x = (box right - fx)) */
+		var TK_PV = TK_BOX ? (TK_BOX[2] - (155 + TK_STRIDE - TK_STRIDE * 0.5 / TK_STANCE) / 2) - (TK_BOX[2] - TK_BOX[0]) / 2 : 0;
 		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1, KP_OFF = [0.34, 0.62];
 		for (var tkI = 0; tkI < specs.length; tkI++) { if (specs[tkI].def.draw === 'tom' && TKM.length) { tkSz = mx2(tkSz, (specs[tkI].def.sz || [32, 32])[1]); } }
 		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R, k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2) };
@@ -4617,62 +4862,11 @@
 				return;
 			}
 			if (h.kind === 'heron' && !h.land) { h.key = hnStep(h.fl, dt); }
-			if (h.kind === 'heron' && h.land) {
-				/* The landing (4.9.0): fly in, glide down with the legs
-				 * lowering, flare (the wings swing up and fan, braking), touch
-				 * down and stand 2.5 s, then take off on hard beats with the
-				 * legs still hanging. (h.x, h.y) is the flying bird's body;
-				 * standing, its feet are 44 units below that, in the water. */
-				var u4 = HN_W / 100, yLand = waterY + 2 - 44 * u4, dxl = h.lx - h.x, ahead = dxl * h.dir;
-				h.t2 = (h.t2 || 0) + dt;
-				if (h.st === 1) { /* in on the ordinary flight, then into a held glide */
-					h.key = hnStep(h.fl, dt);
-					h.x += h.vx * dt;
-					h.y += sin(h.ph) * 8 * dt;
-					/* a long drop starts its glide further out */
-					if (ahead < mx2(220, 1.2 * (yLand - h.y))) { h.fl.beats = mn(h.fl.beats, 0); h.fl.hold = true; }
-					if (h.fl.gl > 0) { h.st = 2; h.t2 = 0; h.y0 = h.y; h.a0 = mx2(ahead, 60); }
-				} else if (h.st === 2) { /* the glide down */
-					h.key = hnStep(h.fl, dt);
-					h.vx = lerp(h.vx, h.dir * clamp(ahead * 0.8, 24, 90), mn(1, dt * 1.5));
-					h.x += h.vx * dt;
-					/* down an eased slope from where the glide began to the
-					 * landing spot, steepest mid-way, level at both ends */
-					h.y = lerp(h.y0, yLand, hnEase(1 - (ahead - 26) / (h.a0 - 26)));
-					h.legs = clamp((140 - ahead) / 100, 0, 1);
-					h.pitch = 0.12 * h.legs;
-					if (ahead < 26) { h.st = 3; h.t2 = 0; }
-				} else if (h.st === 3) { /* the flare: out of the glide, wings up, braking */
-					var ft = h.t2;
-					h.key = ft < 0.2 ? (MT.round((1 - ft / 0.2) * HN_GLIDES) ? 'g' + MT.round((1 - ft / 0.2) * HN_GLIDES) : 'b' + HN_GB)
-						: ft < 0.55 ? 'b' + mn(HN_BEATS - 1, HN_GB + MT.floor((ft - 0.2) / 0.35 * (HN_BEATS - HN_GB))) : 'f';
-					h.vx *= 1 - mn(1, dt * 3.5);
-					h.x += h.vx * dt;
-					h.y += (yLand - h.y) * mn(1, dt * 6);
-					h.legs = 1;
-					h.pitch = lerp(h.pitch, 0.32, mn(1, dt * 5));
-					if (ft >= 0.8) { h.st = 4; h.t2 = 0; h.y = yLand; addRipple(h.x, waterY); }
-				} else if (h.st === 4) { /* stand: the flying bird fades into the standing one */
-					h.sa = clamp(h.t2 / 0.3, 0, 1);
-					h.pitch *= 1 - mn(1, dt * 6);
-					if (h.t2 >= 2.8) {
-						h.st = 5; h.t2 = 0; addRipple(h.x, waterY);
-						h.fl = { ph: 0, bps: 2.6, beats: 99, gl: 0, gt: 0, glides: false };
-						h.vx = h.dir * 20;
-					}
-				} else { /* take off: hard beats, legs hanging, then away */
-					h.key = hnStep(h.fl, dt);
-					h.sa = 1 - clamp(h.t2 / 0.25, 0, 1);
-					h.legs = 1 - clamp((h.t2 - 0.5) / 1.1, 0, 1);
-					h.pitch = 0.22 * (1 - clamp(h.t2 / 1.6, 0, 1));
-					h.vx = h.dir * mn(95, abs(h.vx) + 55 * dt);
-					h.x += h.vx * dt;
-					h.y -= mn(70, 25 + 30 * h.t2) * dt;
-					if (h.t2 > 2.2) { h.fl.bps = 2; h.fl.glides = true; }
-					if ((h.dir > 0 && h.x > vw + 150) || (h.dir < 0 && h.x < -150) || h.y < -80) { hero = null; }
-				}
-				return;
-			}
+			/* The heron's landing (4.9.0: glide in, flare, stand, take off)
+			 * was unreachable from 4.10.7 — the heron flies only in the header
+			 * sky, where hero.land is forced off — and its step was removed in
+			 * 4.15.0 for size. hero.land is still decided (and its rand()
+			 * still drawn) so every later random draw is unchanged. */
 			h.x += h.vx * dt;
 			if (h.kind !== 'manatee') { h.y += sin(h.ph) * 8 * dt; }
 			/* A bird with a fish keeps well clear of the water it came from. */
@@ -7393,6 +7587,8 @@
 				drawBgFills();
 				/* Layer 1 before everything else on the canvas: the subtle layer
 				 * is the calm baseline and every sprite belongs on top of it. */
+				calmStep(pdt);   /* 4.15.0: busy? and the occluders on screen, before anything is drawn */
+				occFrame();
 				stepSubtle(pdt);
 				drawSubtle();
 				if (burstMode) {
@@ -7577,6 +7773,8 @@
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
+				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, a: calmA, busy: calmBusy, poll: calmPoll, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { leg: p.leg, x: p.x, dir: p.dir, tq: p.tq, ko: p.ko, kw: p.kw, alpha: p.alpha, gone: p.gone }; }) }; },
+				occBuild: function () { occBuild(); occVisKey = ''; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },
 				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },

@@ -23,7 +23,7 @@ function ok(c, label, detail) {
   if (c) { pass++; console.log(`    PASS  ${label}`); }
   else { fail++; problems.push(`${label} — ${detail}`); console.log(`    FAIL  ${label} — ${detail}`); }
 }
-const decide = (scope, kind) => execFileSync('php', [path.join(__dirname, 'scope-decide.php'), `--scope=${scope}`, `--kind=${kind}`], { cwd: ROOT, encoding: 'utf8' }).trim();
+const decide = (show, kind) => execFileSync('php', [path.join(__dirname, 'scope-decide.php'), `--show=${show}`, `--kind=${kind}`], { cwd: ROOT, encoding: 'utf8' }).trim();
 
 /* The page a guest gets. When PHP says SKIP the plugin prints NOTHING: no
  * config, no script tag, no styles — so the fixture is served with the
@@ -39,14 +39,16 @@ function html(load, kind) {
 
 const KINDS = [
   ['front', 'the homepage'],
-  ['page', 'an ordinary page (/contact/)'],
+  ['page', '/contact/ (ticked by default)'],
+  ['other', 'a page not ticked'],
   ['cottage', 'a cottage page'],
   ['checkout', 'the checkout'],
 ];
 
 (async () => {
-  for (const scope of ['not_home', 'all']) {
-    console.log(`\n  --- scope = ${scope} ---`);
+  /* 4.15.0: the "Show On" checklist, as Rob's default and with everything ticked */
+  for (const scope of ['default', 'all']) {
+    console.log(`\n  --- Show On = ${scope} ---`);
     for (const [kind, name] of KINDS) {
       const verdict = decide(scope, kind), load = verdict === 'LOAD';
       const ses = await open(html(load, kind), { viewport: { width: 1280, height: 800 } });

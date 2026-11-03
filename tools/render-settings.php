@@ -51,6 +51,24 @@ function wp_unslash($v) { return $v; }
 function absint($v) { return abs((int) $v); }
 function wp_parse_args($a, $d) { return array_merge($d, is_array($a) ? $a : []); }
 function get_option($k, $d = false) { return $GLOBALS['OPTIONS'][$k] ?? $d; }
+/* 4.15.0, Show On: the live site's published pages and cottage pages (a sample) */
+function get_pages($a = []) {
+    $o = [];
+    foreach ([[22, 'Contact Us', 'contact'], [1005, 'Cottages', 'cottages'], [4645, 'Guest Guide', 'guest'], [18119, 'Explore', 'explore'], [3002, 'Wildlife Guide', 'wildlife-guide'], [3007, 'Privacy Policy', 'privacy'], [3008, 'Terms & Conditions', 'terms-conditions'], [3010, 'Accessibility', 'accessibility'], [1399, 'Submit Booking', 'submit-booking'], [18102, 'Staff', 'staff']] as [$id, $t, $sl]) {
+        $p = new \stdClass(); $p->ID = $id; $p->post_title = $t; $p->post_name = $sl; $o[] = $p;
+    }
+    usort($o, function ($x, $y) { return strcmp($x->post_title, $y->post_title); });
+    return $o;
+}
+function get_posts($a = []) {
+    $o = [];
+    foreach ([[1071, 'Cottage 22: The Boathouse', 'cottage-22'], [1069, 'Cottage 23: The Lighthouse', 'cottage-23'], [1607, 'Cottage 34: Coconut Cottage', 'cottage-34']] as [$id, $t, $sl]) {
+        $p = new \stdClass(); $p->ID = $id; $p->post_title = $t; $p->post_name = $sl; $o[] = $p;
+    }
+    return $o;
+}
+if (!function_exists('get_post')) { function get_post($id) { foreach (get_pages() as $p) { if ($p->ID === (int) $id) { $p->post_status = 'publish'; return $p; } } return null; } }
+if (!function_exists('get_page_by_path')) { function get_page_by_path($s) { foreach (get_pages() as $p) { if ($p->post_name === $s) { return $p; } } return null; } }
 function update_option($k, $v, $a = null) { $GLOBALS['OPTIONS'][$k] = $v; return true; }
 function get_transient($k) { return false; } function delete_transient($k) { return true; }
 function current_user_can($c) { return true; }
