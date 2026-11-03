@@ -1447,6 +1447,15 @@ namespace {
     ok('0.54.0: the config hands the photos to the page', isset(\DCCS\Config::build([], [])['cottages'][0]['photo']));
 
     // ---- 0.54.0: strings ---------------------------------------------------------------
+    // ---- 0.56.0: the pop-up setting reaches the page's config -------------------------
+    $GLOBALS['__opts']['dccs_settings'] = [];
+    ok('0.56.0: by default the page widget opens its modes in the pop-up', \DCCS\Config::build([], [])['modesInPopup'] === true);
+    $GLOBALS['__opts']['dccs_settings'] = ['modes_popup' => false];
+    ok('0.56.0: ...and the settings page can turn it off', \DCCS\Config::build([], [])['modesInPopup'] === false);
+    unset($GLOBALS['__opts']['dccs_settings']);
+    ok('0.56.0: a saved form keeps the choice (sanitize reads the checkbox)', \DCCS\Settings::sanitize(['modes_popup' => '1'])['modes_popup'] === true && \DCCS\Settings::sanitize([])['modes_popup'] === false);
+    ok('0.56.0: the new line under a disabled Next is translatable Title Case', (\DCCS\Config::strings()['next_pick'] ?? '') === 'Pick One to Continue');
+
     $s54 = \DCCS\Config::strings();
     ok('0.54.0: the count strings are Title Case', $s54['match_count'] === '%d Cottages Match' && $s54['match_count_one'] === '%d Cottage Matches');
     ok('0.54.0: the two new card strings exist', $s54['chip_sleeps'] === 'Sleeps %d' && $s54['see_all'] === 'See All');

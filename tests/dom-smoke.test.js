@@ -3979,6 +3979,15 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   modal().querySelector('.dccs-modal-close').click();
   outer.querySelector('.dccs-landing-choice[data-mode="quick"]').click();
   ok('107/1: switching modes starts the other one fresh (modes are independent tools)', /\b1\b/.test(progress(inner())) && !inner().querySelector('.dccs-chip.is-active'));
+  // Start over inside the pop-up is remembered as a fresh start, not undone by a reopen.
+  clickAnswer(inner(), '2'); clickNext(inner());
+  ok('107/1: (control) the quiz moved on before Start over', /\b2\b/.test(progress(inner())));
+  // Results -> Start over: answer the rest quickly, then reset.
+  stepThrough(inner(), 'either'); seeMatches(inner());
+  inner().querySelector('.dccs-reset').click();
+  modal().querySelector('.dccs-modal-close').click();
+  outer.querySelector('.dccs-landing-choice[data-mode="quick"]').click();
+  ok('107/1: after Start over, a reopen starts fresh too (the reset is what is kept)', !inner().querySelector('.dccs-results') && !inner().querySelector('.dccs-chip.is-active') && (/\b1\b/.test(progress(inner())) || !!inner().querySelector('.dccs-landing')));
   modal().querySelector('.dccs-modal-close').click();
   {
     // Control: with the setting OFF the page widget opens the mode in the page, as before.

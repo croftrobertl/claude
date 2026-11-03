@@ -829,6 +829,29 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   that button off the spec while everything else appears to comply — which is what
   `style_comparebtn_*` was doing to the Compare button before 0.27.0 removed it from
   the preset. A SAVED value on a live widget still wins and only the panel can clear it.
+- **The page widget opens its modes in the pop-up (0.56.0, Rob).** Site setting
+  `modes_popup` (default ON, a new key so it reaches live's row) → `modesInPopup`.
+  Choosing a mode on a Selector's landing calls `openModePopup()`: the SAME overlay
+  as the cottage pages' Mini Entry (fixed, z-index 99999 over DCC Seasons' 999,
+  `dvh` max-height, own scroll, focus trap, Escape/✕, scroll lock, focus back on the
+  button). Its widget gets `modesInPopup: false` and `openStage: 'mode'`, so it
+  never opens a second pop-up and starts in the chosen mode; the page widget stays
+  on its landing behind it. Compare picks keep the PAGE widget's storage key
+  (`root._dccsCmpKey`), not a `:modal` list. Deep links (`?mode=…`, `?desk=yes`)
+  still render inline (an auto-opening pop-up on page load was not asked for).
+  The test config (`tests/dump-config.php`) pins `modesInPopup: false` because the
+  inline flow is exactly what runs inside the pop-up; dom-smoke 107 tests the pop-up.
+  The live-swap harness must ADD `modesInPopup` (and any new string) to the served
+  data-config: live's PHP builds it, so only JS/CSS can be swapped.
+- **Pop-up answers survive close and reopen for the visit (0.56.0, Rob).** One kept
+  state per widget/Mini (`root._dccsKeep`, memory only, nothing stored): reopening
+  resumes the step, the answers and the count; choosing the OTHER mode starts it
+  fresh; Start over is kept as a fresh start. Before 0.56.0 the Mini's quiz started
+  over on every open (only Compare picks persisted) — the brief assumed otherwise.
+- **A disabled Next is gray, with "Pick One to Continue" under it (0.56.0, Rob).**
+  `#d7dde7` / `#5b6676`, fully opaque, no hover change (0.55.1 turned it coral under
+  a mouse); the line (`next_pick`, `aria-hidden` — the button's name already says it)
+  goes the moment an answer is picked. Not on the dates step.
 - **The bare pop-up has NO header row (0.55.1, Rob).** Without a title (the Mini
   Entry pop-up) `buildOverlay()` renders no `.dccs-modal-head` — it held only the
   close button and cost ~60px of a phone. The button rides `.dccs-modal-closebar`,
