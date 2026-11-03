@@ -28,10 +28,10 @@ const one = s => s.replace(/\n/g, '');
 const body = s => one(s.slice(s.indexOf('|') + 1));
 /* the gold the percentages were drawn with (tools/anniv-percent.js GOLD) */
 const GOLDP = id => `<linearGradient id="${id}" x2="0" y2="1"><stop stop-color="#7C5C16"/><stop offset=".22" stop-color="#C9A227"/><stop offset=".42" stop-color="#F6E3A0"/><stop offset=".55" stop-color="#E2C25A"/><stop offset=".8" stop-color="#A9831F"/><stop offset="1" stop-color="#6E5013"/></linearGradient>`;
-const pctA = id => `'34 20|<defs>${GOLDP(id)}</defs><text x="17" y="16" font-family="Georgia,serif" font-size="16" font-weight="700" fill="#5A410C" text-anchor="middle" stroke="#5A410C" stroke-width="1.6" stroke-linejoin="round">' + t + '</text><text x="17" y="15.4" font-family="Georgia,serif" font-size="16" font-weight="700" fill="url(#${id})" text-anchor="middle">' + t + '</text>'`;
+const pctA = id => `'34 20|<defs>${GOLDP(id)}</defs><text x="17.7" y="16.2" font-family="Georgia,serif" font-size="16" font-weight="700" fill="#5A410C" opacity=".8" text-anchor="middle">' + t + '</text><text x="17" y="15.4" font-family="Georgia,serif" font-size="16" font-weight="700" fill="url(#${id})" text-anchor="middle">' + t + '</text>'`;
 /* the lab's look A, checked: the same markup with the figure spliced in */
 const lab = fs.readFileSync(path.join(__dirname, 'anniv-percent.js'), 'utf8');
-if (!lab.includes('font-size="16" font-weight="700" fill="#5A410C" text-anchor="middle" stroke="#5A410C" stroke-width="1.6" stroke-linejoin="round">${t}</text><text x="17" y="15.4" font-family="Georgia,serif" font-size="16" font-weight="700" fill="url(#${id}a)"')) {
+if (!lab.includes('font-size="16" font-weight="700" fill="#5A410C" opacity=".8" text-anchor="middle">${t}</text><text x="17" y="15.4" font-family="Georgia,serif" font-size="16" font-weight="700" fill="url(#${id}a)"')) {
   throw new Error('tools/anniv-percent.js look A changed: update anniv-build.js to match it');
 }
 const yearA = body(P.crystalA).replace(/dccAnC1/g, 'dccAnY1');

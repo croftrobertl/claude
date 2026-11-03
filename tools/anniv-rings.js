@@ -16,6 +16,7 @@
  *
  *   const { rings } = require('./anniv-rings');  rings('dccAnR') -> 'w h|<svg>'
  */
+const { capLight } = require('./anniv-light');
 const f = v => Math.round(v * 100) / 100;
 /* half of an ellipse (centre c, radii rx ry, rotated a degrees): 'far' is
  * the half away from us (its upper side before rotation) */
@@ -28,8 +29,7 @@ function band(id, c, rx, ry, a, t, which) {
   const halves = which === 'all' ? [true, false] : [which === 'far'];
   return halves.map(far => {
     const g = far ? `url(#${id}f)` : `url(#${id}n)`;
-    return `${half(c, rx, ry, a, far)} fill="none" stroke="#5E4410" stroke-width="${f(t + 0.7)}"/>` +
-      `${half(c, rx, ry, a, far)} fill="none" stroke="${g}" stroke-width="${f(t)}"/>` +
+    return `${half(c, rx, ry, a, far)} fill="none" stroke="${g}" stroke-width="${f(t)}"/>` +
       /* the inner edge in shade, the outer edge catching the light */
       `${half(c, rx - t * 0.32, ry - t * 0.32, a, far)} fill="none" stroke="#7A5A14" stroke-width="${f(t * 0.22)}" opacity=".6"/>` +
       (far ? '' : `${half(c, rx + t * 0.18, ry + t * 0.18, a, far)} fill="none" stroke="#FFF3C8" stroke-width="${f(t * 0.18)}" opacity=".75"/>`);
@@ -55,6 +55,6 @@ function rings(id) {
     /* a glint on each band */
     `<path d="M${f(A.c[0] - 6.6)} ${f(A.c[1] + 1.6)} l1.1 -.35 l.35 -1.1 l.35 1.1 l1.1 .35 l-1.1 .35 l-.35 1.1 l-.35 -1.1 Z" fill="#FFFFFF"/>` +
     `<path d="M${f(B.c[0] + 1.4)} ${f(B.c[1] - 7.4)} l.9 -.3 l.3 -.9 l.3 .9 l.9 .3 l-.9 .3 l-.3 .9 l-.3 -.9 Z" fill="#FFFFFF" opacity=".9"/>`;
-  return `${W} ${H}|${body}`;
+  return capLight(`${W} ${H}|${body}`);
 }
 module.exports = { rings };

@@ -1334,6 +1334,26 @@ Rob sees it (the overlay rows; sources named on the sheets).
     reduced-motion and /submit-booking/ checks moved in); the clips and
     sheets are `tools/holiday-clip.js` and `tools/holiday-sheet.js`.
 
+- **4.14.5 (in review, 2026-11-03): the Anniversary's round 1.** The
+  Director's order: this round (live before 11 Nov, its one day), then a
+  small Christmas round, then one larger round for every other theme. The
+  audit held every Anniversary piece to STYLE-BIBLE.md v2; the pieces
+  failed §2 (an outline stroked round the heart, the crystal drop and year,
+  the flutes, the date band, both rings' edges, and look A's dark rim round
+  the figures) and §3/§6 (20 pure whites). Fixed in the SOURCES
+  (`tools/anniv-pieces.js`, `tools/anniv-rings.js`, `tools/anniv-percent.js`
+  and `pctA` in `tools/anniv-build.js`), the pack regenerated:
+  `tools/anniv-light.js` `capLight()` scales any colour brighter than
+  #F6F4EE down in linear light (hue kept; three-digit mask colours left
+  alone); the outlines became value (own-colour gradients, the flutes' glass
+  edge faint on the lit side and firm on the shadow side, the figures' rim an
+  own-colour shadow offset down-right); the toast's two floating white dots
+  (specks) went. The crane pair (a bible model) and the egg are unchanged.
+  `test-anniversary.js` checks both rules (mutations `DCC_ANNIV_MUT=white|
+  rim|pctrim`); `test-untouched.js` is now against 4.14.4 (`8ed410d`) with
+  only the Anniversary exempt and the engine and every other pack BYTE-
+  identical. Review images: `tools/anniv-review.js` (DCC_BEFORE = the old
+  pack). The zip and the version bump wait for Rob's picks.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no

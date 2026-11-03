@@ -40,6 +40,9 @@ function serve(n) {
   if (MUT === 'noclear' && n === 'engine.js') { src = src.replace('if (mx2(r[0] - bx[i][2], bx[i][0] - r[2], r[1] - bx[i][3], bx[i][1] - r[3]) < AD_M) { ok = 0; }', ''); }
   if (MUT === 'onebird' && n === 'engine.js') { src = src.replace('for (i = 0; i < 2; i++) {\n\t\t\t\t\tcx.save(); cx.translate(birds[i][0]', 'for (i = 0; i < 1; i++) {\n\t\t\t\t\tcx.save(); cx.translate(birds[i][0]'); }
   if (MUT === 'nokeys' && n === 'engine.js') { src = src.replace('if (st.nb == null) { st.nb = !!(adK && adK.done); }', 'if (st.nb == null) { st.nb = false; }'); }
+  if (MUT === 'white' && n === 'art-anniversary.js') { src = src.replace('#F4F4F4', '#FFFFFF'); }
+  if (MUT === 'rim' && n === 'art-anniversary.js') { src = src.replace('fill="url(#dccAnH1)"/>', 'fill="url(#dccAnH1)" stroke="#B9505F" stroke-width=".5"/>'); }
+  if (MUT === 'pctrim' && n === 'art-anniversary.js') { src = src.replace('fill="#5A410C" opacity=".8" text-anchor="middle">', 'fill="#5A410C" text-anchor="middle" stroke="#5A410C" stroke-width="1.6">'); }
   if (MUT === 'fig' && n === 'art-anniversary.js') { src = src.replace('Math.round(100 * wed / ((on - Date.UTC(1986, 2, 25)) / YR))', 'Math.round(100 * wed / ((on - Date.UTC(1989, 2, 26)) / YR))'); }
   return src;
 }
@@ -58,6 +61,22 @@ function serve(n) {
     W.DCC_SEASONS.date = '2026-11-11';
     const yr = A.svgs.anyear(), p1 = A.svgs.anpct1(), p2 = A.svgs.anpct2();
     ok(/>15<\/text>/.test(yr) && />40%<\/text>/.test(p1) && />37%<\/text>/.test(p2), 'the sprites carry them: the crystal reads 15, the figures 40% and 37%', [yr.slice(-60), p1.slice(-60), p2.slice(-60)].join(' / '));
+    /* 4.14.5: the style bible (STYLE-BIBLE.md §2, §3). Every piece, its
+     * figures filled in: no colour brighter than #F6F4EE, and no stroke
+     * drawn along a piece's own silhouette (the heart, the crystal drop,
+     * the flutes' bowls and feet, the date band, the figures' rim). */
+    {
+      const { lum, CAP } = require('./anniv-light');
+      const all = Object.keys(A.svgs).map(k => [k, typeof A.svgs[k] === 'function' ? A.svgs[k]() : A.svgs[k]]);
+      const hot = [];
+      for (const [k, v] of all) { for (const c of v.match(/#[0-9A-Fa-f]{6}\b/g) || []) { if (lum(c) > CAP + 1e-9) { hot.push(k + ' ' + c); } } }
+      ok(!hot.length, `no colour in any piece brighter than #F6F4EE (${all.length} pieces)`, hot.slice(0, 6).join(', '));
+      const sil = { anheart: /<path d="M12 22\.4[^>]*stroke=/, ancrystal: /<path d="M10 3\.6 Q17\.6[^>]*stroke=/, anyear: /<path d="M10 3\.6 Q17\.6[^>]*stroke=/,
+        andate: /<rect x="1\.2" y="2\.4"[^>]*stroke=/, anpct1: /<text[^>]*stroke-width/, anpct2: /<text[^>]*stroke-width/, anrings: /stroke="#5E4410"/ };
+      const rim = all.filter(([k, v]) => sil[k] && sil[k].test(v)).map(([k]) => k);
+      const flute = all.filter(([k, v]) => k === 'antoast' && /stroke="#[0-9A-Fa-f]{6}" stroke-width="\.(55|4)"/.test(v)).map(([k]) => k);
+      ok(!rim.length && !flute.length, 'no outline round any piece: the heart, crystal, year, date band, figures, rings and flutes are made by value', rim.concat(flute).join(','));
+    }
     for (const f of ['art-anniversary.js', 'art-anniversary.min.js']) {
       const t = fs.readFileSync(path.join(JS, f), 'utf8'), m = t.match(/\b(Erica|Rob|Robert|Croft)\b/);
       ok(!m, `no names in ${f}, the file that holds the dates`, m && t.slice(Math.max(0, m.index - 40), m.index + 40));
