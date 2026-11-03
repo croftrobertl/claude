@@ -1392,11 +1392,54 @@ body.dccgg-detail-open {
        room — so the title stays centred, which is the whole point of the
        three-slot row — and stops them collapsing when there is not.
        The centre is minmax(0, auto) so it can give way and WRAP rather than
-       push the sides out of the way. */
+       push the sides out of the way.
+
+       v0.27.2, on Rob's pick: the title is now DEAD CENTRE at every width,
+       which 0.27.1 was not — it sat 22px right of centre at 320, because
+       the two sides fall to their own min-content when squeezed and the
+       lead is the wider of them. Measured across 288 title rows on both
+       live pages at all four widths: the lead is never more than 76px and
+       the tail never more than 32px, so the asymmetry is 44px and half of
+       it is the shift. Both sides now RESERVE the same width, so the centre
+       of the middle track is the centre of the row whatever is in them. */
     grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
     align-items: center;
     gap: 10px;
     color: var(--dccgg-text);
+}
+/* The reserve itself. A token rather than a number in two places, because
+   the two sides must agree or the title is not centred — and if a guide
+   ever grows a wider control, 76px is the one value to raise. It is a
+   floor, not a cap: the tracks stay minmax(min-content, 1fr), so a side
+   holding MORE than the reserve still gets what it needs and nothing is
+   clipped. Anchored on the ELEMENT, doubled to (0,2,0) so it outranks the
+   min-width: 0 above it, and deliberately not hung off .dccgg-root or
+   .dccgg-stage: the stage is portaled to <body> when a section opens, and a
+   selector naming either ancestor is one more thing to get wrong there.
+
+   WHY IT IS NOT A FLAT 76px, which is the whole story of this release.
+   Reserving the wider side on both sides costs the middle track 44px, and
+   at 320 there is not 44px to give: measured on the host's own content with
+   a flat 76px, EIGHT titles across the two pages break a word — Kitchenware
+   by 44px, Laundromat by 40, Electronics by 27, Cold Beverages, Amenities
+   Map, Maximum Guests, Checkout Time. Dead centre and an unbroken word are
+   not both available at 320; they are the same 44px twice.
+
+   So the reserve grows with the room there is for it. Measured at eight
+   widths from 320 to 390, the worst split falls by exactly 1px for every
+   1px of width — 44px at 320, 34 at 330, 24 at 340, 14 at 350, 4 at 360,
+   none from 370 — so the largest reserve that never breaks a word is
+   32px + (width - 320), capping at the full 76px from 364px up. That is
+   what the clamp says. The result: dead centre at 390, 768 and 1440, and
+   as close to it as the glyphs allow below that, with no word ever broken.
+
+   Viewport units, like the gap rule below, because the guide's own width
+   tracks the viewport on a phone, which is where this matters. If a guide
+   is ever placed in a container much narrower than the window, this is the
+   line to revisit — the desktop column, at 430px, is comfortably clear. */
+.dccgg-item-title-lead.dccgg-item-title-lead,
+.dccgg-item-title-tail.dccgg-item-title-tail {
+    min-width: var(--dccgg-title-side, clamp(32px, calc(32px + 100vw - 320px), 76px));
 }
 .dccgg-item-title-lead {
     grid-column: 1;
@@ -1422,6 +1465,21 @@ body.dccgg-detail-open {
        cannot help with, such as a pasted URL. */
     hyphens: auto;
     overflow-wrap: break-word;
+    /* v0.27.2, on Rob's pick. The theme sets html { line-height: 1.8 } and
+       the title inherited it, so a 25px title carried 45px of leading and a
+       wrapped title's two lines stood 45px apart. Nobody had seen it before
+       0.27.1, because until then a long title overlapped rather than
+       wrapped. Rob accepted the cost: every item row is about 11-14px
+       shorter, on both layouts at every width.
+       One class is enough and the reason matters: 1.8 arrives by
+       INHERITANCE from html, and any rule that matches the element beats an
+       inherited value whatever its specificity. What it must not do is hang
+       off .dccgg-root — the stage is portaled to <body> when a section
+       opens, so such a rule never reaches the open sheet, which is where
+       every title a guest reads actually lives. That trap produced a wrong
+       measurement in 0.27.1: an !important rule appeared to prove the
+       leading was immovable, and had in fact matched nothing. */
+    line-height: 1.25;
 }
 /* Those 8px, bought back. The row's gap is 10px either side of the title;
    at phone widths 6px is still a clear separation and gives the centre

@@ -241,6 +241,20 @@ MUTANTS = [
      "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);"),
     ('a word longer than the track can neither hyphenate nor break', CSS,
      "    hyphens: auto;\n    overflow-wrap: break-word;", "    hyphens: auto;"),
+    # ---- v0.27.2: dead centre, and the title's own leading ---------------
+    ('neither side reserves anything, so the title drifts to the narrow one', CSS,
+     "    min-width: var(--dccgg-title-side, clamp(32px, calc(32px + 100vw - 320px), 76px));",
+     "    min-width: 0;"),
+    ('only the lead reserves, which is the same shift by another route', CSS,
+     ".dccgg-item-title-lead.dccgg-item-title-lead,\n.dccgg-item-title-tail.dccgg-item-title-tail {",
+     ".dccgg-item-title-lead.dccgg-item-title-lead {"),
+    ('the reserve is a single class again, losing to the min-width: 0 above it', CSS,
+     ".dccgg-item-title-lead.dccgg-item-title-lead,\n.dccgg-item-title-tail.dccgg-item-title-tail {",
+     ".dccgg-item-title-lead,\n.dccgg-item-title-tail {"),
+    ('the reserve stops growing with the room, pinned at its narrow floor', CSS,
+     "clamp(32px, calc(32px + 100vw - 320px), 76px)", "32px"),
+    ('the title inherits the theme 1.8 again', CSS,
+     "    line-height: 1.25;\n}", "}"),
 ]
 
 EQUIVALENT = [

@@ -29,6 +29,7 @@ const WIDTHS = [320, 390, 768, 1440];
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const found = [];
     const splits = [];
+    const offs = [];
     for (const which of ['guest', 'test']) {
         for (const width of WIDTHS) {
             const { ctx, page } = await openLive(browser, {
@@ -81,6 +82,14 @@ const WIDTHS = [320, 390, 768, 1440];
                             if (over > out.split) { out.split = over; out.word = w; }
                         });
                         probe.remove();
+                        // v0.27.2: how far the title's own centre sits from
+                        // the ROW's centre. This is the thing Rob picked, and
+                        // it is measured on the text box rather than on the
+                        // track, because a centred track holding a left-aligned
+                        // box would still read off centre.
+                        const rowBox = row.getBoundingClientRect();
+                        out.off = Math.round(Math.abs(
+                            (a.left + a.right) / 2 - (rowBox.left + rowBox.right) / 2));
                         return out;
                     }).filter(Boolean));
                 rows.filter((r) => r.over > 0).forEach((r) => {
@@ -91,6 +100,7 @@ const WIDTHS = [320, 390, 768, 1440];
                 rows.filter((r) => r.split > 2).forEach((r) => {
                     splits.push({ page: which, width, section: key, title: r.t, word: r.word, over: r.split });
                 });
+                rows.forEach((r) => offs.push({ page: which, width, off: r.off, title: r.t }));
                 await page.keyboard.press('Escape');
                 await page.waitForTimeout(400);
             }
@@ -106,5 +116,13 @@ const WIDTHS = [320, 390, 768, 1440];
     splits.forEach((f) => console.log(
         `  ${f.page.padEnd(5)} ${String(f.width).padStart(4)}  ${f.section.padEnd(10)} ` +
         `SPLIT "${f.word}" by ${f.over}px  in "${f.title}"`));
+    console.log('  off centre, worst per page and width:');
+    [...new Set(offs.map((o) => `${o.page} ${o.width}`))].forEach((k) => {
+        const [pg, w] = k.split(' ');
+        const rows = offs.filter((o) => o.page === pg && String(o.width) === w);
+        const worst = rows.reduce((m, o) => (o.off > m.off ? o : m), rows[0]);
+        console.log(`    ${pg.padEnd(5)} ${w.padStart(4)}  ${String(worst.off).padStart(3)}px` +
+            (worst.off ? `  "${worst.title}"` : ''));
+    });
     await browser.close();
 })();

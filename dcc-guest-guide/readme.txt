@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.1
+Stable tag: 0.27.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,19 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.2 =
+* An item title now sits dead centre in its row: both sides reserve the
+  same width, so the title no longer shifts towards the narrower one.
+  Measured on both layouts at 390, 768 and 1440 — exactly centred. At 320
+  it is still 22px off, and cannot be less: reserving the wider side on
+  both costs the middle column 44px, which at that width would break a
+  word instead. No title overlaps a control and no word is broken at any
+  width.
+* Item titles use their own line spacing (1.25) rather than inheriting the
+  theme's 1.8, so a wrapped title reads as one title. Every item row is
+  about 14px shorter as a result, on both layouts.
+* Stylesheet only: no markup, behaviour or data changes.
 
 = 0.27.1 =
 * A long item title no longer runs under the checkbox, the emoji or the

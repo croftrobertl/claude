@@ -553,15 +553,16 @@ const check = (name, cond, detail) => {
         // grid, so a computed-style assertion would be testing a rule that
         // does not exist.
         //
-        // v0.27.1 CHANGED WHAT IS PROMISED HERE, and the change is worth
-        // stating rather than quietly relaxing. Until now the title was
-        // absolutely centred in the ROW whatever the lead and tail held —
-        // and that is exactly what let the side tracks collapse to nothing
-        // and the lead spill under the text. The side tracks now refuse to
-        // go below their contents, so when space is tight and the two sides
-        // differ in width the centre track is no longer dead centre.
-        // Measured at 390 on both layouts: 0px off at 768 and 1440, 5px at
-        // 390, 22px at 320 — only where it is that or an overlap.
+        // v0.27.1 relaxed this and v0.27.2 takes it back, on Rob's pick:
+        // both sides now RESERVE the same width, so the middle track's
+        // centre is the row's centre. Measured on the host's own content at
+        // 390, 768 and 1440: 0px off on both pages. At 320 it is 22px and
+        // cannot be less — reserving the wider side on both costs the middle
+        // 44px, and at 320 there is not 44px to give without breaking a
+        // word. The tolerance here stays loose because this harness's title
+        // row is a different type scale from the property's (82px of track
+        // in 20px type against 151px in 25px); the exact figure is pinned
+        // against the real pages by tools/title-overlap.js.
         check('…and the item titles are centred where there is room for it',
             await v.page.$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (row) => {
                 const t = row.querySelector('.dccgg-item-title-text');
@@ -797,6 +798,21 @@ const check = (name, cond, detail) => {
                 check(`${layout} at ${width}: no word in the host's own titles is split`,
                     split.worst <= 2,
                     `"${split.word}" needs ${split.worst}px more than its track, in "${split.who}"`);
+                // v0.27.2: the title's leading, measured where a guest reads
+                // it — INSIDE the open sheet, which is portaled to <body>.
+                // The theme hands down line-height: 1.8 from html, so this
+                // is only ever right if the rule reaches the portal; a rule
+                // hung off .dccgg-root computes 1.8 here and nobody notices
+                // until a title wraps.
+                const lead = await v.page.$eval(
+                    '.dccgg-detail[data-key="checkout"] .dccgg-item-title-text', (t) => {
+                        const cs = getComputedStyle(t);
+                        return { lh: parseFloat(cs.lineHeight), fs: parseFloat(cs.fontSize),
+                                 inPortal: t.closest('body > .dccgg-stage') !== null };
+                    });
+                check(`${layout} at ${width}: the title's leading is 1.25, not the theme's 1.8`,
+                    Math.abs(lead.lh / lead.fs - 1.25) < 0.02,
+                    `${lead.lh}px of ${lead.fs}px = ${(lead.lh / lead.fs).toFixed(2)}`);
                 await shut(v);
             }
         }
@@ -839,6 +855,21 @@ const check = (name, cond, detail) => {
                     if (!t) { return true; }
                     const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
                     return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < 2;
+                })));
+        // v0.27.2: and it is centred BECAUSE the two sides reserve the same
+        // width, not because this fixture's lead and tail happen to match.
+        // Without the reserve the sides fall to their own contents and the
+        // title shifts by half the difference.
+        // Measured on the TRACKS, not on the lead and tail boxes: those carry
+        // justify-self start/end, so each shrinks to its own content inside
+        // its track and their widths differ even when the row is centred.
+        // The reserve's promise is about the columns.
+        check('…because both side tracks are the same width',
+            await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-title', (rows) =>
+                rows.every((row) => {
+                    const cols = getComputedStyle(row).gridTemplateColumns.split(' ').map(parseFloat);
+                    if (cols.length !== 3 || cols.some(isNaN)) { return false; }
+                    return Math.abs(cols[0] - cols[2]) <= 1;
                 })));
         await shut(v);
     }
