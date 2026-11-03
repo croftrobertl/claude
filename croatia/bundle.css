@@ -1997,10 +1997,6 @@ html.dcc-matrix-on .dcc-hp-siege .dcc-hist-note-k { color: #ff6b5e; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-ticket { display: block; }
   .dcc-tour-ticket { position: relative; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border);
     border-radius: 16px; box-shadow: 0 8px 22px rgba(0,0,0,0.1); margin-bottom: 1rem; }
-  .dcc-tour-ticket .tk-head { display: grid; gap: 4px; padding: 18px 18px 14px; }
-  .dcc-tour-ticket .tk-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dcc-tour-secondary); }
-  .dcc-tour-root.dcc-tour-root .dcc-tour-ticket .tk-title { font-family: var(--dcc-tour-font-head); font-size: 2rem; line-height: 1.05; color: var(--dcc-tour-primary); }
-  .dcc-tour-ticket .tk-dates { font-size: 0.84rem; color: var(--dcc-tour-muted); }
   /* the tear line: a dashed rule with a notch cut into each edge */
   .dcc-tour-ticket .tk-perf { position: relative; height: 0; border-top: 2px dashed var(--dcc-tour-border); margin: 0 14px; }
   .dcc-tour-ticket .tk-perf::before, .dcc-tour-ticket .tk-perf::after { content: ""; position: absolute; top: -11px; width: 20px; height: 20px; border-radius: 50%;

@@ -4184,18 +4184,11 @@
       '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personLabel()) +
         '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
     // phones: the totals printed as an entry ticket (the tiles below stay on desktop)
-    const t = DATA.trip || {};
     // the busiest day as a date ("Wed Sep 24"), never a day number
     const bDay = busiest && busiest.index && DATA.days[busiest.index - 1], bLab = bDay ? dWeekday(bDay).slice(0, 3) + ' ' + dDate(bDay) : busiest && busiest.label;
-    const fromTo = t.start_date && t.end_date ? (() => { const a = t.start_date.split('-').map(Number), b = t.end_date.split('-').map(Number);
-      return _MON[a[1] - 1] + ' ' + a[2] + ' – ' + (a[1] === b[1] ? '' : _MON[b[1] - 1] + ' ') + b[2] + ', ' + b[0]; })() : '';
-    const nDays = t.start_date && t.end_date ? Math.round((Date.parse(t.end_date) - Date.parse(t.start_date)) / 864e5) + 1 : DATA.day_count;
     const tk = (k, v) => '<div class="tk-cell"><span class="tk-k">' + k + '</span><span class="tk-v">' + v + '</span></div>';
     const ticket = '<div class="dcc-tour-ticket" role="group" aria-label="The trip in numbers">' +
-      '<div class="tk-head"><span class="tk-eyebrow">' + escapeHtml(t.name || 'Our trip') + '</span>' +
-        '<span class="tk-title">Dubrovnik</span>' +
-        '<span class="tk-dates">' + escapeHtml(fromTo) + (fromTo ? ' · ' : '') + nDays + ' days</span></div>' +
-      '<div class="tk-perf" aria-hidden="true"></div>' +
+      // no heading of its own: the masthead above already names the trip
       '<div class="tk-grid">' +
         tk('Steps', fmt(h.steps)) +
         tk('Walked', escapeHtml(distNumFromMi(h.dist, 1) + ' ' + distUnit())) +
@@ -5207,8 +5200,8 @@
   function mtxToggle() { mtxOn ? mtxStop() : mtxStart(); }
   let mtxTaps = 0, mtxTapT = 0;
   document.addEventListener('click', (e) => {
-    // the title or subtitle; on phones (no header since the dock) the trip name on the Stats ticket
-    if (!e.target.closest || !e.target.closest('.dcc-tour-header, .dcc-tour-ticket .tk-head')) return;
+    // the title or subtitle
+    if (!e.target.closest || !e.target.closest('.dcc-tour-header')) return;
     const now = Date.now();
     mtxTaps = (now - mtxTapT < 1500) ? mtxTaps + 1 : 1; mtxTapT = now;
     if (mtxTaps >= 5) { mtxTaps = 0; mtxToggle(); }
