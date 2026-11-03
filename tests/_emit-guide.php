@@ -135,6 +135,12 @@ function dccgg_all_on(): array {
          'item_content' => '<p>Only one here.</p><p>Also one.</p><p>One. Two.</p>'],
         ['_id' => 'a4', 'item_section' => 'amenities', 'item_title' => 'All single',
          'item_content' => '<p>Only one here.</p><p>Also one.</p><p>And one.</p>'],
+        // A LIST, because the rule counts list items too and nothing in this
+        // fixture had one — the mutant that drops li from the query passed
+        // with nothing to notice. The paragraph here is single-sentence, so
+        // only the li can make this item read left.
+        ['_id' => 'a5', 'item_section' => 'amenities', 'item_title' => 'Multi in a list',
+         'item_content' => '<p>Short intro.</p><ul><li>One. Two.</li><li>Just one.</li></ul>'],
         ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',
          'item_content' => '<p style="font-weight:700">Someone pasted this in bold.</p>'],
         // Long enough to collapse, so Read more renders.

@@ -272,7 +272,8 @@ MUTANTS = [
     ('the alignment pass never runs at all', CORE,
      "        markItemAlignment(root);\n", ""),
     ('the left-alignment is scoped back to the app stage only', CSS,
-     ".dccgg-root .dccgg-item-body.dccgg-body-left p,", ".dccgg-stage--app .dccgg-item-body.dccgg-body-left p,"),
+     ".dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left p,",
+     ".dccgg-stage--app .dccgg-item-body.dccgg-body-left p,"),
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]

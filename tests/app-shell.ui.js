@@ -618,6 +618,82 @@ const check = (name, cond, detail) => {
             JSON.stringify(named('All single')));
         await shut(v);
     }
+    {
+        // ON THE GRID LAYOUT TOO, and this is not ceremony: every alignment
+        // check above runs on the app markup, whose stage carries
+        // .dccgg-stage--app — so scoping the rule back to the app stage,
+        // which is exactly what it used to be and what one mutant restores,
+        // passed all of them. The grid layout is the half of Rob's ask that
+        // had no coverage at all.
+        const v = await open({ markup: 'grid' });
+        await v.page.click('.dccgg-tile[data-key="amenities"]');
+        await v.page.waitForTimeout(700);
+        const grid = await v.page.$$eval('.dccgg-item', (items) => {
+            const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
+            return items.map((item) => {
+                const t = item.querySelector('.dccgg-item-title-text');
+                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
+                    .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+                if (!parts.length) { return null; }
+                return {
+                    title: (t ? t.textContent : '').trim(),
+                    appStage: !!item.closest('.dccgg-stage--app'),
+                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
+                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
+                };
+            }).filter(Boolean);
+        });
+        check('the grid layout really is not on the app stage',
+            grid.length > 0 && grid.every((i) => !i.appStage),
+            `${grid.length} items, ${grid.filter((i) => i.appStage).length} on an app stage`);
+        check('…and one item, one alignment holds there as well',
+            grid.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
+            JSON.stringify(grid));
+        await shut(v);
+    }
+
+    {
+        // v0.27.3: the INLINE reveal, which is the only thing the
+        // .dccgg-root arm of the alignment selector covers. Every other
+        // test here opens a sheet, and a sheet is portaled to <body>, so
+        // the .dccgg-stage arm answers and the root arm can be deleted
+        // without any of them noticing — which is exactly what one mutant
+        // did. Elementor's editor preview is where this path runs for
+        // real: a portaled fixed modal is invisible in the editor canvas,
+        // so shouldUseDetailModal() returns false and the panel is revealed
+        // in place. The body class is what it keys off.
+        const v = await open({ width: 390, height: 900 });
+        await v.page.evaluate(() => {
+            document.body.classList.add('elementor-editor-preview');
+        });
+        await v.page.reload({ waitUntil: 'load' });
+        await v.page.evaluate(() => document.body.classList.add('elementor-editor-preview'));
+        await v.page.waitForTimeout(600);
+        await v.page.click('.dccgg-tile[data-key="amenities"]');
+        await v.page.waitForTimeout(700);
+        const inline = await v.page.$$eval('.dccgg-item', (items) => {
+            const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
+            return items.map((item) => {
+                const t = item.querySelector('.dccgg-item-title-text');
+                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
+                    .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+                if (!parts.length) { return null; }
+                return {
+                    title: (t ? t.textContent : '').trim(),
+                    inRoot: !!item.closest('.dccgg-root') && !item.closest('body > .dccgg-stage'),
+                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
+                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
+                };
+            }).filter(Boolean);
+        });
+        const shown = inline.filter((i) => i.inRoot);
+        check('the inline reveal renders items inside the root, not a portaled stage',
+            shown.length > 0, `${inline.length} items, ${shown.length} in the root`);
+        check('…and the alignment rule reaches them there too',
+            shown.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
+            JSON.stringify(shown));
+        await shut(v);
+    }
 
     console.log('\nG4. The guarantees the first mutation run found untested');
     {

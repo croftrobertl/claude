@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.3
+Stable tag: 0.27.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,12 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.4 =
+* Same behaviour as 0.27.3, with one unused stylesheet rule removed: the
+  left-alignment named a host that no render ever produces. Issued as its
+  own version rather than a second 0.27.3, so no two downloads share a
+  version number.
 
 = 0.27.3 =
 * One item, one alignment. If any paragraph in an item's description runs
