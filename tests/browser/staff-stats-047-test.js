@@ -117,12 +117,13 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
       'In House: arrivals and departures on the day not included (stInHouseNot)': by.inhouse.items.includes(strings.stInHouseNot),
       'Upcoming Nights: last year a little low, and fixed (stPaceLow, stPaceFixed)': by.pace.items.includes(strings.stPaceLow) && by.pace.items.includes(strings.stPaceFixed),
       'the heat map\'s outline and tap lines': by.heat.items.includes(strings.stHeatOutline) && by.heat.items.includes(strings.stHeatTap),
-      'Nights by Cottage: its ▲▼ line, now the same dates last year': by.percot.items.some(i => /^▲▼ compare with the same dates last year \(Oct 1 – 31, 2025\), in % occupancy\.$/.test(i)),
+      'Nights by Cottage: its ▲▼ line, now the same dates last year': by.percot.items.some(i => /^▲▼ are occupancy percentage points vs the same dates last year \(Oct\s1\s–\s31, 2025\)\.$/.test(i)),   // 0.53.0 (Rob): "% occupancy" → percentage points
     };
     for (const [label, ok] of Object.entries(kept)) check('kept: ' + label, ok, tips.map(t => [t.key, t.items]));
     check('every tip leads with its sentence — none empty', tips.every(t => t.lead.length > 10 && /\.$/.test(t.lead)), tips.map(t => [t.key, t.lead]));
-    check('...and no empty list anywhere in Stats: a tip with no points has no <ul> (Nights by Source, Stays by Length, Arrivals & Departures, Days Booked Ahead)',
-      tips.every(t => !t.empty && (t.items.length ? t.uls === 1 : t.uls === 0)) && ['source', 'mix', 'weekdays', 'lead'].every(k => by[k].uls === 0)
+    // 0.53.0: Days Booked Ahead's tip now has points (mean, median, mode).
+    check('...and no empty list anywhere in Stats: a tip with no points has no <ul> (Nights by Source, Stays by Length, Arrivals & Departures)',
+      tips.every(t => !t.empty && (t.items.length ? t.uls === 1 : t.uls === 0)) && ['source', 'mix', 'weekdays'].every(k => by[k].uls === 0)
       && await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out ul')].every(u => u.children.length)), tips.map(t => [t.key, t.uls, t.items.length]));
     check('the joined text still reads as sentences: never a full stop, colon or bracket against the next word',
       tips.every(t => !/[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))), tips.map(t => t.text));
@@ -152,7 +153,7 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
         lh: parseFloat(getComputedStyle(h[0]).lineHeight), wordBroken,
         tileNum: fs('.mphbac-staff-kpi-num'), tileLabel: fs('.mphbac-staff-kpi-label'), tileDelta: fs('.mphbac-staff-kpi-delta'),
         cottage: fs('.mphbac-staff-percot-name'), cottageNum: fs('.mphbac-staff-percot-num'), cottageDelta: fs('.mphbac-staff-percot-delta'), mix: fs('.mphbac-staff-mix-row'),
-        pieLabel: fs('.mphbac-staff-pie-label'), pieKey: fs('.mphbac-staff-pie-list'),
+        srcKey: fs('.mphbac-staff-srcbar-list'),   // the pie's list until 0.53.0; the pie is gone
         wkNum: fs('.mphbac-staff-wk-num'), wkName: fs('.mphbac-staff-wk-name'), wkKey: fs('.mphbac-staff-wk-key'),
         lead: fs('.mphbac-staff-lead'), pace: fs('.mphbac-staff-pace'), paceDelta: fs('.mphbac-staff-pace-delta'),
         heatName: fs('.mphbac-staff-heat-name'), heatKey: fs('.mphbac-staff-heat-key'), tip: fs('.mphbac-staff-tipbox'),
@@ -164,9 +165,9 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
       };
     });
     const want = { heading: '16px', tileNum: '24px', tileLabel: '16px', tileDelta: '14px', cottage: '15px', cottageNum: '15px', cottageDelta: '15px', mix: '15px',
-      pieLabel: '15px', pieKey: '16px', wkNum: '13px', wkName: '14px', wkKey: '15px', lead: '16px', pace: '16px', paceDelta: '15px', heatName: '14px', heatKey: '14px', tip: '15px' };
+      srcKey: '16px', wkNum: '13px', wkName: '14px', wkKey: '15px', lead: '16px', pace: '16px', paceDelta: '15px', heatName: '14px', heatKey: '14px', tip: '15px' };
     const off = Object.keys(want).filter(k => m[k] !== want[k]);
-    check(`${w}px: every size +2 — headings 16, rows 15, tiles 24 / 16 / 14, pie 15 / 16, weekdays 13 / 14 / 15, lists 16 (▲▼ 15), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
+    check(`${w}px: every size +2 — headings 16, rows 15, tiles 24 / 16 / 14, source lines 16, weekdays 13 / 14 / 15, lists 16 (▲▼ 15), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
     check(`${w}px: the tile label 16px even under a theme's \`dt { font-size: 14px }\` (live measured 14)`, m.tileLabel === '16px', m.tileLabel);
     check(`${w}px: headings balanced, their line box grown with the type (${m.lh}px ≥ 16 × 1.3), nothing clipped, no word broken across lines`,
       m.balance === 'balance' && m.lh >= 20.8 && !m.clipped && !m.wordBroken, m);
@@ -177,14 +178,13 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
   }
   {
     const { ctx, p } = await open();
-    // October 2026 by source: Direct 35, Airbnb 25, Booking.com 12, Vrbo 1 — of 73.
-    const pie = await p.evaluate(() => ({ labels: [...document.querySelectorAll('.mphbac-staff-pie-label')].map(t => t.classList[1].replace('is-src-', '') + ' ' + t.textContent),
-      key: [...document.querySelectorAll('.mphbac-staff-pie-item')].map(li => li.textContent) }));
-    check('a slice too thin for its 15px label (Vrbo, 1 night of 73) carries none; the three others do',
-      JSON.stringify(pie.labels) === '["direct 48%","airbnb 34%","booking 16%"]', pie.labels);
-    check('...and the key below still names it: "Vrbo — 1% (1 night)"', pie.key.includes('Vrbo — 1% (1 night)') && pie.key.length === 4, pie.key);
-    const fit = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-pie-label')].map(t => { const b = t.getBBox(); return b.width; }));
-    check('...each label that is drawn is 15px type inside a slice wide enough for it', fit.every(x => x > 0), fit);
+    // October 2026 by source: Direct 35, Airbnb 25, Booking.com 12, Vrbo 1 —
+    // of 73. The pie's too-thin slice (0.47.0) is a 1-in-73 segment of the
+    // stacked bar since 0.53.0: still drawn, still named in the lines.
+    const bar = await p.evaluate(() => ({ segs: [...document.querySelectorAll('.mphbac-staff-srcbar-seg')].map(e => e.getAttribute('data-source') + ' ' + e.getBoundingClientRect().width.toFixed(1)),
+      key: [...document.querySelectorAll('.mphbac-staff-srcbar-item')].map(li => li.textContent) }));
+    check('the 1-night Vrbo share is still a segment of the bar (wider than 0)', bar.segs.length === 4 && +bar.segs[3].split(' ')[1] > 0 && /^vrbo/.test(bar.segs[3]), bar.segs);
+    check('...and the lines below still name it: "Vrbo 1% · 1 night"', bar.key.includes('Vrbo 1% · 1 night') && bar.key.length === 4, bar.key);
     await ctx.close();
   }
 

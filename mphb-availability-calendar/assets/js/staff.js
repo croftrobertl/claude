@@ -1944,16 +1944,39 @@
         // timeframe — taken from the Bookings set, so a channel block echoing
         // a booking is not a second stay. Left out: a booking made AFTER its
         // own check-in (13 on live, the WD) and one with no made-on date.
+        // Since 0.53.0 each booking's days are kept (an array per source), so
+        // the median and mode can be read from them, not only the mean.
         function leadTimes(mine, w) {
-            var by = { all: { n: 0, days: 0 } };
+            var by = { all: { n: 0, days: [] } };
             mine.forEach(function (b) {
                 if (b.checkin < w.from || b.checkin > w.to || !b.madeOn || b.madeOn > b.checkin) return;
                 var k = sourceOf(b), d = nightsBetween(b.madeOn, b.checkin);
-                by[k] = by[k] || { n: 0, days: 0 };
-                by[k].n++; by[k].days += d;
-                by.all.n++; by.all.days += d;
+                by[k] = by[k] || { n: 0, days: [] };
+                by[k].n++; by[k].days.push(d);
+                by.all.n++; by.all.days.push(d);
             });
             return by;
+        }
+        // MEAN, MEDIAN AND MODE (0.53.0, Rob), each in whole days. The mean is
+        // the 0.46.0 figure, Math.round(sum / n). The median is the middle
+        // value, or the two middle ones averaged and rounded. The mode is the
+        // most common value; null ("—") when no value comes up twice, the
+        // smallest on a tie. 5, 12, 12, 40, 200 → 54, 12, 12.
+        function leadStats(days) {
+            var n = days.length;
+            if (!n) return { mean: null, median: null, mode: null };
+            var s = days.slice().sort(function (a, b) { return a - b; });
+            var sum = s.reduce(function (t, d) { return t + d; }, 0);
+            var mid = Math.floor(n / 2);
+            var median = n % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+            var count = {}, mode = null, best = 1;
+            s.forEach(function (d) {
+                count[d] = (count[d] || 0) + 1;
+                // Ascending, so a later value must beat the count outright:
+                // on a tie the smaller one, seen first, stays.
+                if (count[d] > best) { best = count[d]; mode = d; }
+            });
+            return { mean: Math.round(sum / n), median: median, mode: mode };
         }
 
         // PACE (0.46.0, Rob): cottage-nights on the books for the k nights
@@ -1965,6 +1988,39 @@
         function paceNights(data, start, k, asOf) {
             var list = (data.bookings || []).filter(function (b) { return !asOf || (b.madeOn && b.madeOn <= asOf); });
             return own(list, daysBetween(start, shiftDay(start, k - 1))).booked;
+        }
+        // THE PACE LINE (0.53.0, Rob): paceNights(data, from, k, asOf) for
+        // every asOf in `dates` (ascending) at once — the same filter (a
+        // made-on date, made on or before the day) and the same ownership as
+        // own(), so a channel block echoing a booking is never a second
+        // night. One walk instead of one own() per day: for each
+        // cottage-night, in own()'s order, a booking owns it from the day it
+        // was made until an earlier-ranked booking covering it is made.
+        function paceSeries(data, from, to, dates) {
+            var nights = daysBetween(from, to);
+            var list = (data.bookings || []).filter(function (b) { return b.checkin && b.checkout && b.madeOn; })
+                .sort(function (a, b) { return a.checkin < b.checkin ? -1 : a.checkin > b.checkin ? 1 : a.id - b.id; });
+            var first = {}, ev = [];
+            list.forEach(function (b) {
+                (b.cottages || []).forEach(function (c) {
+                    nights.forEach(function (d) {
+                        if (d < b.checkin || d >= b.checkout) return;
+                        var k = c.roomTypeId + '|' + d, m = first[k];
+                        if (m !== undefined && b.madeOn >= m) return;
+                        if (!b.notStay) {
+                            ev.push([b.madeOn, 1]);
+                            if (m !== undefined) ev.push([m, -1]);
+                        }
+                        first[k] = b.madeOn;
+                    });
+                });
+            });
+            ev.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+            var i = 0, v = 0;
+            return dates.map(function (d) {
+                while (i < ev.length && ev[i][0] <= d) v += ev[i++][1];
+                return v;
+            });
         }
 
         // ---- drawing ----------------------------------------------------------
@@ -2122,6 +2178,16 @@
             hr.setAttribute('role', 'row');
             [['name', S.stColCottage], ['num', S.stColNights], ['pct', S.stColOcc], ['delta', (S.stColVs || 'vs {year}').replace('{year}', lyYear)]].forEach(function (c) {
                 var th = el('th', 'mphbac-staff-percot-h is-' + c[0], c[1] || '');
+                // "vs 2025", not "VS 2025" (0.53.0, Rob): the row is drawn in
+                // capitals by CSS, so the string's own words are wrapped in a
+                // span the capitals skip; the year comes from {year} as before.
+                if (c[0] === 'delta') {
+                    th.textContent = '';
+                    (S.stColVs || 'vs {year}').split('{year}').forEach(function (part, i) {
+                        if (i) th.appendChild(document.createTextNode(lyYear));
+                        if (part) th.appendChild(el('span', 'mphbac-staff-percot-as-typed', part));
+                    });
+                }
                 th.setAttribute('scope', 'col');
                 th.setAttribute('role', 'columnheader');
                 // Drawn in capitals by CSS; named in its own case.
@@ -2169,26 +2235,41 @@
             per.appendChild(table);
             out.appendChild(per);
 
-            // Share of NIGHTS booked by source (Rob: nights, not bookings): an
-            // inline SVG pie in the source colours, and the same numbers as
-            // plain text for anyone not looking at the picture.
+            // Share of NIGHTS booked by source (Rob: nights, not bookings).
+            // Since 0.53.0 (Rob's pick) ONE horizontal stacked bar in the
+            // source colours — Direct first, then the rest in SOURCES order —
+            // and under it one line a source, "Direct 41% · 28 nights". What
+            // a screen reader hears is the 0.47 list, word for word, in a
+            // list of its own; the bar and the lines are its picture.
             var src = el('section', 'mphbac-staff-stats-block is-source');
             blockHead(src, 'source', S.stBySource, S.stBySourceTip, []);
             if (!n.booked) {
                 src.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoNights || ''));
             } else {
-                var wrap = el('div', 'mphbac-staff-pie-wrap');
-                wrap.appendChild(pie(n.bySource, n.booked));
-                var ul = el('ul', 'mphbac-staff-pie-list');
-                SOURCES.forEach(function (k) {
+                var wrap = el('div', 'mphbac-staff-srcbar-wrap');
+                var bar = el('div', 'mphbac-staff-srcbar');
+                bar.setAttribute('aria-hidden', 'true');
+                var lines = el('ul', 'mphbac-staff-srcbar-list');
+                lines.setAttribute('aria-hidden', 'true');
+                var said = el('ul', 'mphbac-sr-only');
+                ['direct'].concat(SOURCES.filter(function (k) { return k !== 'direct'; })).forEach(function (k) {
                     var v = n.bySource[k];
                     if (!v) return;
-                    var li = el('li', 'mphbac-staff-pie-item is-src-' + k);
+                    var seg = el('span', 'mphbac-staff-srcbar-seg is-src-' + k);
+                    seg.setAttribute('data-source', k);
+                    seg.style.width = (100 * v / n.booked) + '%';
+                    bar.appendChild(seg);
+                    var li = el('li', 'mphbac-staff-srcbar-item is-src-' + k);
+                    li.setAttribute('data-source', k);
                     li.appendChild(el('span', 'mphbac-staff-pie-swatch'));
-                    li.appendChild(document.createTextNode(sourceName({ sourceKey: k }) + ' — ' + pctOf(v, n.booked) + '% (' + nightsText(v) + ')'));
-                    ul.appendChild(li);
+                    li.appendChild(document.createTextNode((S.stSrcLine || '{source} {pct}% · {nights}')
+                        .replace('{source}', sourceName({ sourceKey: k })).replace('{pct}', String(pctOf(v, n.booked))).replace('{nights}', nightsText(v))));
+                    lines.appendChild(li);
+                    said.appendChild(el('li', '', sourceName({ sourceKey: k }) + ' — ' + pctOf(v, n.booked) + '% (' + nightsText(v) + ')'));
                 });
-                wrap.appendChild(ul);
+                wrap.appendChild(bar);
+                wrap.appendChild(lines);
+                wrap.appendChild(said);
                 src.appendChild(wrap);
             }
             out.appendChild(src);
@@ -2198,6 +2279,9 @@
             out.appendChild(drawLead(n, w));
             out.appendChild(drawPace(got[4], got[5], plan));
             out.appendChild(drawHeat(got[3], plan.year, w, n.cottages.length));
+            // THE TOP (0.53.0, Rob): built last, so every tip below keeps the
+            // number it had, and put above the tiles.
+            out.insertBefore(drawTop(n, ly, w, plan, data, got[2]), grid);
 
             statsOut.textContent = '';
             statsOut.appendChild(out);
@@ -2206,6 +2290,209 @@
                 if (again && keepTip) openTip(again, true);
                 if (again && focusTip) again.focus();
             }
+        }
+
+        // THE TOP OF STATS (0.53.0, Rob's pick): "November Is 28% Booked",
+        // the tiles' own % booked, centred and balanced; under it a pill with
+        // its ▲▼ against the same dates a year earlier — the Booked tile's
+        // figure, comparison rule and records date, so no pill where the tile
+        // shows "—" for want of a comparison; then the pace line.
+        function periodName(w) {
+            var thisYear = function (d) { return d.slice(0, 4) === config.today.slice(0, 4); };
+            if (w.clamped || w.span === 'custom') return rangeLabel(w.from, w.to);
+            if (w.span === 'year') return w.from.slice(0, 4);
+            if (w.span === 'month') return ((CAL.months || [])[+w.from.slice(5, 7) - 1] || '') + (thisYear(w.from) ? '' : ' ' + w.from.slice(0, 4));
+            var d = thisYear(w.from) ? shortDate(w.from) : mediumDay(w.from);
+            return w.span === 'week' ? (S.stHeadWeek || 'Week of {date}').replace('{date}', d) : d;
+        }
+        function lyPeriodName(r, span) {
+            if (span === 'year') return r.from.slice(0, 4);
+            if (span === 'month') return shortMonth(r.from) + ' ' + r.from.slice(0, 4);
+            if (span === 'week') return (S.stHeadWeek || 'Week of {date}').replace('{date}', mediumDay(r.from));
+            return rangeLabel(r.from, r.to);
+        }
+        function drawTop(n, ly, w, plan, data, lyData) {
+            var sec = el('section', 'mphbac-staff-stats-top');
+            if (n.pct !== null) {
+                sec.appendChild(el('h3', 'mphbac-staff-stats-headline',
+                    (S.stHeadline || '{period} Is {n}% Booked').replace('{n}', String(n.pct)).replace('{period}', periodName(w))));
+                if (!plan.ly.why && ly && ly.pct !== null) {
+                    var vs = (S.stHeadVs || 'vs {period}').replace('{period}', lyPeriodName(plan.ly.w, w.span));
+                    var pill = deltaEl('p', 'mphbac-staff-stats-pill', n.pct - ly.pct, 0, vs, 'point');
+                    var tail = el('span', 'mphbac-staff-stats-pillvs', ' ' + vs);
+                    tail.setAttribute('aria-hidden', 'true');
+                    pill.insertBefore(tail, pill.lastChild);
+                    sec.appendChild(pill);
+                }
+            }
+            sec.appendChild(drawCurve(w, plan, data, plan.ly.why ? null : lyData));
+            return sec;
+        }
+
+        // THE PACE LINE (0.53.0, Rob): cottage-nights of the timeframe on the
+        // books, day by day, from 90 days before it starts — further back
+        // when today is earlier still (at most two years) — to its first
+        // night, or on to today while it is under way, or to its last night
+        // once it is over. This year solid blue (#0A50B2) up to today; last
+        // year, the same dates a year earlier, dashed grey, read from madeOn
+        // exactly as paceNights() reads it with asOf. "Today" is marked with
+        // its value. A tap, a drag or the arrow keys read any day for both
+        // years; it is one slider to a screen reader.
+        function drawCurve(w, plan, data, lyData) {
+            var today = config.today;
+            var start = shiftDay(w.from, -90);
+            if (today < start) start = today < shiftDay(w.from, -730) ? shiftDay(w.from, -730) : today;
+            var end = today < w.from ? w.from : (today > w.to ? w.to : today);
+            var dates = daysBetween(start, end), N = dates.length;
+            var now = paceSeries(data, w.from, w.to, dates).map(function (v, i) { return dates[i] <= today ? v : null; });
+            var ago = lyData ? paceSeries(lyData, plan.ly.w.from, plan.ly.w.to, dates.map(yearBack)) : null;
+            var max = Math.max.apply(null, now.concat(ago || []).concat([1]).filter(function (v) { return v !== null; }));
+            var W = 300, H = 120, TOP = 10;
+            var X = function (i) { return N > 1 ? i * W / (N - 1) : W / 2; };
+            var Y = function (v) { return H - v * (H - TOP) / max; };
+            var pc = function (i) { return (N > 1 ? 100 * i / (N - 1) : 50) + '%'; };
+
+            var box = el('div', 'mphbac-staff-curve');
+            var plot = el('div', 'mphbac-staff-curve-plot');
+            var NS = 'http://www.w3.org/2000/svg';
+            var svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+            svg.setAttribute('preserveAspectRatio', 'none');
+            svg.setAttribute('class', 'mphbac-staff-curve-svg');
+            svg.setAttribute('aria-hidden', 'true');
+            svg.setAttribute('focusable', 'false');
+            var line = function (vals, cls) {
+                var d = '';
+                vals.forEach(function (v, i) { if (v !== null) d += (d ? 'L' : 'M') + X(i).toFixed(2) + ' ' + Y(v).toFixed(2); });
+                if (!d) return;
+                var p = document.createElementNS(NS, 'path');
+                p.setAttribute('d', d);
+                p.setAttribute('class', cls);
+                svg.appendChild(p);
+            };
+            var base = document.createElementNS(NS, 'path');
+            base.setAttribute('d', 'M0 ' + H + 'H' + W + 'M0 ' + TOP + 'H' + W);
+            base.setAttribute('class', 'mphbac-staff-curve-grid');
+            svg.appendChild(base);
+            var s0 = dates.indexOf(w.from);
+            if (s0 > 0 && s0 < N - 1) {
+                var sl = document.createElementNS(NS, 'path');
+                sl.setAttribute('d', 'M' + X(s0).toFixed(2) + ' ' + TOP + 'V' + H);
+                sl.setAttribute('class', 'mphbac-staff-curve-start');
+                svg.appendChild(sl);
+            }
+            if (ago) line(ago, 'mphbac-staff-curve-ly');
+            line(now, 'mphbac-staff-curve-now');
+            plot.appendChild(svg);
+            var top = el('span', 'mphbac-staff-curve-max', nightsText(max));
+            top.setAttribute('aria-hidden', 'true');
+            plot.appendChild(top);
+
+            // Today, or — once the timeframe is over — its last night.
+            var ti = dates.indexOf(today), mi = ti >= 0 ? ti : (today > end ? N - 1 : -1);
+            if (mi >= 0 && now[mi] !== null) {
+                var dot = el('span', 'mphbac-staff-curve-dot is-today');
+                dot.style.left = pc(mi);
+                dot.style.top = Y(now[mi]) + 'px';
+                plot.appendChild(dot);
+                var tag = el('span', 'mphbac-staff-curve-tag', (ti >= 0 ? (S.stCurveToday || 'Today: {nights}') : (S.stCurveEnd || '{date}: {nights}'))
+                    .replace('{date}', shortDate(dates[mi])).replace('{nights}', nightsText(now[mi])));
+                tag.setAttribute('aria-hidden', 'true');
+                var at = N > 1 ? mi / (N - 1) : 0.5;
+                tag.className += at > 0.6 ? ' is-right' : at < 0.4 ? ' is-left' : '';
+                if (at > 0.6) tag.style.right = (100 - 100 * at) + '%'; else tag.style.left = pc(mi);
+                tag.style.top = (Y(now[mi]) < 34 ? Y(now[mi]) + 10 : Y(now[mi]) - 30) + 'px';
+                plot.appendChild(tag);
+            }
+            var guide = el('span', 'mphbac-staff-curve-guide');
+            var gNow = el('span', 'mphbac-staff-curve-dot is-now');
+            var gAgo = el('span', 'mphbac-staff-curve-dot is-ly');
+            [guide, gNow, gAgo].forEach(function (e) { e.hidden = true; plot.appendChild(e); });
+
+            var axis = el('div', 'mphbac-staff-curve-axis');
+            axis.setAttribute('aria-hidden', 'true');
+            var mark = function (i, text, cls) {
+                var a = el('span', 'mphbac-staff-curve-tick ' + cls, text);
+                if (cls !== 'is-end') a.style.left = pc(i);
+                axis.appendChild(a);
+            };
+            var outText = function (k) { return ((k === 1 ? S.stCurveOut1 : S.stCurveOut) || '{n} days out').replace('{n}', String(k)); };
+            mark(0, start < w.from ? outText(nightsBetween(start, w.from)) : shortDate(start), 'is-first');
+            if (s0 > 0 && s0 < N - 1 && s0 / (N - 1) < 0.8 && s0 / (N - 1) > 0.2) mark(s0, S.stCurveStart || 'Start', 'is-mid');
+            mark(N - 1, end === today ? (S.stCurveTodayShort || 'Today') : end === w.from ? (S.stCurveStart || 'Start') : shortDate(end), 'is-end');
+
+            var read = el('p', 'mphbac-staff-curve-read');
+            read.setAttribute('aria-hidden', 'true');
+            var say = function (i) {
+                var d = dates[i], when;
+                if (d < w.from) when = outText(nightsBetween(d, w.from));
+                else when = (S.stCurveNight || 'night {n}').replace('{n}', String(nightsBetween(w.from, d) + 1));
+                var parts = [];
+                if (now[i] !== null) parts.push((S.stCurveNow || '{nights} this year').replace('{nights}', nightsText(now[i])));
+                if (ago) parts.push((S.stCurveAgo || '{nights} last year').replace('{nights}', nightsText(ago[i])));
+                return [shortDate(d) + ' · ' + when, parts.join(', ')];
+            };
+            var pick = mi >= 0 ? mi : N - 1;
+            var show = function (i, cursor) {
+                pick = Math.max(0, Math.min(N - 1, i));
+                // Two lines that never jump: the day, then both years.
+                var r = say(pick);
+                read.textContent = '';
+                read.appendChild(el('span', 'mphbac-staff-curve-when', r[0]));
+                read.appendChild(document.createTextNode(' '));
+                read.appendChild(el('span', 'mphbac-staff-curve-vals', r[1]));
+                plot.setAttribute('aria-valuenow', String(pick));
+                plot.setAttribute('aria-valuetext', r[0] + ': ' + r[1]);
+                guide.hidden = gNow.hidden = gAgo.hidden = !cursor;
+                if (!cursor) return;
+                guide.style.left = gNow.style.left = gAgo.style.left = pc(pick);
+                gNow.hidden = now[pick] === null;
+                if (now[pick] !== null) gNow.style.top = Y(now[pick]) + 'px';
+                gAgo.hidden = !ago;
+                if (ago) gAgo.style.top = Y(ago[pick]) + 'px';
+            };
+            plot.tabIndex = 0;
+            plot.setAttribute('role', 'slider');
+            plot.setAttribute('aria-label', S.stCurveSr || S.stCurve || '');
+            plot.setAttribute('aria-valuemin', '0');
+            plot.setAttribute('aria-valuemax', String(N - 1));
+            show(pick, false);
+            var held = false;
+            var fromX = function (e) {
+                var r = plot.getBoundingClientRect();
+                return r.width ? Math.round((e.clientX - r.left) / r.width * (N - 1)) : pick;
+            };
+            plot.addEventListener('pointerdown', function (e) { held = true; show(fromX(e), true); });
+            plot.addEventListener('pointermove', function (e) { if (held || e.pointerType === 'mouse') show(fromX(e), true); });
+            ['pointerup', 'pointercancel'].forEach(function (t) { plot.addEventListener(t, function () { held = false; }); });
+            plot.addEventListener('keydown', function (e) {
+                var k = e.key, to = null;
+                if (k === 'ArrowRight' || k === 'ArrowUp') to = pick + 1;
+                else if (k === 'ArrowLeft' || k === 'ArrowDown') to = pick - 1;
+                else if (k === 'PageUp') to = pick + 7;
+                else if (k === 'PageDown') to = pick - 7;
+                else if (k === 'Home') to = 0;
+                else if (k === 'End') to = N - 1;
+                else return;
+                e.preventDefault();
+                show(to, true);
+            });
+
+            box.appendChild(plot);
+            box.appendChild(axis);
+            box.appendChild(read);
+            // The key in one line, the ⓘ held to its last word.
+            var key = el('p', 'mphbac-staff-curve-key');
+            var words = String((ago ? S.stCurveKey : S.stCurveKeyNow) || '').split(' ');
+            var last = words.pop();
+            if (words.length) key.appendChild(document.createTextNode(words.join(' ') + ' '));
+            var hold = el('span', 'mphbac-staff-stats-hlast', last);
+            var t = tipParts('curve', S.stCurve || '', S.stCurveTip, [plan.ly.why ? noCompareText(plan.ly.why) : S.stCurveLy, S.stCurveLow]);
+            hold.appendChild(t.btn);
+            key.appendChild(hold);
+            box.appendChild(key);
+            box.appendChild(t.box);
+            return box;
         }
 
         // LENGTH OF STAY (0.46.0): 1–2, 3–6, 7–27 and 28+ nights.
@@ -2276,24 +2563,52 @@
         // HOW FAR AHEAD THEY BOOK (0.46.0), by source, then all together.
         function drawLead(n, w) {
             var sec = el('section', 'mphbac-staff-stats-block is-lead');
-            blockHead(sec, 'lead', S.stLead, S.stLeadTip, []);
+            blockHead(sec, 'lead', S.stLead, S.stLeadTip, [S.stLeadTipMean, S.stLeadTipMedian, S.stLeadTipMode, S.stLeadTipPull, S.stLeadTipNone]);
             var by = leadTimes(n.mine, w);
             if (!by.all.n) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoLead || ''));
                 return sec;
             }
+            // One row a source, then All Sources (0.53.0, Rob): the name and
+            // its stay count on the first line, then Mean · Median · Mode,
+            // each a label over its figure in whole days. A mode of "—" (no
+            // value came up twice) is read as "none".
             var ul = el('ul', 'mphbac-staff-lead');
             SOURCES.concat(['all']).forEach(function (k) {
                 var v = by[k];
                 if (!v || !v.n) return;
-                var days = Math.round(v.days / v.n);
+                var st = leadStats(v.days);
                 var li = el('li', 'mphbac-staff-lead-row' + (k === 'all' ? ' is-all' : ' is-src-' + k));
                 li.setAttribute('data-source', k);
-                if (k !== 'all') li.appendChild(el('span', 'mphbac-staff-pie-swatch'));
-                li.appendChild(el('span', 'mphbac-staff-lead-name', k === 'all' ? (S.stAllSources || '') : sourceName({ sourceKey: k })));
-                li.appendChild(el('span', 'mphbac-staff-lead-num',
-                    ((days === 1 ? S.stDay : S.stDays) || '{n} days').replace('{n}', String(days))
-                    + ' (' + ((v.n === 1 ? S.stStay : S.stStays) || '{n} stays').replace('{n}', String(v.n)) + ')'));
+                var head = el('span', 'mphbac-staff-lead-head');
+                if (k !== 'all') head.appendChild(el('span', 'mphbac-staff-pie-swatch'));
+                head.appendChild(el('span', 'mphbac-staff-lead-name', k === 'all' ? (S.stAllSources || '') : sourceName({ sourceKey: k })));
+                head.appendChild(el('span', 'mphbac-staff-lead-count', ' (' + ((v.n === 1 ? S.stStay : S.stStays) || '{n} stays').replace('{n}', String(v.n)) + ')'));
+                li.appendChild(head);
+                li.appendChild(document.createTextNode(' '));
+                var figs = el('span', 'mphbac-staff-lead-figs');
+                [['mean', S.stLeadMean], ['median', S.stLeadMedian], ['mode', S.stLeadMode]].forEach(function (f) {
+                    var x = st[f[0]];
+                    var cell = el('span', 'mphbac-staff-lead-fig is-' + f[0]);
+                    cell.appendChild(el('span', 'mphbac-staff-lead-label', f[1] || ''));
+                    cell.appendChild(document.createTextNode(' '));
+                    var num = el('span', 'mphbac-staff-lead-num');
+                    if (x === null) {
+                        num.className += ' is-none';
+                        var dash = el('span', '', '—');
+                        dash.setAttribute('aria-hidden', 'true');
+                        num.appendChild(dash);
+                        num.appendChild(el('span', 'mphbac-sr-only', S.stLeadNone || 'none'));
+                    } else {
+                        num.textContent = ((x === 1 ? S.stDay : S.stDays) || '{n} days').replace('{n}', String(x));
+                    }
+                    cell.appendChild(num);
+                    // A space between the figures, so nothing that joins the
+                    // text up reads "54 daysMedian".
+                    if (figs.firstChild) figs.appendChild(document.createTextNode(' '));
+                    figs.appendChild(cell);
+                });
+                li.appendChild(figs);
                 ul.appendChild(li);
             });
             sec.appendChild(ul);
@@ -2503,6 +2818,11 @@
         function openTip(btn, pinned) {
             if (tipOpen && tipOpen.btn !== btn) closeTip();
             btn._box.hidden = false;
+            // ABOVE EVERYTHING IN STATS (0.53.0, Rob's bug): a tile's bubble
+            // sits inside its corner holder, a stacking context of z-index 1,
+            // so every later tile's ⓘ — z-index 1 too, later in the page —
+            // was drawn on top of it. The holder of the open one is lifted.
+            if (btn._box.parentNode) btn._box.parentNode.classList.add('is-tip-open');
             btn.setAttribute('aria-expanded', 'true');
             tipOpen = { btn: btn, box: btn._box, pinned: pinned, key: btn.getAttribute('data-tip') };
             placeTip(btn);
@@ -2510,6 +2830,7 @@
         function closeTip() {
             if (!tipOpen) return;
             tipOpen.box.hidden = true;
+            if (tipOpen.box.parentNode) tipOpen.box.parentNode.classList.remove('is-tip-open');
             tipOpen.btn.setAttribute('aria-expanded', 'false');
             tipOpen = null;
         }
@@ -2782,53 +3103,6 @@
         }
 
         function pctOf(v, total) { return total ? Math.round(100 * v / total) : 0; }
-
-        var PIE_FONT = '700 15px ' + (getComputedStyle(root).fontFamily || 'sans-serif');
-        function pie(bySource, total) {
-            var NS = 'http://www.w3.org/2000/svg';
-            var R = 70, C = 80;
-            var svg = document.createElementNS(NS, 'svg');
-            svg.setAttribute('viewBox', '0 0 160 160');
-            svg.setAttribute('class', 'mphbac-staff-pie');
-            svg.setAttribute('aria-hidden', 'true');
-            var at = -Math.PI / 2;
-            SOURCES.forEach(function (k) {
-                var v = bySource[k];
-                if (!v) return;
-                var frac = v / total, end = at + frac * 2 * Math.PI, shape;
-                if (frac >= 0.9999) {
-                    shape = document.createElementNS(NS, 'circle');
-                    shape.setAttribute('cx', C); shape.setAttribute('cy', C); shape.setAttribute('r', R);
-                } else {
-                    shape = document.createElementNS(NS, 'path');
-                    var x1 = C + R * Math.cos(at), y1 = C + R * Math.sin(at);
-                    var x2 = C + R * Math.cos(end), y2 = C + R * Math.sin(end);
-                    shape.setAttribute('d', 'M' + C + ' ' + C + ' L' + x1.toFixed(2) + ' ' + y1.toFixed(2)
-                        + ' A' + R + ' ' + R + ' 0 ' + (frac > 0.5 ? 1 : 0) + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + ' Z');
-                }
-                shape.setAttribute('class', 'mphbac-staff-pie-slice is-src-' + k);
-                shape.setAttribute('data-source', k);
-                svg.appendChild(shape);
-                // The label sits in its slice; one too thin to hold it is
-                // labelled in the list beside the pie only. Since 0.47.0 (15px
-                // labels) "too thin" is measured: the label, with 3px either
-                // side, must fit across the slice where it sits.
-                var mid = (at + end) / 2, lr = frac >= 0.9999 ? 0 : R * 0.62;
-                var room = frac >= 0.5 ? Infinity : 2 * lr * Math.sin(Math.PI * frac);
-                if (frac >= 0.9999 || room >= textW(pctOf(v, total) + '%', PIE_FONT) + 6) {
-                    var t = document.createElementNS(NS, 'text');
-                    t.setAttribute('x', (C + lr * Math.cos(mid)).toFixed(2));
-                    t.setAttribute('y', (C + lr * Math.sin(mid)).toFixed(2));
-                    t.setAttribute('class', 'mphbac-staff-pie-label is-src-' + k);   // its slice's ink (0.46.2)
-                    t.setAttribute('text-anchor', 'middle');
-                    t.setAttribute('dominant-baseline', 'central');
-                    t.textContent = pctOf(v, total) + '%';
-                    svg.appendChild(t);
-                }
-                at = end;
-            });
-            return svg;
-        }
 
         if (statsEl) {
             statsAnchor = statsClamp(config.today);

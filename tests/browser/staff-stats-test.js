@@ -122,8 +122,9 @@ const DOCKS = [
     check('▲ ▼ in occupancy points against the SAME DATES LAST YEAR (0.47.0): #24 ▲7 (39 − 32), #22 ▲9 (32 − 23), #26 ▲23, #23 ▲16, #25 ▼3 (3 − 6), #27 ▼6, #28 ±0',
       JSON.stringify(per.map(r => r[3])) === JSON.stringify(['▲7', '▲9', '▲23', '▲16', '▼3', '▼6', '±0', '±0']), per.map(r => r[3]));
     const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
-    check('...its tip: the share of its 31 nights, and last year\'s dates named (Oct 1 – 31, 2025), in % occupancy',
-      /share of this period's 31 nights/.test(tip) && /same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\), in % occupancy/.test(tip) && !/period before/.test(tip), tip);
+    // 0.53.0 (Rob): the tip says the ▲▼ are occupancy percentage points.
+    check('...its tip: the share of its 31 nights, and last year\'s dates named (Oct 1 – 31, 2025), in occupancy percentage points',
+      /share of this period's 31 nights/.test(tip) && /▲▼ are occupancy percentage points vs the same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\)\./.test(tip) && !/period before/.test(tip), tip);
 
     // C16 stay-length mix: the Bookings set — 2 (Cal), 3 (Ben), 4 (Eli),
     // 7 (Fay), 10 (Amy), 31 (Dot).
@@ -146,10 +147,13 @@ const DOCKS = [
 
     // C15 lead time: arrivals in Oct from the Bookings set — Amy 30, Ben 40,
     // Dot 120, Fay 7; Cal was made AFTER her check-in and is left out; the
-    // echo is not in the set. Direct (30+7)/2 = 18.5 → 19.
+    // echo is not in the set. Direct (30+7)/2 = 18.5 → 19. Since 0.53.0
+    // mean · median · mode: Direct 7, 30 → 19 · 19 · —; All 7, 30, 40, 120
+    // → 49 (49.25) · 35 ((30+40)/2) · — (no value twice, read "none").
     const lead = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-lead-row')].map(r => r.textContent));
-    check('How Far Ahead They Book: Direct 19 days (2 stays), Airbnb 40 (1), Vrbo 120 (1), all 49 (4) — no Booking.com (Cal made after check-in)',
-      JSON.stringify(lead) === JSON.stringify(['Direct19 days (2 stays)', 'Airbnb40 days (1 stay)', 'Vrbo120 days (1 stay)', 'All Sources49 days (4 stays)']), lead);
+    check('How Far Ahead They Book: Direct 19 / 19 / — (2 stays), Airbnb 40 (1), Vrbo 120 (1), all 49 / 35 / — (4) — no Booking.com (Cal made after check-in)',
+      JSON.stringify(lead) === JSON.stringify(['Direct (2 stays) Mean 19 days Median 19 days Mode —none', 'Airbnb (1 stay) Mean 40 days Median 40 days Mode —none',
+        'Vrbo (1 stay) Mean 120 days Median 120 days Mode —none', 'All Sources (4 stays) Mean 49 days Median 35 days Mode —none']), lead);
 
     // C14 pace from tonight (Oct 8). Now: Amy 3 (8–10), Dot 18 / 31 / 31,
     // Fay 7, Hal 0 / 6 / 10 → 28 / 47 / 51. A year ago, as booked ON
@@ -202,8 +206,9 @@ const DOCKS = [
       tag: b.tagName, type: b.type, exp: b.getAttribute('aria-expanded'), label: b.getAttribute('aria-label'),
       ctl: !!document.getElementById(b.getAttribute('aria-controls')), hidden: document.getElementById(b.getAttribute('aria-controls')).hidden,
       text: document.getElementById(b.getAttribute('aria-controls')).textContent, tab: b.tabIndex })));
-    check(`${DEV}: a real <button> ⓘ on every tile (6) and block (7), collapsed, each controlling its own hidden bubble`,
-      all.length === 13 && all.every(b => b.tag === 'BUTTON' && b.type === 'button' && b.exp === 'false' && b.ctl && b.hidden && b.tab === 0 && b.text.length > 20), all.length);
+    // 0.53.0: and the pace line's, at the top.
+    check(`${DEV}: a real <button> ⓘ on every tile (6) and block (8, the pace line's since 0.53.0), collapsed, each controlling its own hidden bubble`,
+      all.length === 14 && all.every(b => b.tag === 'BUTTON' && b.type === 'button' && b.exp === 'false' && b.ctl && b.hidden && b.tab === 0 && b.text.length > 20), all.length);
     check(`${DEV}: ...named for what it explains ("About Booked")`, all.some(b => b.label === 'About Booked'), all.map(b => b.label));
     if (!phone) {
       console.log('   EVERY TIP\'S TEXT (for the check list):');
@@ -493,14 +498,12 @@ const DOCKS = [
     const blues = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-bar')].map(b => getComputedStyle(b).backgroundColor).filter(c => c === 'rgb(0, 46, 122)' || c === 'rgb(15, 109, 191)'));
     check('no bar is either of the old blues (#002e7a, #0f6dbf); the board\'s own #0A50B2 band stays',
       blues.length === 0 && await p.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff-monthband')).backgroundColor) === 'rgb(10, 80, 178)', blues);
-    // Stats: the pie, its labels in each slice's ink, the lead-time swatches.
-    const pie = await p.evaluate(fn => { const contrast = eval(fn);
-      return [...document.querySelectorAll('.mphbac-staff-pie-label')].map(t => { const k = (t.getAttribute('class').match(/is-src-(\w+)/) || [])[1];
-        const slice = document.querySelector('.mphbac-staff-pie-slice.is-src-' + k);
-        return { k, label: getComputedStyle(t).fill, slice: getComputedStyle(slice).fill, ratio: +contrast(getComputedStyle(t).fill, getComputedStyle(slice).fill).toFixed(2) }; }); }, contrastFn);
-    check('Nights Booked by Source: every % drawn ON a slice is in that slice\'s ink, ≥ 4.5:1 (Booking.com\'s dark)',
-      pie.length >= 3 && pie.every(x => x.slice === want[x.k][0] && x.label === want[x.k][1] && x.ratio >= 4.5) && pie.some(x => x.k === 'booking'), pie);
-    const sw = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-pie-item, .mphbac-staff-lead-row[data-source]:not(.is-all)')].map(li => [li.className.match(/is-src-(\w+)/)[1], getComputedStyle(li.querySelector('.mphbac-staff-pie-swatch')).backgroundColor]));
+    // Stats: the source bar (a pie until 0.53.0 — no text on it now, so no
+    // ink to check), its lines and the lead-time swatches.
+    const segs = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-srcbar-seg')].map(e => [e.getAttribute('data-source'), getComputedStyle(e).backgroundColor, e.textContent]));
+    check('Nights by Source: each bar segment in its source\'s colour, and no text on it',
+      segs.length >= 3 && segs.every(([k, c, t]) => c === want[k][0] && t === '') && segs.some(x => x[0] === 'booking'), segs);
+    const sw = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-srcbar-item, .mphbac-staff-lead-row[data-source]:not(.is-all)')].map(li => [li.className.match(/is-src-(\w+)/)[1], getComputedStyle(li.querySelector('.mphbac-staff-pie-swatch')).backgroundColor]));
     check('...its list and How Far Ahead\'s swatches in the new colours', sw.length >= 6 && sw.every(([k, c]) => c === want[k][0]), sw);
     await ctx.close();
   }
@@ -596,14 +599,19 @@ const DOCKS = [
     }
     // 0.47.0 (Rob): with the counting-rule lines gone, four tips are their
     // lead sentence alone — and carry no list at all, not an empty one.
-    const LEAD_ONLY = ['source', 'mix', 'weekdays', 'lead'];
+    // 0.53.0 (Rob): Days Booked Ahead's says what mean, median and mode
+    // are, as points; the pace line's ⓘ is the fourteenth.
+    const LEAD_ONLY = ['source', 'mix', 'weekdays'];
     check(`all ${res.length} tips: a lead sentence; a real <ul> list wherever there are points, and none (never an empty one) where there are not`,
-      res.length === 13 && res.every(t => t.lead.length > 10 && /[.]$/.test(t.lead) && (LEAD_ONLY.includes(t.k) ? t.ul === 0 && !t.items.length : t.list && t.ul === 1)),
+      res.length === 14 && res.every(t => t.lead.length > 10 && /[.]$/.test(t.lead) && (LEAD_ONLY.includes(t.k) ? t.ul === 0 && !t.items.length : t.list && t.ul === 1)),
       res.map(t => [t.k, t.lead, t.ul, t.items.length]));
     check('...every line a complete sentence ending in a full stop', res.every(t => t.items.every(i => /[.]$/.test(i) && /^[A-Z▲]/.test(i))), res.map(t => t.items));
     check('...nothing run together ("counts once.Dock blocks"): never a full stop, colon or bracket straight against the next word',
       res.every(t => !/[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))), res.filter(t => /[.:)][A-Z▲a-z]/.test(t.text.replace(/Booking\.com/g, 'Bookingcom'))).map(t => t.text));
-    check('...none of the old jargon ("timeframe", "points", "echo", "channel block")', res.every(t => !/timeframe|points|echo|channel block/i.test(t.text)), res.filter(t => /timeframe|points|echo|channel block/i.test(t.text)).map(t => t.k));
+    // "points" is back in ONE place, by Rob's own words (0.53.0): Nights by
+    // Cottage's ▲▼ "are occupancy percentage points" — never "points" alone.
+    const jargon = t => /timeframe|echo|channel block/i.test(t.text) || /points/i.test(t.text.replace(/occupancy percentage points/g, ''));
+    check('...none of the old jargon ("timeframe", "points" — but for Rob\'s "occupancy percentage points" — "echo", "channel block")', res.every(t => !jargon(t)), res.filter(jargon).map(t => t.k));
     check('...a date range in a tip is never broken at its dash ("Oct 1 – 31" stays together)', res.every(t => !/ –|– /.test(t.text)), res.filter(t => / –|– /.test(t.text)).map(t => t.k));
     check('...at 375: the lead at most 2 lines, each point at most 2, the whole bubble on screen',
       res.every(t => t.leadLines <= 2 && t.itemLines.every(n => n <= 2) && t.on), res.map(t => [t.k, t.leadLines, t.itemLines.join('+'), t.total]));

@@ -304,14 +304,15 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     // "Nights"), and the bar shows the Occupancy figure itself, 97%.
     check('nights booked per cottage: #28 30 nights (97%), #23 7 (the block counted once), #29 none',
       per['#28 C28'][0] === '30' && per['#28 C28'][1] === '97%' && per['#23 Kingfisher'][0] === '7' && per['#29 C29'][0] === '0', per);
+    // 0.53.0 (Rob): one stacked bar, not a pie; the same shares.
     const pie = await p.evaluate(() => ({
-      slices: [...document.querySelectorAll('.mphbac-staff-pie-slice')].map(x => [x.dataset.source, getComputedStyle(x).fill]),
-      labels: [...document.querySelectorAll('.mphbac-staff-pie-label')].map(x => x.textContent),
-      list: [...document.querySelectorAll('.mphbac-staff-pie-item')].map(x => x.textContent) }));
-    check('the pie: Direct, Airbnb, Booking.com, Vrbo in their colours', JSON.stringify(pie.slices) === JSON.stringify([['direct', RGB.direct], ['airbnb', RGB.airbnb], ['booking', RGB.booking], ['vrbo', RGB.vrbo]]), pie.slices);
-    check('...share of NIGHTS: Direct 23% (12), Airbnb 12% (6), Booking.com 6% (3), Vrbo 60% (31) — as text too',
+      slices: [...document.querySelectorAll('.mphbac-staff-srcbar-seg')].map(x => [x.dataset.source, getComputedStyle(x).backgroundColor]),
+      lines: [...document.querySelectorAll('.mphbac-staff-srcbar-item')].map(x => x.textContent),
+      list: [...document.querySelectorAll('.mphbac-staff-stats-block.is-source ul.mphbac-sr-only li')].map(x => x.textContent) }));
+    check('the source bar: Direct, Airbnb, Booking.com, Vrbo in their colours', JSON.stringify(pie.slices) === JSON.stringify([['direct', RGB.direct], ['airbnb', RGB.airbnb], ['booking', RGB.booking], ['vrbo', RGB.vrbo]]), pie.slices);
+    check('...share of NIGHTS: Direct 23% (12), Airbnb 12% (6), Booking.com 6% (3), Vrbo 60% (31) — as text for a screen reader, as before',
       JSON.stringify(pie.list) === JSON.stringify(['Direct — 23% (12 nights)', 'Airbnb — 12% (6 nights)', 'Booking.com — 6% (3 nights)', 'Vrbo — 60% (31 nights)']), pie.list);
-    check('...labelled with % where the slice holds it', pie.labels.includes('60%') && pie.labels.includes('23%'), pie.labels);
+    check('...and on screen, a line a source', JSON.stringify(pie.lines) === JSON.stringify(['Direct 23% · 12 nights', 'Airbnb 12% · 6 nights', 'Booking.com 6% · 3 nights', 'Vrbo 60% · 31 nights']), pie.lines);
     const blank = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-out').innerHTML.includes('<script'));
     check('(textContent only) nothing in Stats became markup', !blank);
 

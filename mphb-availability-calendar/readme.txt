@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.52.0
+Stable tag: 0.53.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.53.0 =
+* **Stats on /staff/: a headline and a pace line (Rob's picks).** Above the six tiles: "November Is 28% Booked" (the Booked tile's figure), with a pill such as "▲6 vs Nov 2025" where a comparison is allowed. Under it, a line of the cottage-nights on the books for the chosen period, day by day from 90 days before it starts: this year in blue, the same dates last year dashed gray, "Today" marked with its value. Tap or drag along it, or use the arrow keys, to read any day for both years.
+* **Nights by Cottage:** the header reads "vs 2025" with a lowercase "vs", and its ⓘ says the ▲▼ are occupancy percentage points.
+* **Nights by Source:** one stacked bar replaces the pie, Direct first, with a line per source ("Direct 41% · 28 nights"). A screen reader hears the same list as before.
+* **Days Booked Ahead:** mean, median and mode for each source and for all, in whole days; "—" where no number of days repeats; the smaller number on a tie. Its ⓘ explains the three.
+* **Fixes:** an open ⓘ no longer has other tiles' ⓘ icons drawn over it. The page's foot is padded by the iPhone's home-bar inset (it takes effect when the theme's viewport tag carries viewport-fit=cover).
+* Everything else on /staff/ is unchanged. Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.52.0 =
 * **An Occupied button (Rob's pick).** While a guest is in a cottage, its popup offers the two signs it isn't showing: on gray, Ready and Not Ready (as before); after a Ready marked during the stay, Not Ready and Occupied; after a Not Ready, Ready and Occupied. Tapping Occupied clears the mark, so the gray person shows again until the guest's checkout. Never offered when no guest is in; checkout mornings and turnover days are unchanged. On a narrow phone the two buttons stack, so the popup still opens beside the cottage's name. Same staff password check and the same refusal when another phone changed the cottage first. Read-only on MotoPress; nothing is written on install, activation or upgrade.

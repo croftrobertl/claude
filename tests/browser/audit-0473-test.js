@@ -114,7 +114,7 @@ const UNDO = `<style id="t-undo">
     const reachTips = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-out .mphbac-staff-tip')].map(b => {
       b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       return [[0, 21], [0, -21], [21, 0], [-21, 0]].every(([dx, dy]) => { const e = document.elementFromPoint(cx + dx, cy + dy); return !!e && (e === b || b.contains(e)); }); }));
-    check(`all ${tips.length} Stats ⓘ: still 24×24, and a tap 21px from the centre in any direction reaches each`, tips.length === 13 && tips.every(t => t[0] === 24 && t[1] === 24) && reachTips.every(Boolean), [tips[0], reachTips]);
+    check(`all ${tips.length} Stats ⓘ: still 24×24, and a tap 21px from the centre in any direction reaches each`, tips.length === 14 && /* 0.53.0: + the pace line's */  tips.every(t => t[0] === 24 && t[1] === 24) && reachTips.every(Boolean), [tips[0], reachTips]);
     await p.evaluate(() => window.scrollTo(0, 0));
     const stats = await p.$('.mphbac-staff-stats');
     const now = await stats.screenshot();

@@ -279,8 +279,15 @@ foreach ($cases as $case => $w) {
             'readyBtn', 'notReadyBtn', 'dotRed', 'dotGreen', 'readyPop', 'readyFailed',    // 0.48.0: the cleaning dot (Rob)
             'readyChanged',                                                                 // 0.50.0: a stale page's save refused
             'dotOccupied',                                                                  // 0.51.0: a guest is in (the gray sign)
-            'occupiedBtn'];                                                                 // 0.52.0: the popup's Occupied button
-        $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat'];
+            'occupiedBtn',                                                                  // 0.52.0: the popup's Occupied button
+            // 0.53.0 (Rob's Stats picks): the headline, its pill and the pace
+            // line; the source bar's lines; mean · median · mode and their tip.
+            'stHeadline', 'stHeadWeek', 'stHeadVs', 'stCurve', 'stCurveSr', 'stCurveKey', 'stCurveKeyNow', 'stCurveTip', 'stCurveLy', 'stCurveLow',
+            'stCurveToday', 'stCurveTodayShort', 'stCurveEnd', 'stCurveStart', 'stCurveOut', 'stCurveOut1', 'stCurveNight', 'stCurveNow', 'stCurveAgo',
+            'stSrcLine', 'stLeadMean', 'stLeadMedian', 'stLeadMode', 'stLeadNone',
+            'stLeadTipMean', 'stLeadTipMedian', 'stLeadTipMode', 'stLeadTipPull', 'stLeadTipNone'];
+        $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat',
+            'stLeadTip'];                                     // 0.53.0: "on average" dropped — it now shows mean, median and mode
         $same = static function (array $x, array $y): bool { sort($x); sort($y); return $x === $y; };
         $changed = array_keys(array_filter($b, static fn($v, $k) => array_key_exists($k, $a) && $a[$k] !== $v, ARRAY_FILTER_USE_BOTH));
         check("$label strings: 0.47.0 removes the eight counting-rule lines and the previous-timeframe pair, adds last year's and the table's, renames the seven sections — and drops the Updated {time} line (0.47.1) and the Photo ID note (0.47.5), and adds the cleaning dot's six (0.48.0) — nothing else",

@@ -3987,3 +3987,15 @@ mark is stale. Refused with no guest in and on a turnover day. Checkout
 morning: the checkout is newer, so Not Ready (unchanged). Buttons stack
 (.is-stacked) whenever the row would not fit beside the name — a 320px phone
 — so the popup never covers the name it is for; at 390 they sit side by side.
+
+## 0.53.0 — /staff/ Stats round (Rob's visual picks, 2026-11-02; built 2026-11-03)
+
+Do only what was listed; everything else on /staff/ is kept byte-identical (proved by `tests/browser/keep-0530-proof.js` against 28448c6).
+
+- **Top of Stats** (`drawTop`, `drawCurve`): headline "<Period> Is N% Booked" = the Booked tile's `n.pct`; pill = the tile's ▲▼ (`n.pct - ly.pct`), shown only when `plan.ly.why` is empty. Period names: month name (year added when not this year), the year, "Week of Nov 1", "Nov 3", a custom range by `rangeLabel`. Built LAST in `drawStats` and inserted before the tiles, so every older tip keeps its id.
+- **Pace line**: domain = 90 days before the period's first night (further back, max 730, when today is earlier still) → the first night if the period is ahead, today while it is under way, its last night once over. `paceSeries()` is `paceNights(data, from, k, asOf)` for every day in one sweep (same madeOn filter, same own() ranking: a booking owns a cottage-night from its madeOn until an earlier-ranked booking covering it is made). `stats-053-test.js` checks every day of both lines against a brute-force own() in the test. Last year = `paceSeries(lyData, ly.w, dates.map(yearBack))`. One slider to a screen reader (arrow keys, PageUp/Down, Home/End); `touch-action: pan-y` so a vertical swipe still scrolls.
+- **"vs 2025"**: the non-{year} parts of `stColVs` are wrapped in `.mphbac-staff-percot-as-typed` (text-transform: none). Its tip string `stTipVsOcc` now says "occupancy percentage points". The column shifts a few px narrower as a result (proved: forcing that span back to capitals restores 0.52.0's geometry exactly).
+- **Source bar**: `.mphbac-staff-srcbar`; the pie code and `PIE_FONT` removed (`textW` stays — other callers). `.mphbac-staff-pie-swatch` kept (lead rows use it). Screen readers get the 0.47 list text unchanged in a `.mphbac-sr-only` list.
+- **Mean · median · mode**: `leadTimes` keeps `days: []` per source; `leadStats(days)`: mean `Math.round(sum/n)` (as before), median middle or the two middle averaged and rounded, mode most common, null ("—", read "none") when nothing repeats, smallest on a tie. One CSS grid for the whole list (rows `display: contents`) so the columns align and the block centres.
+- **Tip show-through**: a tile's bubble lives in `.mphbac-staff-kpi-more` (z-index 1, a stacking context); `openTip` marks the holder `.is-tip-open` → z-index 40. Every ⓘ is checked by elementFromPoint over its open box.
+- **Home bar**: `.mphbac-staff { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) + 0px)) }`. **Live's viewport meta is `width=device-width, user-scalable=yes, initial-scale=1.0` — no viewport-fit=cover — so env() is 0 there and this changes nothing until the theme's tag carries it** (not changed by the plugin: it is the theme's, site-wide).

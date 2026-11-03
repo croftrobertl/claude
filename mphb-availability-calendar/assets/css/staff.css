@@ -104,6 +104,11 @@
 .mphbac-staff {
     box-sizing: border-box;
     width: 100%;
+    /* THE HOME BAR (0.53.0, Rob's bug): the page's last line kept clear of
+       an iPhone's home indicator — max(<current>, env() + <current>) with
+       the current 0. env() is 0 unless the page's viewport meta carries
+       viewport-fit=cover; the theme's does not today (see PROJECT-NOTES). */
+    padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) + 0px));
     color: var(--staff-text);
     background: var(--staff-bg);
     color-scheme: light;
@@ -1630,6 +1635,12 @@ body.mphbac-staff-open { overflow: hidden; }
 /* Above the next tile (0.47.3), so the ⓘ's 44px tap area — which reaches a
    few pixels into it — is the ⓘ's. Nothing visible overlaps. */
 .mphbac-staff-kpi-more { z-index: 1; }
+/* THE OPEN TIP ABOVE EVERYTHING IN STATS (0.53.0, Rob's bug): a tile's
+   bubble lives in its corner holder — z-index 1, a stacking context — so the
+   ⓘ of every later tile, z-index 1 as well, painted over the dark box.
+   staff.js marks the holder of the open bubble, and it rises above every
+   other holder and the bubbles' own 30. */
+.mphbac-staff-kpi-more.is-tip-open { z-index: 40; }
 .mphbac-staff .mphbac-staff-tip.mphbac-staff-tip {
     display: inline-flex;
     align-items: center;
@@ -2134,18 +2145,6 @@ body.mphbac-staff-open { overflow: hidden; }
     opacity: 0.22;
     pointer-events: none;
 }
-.mphbac-staff-pie-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 12px 24px;
-}
-.mphbac-staff-pie { width: 160px; height: 160px; }
-.mphbac-staff-pie-slice { fill: var(--staff-bar); stroke: #ffffff; stroke-width: 1.5; }
-.mphbac-staff-pie-label { fill: var(--staff-bar-ink, #ffffff); font-size: 15px; font-weight: 700; }
-.mphbac-staff-pie-list { margin: 0; padding: 0; list-style: none; font-size: 16px; line-height: 1.3; }
-.mphbac-staff-pie-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .mphbac-staff-pie-swatch {
     width: 12px;
     height: 12px;
@@ -2418,6 +2417,178 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff .mphbac-staff-chart .mphbac-staff-turn { transition: none; }
 }
 
+/* =====================================================================
+   0.53.0 — THE TOP OF STATS, THE SOURCE BAR, MEAN · MEDIAN · MODE
+   (Rob's picks of 2026-11-02). (0,3,0) where a theme's h3 / p / ul rules
+   could reach, as everywhere else in Stats.
+   ===================================================================== */
+.mphbac-staff-stats-top { margin: 0 0 16px; text-align: center; }
+.mphbac-staff .mphbac-staff-stats-top .mphbac-staff-stats-headline {
+    margin: 0;
+    padding: 0;
+    color: var(--staff-text);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-wrap: balance;
+}
+/* The pill: the tiles' ▲▼, colours and all, on a soft ground. */
+.mphbac-staff .mphbac-staff-stats-top .mphbac-staff-stats-pill {
+    display: inline-block;
+    margin: 8px 0 0;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: #f1f3f4;
+    color: var(--staff-muted);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff .mphbac-staff-stats-top .mphbac-staff-stats-pill.is-up { background: #e6f4ea; color: var(--staff-in); }
+.mphbac-staff .mphbac-staff-stats-top .mphbac-staff-stats-pill.is-down { background: #fce8e6; color: var(--staff-out); }
+
+/* The pace line. The SVG is stretched to the plot; its strokes are not. */
+.mphbac-staff-curve { position: relative; max-width: 560px; margin: 14px auto 0; }
+.mphbac-staff-curve-plot {
+    position: relative;
+    height: 120px;
+    margin: 0 6px;
+    touch-action: pan-y;
+    cursor: crosshair;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.mphbac-staff-curve-plot:focus { outline: none; }
+.mphbac-staff-curve-plot:focus-visible { outline: 2px solid var(--staff-focus, #0f6dbf); outline-offset: 4px; border-radius: 2px; }
+.mphbac-staff-curve-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.mphbac-staff-curve-svg path { fill: none; vector-effect: non-scaling-stroke; }
+.mphbac-staff-curve-grid { stroke: var(--staff-frame); stroke-width: 1; }
+.mphbac-staff-curve-start { stroke: #9aa0a6; stroke-width: 1; stroke-dasharray: 2 3; }
+.mphbac-staff-curve-ly { stroke: #757575; stroke-width: 2; stroke-dasharray: 6 4; }
+.mphbac-staff-curve-now { stroke: #0a50b2; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.mphbac-staff-curve-max {
+    position: absolute;
+    top: -8px;
+    left: 0;
+    padding-right: 4px;
+    background: var(--staff-bg, #ffffff);
+    color: var(--staff-muted);
+    font-size: 12px;
+    line-height: 16px;
+    pointer-events: none;
+}
+.mphbac-staff-curve-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #0a50b2;
+    box-shadow: 0 0 0 1px #0a50b2;
+    pointer-events: none;
+}
+.mphbac-staff-curve-dot.is-ly { background: #757575; box-shadow: 0 0 0 1px #757575; }
+.mphbac-staff-curve-dot[hidden],
+.mphbac-staff-curve-guide[hidden] { display: none; }
+.mphbac-staff-curve-guide {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px solid #5f6368;
+    pointer-events: none;
+}
+.mphbac-staff-curve-tag {
+    position: absolute;
+    color: #0a50b2;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+    white-space: nowrap;
+    text-shadow: 0 0 3px #ffffff, 0 0 3px #ffffff, 0 0 3px #ffffff;   /* read clear of the line it sits by */
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+/* Beside its dot, never past the end of the line: from the left third it
+   starts just after the dot, from the right third it ends just before. */
+.mphbac-staff-curve-tag.is-left { transform: translateX(10px); }
+.mphbac-staff-curve-tag.is-right { transform: translateX(-10px); }
+.mphbac-staff-curve-axis { position: relative; height: 18px; margin: 4px 6px 0; color: var(--staff-muted); font-size: 12px; line-height: 18px; }
+.mphbac-staff-curve-tick { position: absolute; top: 0; white-space: nowrap; transform: translateX(-50%); }
+.mphbac-staff-curve-tick.is-first { transform: none; }
+.mphbac-staff-curve-tick.is-end { right: 0; transform: none; }
+.mphbac-staff .mphbac-staff-curve .mphbac-staff-curve-read {
+    min-height: 2.6em;
+    margin: 6px 0 0;
+    padding: 0;
+    color: var(--staff-text);
+    font-size: 15px;
+    line-height: 1.3;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff-curve-when { display: block; color: var(--staff-muted); font-size: 14px; }
+.mphbac-staff-curve-vals { display: block; font-weight: 700; }
+.mphbac-staff .mphbac-staff-curve .mphbac-staff-curve-key {
+    margin: 2px 0 0;
+    padding: 0;
+    color: var(--staff-muted);
+    font-size: 14px;
+    line-height: max(24px, 1.3em);
+    text-align: center;
+}
+.mphbac-staff .mphbac-staff-curve-key .mphbac-staff-tip.mphbac-staff-tip { margin-left: 4px; vertical-align: top; }
+
+/* Nights by Cottage's "vs": the row is in capitals, this word as typed. */
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h .mphbac-staff-percot-as-typed { text-transform: none; }
+
+/* Nights by Source: one stacked bar, then a line a source. */
+.mphbac-staff-srcbar-wrap { max-width: 440px; margin: 0 auto; }
+.mphbac-staff-srcbar {
+    display: flex;
+    height: 22px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--staff-frame);
+}
+.mphbac-staff-srcbar-seg { display: block; flex: none; height: 100%; background: var(--staff-bar); }
+.mphbac-staff-srcbar-seg + .mphbac-staff-srcbar-seg { box-shadow: inset 1.5px 0 0 #ffffff; }
+.mphbac-staff .mphbac-staff-srcbar-wrap .mphbac-staff-srcbar-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 16px;
+    line-height: 1.3;
+}
+.mphbac-staff-srcbar-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-variant-numeric: tabular-nums; }
+.mphbac-staff-srcbar-item .mphbac-staff-pie-swatch { flex: none; }
+
+/* Days Booked Ahead: the name and its stays, then Mean · Median · Mode.
+   ONE grid for the whole list — each row's cells take part in it (the row
+   is display: contents) — so the three columns line up down the list, and
+   sized to their figures and centred, so the block is centred as a whole,
+   as every Stats block is (0.46.2). */
+.mphbac-staff .mphbac-staff-lead.mphbac-staff-lead {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: center;
+    column-gap: 22px;
+}
+.mphbac-staff .mphbac-staff-lead .mphbac-staff-lead-row,
+.mphbac-staff .mphbac-staff-lead .mphbac-staff-lead-figs { display: contents; }
+.mphbac-staff-lead-head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; padding-top: 8px; }
+.mphbac-staff-lead-row:first-child .mphbac-staff-lead-head { padding-top: 0; }
+.mphbac-staff-lead-row.is-all .mphbac-staff-lead-head { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--staff-frame); font-weight: 700; }
+.mphbac-staff-lead-head .mphbac-staff-pie-swatch { flex: none; }
+.mphbac-staff-lead-count { color: var(--staff-muted); font-weight: 400; }
+.mphbac-staff-lead-fig { display: flex; flex-direction: column; align-items: center; margin-top: 2px; text-align: center; }
+.mphbac-staff-lead-label { color: var(--staff-muted); font-size: 13px; font-weight: 600; line-height: 1.2; }
+.mphbac-staff .mphbac-staff-lead .mphbac-staff-lead-num { margin: 0; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 /* ======================================================================
    EVERY HOVER RULE IN THIS FILE LIVES HERE, AND NOWHERE ELSE.
 
@@ -2431,7 +2602,6 @@ body.mphbac-staff-open { overflow: hidden; }
    The :focus-visible halves stay OUTSIDE this block — keyboard users need
    them on every device. Add new hover rules inside the guard, never
    beside their focus-visible twin.
-
    THE BAR AND THE ROW ARE HERE BUT NOT RESTYLED. They are surfaces, not
    buttons, so they keep their own treatment; the guard is about the iOS
    bug, which does not care about that distinction.
@@ -2490,3 +2660,4 @@ body.mphbac-staff-open { overflow: hidden; }
         padding: 0;
     }
 }
+
