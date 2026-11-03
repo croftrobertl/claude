@@ -413,7 +413,7 @@
 .dccs-root.dccs-root .dccs-dates { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .dccs-root.dccs-root .dccs-date-row { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; }
 .dccs-root.dccs-root .dccs-date-field { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 4px;
-  font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); text-align: left; }
+  font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); text-align: center; }
 /* 44px tall and 16px text: iOS zooms the page on focus for anything smaller. */
 .dccs-root.dccs-root .dccs-date-field input {
   width: 100%; min-height: 44px; padding: 10px 12px; font-size: 16px; font-family: inherit;
@@ -482,7 +482,7 @@
 /* "Pick One to Continue" — under Next, while it is disabled. Takes the row's full
    width so it sits on its own line, right-aligned under the button. */
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-pick {
-  flex: 0 0 100%; margin: -2px 0 0; text-align: right; font-size: 0.85rem; font-weight: 600; color: #5b6676;
+  margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: #5b6676;
 }
 
 /* Review list */
@@ -517,10 +517,10 @@
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
 /* Compare mode: the button that opens the comparison popup, centred under the checklist. */
 /* Right-aligned so it sits under the compare checkboxes it belongs to. */
-.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: right; }
+.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
 /* On the results screen the same button sits below the cards (where the recap used to be),
    separated from the cards above and the edit/restart nav below. */
-.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; text-align: right; }
+.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; text-align: center; }
 
 /* "What it misses" tags */
 .dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -677,7 +677,7 @@
 .dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; background: var(--dccs-surface); }
 .dccs-root.dccs-root .dccs-matrix th,
 .dccs-root.dccs-root .dccs-matrix td {
-  border: 1px solid var(--dccs-border); padding: 10px; text-align: left; font-size: 0.9rem; vertical-align: top;
+  border: 1px solid var(--dccs-border); padding: 10px; text-align: center; font-size: 0.9rem; vertical-align: top;
 }
 .dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; font-size: 0.8rem; padding: 8px 6px; }
 .dccs-root.dccs-root .dccs-cmp-th-num { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
@@ -999,7 +999,8 @@
 .dccs-root.dccs-root .dccs-card-head,
 .dccs-root.dccs-root .dccs-card-head h4,
 .dccs-root.dccs-root .dccs-mcard-title { text-align: center; }
-.dccs-root.dccs-root .dccs-multi { text-align: left; }
+/* 0.57.0: superseded by Rob's text rule — a multi-sentence paragraph is centered
+   too (see the block at the foot of this file); the class stays as a hook. */
 
 /* The match pill: "N Cottages Match", navy (the selected colour), from the SAME
    count the quiz pill shows. The "8 → N" ticker beside it is aria-hidden. */
@@ -1156,6 +1157,34 @@
 @media (min-width: 1024px) {
   .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ==== 0.57.0: ROB'S TEXT RULE ================================================
+   "Text should be assumed that it needs to be center-aligned using balanced text
+   wrapping." Every piece of text in the full Selector, its pop-up and the Minis is
+   centered, and every block of text wraps balanced. The containers declare it
+   (the pop-up sits outside the page's column and inherited START from the body,
+   which is how the big cards' text came out left-aligned in 0.56.0), and every
+   text-bearing element repeats it so no other rule's alignment can leak in. Rows
+   that pair things (the progress label and the pill, Back and Next) keep their
+   row layout; the text inside each is centered. Font, size, weight and line
+   height are untouched. */
+.dccs-root.dccs-root,
+.dccs-entry.dccs-entry,
+.dccs-modal .dccs-modal-box { text-align: center; }
+.dccs-root.dccs-root :is(p, h2, h3, h4, li, th, td, label, a, button, .dccs-q-note-s, .dccs-progress-label, .dccs-count,
+  .dccs-badge, .dccs-miss, .dccs-mcard-num, .dccs-mcard-name, .dccs-mcard-chip, .dccs-mcard-noimg, .dccs-landing-choice-label, .dccs-compare-actions, .dccs-matrix-pos),
+.dccs-entry.dccs-entry :is(p, button, .dccs-entry-label),
+.dccs-modal .dccs-modal-title { text-align: center; text-wrap: balance; }
+/* A block of more than one paragraph: a blank line's worth (1em) BETWEEN its
+   paragraphs, none before the first or after the last. The capacity note's two
+   sentences are its two paragraphs (split for display, one string). */
+.dccs-root.dccs-root p + p,
+.dccs-root.dccs-root .dccs-q-note-s + .dccs-q-note-s { margin-top: 1em; }
+.dccs-root.dccs-root .dccs-q-note-s:first-child { margin-top: 0; }
+.dccs-root.dccs-root .dccs-q-note-s:last-child { margin-bottom: 0; }
+/* Next and its "Pick One to Continue" line share one column of the nav row. */
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col > .dccs-next { flex: 0 0 auto; }
 
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }

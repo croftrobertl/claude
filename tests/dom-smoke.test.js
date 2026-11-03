@@ -710,7 +710,9 @@ function configWith(overrides) {
   // a paragraph, not a control — so count the BUTTONS.
   ok('wizard nav holds Back + Next as its only two buttons',
     !!nav && nav.querySelectorAll('button').length === 2 && !!nav.querySelector('.dccs-back') && !!nav.querySelector('.dccs-next')
-    && Array.prototype.every.call(nav.children, c => c.tagName === 'BUTTON' || c.classList.contains('dccs-next-pick')));
+    // 0.57.0: Next and that line share a .dccs-next-col, so the line centres under Next.
+    && Array.prototype.every.call(nav.children, c => c.tagName === 'BUTTON' || c.classList.contains('dccs-next-col'))
+    && !!nav.querySelector('.dccs-next-col > .dccs-next'));
   // jsdom has no CSS cascade, so verify the responsive rules in the stylesheet source.
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   // 0.27.0 supersedes the old nowrap + equal-halves pairing. At the spec's 20px
@@ -2214,9 +2216,10 @@ defer(async function () {
     /color:\s*var\(--dccs-compare-red\)/.test(ruleBody('.dccs-root.dccs-root .dccs-cmp-toggle')));
   ok('the Compare button background is the red, not the spec blue',
     /var\(--dccs-btn-bg,\s*var\(--dccs-compare-red\)\)/.test(css));
-  ok('the Compare button is right-aligned with its checkboxes',
-    /\.dccs-compare-actions \{[^}]*text-align:\s*right/.test(css) &&
-    /\.dccs-results-compare \{[^}]*text-align:\s*right/.test(css));
+  // 0.57.0, Rob's text rule: centred (it was right-aligned with the checkboxes).
+  ok('the Compare button is centred',
+    /\.dccs-compare-actions \{[^}]*text-align:\s*center/.test(css) &&
+    /\.dccs-results-compare \{[^}]*text-align:\s*center/.test(css));
   // Only the background changes: it is still in the shared skin rule, so every
   // other spec property still comes from there.
   const skin = css.slice(css.indexOf('.dccs-root.dccs-root .dccs-primary,'));
@@ -3738,7 +3741,9 @@ defer(async function () {
   ['.dccs-heading', '.dccs-step-q', '.dccs-results-h', '.dccs-card-head h4', '.dccs-mcard-title'].forEach(x =>
     ok('104: ' + x + ' is centred', align('.dccs-root.dccs-root ' + x) === 'center'));
   ok('104: the pop-up title is centred', align('.dccs-modal-title') === 'center');
-  ok('104: a multi-sentence paragraph is left-aligned', align('.dccs-root.dccs-root .dccs-multi') === 'left');
+  // 0.57.0 (Rob's text rule) supersedes "multi-sentence paragraphs are left": no rule
+  // aligns .dccs-multi any more; it centres with everything else (see block 108).
+  ok('104: a multi-sentence paragraph is no longer left-aligned', align('.dccs-root.dccs-root .dccs-multi') === null);
   const cap = (() => { const q = mountSelector(freshDom(), configWith({ guest34: true })); enter(q, 'quick'); return q.querySelector('.dccs-q-note'); })();
   ok('104: the two-sentence capacity note is marked multi-sentence', !!cap && cap.classList.contains('dccs-multi'));
   const one = (() => { const q = mountSelector(freshDom()); enter(q, 'compare'); return q.querySelector('.dccs-compare .dccs-hint'); })();
@@ -4027,6 +4032,59 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   ok('107/2: a disabled Next is gray #d7dde7 with #5b6676 text, fully opaque', !!dis && /background:\s*#d7dde7/i.test(dis.body) && /color:\s*#5b6676/i.test(dis.body) && /opacity:\s*1\b/.test(dis.body));
   ok('107/2: ...and stays gray on hover and focus (no coral on a button that does nothing)', !!dis && dis.sel.indexOf(D + ':hover') !== -1 && dis.sel.indexOf(D + ':focus-visible') !== -1);
   ok('107/2: an enabled Next keeps the site blue (control: the gray rule is [disabled]-only)', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-primary') !== -1 && /var\(--dccs-btn-bg/.test(r.body)));
+})();
+
+// ==== 0.57.0 =======================================================================
+// ---- 108. Rob's text rule: every text centred and balanced; 1em between paragraphs ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Every rule block in the sheet, @media contents included (innermost braces). The
+  // selector list is split on TOP-LEVEL commas only: the text rule uses :is(p, h2, ...).
+  const split = (sel) => { const out = []; let d = 0, cur = ''; for (const ch of sel) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { out.push(cur.trim()); cur = ''; } else cur += ch; } out.push(cur.trim()); return out; };
+  const rules = []; css.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: split(sel), body }); return ''; });
+  const aligns = []; rules.forEach(r => { const re = /(?:^|;)\s*text-align\s*:\s*([^;]+)/g; let m; while ((m = re.exec(r.body))) aligns.push({ v: m[1].trim(), sel: r.sel[0] }); });
+  // Detector positive first: the parser must SEE text-align declarations at all.
+  ok('108: the parser finds text-align declarations (detector sees them: ' + aligns.length + ')', aligns.filter(a => a.v === 'center').length >= 10);
+  // A Style-panel control may feed the value through a token, but its fallback is centre
+  // (no live widget stores one; the preset holds none).
+  const off = aligns.filter(a => a.v !== 'center' && a.v !== 'inherit' && !/^var\(--dccs-[a-z-]+,\s*center\)$/.test(a.v));
+  ok('108: no rule anywhere aligns text left, right, start, end or justify' + (off.length ? ' — ' + off.map(a => a.sel + ': ' + a.v).join(' | ') : ''), off.length === 0);
+  // The containers centre (the pop-up box sits outside the page column and inherited START).
+  ['.dccs-root.dccs-root', '.dccs-entry.dccs-entry', '.dccs-modal .dccs-modal-box'].forEach(x =>
+    ok('108: container ' + x + ' centres', rules.some(r => r.sel.indexOf(x) !== -1 && /text-align:\s*center/.test(r.body))));
+  // The balance rule: every selector in it, as one list the DOM can match against.
+  const bal = rules.filter(r => /text-wrap:\s*balance/.test(r.body));
+  const balSel = [].concat.apply([], bal.map(r => r.sel)).join(', ');
+  ok('108: a balance rule exists and also centres', bal.some(r => /text-align:\s*center/.test(r.body) && r.sel.some(x => /:is\(p,/.test(x))));
+  // Every element that carries its own text, in every state, is reached by a balance rule
+  // (text-wrap and text-align both inherit, so a matched ancestor inside the widget counts).
+  const states = [];
+  const S0 = mountSelector(freshDom()); states.push(['landing', S0]);
+  const S1 = mountSelector(freshDom(), configWith({ guest34: true })); enter(S1, 'quick'); states.push(['quiz step + capacity note', S1]);
+  const S2 = mountSelector(freshDom()); enter(S2, 'quick'); toResults(S2, 'either'); const sa = S2.querySelector('.dccs-see-all'); if (sa) sa.click(); states.push(['results + See All', S2]);
+  const S3 = mountSelector(freshDom()); enter(S3, 'compare'); states.push(['Compare Mode', S3]);
+  states.forEach(([name, root]) => {
+    const els = Array.prototype.filter.call(root.querySelectorAll('*'), el =>
+      !el.closest('.dccs-sr-only, [hidden], svg, style, script') && Array.prototype.some.call(el.childNodes, n => n.nodeType === 3 && n.textContent.trim()));
+    const miss = els.filter(el => { for (let e = el; e && e !== root.parentNode; e = e.parentElement) { if (e.matches(balSel)) return false; } return true; });
+    ok('108: ' + name + ' renders text (' + els.length + ' elements; detector positive)', els.length >= 3);
+    ok('108: ' + name + ': every text element is centred and balanced' + (miss.length ? ' — missed: ' + miss.slice(0, 5).map(e => e.tagName + '.' + e.className).join(', ') : ''), miss.length === 0);
+  });
+  // Paragraph gap: 1em BETWEEN the capacity note's two sentences, none before or after.
+  const gap = rules.find(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-q-note-s + .dccs-q-note-s') !== -1);
+  ok('108: 1em between the two sentences of a two-sentence note', !!gap && /margin-top:\s*1em/.test(gap.body));
+  ok('108: none before the first', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-q-note-s:first-child') !== -1 && /margin-top:\s*0/.test(r.body)));
+  ok('108: none after the last', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-q-note-s:last-child') !== -1 && /margin-bottom:\s*0/.test(r.body)));
+  const spans = S1.querySelectorAll('.dccs-q-note .dccs-q-note-s');
+  ok('108: the note renders as two ADJACENT sentence blocks, so the + rule reaches the second', spans.length === 2 && spans[1].matches('.dccs-q-note-s + .dccs-q-note-s') && !spans[0].matches('.dccs-q-note-s + .dccs-q-note-s'));
+  // "Pick One to Continue" sits in Next's own column, so centred means under NEXT.
+  const S4 = mountSelector(freshDom()); enter(S4, 'quick');
+  const col = S4.querySelector('.dccs-wizard-nav .dccs-next-col');
+  ok('108: Next and its line share one column', !!col && !!col.querySelector('.dccs-next') && !!col.querySelector('.dccs-next-pick'));
+  ok('108: the column stacks', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col') !== -1 && /flex-direction:\s*column/.test(r.body)));
+  // Font, size, weight and line height are not part of the rule.
+  const textRule = bal.find(r => r.sel.some(x => /:is\(p,/.test(x)));
+  ok('108: the text rule changes no font, size, weight or line height', !!textRule && !/font|line-height/.test(textRule.body));
 })();
 
 (async function runDeferred() {

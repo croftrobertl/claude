@@ -653,6 +653,9 @@
     html += i > 0
       ? '<button type="button" class="dccs-back dccs-primary">' + navAffix(config, 'back', '\u2190', 'left') + esc(S.wiz_back) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
+    // Next and the small line under it share a column (0.57.0), so the line is
+    // centered under the BUTTON, not across the whole row (Rob's text rule).
+    html += '<div class="dccs-next-col">';
     html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + navAffix(config, 'next', '\u2192', 'right') + '</button>';
     // The small line under a disabled Next (0.56.0, Rob). Gone the moment an answer
     // is picked (the step re-renders). aria-hidden: the disabled button's own name
@@ -660,7 +663,7 @@
     if (!canNext && !isDates && S.next_pick) {
       html += '<p class="dccs-next-pick" aria-hidden="true">' + esc(S.next_pick) + '</p>';
     }
-    html += '</div></div>';
+    html += '</div></div></div>';
     return html;
   }
 

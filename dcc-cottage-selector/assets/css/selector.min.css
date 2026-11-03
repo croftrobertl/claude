@@ -213,7 +213,7 @@
 .dccs-root.dccs-root .dccs-dates { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .dccs-root.dccs-root .dccs-date-row { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; }
 .dccs-root.dccs-root .dccs-date-field { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 4px;
-  font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); text-align: left; }
+  font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); text-align: center; }
 .dccs-root.dccs-root .dccs-date-field input {
   width: 100%; min-height: 44px; padding: 10px 12px; font-size: 16px; font-family: inherit;
   border: 1px solid var(--dccs-border); border-radius: 10px;
@@ -256,7 +256,7 @@
   opacity: 1; background: #d7dde7; color: #5b6676; cursor: not-allowed; box-shadow: none;
 }
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-pick {
-  flex: 0 0 100%; margin: -2px 0 0; text-align: right; font-size: 0.85rem; font-weight: 600; color: #5b6676;
+  margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: #5b6676;
 }
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
 .dccs-root.dccs-root .dccs-review-list li {
@@ -279,8 +279,8 @@
   background: var(--dccs-btn-bg, var(--dccs-compare-red));
 }
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
-.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: right; }
-.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; text-align: right; }
+.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
+.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; text-align: center; }
 .dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .dccs-root.dccs-root .dccs-miss {
   background: rgba(240,128,128,0.18); color: #a8322e; border: 1px solid rgba(240,128,128,0.5);
@@ -375,7 +375,7 @@
 .dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; background: var(--dccs-surface); }
 .dccs-root.dccs-root .dccs-matrix th,
 .dccs-root.dccs-root .dccs-matrix td {
-  border: 1px solid var(--dccs-border); padding: 10px; text-align: left; font-size: 0.9rem; vertical-align: top;
+  border: 1px solid var(--dccs-border); padding: 10px; text-align: center; font-size: 0.9rem; vertical-align: top;
 }
 .dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; font-size: 0.8rem; padding: 8px 6px; }
 .dccs-root.dccs-root .dccs-cmp-th-num { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
@@ -555,7 +555,6 @@
 .dccs-root.dccs-root .dccs-card-head,
 .dccs-root.dccs-root .dccs-card-head h4,
 .dccs-root.dccs-root .dccs-mcard-title { text-align: center; }
-.dccs-root.dccs-root .dccs-multi { text-align: left; }
 .dccs-root.dccs-root .dccs-match-pill { margin: 0 0 12px; text-align: center; }
 .dccs-root.dccs-root .dccs-match-pill-n {
   display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.95rem;
@@ -661,6 +660,19 @@
 @media (min-width: 1024px) {
   .dccs-root.dccs-root .dccs-cmp-list.dccs-cmp-static { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+.dccs-root.dccs-root,
+.dccs-entry.dccs-entry,
+.dccs-modal .dccs-modal-box { text-align: center; }
+.dccs-root.dccs-root :is(p, h2, h3, h4, li, th, td, label, a, button, .dccs-q-note-s, .dccs-progress-label, .dccs-count,
+  .dccs-badge, .dccs-miss, .dccs-mcard-num, .dccs-mcard-name, .dccs-mcard-chip, .dccs-mcard-noimg, .dccs-landing-choice-label, .dccs-compare-actions, .dccs-matrix-pos),
+.dccs-entry.dccs-entry :is(p, button, .dccs-entry-label),
+.dccs-modal .dccs-modal-title { text-align: center; text-wrap: balance; }
+.dccs-root.dccs-root p + p,
+.dccs-root.dccs-root .dccs-q-note-s + .dccs-q-note-s { margin-top: 1em; }
+.dccs-root.dccs-root .dccs-q-note-s:first-child { margin-top: 0; }
+.dccs-root.dccs-root .dccs-q-note-s:last-child { margin-bottom: 0; }
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col > .dccs-next { flex: 0 0 auto; }
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }
 }
