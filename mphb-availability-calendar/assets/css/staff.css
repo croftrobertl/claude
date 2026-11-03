@@ -107,8 +107,12 @@
     /* THE HOME BAR (0.53.0, Rob's bug): the page's last line kept clear of
        an iPhone's home indicator — max(<current>, env() + <current>) with
        the current 0. env() is 0 unless the page's viewport meta carries
-       viewport-fit=cover; the theme's does not today (see PROJECT-NOTES). */
+       viewport-fit=cover, which /staff/'s does since 0.53.1 (Staff::
+       viewport_meta). The sides too: turned sideways, the notch is the
+       page's — 0 in portrait and on every screen without one. */
     padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) + 0px));
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
     color: var(--staff-text);
     background: var(--staff-bg);
     color-scheme: light;

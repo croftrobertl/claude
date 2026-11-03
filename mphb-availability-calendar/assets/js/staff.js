@@ -268,15 +268,37 @@
             // long press: its lift lands on the name, not on a button.
             var r = label.getBoundingClientRect();
             var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+            // CLEAR OF THE HOME BAR AND THE NOTCH (0.53.1): /staff/ asks for
+            // viewport-fit=cover, so the screen's edges under the home
+            // indicator (and, turned sideways, the notch) are the page's —
+            // the popup keeps 8px inside the safe area, not the screen.
+            var sa = safeArea();
             // Side by side where they fit beside the name; stacked where not
             // (a 320px phone), so the popup never covers the name it is for.
-            if (popBtns.children.length > 1 && pop.offsetWidth > vw - r.right - 16) popBtns.classList.add('is-stacked');
+            if (popBtns.children.length > 1 && pop.offsetWidth > vw - sa.right - r.right - 16) popBtns.classList.add('is-stacked');
             var w = pop.offsetWidth, h = pop.offsetHeight;
-            var left = Math.min(r.right + 8, vw - w - 8);
-            var top = Math.max(8, Math.min(r.top + r.height / 2 - h / 2, vh - h - 8));
-            pop.style.left = Math.round(Math.max(8, left)) + 'px';
+            var left = Math.min(r.right + 8, vw - sa.right - w - 8);
+            var top = Math.max(sa.top + 8, Math.min(r.top + r.height / 2 - h / 2, vh - sa.bottom - h - 8));
+            pop.style.left = Math.round(Math.max(sa.left + 8, left)) + 'px';
             pop.style.top = Math.round(top) + 'px';
             if (viaKey) { var f = popBtns.querySelector('button'); if (f) f.focus(); }
+        }
+
+        // The safe-area insets as the browser reports them: all 0 unless the
+        // page's viewport tag carries viewport-fit=cover (0.53.1: /staff/
+        // does) and the screen has a notch or a home bar. Read from a probe
+        // that is never seen; measured afresh each time (rotation).
+        var saProbe = null;
+        function safeArea() {
+            if (!saProbe) {
+                saProbe = document.createElement('div');
+                saProbe.setAttribute('aria-hidden', 'true');
+                saProbe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;'
+                    + 'padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+                document.body.appendChild(saProbe);
+            }
+            var c = getComputedStyle(saProbe);
+            return { top: parseFloat(c.paddingTop) || 0, right: parseFloat(c.paddingRight) || 0, bottom: parseFloat(c.paddingBottom) || 0, left: parseFloat(c.paddingLeft) || 0 };
         }
 
         function closeReady(refocus) {

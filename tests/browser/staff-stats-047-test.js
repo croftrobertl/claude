@@ -112,7 +112,9 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
       && !/[Dd]ock block|counts? once|left out/.test(all), Object.values(REMOVED).filter(l => all.includes(l)));
     const by = Object.fromEntries(tips.map(t => [t.key, t]));
     const kept = {
-      'every tile\'s ▲▼ line': ['bookings', 'booked', 'length', 'arrivals', 'departures', 'turnovers', 'inhouse'].every(k => by[k].items.some(i => /^▲▼ compare with the same dates last year/.test(i))),
+      // 0.53.1 (Rob): the Booked tile's line says percentage points, as Nights by Cottage's.
+      'the Booked tile\'s ▲▼ line: occupancy percentage points vs the same dates last year': by.booked.items.some(i => /^▲▼ are occupancy percentage points vs the same dates last year \(Oct\s1\s–\s31, 2025\)\.$/.test(i)),
+      'every other tile\'s ▲▼ line': ['bookings', 'length', 'arrivals', 'departures', 'turnovers', 'inhouse'].every(k => by[k].items.some(i => /^▲▼ compare with the same dates last year/.test(i))),
       'Length: the whole stay counts (stLengthWhole)': by.length.items.includes(strings.stLengthWhole),
       'In House: arrivals and departures on the day not included (stInHouseNot)': by.inhouse.items.includes(strings.stInHouseNot),
       'Upcoming Nights: last year a little low, and fixed (stPaceLow, stPaceFixed)': by.pace.items.includes(strings.stPaceLow) && by.pace.items.includes(strings.stPaceFixed),

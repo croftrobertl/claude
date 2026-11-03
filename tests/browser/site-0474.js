@@ -66,8 +66,14 @@ function html(r, dir) {
 
 /**
  * Open one widget instance. opts: mode (fixture-0474.php's), cas, width,
- * dir (default this checkout), height, touch (default: width < 600).
+ * dir (default this checkout), height, touch (default: width < 600),
+ * clockDays (0.53.1: the visitor's clock this many days past the render —
+ * a page served from a cache that long after it was built).
  * Every endpoint request is recorded in page.__ajax (body + answer).
+ * Set page.__mode to answer later requests in another fixture mode (e.g.
+ * 'throw': MotoPress becomes unreadable mid-visit), and page.__hold to a
+ * promise to hold every answer until it settles (opts.hold sets one from
+ * the start, released by page.__release()).
  */
 async function open(browser, opts) {
   const dir = opts.dir || HERE;
@@ -79,18 +85,22 @@ async function open(browser, opts) {
   p.__ajax = [];
   p.__sent = [];
   p.__errors = [];
+  // opts.hold: every answer waits until page.__release() — the first paint
+  // is then the embed's alone.
+  if (opts.hold) p.__hold = new Promise(res => { p.__release = () => { p.__hold = null; res(); }; });
   p.on('pageerror', e => p.__errors.push(e.message));
   // The page's clock is NOW at the moment it opens, after PHP rendered it: a
   // clock pinned earlier makes the embedded data look rendered in the future,
   // and the calendar (rightly) revalidates — three requests 0.47.3 would
   // not have made in the same second, and a race in every comparison.
-  await p.clock.setFixedTime(new Date(Math.max(Date.now(), NOW.getTime())));
+  await p.clock.setFixedTime(new Date(Math.max(Date.now(), NOW.getTime()) + (opts.clockDays || 0) * 864e5));
   const page = html(r, dir);
   await p.route(ORIGIN + '/**', async route => {
     const req = route.request();
     if (req.url().endsWith('/wp-admin/admin-ajax.php') && req.method() === 'POST') {
       const body = req.postData() || '';
-      const out = ajax(dir, body, opts.mode);
+      if (p.__hold) await p.__hold;
+      const out = ajax(dir, body, p.__mode || opts.mode);
       p.__ajax.push({ body, json: JSON.parse(out) });
       return route.fulfill({ status: 200, contentType: 'application/json', body: out });
     }
@@ -103,7 +113,7 @@ async function open(browser, opts) {
     return route.fulfill({ status: req.method() === 'POST' ? 200 : 404, contentType: 'text/html', body: '<!doctype html><title>checkout</title>' });
   });
   await p.goto(ORIGIN + '/');
-  await p.waitForSelector('.mphbac-grid, .mphbac-months', { timeout: 15000 });
+  await p.waitForSelector('.mphbac-grid, .mphbac-months', { timeout: 15000, state: opts.hold ? 'attached' : 'visible' });
   await p.waitForTimeout(400);
   return { ctx, p, r };
 }

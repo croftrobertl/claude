@@ -220,8 +220,17 @@ $borders = static function (string $line) use ($oldF): bool {
     $next = (new DateTimeImmutable($d))->modify('+1 day')->format('Y-m-d');
     return ($oldF['data']['availability'][$t][$prev] ?? '') === 'booked' || ($oldF['data']['availability'][$t][$next] ?? '') === 'booked';
 };
-check('...those are exactly the buffer nights: each borders a booked stay, two to a stay (ten stays: 20) — the Boathouse\'s today+9 and today+13 among them',
-    count($diff) === 20 && count(array_filter($diff, $borders)) === 20
+// 0.53.1: an eleventh stay, Flamingo (1065) from the 1st of the month after
+// next (fixture-0474.php, the buffer across a month's edge). Its two buffer
+// nights — the last day of the month before and its check-out day — count
+// where they fall inside this comparison's window (today-3 … today+60),
+// which moves with the date.
+$edgeCi = $today->modify('first day of +2 months');
+$edgeBuf = array_values(array_filter([$edgeCi->modify('-1 day')->format('Y-m-d'), $edgeCi->modify('+2 days')->format('Y-m-d')], static fn($d) => $d >= $D(-3) && $d <= $D(60)));
+$wantBuf = 20 + count($edgeBuf);
+check("...those are exactly the buffer nights: each borders a booked stay, two to a stay (ten stays: 20, + Flamingo's month-edge stay's " . count($edgeBuf) . " in the window = $wantBuf) — the Boathouse's today+9 and today+13 among them",
+    count($diff) === $wantBuf && count(array_filter($diff, $borders)) === $wantBuf
+    && array_reduce($edgeBuf, static fn($ok, $d) => $ok && in_array("1065 $d available>booked", $diff, true), true)
     && in_array('1071 ' . $D(9) . ' available>booked', $diff, true) && in_array('1071 ' . $D(13) . ' available>booked', $diff, true), $diff);
 check('...every status is still one of the three the Selector knows: available, booked, past',
     array_diff(array_unique(array_merge(...array_map('array_values', $newF['data']['availability']))), ['available', 'booked', 'past']) === []);

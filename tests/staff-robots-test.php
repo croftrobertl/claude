@@ -52,21 +52,25 @@ namespace {
     Staff::register();
     $th = $GLOBALS['t_actions']['template_redirect'] ?? [];
     $wh = $GLOBALS['t_actions']['wp_head'] ?? [];
-    check('template_redirect sends the header; wp_head prints the meta tag, first (priority 1)',
-        count($th) === 1 && count($wh) === 1 && $wh[0][1] === 1, [$th, $wh]);
+    check('template_redirect sends the header; wp_head prints the robots tag, then (0.53.1) the viewport tag, both at priority 1',
+        count($th) === 1 && count($wh) === 2 && $wh[0][1] === 1 && $wh[1][1] === 1 && $wh[0][0][1] === 'robots_meta' && $wh[1][0][1] === 'viewport_meta', [$th, $wh]);
     check('...and the five gated endpoints are still registered as before (ready since 0.48.0)',
         count(array_filter(array_keys($GLOBALS['t_actions']), static fn($k) => str_starts_with($k, 'wp_ajax_'))) === 10);
 
     echo "\n-- the staff page (18102) --\n";
     [$h, $head] = page(Staff::DEFAULT_PAGE_ID);
     check('X-Robots-Tag: noindex, nofollow', $h === ['X-Robots-Tag: noindex, nofollow'], $h);
-    check('<meta name="robots" content="noindex, nofollow"> in <head>', trim($head) === '<meta name="robots" content="noindex, nofollow">', $head);
+    check('<meta name="robots" content="noindex, nofollow"> in <head>, then (0.53.1) the viewport tag with viewport-fit=cover',
+        $head === "<meta name=\"robots\" content=\"noindex, nofollow\">\n<meta name=\"viewport\" content=\"width=device-width, user-scalable=yes, initial-scale=1.0, viewport-fit=cover\">\n", $head);
+    check('...the viewport tag keeps live theme\'s own values (width=device-width, user-scalable=yes, initial-scale=1.0) and only adds viewport-fit=cover',
+        Staff::VIEWPORT === 'width=device-width, user-scalable=yes, initial-scale=1.0' . ', viewport-fit=cover');
     [$h, $head] = page(Staff::DEFAULT_PAGE_ID, true, [], true);
     check('headers already gone (an unusual set-up): no header call, the meta tag still printed', $h === [] && str_contains($head, 'noindex'), [$h, $head]);
 
     echo "\n-- any other page holding the staff widget --\n";
     [$h, $head] = page(4242, true, ['_elementor_data' => '[{"elType":"widget","widgetType":"dccac_staff","settings":[]}]']);
     check('a page whose Elementor content holds the staff widget: header and meta tag', $h === ['X-Robots-Tag: noindex, nofollow'] && str_contains($head, 'noindex, nofollow'), [$h, $head]);
+    check('...and the viewport tag', str_contains($head, 'viewport-fit=cover'), $head);
 
     echo "\n-- and nowhere else --\n";
     [$h, $head] = page(4243, true, ['_elementor_data' => '[{"elType":"widget","widgetType":"dccac_calendar","settings":[]}]']);
@@ -75,6 +79,33 @@ namespace {
     check('an ordinary page: nothing', $h === [] && $head === '', [$h, $head]);
     [$h, $head] = page(Staff::DEFAULT_PAGE_ID, false);
     check('not a single page (an archive, the home page list): nothing', $h === [] && $head === '', [$h, $head]);
+
+    // OTHER PAGES' <head> UNCHANGED (0.53.1, the definition of done). Every
+    // page on live that holds one of this plugin's widgets, by its real
+    // Elementor widget type (live-state-0.46.6.json): the plugin adds NOTHING
+    // to any <head> but the staff page's — byte for byte what 0.53.0 added
+    // (nothing), so the theme's viewport tag is the only one there. And
+    // wp_head is hooked nowhere else in the plugin, so these two hooks are
+    // all it can print.
+    echo "\n-- every other live page's <head>: nothing added (0.53.1) --\n";
+    $live = json_decode(file_get_contents(__DIR__ . '/render/live-state-0.46.6.json'), true);
+    foreach ($live['widgets'] as $lw) {
+        [$h, $head] = page((int) $lw['post_id'], true, ['_elementor_data' => '[{"elType":"widget","widgetType":"' . $lw['widget_type'] . '","settings":[]}]']);
+        if ($lw['widget_type'] === 'dccac_staff') {
+            check($lw['post_id'] . ' ' . $lw['post_title'] . ' (staff): robots + viewport-fit=cover', str_contains($head, 'noindex') && str_contains($head, 'viewport-fit=cover'), $head);
+        } else {
+            check($lw['post_id'] . ' ' . $lw['post_title'] . ' (' . $lw['widget_type'] . '): nothing in <head>, no header', $h === [] && $head === '', [$h, $head]);
+        }
+    }
+    $hooks = [];
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($ROOT)) as $f) {
+        if (substr((string) $f, -4) === '.php' && preg_match_all("/add_action\\(\\s*'wp_head'/", file_get_contents((string) $f), $m)) {
+            $hooks[basename((string) $f)] = count($m[0]);
+        }
+    }
+    check('wp_head is hooked in class-staff.php only (the two above), nowhere else in the plugin', $hooks === ['class-staff.php' => 2], $hooks);
+    check('...and nothing buffers or rewrites the page (no ob_start on a front-end hook that could touch the theme\'s tag)',
+        !preg_match("/add_action\\(\\s*'(template_redirect|wp_head|init|wp)'[^;]*ob_start|ob_start\\(\\s*\\[/", implode('', array_map('file_get_contents', glob($ROOT . '/includes/*.php')))));
 
     echo "\n-- the widget says it too, whenever it renders --\n";
     $w = file_get_contents($ROOT . '/includes/class-staff-widget.php');

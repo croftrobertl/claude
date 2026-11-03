@@ -50,10 +50,10 @@ function ajax(body, env = {}) {
 }
 
 /** The staff page, its calendar inside a TRANSFORMED ancestor below a tall header. */
-function page(r) {
+function page(r, meta = '<meta name="viewport" content="width=device-width,initial-scale=1">') {
   const [post, wid] = r.case.split(':');
   return `<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+${meta}
 <style>body{margin:0;font-family:Raleway,Georgia,serif}${H.THEME}${S.raleway()}</style>
 <style id="elementor">${r.css}</style>
 <style id="plugin">${S.css()}</style></head>
@@ -74,7 +74,8 @@ async function open(browser, width, opts = {}) {
   p.__errors = []; p.__ready = [];
   p.on('pageerror', e => p.__errors.push(e.message));
   await p.clock.setFixedTime(new Date());
-  const html = page(r);
+  if (opts.safe) await (await ctx.newCDPSession(p)).send('Emulation.setSafeAreaInsetsOverride', { insets: opts.safe });
+  const html = opts.meta ? page(r, opts.meta) : page(r);
   await p.route(ORIGIN + '/**', async route => {
     const req = route.request();
     if (req.url().endsWith('/wp-admin/admin-ajax.php')) {
@@ -411,6 +412,37 @@ const status = p => p.evaluate(() => document.querySelector('.mphbac-staff-statu
     check(`${w}px: the two-button popup on #36 is ${w < 360 ? 'STACKED' : 'side by side'}, beside the name and not over it, its buttons on screen`,
       stacked === (w < 360) && at.beside && at.level && pp.inView, [stacked, at, pp.sizes]);
     await c6.close();
+  }
+
+  console.log('\n-- 7c. 0.53.1: the popup clear of the home bar (and the notch) --');
+  {
+    // Live's <head> on /staff/: the theme's tag, then the plugin's
+    // (Staff::VIEWPORT, read from the PHP). An iPhone 14: 390 × 844, a 47px
+    // status area and a 34px home bar. The lowest row, #36, is scrolled to
+    // the very bottom of the screen and held there.
+    const VP = /public const VIEWPORT = '([^']+)'/.exec(fs.readFileSync(S.ROOT + '/includes/class-staff.php', 'utf8'))[1];
+    const meta = '<meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0">\n<meta name="viewport" content="' + VP + '">';
+    const low = async (opts) => {
+      const { ctx: c, p: q } = await open(browser, 390, Object.assign({ height: 844, meta }, opts));
+      await q.evaluate(sel => { const l = document.querySelector(sel), r = l.getBoundingClientRect(); window.scrollBy(0, r.bottom - (innerHeight - 4)); }, label(T.b36));
+      await q.waitForTimeout(150);
+      await longPress(q, label(T.b36));
+      const pp = await popup(q), lb = await q.evaluate(sel => document.querySelector(sel).getBoundingClientRect().bottom, label(T.b36));
+      await c.close();
+      return { pp, lb };
+    };
+    const a = await low({ safe: { top: 47, bottom: 34, left: 0, right: 0 } });
+    check('#36 held 4px above the screen\'s bottom edge, a 34px home bar: the popup opens', a.pp.open && a.lb > 844 - 34, a.lb);
+    check('…and ends 8px above the home bar (' + Math.round(a.pp.rect.bottom) + ' ≤ ' + (844 - 34 - 8) + '), beside the name', a.pp.rect.bottom <= 844 - 34 - 8 + 0.5 && a.pp.rect.left >= 0, a.pp.rect);
+    const b = await low({});
+    check('control, no inset reported: the same popup sits lower — 8px above the screen\'s edge (' + Math.round(b.pp.rect.bottom) + ')', b.pp.open && Math.abs(b.pp.rect.bottom - (844 - 8)) <= 1, b.pp.rect);
+    // Sideways: 844 × 390 with the notch's 47px each side.
+    const { ctx: c7, p: q7 } = await open(browser, 844, { height: 390, meta, safe: { top: 0, bottom: 21, left: 47, right: 47 } });
+    await centre(q7, T.b36);
+    await longPress(q7, label(T.b36));
+    const ps = await popup(q7);
+    check('sideways (notch 47px each side, home bar 21px): the popup stays inside the safe area', ps.open && ps.rect.right <= 844 - 47 - 8 + 0.5 && ps.rect.left >= 47 && ps.rect.bottom <= 390 - 21 - 8 + 0.5, ps.rect);
+    await c7.close();
   }
 
   console.log('\n-- 8. the gate, and zero writes to MotoPress --');

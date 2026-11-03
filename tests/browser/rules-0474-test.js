@@ -341,6 +341,70 @@ const tipOf = (p, d) => p.evaluate(sel => {
     await ctx.close();
   }
 
+  // 0.53.1: THREE GUARDS THAT COULD NOT FAIL (the 0.53.0 mutation run).
+  // Each case below is one the earlier checks never reached; all dates are
+  // relative to today, as the rest of this suite's.
+  console.log('\n-- 7. 0.53.1: the window\'s edges, a rule-less answer mid-visit, a cached page --');
+  {
+    // (a) BUFFERS ACROSS THE WINDOW'S EDGE. The Boathouse stay is today+10 …
+    // today+13 with a 1-day buffer. A window ending today+9 does not hold the
+    // stay, but its buffer night (today+9) must still show booked — so the
+    // endpoint has to read bookings a buffer's width beyond the window.
+    const q = (from, to) => JSON.parse(site.ajax(site.HERE, `action=mphbac_query&from=${from}&to=${to}&room_type_ids[]=${BOATHOUSE}`, 'fixture')).data.availability[BOATHOUSE];
+    const before = q(site.day(2), site.day(9));
+    check('a window ENDING the night before the stay (… today+9): that night is the stay\'s buffer — booked', before[site.day(9)] === 'booked', before[site.day(9)]);
+    check('...(instrument) and the night before it (today+8) is open — the buffer is one night', before[site.day(8)] === 'available', before[site.day(8)]);
+    const after = q(site.day(13), site.day(20));
+    check('a window STARTING on the stay\'s check-out day (today+13 …): that day is its buffer — booked', after[site.day(13)] === 'booked', after[site.day(13)]);
+    // …and across a MONTH'S edge, where it counts: availability is computed
+    // a whole month at a time, so only a stay in ANOTHER month needs the
+    // buffer-wide read. Flamingo (1065) checks in on the 1st of the month
+    // after next (fixture-0474.php); its buffer night is the last day of the
+    // month before, asked for on its own.
+    const FLAMINGO = 1065;
+    const t0 = new Date(site.day(0) + 'T12:00:00');
+    const first1 = new Date(t0.getFullYear(), t0.getMonth() + 2, 1, 12);
+    const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const last = iso(new Date(first1.getTime() - 864e5)), prev = iso(new Date(first1.getTime() - 2 * 864e5)), monthStart = last.slice(0, 8) + '01';
+    const qf = JSON.parse(site.ajax(site.HERE, `action=mphbac_query&from=${monthStart}&to=${last}&room_type_ids[]=${FLAMINGO}`, 'fixture')).data.availability[FLAMINGO];
+    check(`a month asked for alone (${monthStart} … ${last}), a stay checking in the next day (${iso(first1)}): its last night is the buffer — booked`, qf[last] === 'booked', qf[last]);
+    check('...(instrument) and the night before it is open', qf[prev] === 'available', qf[prev]);
+
+    // (b) THE LEGEND ENTRY GOES WHEN THE RULES DO. Open with MotoPress's
+    // rules ("No Check-In" in the legend), then MotoPress becomes unreadable
+    // and the next answer carries no rules: the entry must go with them.
+    const { ctx, p } = await site.open(browser, { mode: 'fixture', cas: V2, width: 360 });
+    const leg = () => p.evaluate(() => [...document.querySelectorAll('.mphbac-legend-item')].filter(x => !x.hidden).map(x => x.textContent.trim()));
+    const l0 = await leg();
+    check('(instrument) with the rules: the legend has "No Check-In"', l0.includes('No Check-In'), l0);
+    p.__mode = 'throw';
+    const n0 = p.__ajax.length;
+    await p.click('.mphbac-nav-next');
+    await p.waitForTimeout(900);
+    const l1 = await leg(), striped = await p.evaluate(() => document.querySelectorAll('.is-no-checkin').length);
+    check('MotoPress unreadable on the next answer (no rules): no day striped, and the legend is the old three again',
+      p.__ajax.length > n0 && striped === 0 && JSON.stringify(l1) === '["Available","Booked","Past"]', [p.__ajax.length - n0, striped, l1]);
+    await ctx.close();
+
+    // (c) A PAGE SERVED FROM CACHE, TWO DAYS AFTER IT WAS BUILT. The
+    // homepage strip opens on the visitor's today (render day + 2), inside
+    // the embed, so the first paint is the embed's — every answer held back
+    // to see it alone. The embed's rules start on ITS first day, not the
+    // window's: read from the window's, each rule lands two days late (a
+    // Tuesday's "no check-in" on the Thursday).
+    const { ctx: c2, p: p2 } = await site.open(browser, { mode: 'fixture', cas: V1, width: 360, clockDays: 2, hold: true });
+    const first = await p2.evaluate(() => ({
+      days: [...new Set([...document.querySelectorAll('.mphbac-cell-status[data-date]')].map(c => c.dataset.date))].sort(),
+      striped: [...new Set([...document.querySelectorAll('.mphbac-cell-status.is-no-checkin')].map(c => c.dataset.date))].sort() }));
+    const tues = first.days.filter(d => dow(d) === 2);
+    check('(instrument) the first paint is the embed\'s alone (no answer yet), its window starting two days in (' + first.days[0] + ' = today+2)',
+      p2.__ajax.length === 0 && first.days[0] === site.day(2) && tues.length >= 1, [p2.__ajax.length, first.days[0], site.day(2)]);
+    check('the cached page\'s first paint stripes the Tuesday(s) in view (' + tues.join(', ') + '), and nothing else — its rules read from the embed\'s first day',
+      first.striped.length > 0 && first.striped.every(d => dow(d) === 2), first.striped.map(d => d + ' (' + dow(d) + ')'));
+    p2.__release();
+    await c2.close();
+  }
+
   await browser.close();
   done();
 })().catch(e => { console.error(e); process.exit(2); });

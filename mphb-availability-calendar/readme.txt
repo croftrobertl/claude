@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.0
+Stable tag: 0.53.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.53.1 =
+* **/staff/ keeps clear of the iPhone's home bar (Rob's pick).** On the staff page only, the plugin now adds a viewport tag with the theme's own values plus viewport-fit=cover, so iOS reports the home bar's safe area. The bottom of the page, and the Ready / Not Ready popup, keep clear of it (and of the notch when the phone is turned sideways). Every other page's <head> is unchanged.
+* **The Booked tile's ⓘ** now says its ▲▼ are occupancy percentage points vs the same dates last year, as Nights by Cottage's does.
+* Tests only: three public-calendar checks that could no longer fail now can (a buffer night across a month's edge, the "No Check-In" legend entry when the rules go, a page served from cache days after it was built). No change to the public calendar.
+* Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.53.0 =
 * **Stats on /staff/: a headline and a pace line (Rob's picks).** Above the six tiles: "November Is 28% Booked" (the Booked tile's figure), with a pill such as "▲6 vs Nov 2025" where a comparison is allowed. Under it, a line of the cottage-nights on the books for the chosen period, day by day from 90 days before it starts: this year in blue, the same dates last year dashed gray, "Today" marked with its value. Tap or drag along it, or use the arrow keys, to read any day for both years.

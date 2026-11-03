@@ -106,6 +106,8 @@ const pct = (v, of) => Math.round(100 * v / of);
     check('…read as a sentence', top.pillSaid === (d > 0 ? 'up ' : 'down ') + Math.abs(d) + (Math.abs(d) === 1 ? ' point' : ' points') + ' vs Nov 2025', top.pillSaid);
     check('…in the ▲ colours (is-up / is-down)', /is-(up|down|same)/.test(top.pillCls), top.pillCls);
     check('the six tiles come straight after it', /mphbac-staff-stats-kpis/.test(top.before), top.before);
+    const bt = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').textContent);
+    check('0.53.1: the Booked tile\'s ⓘ says its ▲▼ are occupancy percentage points vs the same dates last year', /▲▼ are occupancy percentage points vs the same dates last year \(Nov\s1\s–\s30, 2025\)\./.test(bt) && !/% booked\./.test(bt), bt);
     // October 2025 cannot be compared (records complete from Oct 1, 2025, and
     // its year-earlier dates are before it): the tile shows "—", no pill.
     await p.selectOption('.mphbac-staff-stats-month', '2025-10');
@@ -318,21 +320,30 @@ const pct = (v, of) => Math.round(100 * v / of);
     await ctx.close();
   }
 
-  console.log('\n-- 6: the foot of the page and the home bar --');
+  console.log('\n-- 6: the foot of the page and the home bar (0.53.1: /staff/\'s own viewport tag) --');
   {
-    // An iPhone 14 viewport (390 × 844, home indicator 34px), the page's
-    // viewport meta given viewport-fit=cover — what env() needs.
-    const cover = shell().replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">');
-    const { ctx, p } = await open({ w: 390, h: 844, html: cover, safe: { top: 47, bottom: 34, left: 0, right: 0 } });
+    // LIVE'S <head> ORDER: the theme's viewport tag first (live's, read
+    // 2026-11-03), then — on the staff page only — the plugin's, exactly as
+    // Staff::viewport_meta() prints it (the constant read from the PHP).
+    const THEME = '<meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0">';
+    const VP = /public const VIEWPORT = '([^']+)'/.exec(require('fs').readFileSync(S.ROOT + '/includes/class-staff.php', 'utf8'))[1];
+    const PLUGIN = '<meta name="viewport" content="' + VP + '">';
+    const live = (withPlugin) => shell().replace('<meta name="viewport" content="width=device-width,initial-scale=1">', THEME + (withPlugin ? '\n' + PLUGIN : ''));
+    check('the plugin\'s tag is the theme\'s values plus viewport-fit=cover', VP === 'width=device-width, user-scalable=yes, initial-scale=1.0, viewport-fit=cover', VP);
+    // An iPhone 14 viewport (390 × 844, home indicator 34px).
+    const SAFE = { top: 47, bottom: 34, left: 0, right: 0 };
+    const { ctx, p } = await open({ w: 390, h: 844, html: live(true), safe: SAFE });
     const r = await p.evaluate(() => {
       window.scrollTo(0, document.documentElement.scrollHeight);
       const root = document.querySelector('.mphbac-staff');
       const items = [...root.querySelectorAll('.mphbac-staff-heat-key, .mphbac-staff-heat')];
       const last = items[items.length - 1].getBoundingClientRect();
-      return { pad: getComputedStyle(root).paddingBottom, lastBottom: last.bottom, vh: innerHeight };
+      return { pad: getComputedStyle(root).paddingBottom, side: getComputedStyle(root).paddingLeft + ' ' + getComputedStyle(root).paddingRight, lastBottom: last.bottom, vh: innerHeight,
+        metas: document.querySelectorAll('meta[name="viewport"]').length };
     });
-    check('with a 34px home bar: the shell\'s foot padded 34px', r.pad === '34px', r.pad);
+    check('theme tag, then the plugin\'s (two tags, the last one used): the shell\'s foot padded 34px', r.pad === '34px' && r.metas === 2, r.pad + ' / ' + r.metas + ' tags');
     check('…the last line ends above the home bar (' + Math.round(r.lastBottom) + ' ≤ ' + (r.vh - 34) + ')', r.lastBottom <= r.vh - 34 + 0.5, JSON.stringify(r));
+    check('…portrait: no side insets, so no side padding', r.side === '0px 0px', r.side);
     // For the still only: the home indicator drawn where iOS draws it, in
     // the 34px the inset reserves.
     await p.evaluate(() => {
@@ -342,10 +353,34 @@ const pct = (v, of) => Math.round(100 * v / of);
       document.body.appendChild(bar);
     });
     await still(p, 'page bottom iPhone safe area 390px');
+    if (OUT) {
+      const fs = require('fs');
+      const from = path.join(OUT, 'Availability Calendar - 0.53.0 page bottom iPhone safe area 390px.png');
+      fs.renameSync(from, path.join(OUT, 'Availability Calendar - 0.53.1 page bottom iPhone safe area 390px.png'));
+    }
     await ctx.close();
-    const { ctx: c2, p: p2 } = await open({ w: 390, h: 844 });
-    check('without the inset (no viewport-fit=cover, as live today): no padding, nothing moves', await p2.evaluate(() => getComputedStyle(document.querySelector('.mphbac-staff')).paddingBottom) === '0px');
+    // Sideways (844 × 390): the notch's 47px on the left is the page's now.
+    const { ctx: c3, p: p3 } = await open({ w: 844, h: 390, mobile: true, html: live(true), safe: { top: 0, bottom: 21, left: 47, right: 47 } });
+    const side = await p3.evaluate(() => { const root = document.querySelector('.mphbac-staff'); return { pad: getComputedStyle(root).paddingLeft + ' ' + getComputedStyle(root).paddingRight, left: document.querySelector('.mphbac-staff-chart, .mphbac-staff-grid').getBoundingClientRect().left }; });
+    check('sideways: the shell keeps clear of the notch (47px each side)', side.pad === '47px 47px' && side.left >= 47, JSON.stringify(side));
+    await c3.close();
+    // THE LAST TAG IS THE ONE USED. Chromium reports an emulated inset
+    // whatever viewport-fit says (iOS applies it only with cover), so it
+    // cannot show the theme's tag alone ignoring it — that is proved where
+    // it happens, in staff-robots-test.php: no other page gets a second
+    // tag. What a browser CAN show is the mechanism the fix rests on: of two
+    // viewport tags, the later governs. A first tag of width=980 followed by
+    // the plugin's: the page is laid out at the device's 390, not 980.
+    const two = shell().replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=980">\n' + PLUGIN);
+    const { ctx: c2, p: p2 } = await open({ w: 390, h: 844, html: two });
+    const iw = await p2.evaluate(() => innerWidth);
+    check('of two viewport tags the later one is used (width=980 then the plugin\'s → laid out at ' + iw + 'px)', iw === 390, iw);
     await c2.close();
+    const one = shell().replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=980">');
+    const { ctx: c4, p: p4 } = await open({ w: 390, h: 844, html: one });
+    const iw1 = await p4.evaluate(() => innerWidth);
+    check('…control: the width=980 tag alone does govern (laid out at ' + iw1 + 'px)', iw1 === 980, iw1);
+    await c4.close();
   }
 
   await browser.close();

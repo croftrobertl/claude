@@ -105,6 +105,16 @@ if (in_array($f_mode, ['fixture', 'checkout', 'throw'], true)) {
     $GLOBALS['t_options']['mphb_buffer_days'] = [['season_ids' => [0], 'room_type_ids' => [0], 'buffer_days' => 1]];
     $GLOBALS['t_options']['mphb_min_advance_reservation'] = [['season_ids' => [0], 'room_type_ids' => [0], 'min_advance_reservation' => 1]];
 }
+// THE BUFFER ACROSS A MONTH'S EDGE (0.53.1). Availability is computed a
+// whole month at a time, so a stay inside the window's own month never
+// needs the buffer-wide read. This one does: Flamingo (1065) checks in on
+// the 1st of the month after next — relative to today — so its buffer night
+// is the LAST day of the month before, computed on its own.
+if (in_array($f_mode, ['fixture', 'checkout', 'throw'], true)) {
+    $f_first = $f_today->modify('first day of +2 months');
+    $f_n_first = (int) $f_today->diff($f_first)->format('%a');
+    $f_book(1065, $f_n_first, $f_n_first + 2);
+}
 if ($f_mode === 'checkout') {
     $GLOBALS['t_options']['mphb_check_out_days'] = [['season_ids' => [0], 'room_type_ids' => [0], 'check_out_days' => [0, 1, 2, 4, 5, 6]]];
     $GLOBALS['t_options']['mphb_max_advance_reservation'] = [['season_ids' => [0], 'room_type_ids' => [0], 'max_advance_reservation' => 60]];

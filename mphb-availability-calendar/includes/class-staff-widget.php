@@ -277,7 +277,8 @@ final class Staff_Widget
                 // 0.47.0 (Rob): only lines that say what a figure means or what
                 // it is compared with — the eight counting-rule lines are gone.
                 'stTipVs'      => __('▲▼ compare with the same dates last year ({range}).', 'mphb-availability-calendar'),
-                'stTipVsPct'   => __('▲▼ compare with the same dates last year ({range}), in % booked.', 'mphb-availability-calendar'),
+                // 0.53.1 (Rob): as Nights by Cottage's — the ▲▼ are percentage points.
+                'stTipVsPct'   => __('▲▼ are occupancy percentage points vs the same dates last year ({range}).', 'mphb-availability-calendar'),
                 'stTipVsNights' => __('▲▼ compare with the same dates last year ({range}), in nights.', 'mphb-availability-calendar'),
                 'stTipVsOcc'   => __('▲▼ are occupancy percentage points vs the same dates last year ({range}).', 'mphb-availability-calendar'),
                 'stLengthWhole' => __('The whole stay counts, even nights outside this period.', 'mphb-availability-calendar'),

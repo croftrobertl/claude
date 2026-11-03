@@ -156,6 +156,25 @@ final class Staff
         // either of which a setting can switch off.
         add_action('template_redirect', ['\\MPHBAC\\Staff', 'robots_header']);
         add_action('wp_head', ['\\MPHBAC\\Staff', 'robots_meta'], 1);
+        // THE HOME BAR (0.53.1, Rob's pick: this plugin, /staff/ only). The
+        // theme prints its viewport tag before wp_head; this one follows it,
+        // and the last viewport tag is the one a browser uses.
+        add_action('wp_head', ['\\MPHBAC\\Staff', 'viewport_meta'], 1);
+    }
+
+    /**
+     * The theme's own viewport values (live's tag, read 2026-11-03), plus
+     * viewport-fit=cover, so iOS reports the home bar's safe area and the
+     * board can keep clear of it. Printed on the board's pages only; every
+     * other page keeps the theme's tag alone.
+     */
+    public const VIEWPORT = 'width=device-width, user-scalable=yes, initial-scale=1.0, viewport-fit=cover';
+
+    public static function viewport_meta(): void
+    {
+        if (self::is_board_page()) {
+            echo '<meta name="viewport" content="' . esc_attr(self::VIEWPORT) . "\">\n";
+        }
     }
 
     /**
