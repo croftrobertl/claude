@@ -140,10 +140,13 @@ check('their types and order',
     ['name', 'email', 'tel', 'textarea']);
 
 section('PICK 3. the message label');
-check('the message label is "Enter your message below"',
-    $by_type['textarea']['field_label'] ?? null, 'Enter your message below');
-check('it is NOT the live wording "Your Message"',
-    ($by_type['textarea']['field_label'] ?? '') === 'Your Message', false);
+check('the message label is "Your Message"',
+    $by_type['textarea']['field_label'] ?? null, 'Your Message');
+/* The wording this was briefly set to. Pinned so the default cannot drift back
+   to it: it is what a NEW form would show, and it would no longer match the
+   live one. */
+check('it is NOT "Enter your message below"',
+    ($by_type['textarea']['field_label'] ?? '') === 'Enter your message below', false);
 check('the message field is still required, so the asterisk stays',
     $by_type['textarea']['field_required'] ?? null, 'yes');
 

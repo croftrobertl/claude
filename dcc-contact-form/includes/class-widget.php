@@ -313,7 +313,7 @@ final class Widget extends Widget_Base
                     'field_placeholder' => '(352) 555-0123',
                 ],
                 [
-                    'field_label'    => __('Enter your message below', 'dcc-contact-form'),
+                    'field_label'    => __('Your Message', 'dcc-contact-form'),
                     'field_type'     => 'textarea',
                     'field_required' => 'yes',
                     'field_width'    => '100',

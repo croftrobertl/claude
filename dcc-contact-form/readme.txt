@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.7.2
+Stable tag: 1.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -154,6 +154,17 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.7.3 =
+**One default corrected. Nothing else changes.**
+
+* The message field's default label is "Your Message", matching what the live
+  form shows. 1.7.2 shipped "Enter your message below" as the default, which
+  was the wrong one of the two wordings under consideration — a newly placed
+  form would not have matched the live one.
+
+Existing forms are unaffected: a widget already on a page carries its own
+stored label and never reads this default.
 
 = 1.7.2 =
 **Appearance only. Nothing about submission, email or entries changes.**

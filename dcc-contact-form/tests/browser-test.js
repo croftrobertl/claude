@@ -558,9 +558,9 @@ function serve() {
     await fresh.close();
 
     section("PICK 3. the message label wording");
-    check('the message label reads "Enter your message below"',
+    check('the message label reads "Your Message"',
         (await page.locator('.dcc-field--textarea .dcc-label').textContent()).trim().replace(/\s*\*$/, ''),
-        'Enter your message below');
+        'Your Message');
     check('…and keeps its required asterisk',
         await page.locator('.dcc-field--textarea .dcc-label .dcc-req').textContent(), '*');
 

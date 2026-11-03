@@ -275,10 +275,10 @@ MUTATIONS = [
         "js",
     ),
     (
-        "D1  pick 3: the message label reverts to the live wording",
+        "D1  pick 3: the message label drifts away from the live wording",
         "includes/class-widget.php",
-        "'field_label'    => __('Enter your message below', 'dcc-contact-form'),",
         "'field_label'    => __('Your Message', 'dcc-contact-form'),",
+        "'field_label'    => __('Enter your message below', 'dcc-contact-form'),",
         "php",
     ),
     (
