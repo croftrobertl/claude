@@ -391,6 +391,180 @@ function serve() {
     console.log(`       (neighbour above the hit area: ${geom.aboveHit}; below: ${geom.belowHit})`);
 
     await ctx9.close();
+
+    /* ============================================================== */
+    section("PICK 1. typed text is centered in EVERY field");
+
+    const ctxA = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    page = await ctxA.newPage();
+    await page.goto(url);
+
+    /* Type into every field, including a three-line message. */
+    await page.fill('#dcc-fixture-f1-first', 'Jane');
+    await page.fill('#dcc-fixture-f1-last', 'Guest');
+    await page.fill('#dcc-fixture-f2', 'jane.guest@example.com');
+    await page.fill('#dcc-fixture-f3', '(352) 555-0199');
+    await page.fill('#dcc-fixture-f4',
+        'We are hoping to book a cottage for three nights in June.\n' +
+        'Two adults, no pets, arriving on the Friday afternoon.\n' +
+        'Could you let us know what is available? Thank you.');
+
+    const align = (sel) => page.locator(sel).evaluate((el) => getComputedStyle(el).textAlign);
+
+    check('first name is centered',    await align('#dcc-fixture-f1-first'), 'center');
+    check('last name is centered',     await align('#dcc-fixture-f1-last'), 'center');
+    check('email is centered',         await align('#dcc-fixture-f2'), 'center');
+    check('phone is centered',         await align('#dcc-fixture-f3'), 'center');
+    check('the message box is centered (Rob\'s explicit pick)',
+        await align('#dcc-fixture-f4'), 'center');
+
+    /* The typed value must really be centered, not merely declared so: measure
+       where the glyphs actually sit by rendering the same text in a span. */
+    const centred = await page.evaluate(() => {
+        const input = document.querySelector('#dcc-fixture-f2');
+        const box = input.getBoundingClientRect();
+        const cs = getComputedStyle(input);
+
+        /* Measure the text's natural width in the input's own font. */
+        const probe = document.createElement('span');
+        probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;
+            font:${cs.font};letter-spacing:${cs.letterSpacing};`;
+        probe.textContent = input.value;
+        document.body.appendChild(probe);
+        const textWidth = probe.getBoundingClientRect().width;
+        probe.remove();
+
+        const padL = parseFloat(cs.paddingLeft);
+        const padR = parseFloat(cs.paddingRight);
+        const inner = box.width - padL - padR;
+        /* Gap on the left of the text if centered vs if left-aligned. */
+        return {
+            slack: Math.round(inner - textWidth),
+            /* Where the text starts, relative to the content box. */
+            expectedCentredOffset: Math.round((inner - textWidth) / 2)
+        };
+    });
+    check('there is real slack to center within (the test would be vacuous otherwise)',
+        centred.slack > 20, true);
+    check('…so a centered value sits well clear of the left padding',
+        centred.expectedCentredOffset > 10, true);
+
+    /* A select's chosen value. The live form has none, so one is injected to
+       cover the widget's select field type. */
+    const selectAlign = await page.evaluate(() => {
+        const field = document.createElement('div');
+        field.className = 'dcc-field dcc-field--select dcc-w-100';
+        field.innerHTML = `<select class="dcc-input dcc-select" id="probe-select">
+            <option value="">— Select —</option>
+            <option value="Cottage" selected>Cottage</option></select>`;
+        document.querySelector('.dcc-fields').appendChild(field);
+        const s = getComputedStyle(document.querySelector('#probe-select'));
+        return { align: s.textAlign, last: s.textAlignLast, padL: s.paddingLeft, padR: s.paddingRight };
+    });
+    check('the select value is centered',            selectAlign.align, 'center');
+    check('…and text-align-last is set for WebKit',  selectAlign.last, 'center');
+    check('…with padding matched so it is optically centered',
+        selectAlign.padL, selectAlign.padR);
+
+    section("PICK 2. labels are plain bold with no underline");
+
+    const labelStyle = async (sel) => page.locator(sel).evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { decoration: s.textDecorationLine, weight: s.fontWeight };
+    });
+
+    for (const [name, sel] of [
+        ['Name', '.dcc-field--name .dcc-label'],
+        ['Email Address', '.dcc-field--email .dcc-label'],
+        ['Phone', '.dcc-field--tel .dcc-label'],
+        ['the message', '.dcc-field--textarea .dcc-label']
+    ]) {
+        const st = await labelStyle(sel);
+        check(`${name} label has NO underline`, st.decoration, 'none');
+        check(`${name} label is bold`, st.weight, '700');
+    }
+
+    /* Every OTHER label the widget renders is covered too. The theme rule is on
+       `label`, so it reaches the copy row and any checkbox label just as surely
+       as the four field labels. */
+    check('the "send me a copy" label has NO underline',
+        (await labelStyle('.dcc-copy-label')).decoration, 'none');
+    check('…and is NOT forced bold (it is not a field label)',
+        (await labelStyle('.dcc-copy-label')).weight !== '700', true);
+
+    /* The fixture carries the theme's `.elementor-kit-331 label {underline}`,
+       so these assertions are beating a real competing rule. Prove it is
+       actually there, or the four above prove nothing. */
+    check('the theme underline rule IS present in the fixture',
+        await page.evaluate(() => {
+            for (const sheet of document.styleSheets) {
+                let rules;
+                try { rules = sheet.cssRules; } catch (e) { continue; }
+                for (const r of rules) {
+                    if (r.selectorText === '.elementor-kit-331 label'
+                        && r.style.textDecoration.includes('underline')) { return true; }
+                }
+            }
+            return false;
+        }), true);
+
+    /* …and it still underlines a label OUTSIDE the form, confirming the rule
+       applies and that only our own labels are exempted. */
+    check('a label outside the form is still underlined by the theme',
+        await page.evaluate(() => {
+            const l = document.createElement('label');
+            l.textContent = 'outside';
+            document.body.appendChild(l);
+            const d = getComputedStyle(l).textDecorationLine;
+            l.remove();
+            return d;
+        }), 'underline');
+
+    /* The deliberate specificity choice: an Elementor Label Typography
+       decoration, which generates `.elementor-element-<id> .dcc-label` at the
+       same (0,2,0) and loads later, must STILL win — the panel is not dead. */
+    await page.evaluate(() => {
+        document.querySelector('.dcc-contact-wrap').classList.add('elementor-element-abc123');
+        const st = document.createElement('style');
+        st.textContent = '.elementor-element-abc123 .dcc-label { text-decoration: underline; }';
+        document.head.appendChild(st);
+    });
+    check('an explicit Elementor panel decoration still applies',
+        (await labelStyle('.dcc-field--email .dcc-label')).decoration, 'underline');
+
+    section("PICK 4. the hints, in the same grey as the Name hints");
+
+    const phColor = (sel) => page.locator(sel).evaluate(
+        (el) => getComputedStyle(el, '::placeholder').color);
+
+    const nameGrey = await phColor('#dcc-fixture-f1-first');
+    check('the Name hint grey is the expected value', nameGrey, 'rgba(0, 0, 0, 0.5)');
+    check('the Email hint is the SAME grey',  await phColor('#dcc-fixture-f2'), nameGrey);
+    check('the Phone hint is the SAME grey',  await phColor('#dcc-fixture-f3'), nameGrey);
+
+    check('the Email hint text is the worked example',
+        await page.locator('#dcc-fixture-f2').getAttribute('placeholder'), 'name@example.com');
+    check('the Phone hint text is the worked example',
+        await page.locator('#dcc-fixture-f3').getAttribute('placeholder'), '(352) 555-0123');
+
+    /* A hint is not a value: the fields must submit empty if nobody types. */
+    const fresh = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const freshPage = await fresh.newPage();
+    await freshPage.goto(url);
+    check('the Email field starts EMPTY (the hint is not a value)',
+        await freshPage.locator('#dcc-fixture-f2').inputValue(), '');
+    check('the Phone field starts EMPTY',
+        await freshPage.locator('#dcc-fixture-f3').inputValue(), '');
+    await fresh.close();
+
+    section("PICK 3. the message label wording");
+    check('the message label reads "Enter your message below"',
+        (await page.locator('.dcc-field--textarea .dcc-label').textContent()).trim().replace(/\s*\*$/, ''),
+        'Enter your message below');
+    check('…and keeps its required asterisk',
+        await page.locator('.dcc-field--textarea .dcc-label .dcc-req').textContent(), '*');
+
+    await ctxA.close();
     await browser.close();
     server.close();
 

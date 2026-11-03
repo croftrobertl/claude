@@ -22,6 +22,9 @@
   .elementor-kit-331 button { text-transform: uppercase; }
   .elementor-kit-331 button:hover,
   .elementor-kit-331 button:focus { background-color: #F08080; }
+  /* The underline reported on live (2026-11-03). Reproduced here at (0,1,1) so
+     the fix is tested against the thing it has to beat, not against nothing. */
+  .elementor-kit-331 label { text-decoration: underline; }
 </style>
 
 <link rel="stylesheet" href="/assets/css/widget.css">
@@ -70,7 +73,7 @@
       <div class="dcc-field dcc-field--email dcc-w-50" data-field="f2">
         <label class="dcc-label" for="dcc-fixture-f2">Email Address <span class="dcc-req" aria-hidden="true">*</span></label>
         <input type="email" class="dcc-input" id="dcc-fixture-f2" name="dcc_field[f2]"
-               autocomplete="email" maxlength="200" placeholder="Email Address"
+               autocomplete="email" maxlength="200" placeholder="name@example.com"
                aria-required="true" aria-describedby="dcc-fixture-err-f2">
         <span class="dcc-error" id="dcc-fixture-err-f2"></span>
       </div>
@@ -78,13 +81,13 @@
       <div class="dcc-field dcc-field--tel dcc-w-50" data-field="f3">
         <label class="dcc-label" for="dcc-fixture-f3">Phone</label>
         <input type="tel" class="dcc-input" id="dcc-fixture-f3" name="dcc_field[f3]"
-               autocomplete="tel" inputmode="tel" maxlength="200" placeholder="Phone"
+               autocomplete="tel" inputmode="tel" maxlength="200" placeholder="(352) 555-0123"
                aria-describedby="dcc-fixture-err-f3">
         <span class="dcc-error" id="dcc-fixture-err-f3"></span>
       </div>
 
       <div class="dcc-field dcc-field--textarea dcc-w-100" data-field="f4">
-        <label class="dcc-label" for="dcc-fixture-f4">Message <span class="dcc-req" aria-hidden="true">*</span></label>
+        <label class="dcc-label" for="dcc-fixture-f4">Enter your message below <span class="dcc-req" aria-hidden="true">*</span></label>
         <textarea class="dcc-textarea" id="dcc-fixture-f4" name="dcc_field[f4]" rows="5"
                   placeholder="Message" maxlength="5000"
                   aria-required="true" aria-describedby="dcc-fixture-err-f4"></textarea>

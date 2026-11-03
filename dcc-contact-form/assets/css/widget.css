@@ -65,6 +65,33 @@
     line-height: 1.3;
     text-transform: none;
 }
+
+/* Labels are never underlined, so they cannot be mistaken for links. This
+   plugin never set a decoration — the underline seen on live comes from
+   outside it, and it is cancelled HERE rather than left to whatever stylesheet
+   happens to load last.
+
+   The selector covers EVERY label the widget renders, not just the four field
+   labels: a theme rule reading `label { text-decoration: underline }` hits the
+   "send me a copy" row and any checkbox field's label too, and fixing only the
+   four named ones would have left the same bug one row further down.
+
+   The specificity is chosen, not incidental. (0,2,0) beats a theme rule on the
+   element (`label`, or `.something label`, at most (0,1,1)) and so removes a
+   theme underline outright. It deliberately does NOT out-specify Elementor's
+   own generated `.elementor-element-<id> .dcc-label`, which is also (0,2,0)
+   and loads later: if the owner sets a decoration in the widget's Label
+   Typography control on purpose, that choice still wins. A theme accident is
+   overridden; a deliberate panel setting is not.
+
+   text-decoration cannot be cancelled by a descendant, so this has to sit on
+   the label itself — which is also where any theme rule would be. */
+.dcc-contact-form .dcc-label,
+.dcc-contact-form .dcc-sublabel,
+.dcc-contact-form .dcc-copy-label,
+.dcc-contact-form .dcc-checkbox-label {
+    text-decoration: none;
+}
 .dcc-req {
     color: #c62828;
 }
@@ -114,6 +141,35 @@
     resize: vertical;
 }
 
+/* ---- Typed text is centered, in every field ----
+
+   The placeholder already centered; the VALUE did not, so a field changed
+   alignment the moment anyone typed into it. These rules center the typed text
+   too, in the one-line inputs, the select's chosen value and the message box
+   alike. (Centering a multi-line message is a deliberate choice of Rob's, made
+   knowing it reads less easily than ragged-right.)
+
+   (0,2,0) again, to clear a theme rule such as `.entry-content input`; no
+   Elementor typography control governs text-align, so nothing in the panel is
+   being masked here. */
+.dcc-contact-form .dcc-input,
+.dcc-contact-form .dcc-textarea {
+    text-align: center;
+}
+
+/* A select needs both: text-align centers the options list in some engines,
+   text-align-last the collapsed value in others (WebKit historically honoured
+   only the latter). */
+.dcc-contact-form .dcc-select {
+    text-align: center;
+    text-align-last: center;
+    /* Matching the 34px the arrow reserves on the right, so "centered" is
+       centered in the CONTROL and not in a box shifted left by it. */
+    padding-left: 34px;
+}
+
+/* Placeholder colour. The alignment here is now inherited from the rules above
+   and is kept only so a placeholder still centers if those are ever narrowed. */
 .dcc-input::placeholder,
 .dcc-textarea::placeholder {
     color: rgba(0, 0, 0, 0.5);

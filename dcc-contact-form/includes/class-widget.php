@@ -293,16 +293,24 @@ final class Widget extends Widget_Base
                     'field_width'    => '100',
                 ],
                 [
-                    'field_label'    => __('Email Address', 'dcc-contact-form'),
-                    'field_type'     => 'email',
-                    'field_required' => 'yes',
-                    'field_width'    => '50',
+                    'field_label'       => __('Email Address', 'dcc-contact-form'),
+                    'field_type'        => 'email',
+                    'field_required'    => 'yes',
+                    'field_width'       => '50',
+                    // A worked example, not an instruction: it shows the shape
+                    // without adding a line of prose to read. Rendered in the
+                    // same grey as the Name field's First/Last hints, which it
+                    // inherits from .dcc-input::placeholder.
+                    'field_placeholder' => 'name@example.com',
                 ],
                 [
-                    'field_label'    => __('Phone Number', 'dcc-contact-form'),
-                    'field_type'     => 'tel',
-                    'field_required' => 'yes',
-                    'field_width'    => '50',
+                    'field_label'       => __('Phone Number', 'dcc-contact-form'),
+                    'field_type'        => 'tel',
+                    'field_required'    => 'yes',
+                    'field_width'       => '50',
+                    // A hint only. The typed value is deliberately NOT
+                    // reformatted as it is entered.
+                    'field_placeholder' => '(352) 555-0123',
                 ],
                 [
                     'field_label'    => __('Enter your message below', 'dcc-contact-form'),

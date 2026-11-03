@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.7.1
+Stable tag: 1.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -154,6 +154,28 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.7.2 =
+**Appearance only. Nothing about submission, email or entries changes.**
+
+* Typed text is centered in every field, matching the placeholders: the
+  one-line inputs, a select's chosen value, and the message box. Previously
+  only the placeholder centered, so a field changed alignment as soon as anyone
+  typed into it.
+* Labels are plain bold and never underlined. The plugin never set a
+  decoration; the underline came from outside it and is now cancelled on the
+  label at a specificity that clears a theme rule while still letting an
+  explicit Label Typography setting in the widget panel win.
+* The message field's default label is "Enter your message below" (unchanged in
+  this release — it was already the default) and keeps its required asterisk.
+* Default hints for two fields: Email shows "name@example.com", Phone shows
+  "(352) 555-0123", in the same grey as the Name field's First/Last hints. They
+  are hints, not values: the fields still start empty. A typed phone number is
+  deliberately NOT reformatted as it is entered.
+
+Defaults apply to a NEWLY placed widget. A widget already on a page keeps its
+own stored copy of these values in that page's Elementor data, which overrides
+the defaults; see the release notes for the keys to clear.
 
 = 1.7.1 =
 **Lead capture and hardening, from the 2026-10-17 audit.**
