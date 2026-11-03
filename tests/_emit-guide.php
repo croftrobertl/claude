@@ -100,9 +100,16 @@ function dccgg_all_on(): array {
         // property's — the same divergence as the Font Awesome width in the
         // kit block. The real guarantee is measured against the real pages by
         // tools/title-overlap.js instead.
+        // v0.27.5: these two carry an ITEM EMOJI, which nothing in this
+        // fixture did before — the only emoji in it was the emergency
+        // section's. Every item in Rob's content has one, and pick A is
+        // entirely about where it sits, so without one here all three of
+        // its mutants survived with nothing to measure.
         ['_id' => 'c1', 'item_section' => 'checkout', 'item_title' => 'Strip the beds',
+         'item_emoji' => '🛏',
          'item_content' => '<p>Leave them in the hamper.</p>', 'item_checkable' => 'yes'],
         ['_id' => 'c2', 'item_section' => 'checkout', 'item_title' => 'Lock the door',
+         'item_emoji' => '🔑',
          'item_content' => '<p>Twice.</p>', 'item_checkable' => 'yes'],
         // v0.27.0: a paragraph of MORE THAN ONE SENTENCE. Without one in the
         // fixture, "a multi-sentence paragraph still reads left" passed

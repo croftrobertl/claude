@@ -270,9 +270,6 @@ MUTANTS = [
      "        grid-template-areas:"),
     ("pick A's emoji stays in the row instead of going above it", CSS,
      "    .dccgg-item-title-lead.dccgg-item-title-lead { display: contents; }", ""),
-    ("pick A's left reserve goes, so the title drifts again under 390", CSS,
-     "        content: \"\"; grid-area: lead; min-width: 44px; height: 0;",
-     "        content: \"\"; grid-area: lead; min-width: 0; height: 0;"),
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]
@@ -301,6 +298,19 @@ EQUIVALENT = [
      "rather than the floor."),
 ]
 UNREACHABLE = [
+    ("pick A's 44px left reserve",
+     "the reserve is a FLOOR, and in this harness nothing ever reaches it. "
+     "Measured at 320 with the reserve and without it, the title row's three "
+     "tracks are 72px / 90px / 98px either way: the harness tail carries two "
+     "buttons and runs to 98px, the lead track takes 72px from the fr "
+     "distribution, and a 44px minimum is simply never the binding "
+     "constraint. The property's tail is one 32px button and its lead one "
+     "24px checkbox, which is where 44px decides the layout. KILLED AGAINST "
+     "THE LIVE PAGES, demonstrated not asserted: with the reserve at 0, "
+     "tools/title-overlap.js reports 'Activities / Games' 22px off centre at "
+     "320 on both /guest/ and /test/ — the exact defect pick A exists to "
+     "remove — and 0px with it. An assertion in this suite could only have "
+     "passed either way, which is what it did."),
     ('the four mutants on the symmetric side reserve',
      "removing the reserve outright, reserving on the lead only, dropping it "
      "to a single class so min-width: 0 beats it, and pinning it at its "

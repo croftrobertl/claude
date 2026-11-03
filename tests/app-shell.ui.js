@@ -727,6 +727,53 @@ const check = (name, cond, detail) => {
         await shut(v);
     }
 
+    {
+        // v0.27.5: PICK A ITSELF. Everything else at 320 asks whether
+        // anything overlaps or splits, and the answer is no either way —
+        // which is how all three pick A mutants survived their first run.
+        // What is asserted here is that the layout EXISTS below 390 and
+        // does NOT exist at 390.
+        for (const width of [320, 390]) {
+            const v = await open({ width, height: 1000 });
+            await v.page.click('.dccgg-tile[data-key="checkout"]');
+            await v.page.waitForTimeout(700);
+            const rows = await v.page.$$eval(
+                '.dccgg-detail[data-key="checkout"] .dccgg-item-title', (els) => els.map((row) => {
+                    const t = row.querySelector('.dccgg-item-title-text');
+                    const emoji = row.querySelector('.dccgg-emoji-icon');
+                    if (!t || !emoji || !emoji.getClientRects().length) { return null; }
+                    const a = t.getBoundingClientRect(), e = emoji.getBoundingClientRect();
+                    return {
+                        t: (t.textContent || '').trim(),
+                        // above = the emoji's box ends before the title's begins
+                        above: e.bottom <= a.top + 1,
+                        beside: !(e.bottom <= a.top + 1) && !(e.top >= a.bottom - 1),
+                        lead: Math.round(parseFloat(
+                            getComputedStyle(row).gridTemplateColumns.split(' ')[0])),
+                    };
+                }).filter(Boolean));
+            if (width === 320) {
+                check('320: the emoji sits ABOVE the title, not beside it',
+                    rows.length > 0 && rows.every((r) => r.above),
+                    JSON.stringify(rows));
+                // The reserve that keeps the two sides matched. Measured on
+                // the track, because the ::before that provides it has no
+                // content of its own to measure.
+                // The 44px reserve is NOT asserted here. Measured: this
+                // harness's tail runs to 98px and its lead track to 72px, so
+                // a 44px floor never binds and the tracks are identical with
+                // the reserve and without it. It binds on the property, whose
+                // tail is a single 32px button — see the runner's unreachable
+                // list, where it is killed against the live pages instead.
+            } else {
+                check('390: the emoji is still BESIDE the title — pick A stops below it',
+                    rows.length > 0 && rows.every((r) => r.beside && !r.above),
+                    JSON.stringify(rows));
+            }
+            await shut(v);
+        }
+    }
+
     console.log('\nG4. The guarantees the first mutation run found untested');
     {
         // --- no jump on Back ---------------------------------------------
