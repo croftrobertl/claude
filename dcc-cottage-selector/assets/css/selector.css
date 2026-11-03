@@ -716,16 +716,25 @@
    site. An inherited value loses to any rule that matches the element itself, so
    declaring it here at (0,3,0) settles it wherever the widget is dropped. */
 .dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; font-weight: 400; }
-/* list-style-position: inside puts the marker INSIDE the line box, so it moves
-   with the text under the page's inherited text-align instead of sitting at a
-   fixed x while centred text drifts away from it (0.36.0). The 18px
-   padding-left went with it: with the marker in the flow that padding only
-   pushed the optical centre of every line 9px right of the card's. */
+/* BULLETED LISTS (0.57.1, Rob, option 1 "flush-left"): the bullets form ONE
+   straight column, each item's text is LEFT-aligned beside its bullet, and a
+   wrapped line sits under the TEXT, not under the bullet. The one exception to
+   Rob's text rule: the text above a list (the reason, the identical-layout note)
+   stays centred. Markers are OUTSIDE and the indent is on each ITEM, not the
+   list: in the two-column layout (480px+) an indent on the <ul> exists only once,
+   so the second column's bullets would sit in the column gap against the first
+   column's text (measured on Cottage 34 at 1440 while choosing). 0.36.0-0.57.0
+   used inside markers so they travelled with centred text; centred lines are
+   what put the bullets out of column. */
 .dccs-root.dccs-root .dccs-highlights {
   margin: 0 0 8px; padding-left: 0; font-size: 0.85rem; line-height: 1.45;
-  color: var(--dccs-muted); list-style-position: inside; font-weight: 400;
+  color: var(--dccs-muted); list-style-position: outside; font-weight: 400;
 }
-.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0; break-inside: avoid; font-weight: 400; }
+.dccs-root.dccs-root .dccs-highlights,
+.dccs-root.dccs-root .dccs-highlights li,
+.dccs-root.dccs-root .dccs-noscript,
+.dccs-root.dccs-root .dccs-noscript li { text-align: left; }
+.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0 1px 1.2em; break-inside: avoid; font-weight: 400; }
 @media (min-width: 480px) {
   .dccs-root.dccs-root .dccs-highlights { columns: 2; column-gap: 22px; }
 }
@@ -819,6 +828,8 @@
 .dccs-root.dccs-root .dccs-unavailable { color: var(--dccs-muted); padding: 16px; }
 .dccs-root.dccs-root .dccs-noscript ul,
 .dccs-root.dccs-root .dccs-noscript { margin: 0; }
+.dccs-root.dccs-root .dccs-noscript { padding-left: 0; list-style-position: outside; }
+.dccs-root.dccs-root .dccs-noscript li { margin-left: 1.2em; }
 
 /* Mini entry (0.53.1, Rob): the intro line, then a button that is an EXACT match
    of the full Selector's landing buttons. Everything is literal: the entry sits

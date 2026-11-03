@@ -405,9 +405,13 @@
 .dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; font-weight: 400; }
 .dccs-root.dccs-root .dccs-highlights {
   margin: 0 0 8px; padding-left: 0; font-size: 0.85rem; line-height: 1.45;
-  color: var(--dccs-muted); list-style-position: inside; font-weight: 400;
+  color: var(--dccs-muted); list-style-position: outside; font-weight: 400;
 }
-.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0; break-inside: avoid; font-weight: 400; }
+.dccs-root.dccs-root .dccs-highlights,
+.dccs-root.dccs-root .dccs-highlights li,
+.dccs-root.dccs-root .dccs-noscript,
+.dccs-root.dccs-root .dccs-noscript li { text-align: left; }
+.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0 1px 1.2em; break-inside: avoid; font-weight: 400; }
 @media (min-width: 480px) {
   .dccs-root.dccs-root .dccs-highlights { columns: 2; column-gap: 22px; }
 }
@@ -453,6 +457,8 @@
 .dccs-root.dccs-root .dccs-unavailable { color: var(--dccs-muted); padding: 16px; }
 .dccs-root.dccs-root .dccs-noscript ul,
 .dccs-root.dccs-root .dccs-noscript { margin: 0; }
+.dccs-root.dccs-root .dccs-noscript { padding-left: 0; list-style-position: outside; }
+.dccs-root.dccs-root .dccs-noscript li { margin-left: 1.2em; }
 .dccs-entry.dccs-entry { margin: 12px 0; }
 .dccs-entry.dccs-entry .dccs-entry-intro {
   margin: 33px auto 11px; max-width: calc(var(--dccs-shell-max) - 2 * var(--dccs-shell-pad));

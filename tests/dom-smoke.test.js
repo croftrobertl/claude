@@ -2620,10 +2620,10 @@ defer(async function () {
   ok('the highlights list declares a regular weight', /font-weight:\s*400/.test(hl));
   ok('and each highlight item does too, over a theme li rule', /font-weight:\s*400/.test(li));
 
-  // Markers live inside the line box, so they move with the inherited text-align.
-  ok('bullet markers sit inside the line box', /list-style-position:\s*inside/.test(hl));
-  // The 18px indent existed only to make room for outside markers.
-  ok('the outside-marker indent is gone', !/padding-left:\s*18px/.test(hl));
+  // 0.57.1 supersedes 0.36.0's inside markers (Rob: bullets in one column, text left
+  // beside them); block 108 pins the new geometry. The list itself carries no indent.
+  ok('bullet markers sit OUTSIDE, in a column (0.57.1)', /list-style-position:\s*outside/.test(hl));
+  ok('the list carries no indent of its own (each item does)', /padding-left:\s*0/.test(hl));
 })();
 
 // ---- 80. 0.37.0: the card's action row is bottom-aligned and clear of the copy ----
@@ -4047,7 +4047,11 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   ok('108: the parser finds text-align declarations (detector sees them: ' + aligns.length + ')', aligns.filter(a => a.v === 'center').length >= 10);
   // A Style-panel control may feed the value through a token, but its fallback is centre
   // (no live widget stores one; the preset holds none).
-  const off = aligns.filter(a => a.v !== 'center' && a.v !== 'inherit' && !/^var\(--dccs-[a-z-]+,\s*center\)$/.test(a.v));
+  // 0.57.1 (Rob): a BULLETED LIST is the one exception — its items are left-aligned
+  // so the bullets form a column. Only 'left', and only on a list's own selectors.
+  const LIST = /^\.dccs-root\.dccs-root \.dccs-(highlights|noscript)( li)?$/;
+  const off = aligns.filter(a => a.v !== 'center' && a.v !== 'inherit' && !/^var\(--dccs-[a-z-]+,\s*center\)$/.test(a.v)
+    && !(a.v === 'left' && rules.some(r => r.sel[0] === a.sel && r.sel.every(x => LIST.test(x)))));
   ok('108: no rule anywhere aligns text left, right, start, end or justify' + (off.length ? ' — ' + off.map(a => a.sel + ': ' + a.v).join(' | ') : ''), off.length === 0);
   // The containers centre (the pop-up box sits outside the page column and inherited START).
   ['.dccs-root.dccs-root', '.dccs-entry.dccs-entry', '.dccs-modal .dccs-modal-box'].forEach(x =>
@@ -4082,6 +4086,23 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   const col = S4.querySelector('.dccs-wizard-nav .dccs-next-col');
   ok('108: Next and its line share one column', !!col && !!col.querySelector('.dccs-next') && !!col.querySelector('.dccs-next-pick'));
   ok('108: the column stacks', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col') !== -1 && /flex-direction:\s*column/.test(r.body)));
+  // ---- 0.57.1: bullets in ONE straight column; text left beside them; wraps under the text ----
+  const decl = (sel, prop) => { let v = null; rules.filter(r => r.sel.indexOf(sel) !== -1).forEach(r => { const m = r.body.match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)')); if (m) v = m[1].trim(); }); return v; };
+  const mL = (sel) => { let v = null; rules.filter(r => r.sel.indexOf(sel) !== -1).forEach(r => { const m = r.body.match(/(?:^|;)\s*margin\s*:\s*([^;]+)/); if (m) { const p = m[1].trim().split(/\s+/); v = p[p.length === 4 ? 3 : p.length === 2 || p.length === 3 ? 1 : 0]; } const n = r.body.match(/(?:^|;)\s*margin-left\s*:\s*([^;]+)/); if (n) v = n[1].trim(); }); return v; };
+  [['highlights', '.dccs-root.dccs-root .dccs-highlights'], ['no-JavaScript list', '.dccs-root.dccs-root .dccs-noscript']].forEach(([n, L]) => {
+    // Every rendered item is reached by the left rule (the text rule would centre it).
+    ok('0.57.1: ' + n + ': the list and its items are left-aligned', decl(L, 'text-align') === 'left' && decl(L + ' li', 'text-align') === 'left');
+    ok('0.57.1: ' + n + ': markers OUTSIDE (inside markers ride centred lines out of column; wraps would go under the bullet)', decl(L, 'list-style-position') === 'outside');
+    ok('0.57.1: ' + n + ': the indent is on each ITEM, not the list (so a second column indents too)', decl(L, 'padding-left') === '0' && parseFloat(mL(L + ' li')) > 0);
+  });
+  ok('0.57.1: the left rule out-ranks the text rule for a list item (0,3,1 > 0,2,1)', rules.some(r => r.sel.indexOf('.dccs-root.dccs-root .dccs-highlights li') !== -1 && /text-align:\s*left/.test(r.body)));
+  // The rendered card: items carry the class the rule matches; the text ABOVE stays centred.
+  const card = S2.querySelector('.dccs-all .dccs-card');
+  const lis = card ? card.querySelectorAll('ul.dccs-highlights > li') : [];
+  ok('0.57.1: a See All card renders its highlights as list items (detector positive: ' + lis.length + ')', lis.length >= 2);
+  ok('0.57.1: every item matches the left rule', Array.prototype.every.call(lis, li => li.matches('.dccs-root.dccs-root .dccs-highlights li')));
+  ok('0.57.1: the reason above the list is NOT under the left rule (it stays centred and balanced)', !!card.querySelector('.dccs-why') && !card.querySelector('.dccs-why').matches('.dccs-root.dccs-root .dccs-highlights, .dccs-root.dccs-root .dccs-highlights li') && card.querySelector('.dccs-why').matches(balSel));
+  ok('0.57.1: no other list in the plugin has bullets (review list is list-style none)', decl('.dccs-root.dccs-root .dccs-review-list', 'list-style') === 'none');
   // Font, size, weight and line height are not part of the rule.
   const textRule = bal.find(r => r.sel.some(x => /:is\(p,/.test(x)));
   ok('108: the text rule changes no font, size, weight or line height', !!textRule && !/font|line-height/.test(textRule.body));
