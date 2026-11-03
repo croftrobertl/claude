@@ -427,22 +427,6 @@
     }
 
     /**
-     * Rob's alignment rule, applied to the text inside a sheet.
-     *
-     * Titles are centred by CSS. A PARAGRAPH is centred too unless it runs to
-     * more than one sentence, which is the same test the Cottage Selector and
-     * the Front Desk privacy note use — it reads the paragraph's own text, so
-     * a host who rewrites one gets the right alignment without anyone
-     * touching CSS.
-     */
-    const isMulti = (text) => /[.!?]["\u201D']?\s+\S/.test(String(text == null ? '' : text));
-    function markMultiSentence(root) {
-        root.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li').forEach((el) => {
-            if (isMulti(el.textContent)) { el.classList.add('dccgg-multi'); }
-        });
-    }
-
-    /**
      * Warm the first sheet while the guest is still reading the hub.
      *
      * Every panel is already in the DOM — the server renders them all and
@@ -475,7 +459,8 @@
         wireNow(root, config, app);
         wireTabs(root, config, app);
         wirePressFeedback(root);
-        markMultiSentence(root);
+        // v0.27.3: the alignment pass moved to core (markItemAlignment), so
+        // it reaches /guest/ as well as the app shell. Nothing here now.
         preloadFirstDetail(root);
         wireSheetHistory(root, app);
     };

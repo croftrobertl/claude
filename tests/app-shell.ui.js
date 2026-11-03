@@ -569,15 +569,53 @@ const check = (name, cond, detail) => {
                 const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
                 return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) <= 6;
             }));
-        const paras = await v.page.$$eval('.dccgg-detail[data-key="checkout"] .dccgg-item-body p',
-            (ps) => ps.map((p) => ({ multi: p.classList.contains('dccgg-multi'),
-                align: getComputedStyle(p).textAlign, t: p.textContent.trim().slice(0, 30) })));
-        // The fixture HAS a multi-sentence paragraph, deliberately: without
-        // one this pair could only ever pass.
-        check('a paragraph of more than one sentence is marked as one',
-            paras.filter((p) => p.multi).length === 1, JSON.stringify(paras));
-        check('…and reads left while the single-sentence ones stay centred',
-            paras.every((p) => p.align === (p.multi ? 'left' : 'center')), JSON.stringify(paras));
+        // v0.27.3, Rob's rule: ONE ITEM, ONE ALIGNMENT. If any paragraph in
+        // an item runs to two sentences or more, every paragraph in that item
+        // reads left; otherwise every paragraph in it stays centred. It used
+        // to be decided paragraph by paragraph, which put one rule in two
+        // alignments.
+        //
+        // The fixture carries the multi-sentence paragraph FIRST, MIDDLE and
+        // LAST in three otherwise identical items, plus an all-single item as
+        // the control — without that last one, a mutant that simply left-
+        // aligns everything would pass the other three.
+        await v.page.keyboard.press('Escape');
+        await v.page.waitForTimeout(350);
+        await v.page.click('.dccgg-tile[data-key="amenities"]');
+        await v.page.waitForTimeout(650);
+        const byItem = await v.page.$$eval(
+            '.dccgg-detail[data-key="amenities"] .dccgg-item', (items) => items.map((item) => {
+                const t = item.querySelector('.dccgg-item-title-text');
+                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
+                    .filter((el) => (el.textContent || '').trim());
+                if (!parts.length) { return null; }
+                const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
+                return {
+                    title: (t ? t.textContent : '').trim(),
+                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
+                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
+                };
+            }).filter(Boolean));
+        check('every item has ONE alignment, never a mix',
+            byItem.every((i) => new Set(i.aligns).size === 1),
+            JSON.stringify(byItem.filter((i) => new Set(i.aligns).size > 1)));
+        check('…left when ANY of its paragraphs has two sentences, centred otherwise',
+            byItem.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
+            JSON.stringify(byItem));
+        // And the three positions are really present, so the pair above
+        // cannot pass by having nothing to tell apart.
+        const named = (n) => byItem.find((i) => i.title === n);
+        check('the fixture carries the multi-sentence paragraph first, middle and last',
+            ['Multi first', 'Multi middle', 'Multi last'].every((n) => named(n) && named(n).anyMulti)
+            && !!named('All single') && named('All single').anyMulti === false,
+            JSON.stringify(byItem.map((i) => [i.title, i.anyMulti])));
+        check('…and each of those three reads left throughout',
+            ['Multi first', 'Multi middle', 'Multi last']
+                .every((n) => named(n).aligns.every((a) => a === 'left')),
+            JSON.stringify(['Multi first', 'Multi middle', 'Multi last'].map((n) => [n, named(n).aligns])));
+        check('…while the all-single item stays centred throughout',
+            named('All single').aligns.every((a) => a === 'center'),
+            JSON.stringify(named('All single')));
         await shut(v);
     }
 

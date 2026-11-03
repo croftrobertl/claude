@@ -304,6 +304,7 @@
         wireAiSearch(root, config);
         wireSavePdf(root, config);
         wireEmergency(root, config);
+        markItemAlignment(root);
         // v0.25.0: the Front Desk form, the voice concierge and the review
         // prompt live in widget-guest.js, which only the FULL guide loads.
         // On the public page window.DCCGG_GUEST is undefined and these three
@@ -311,6 +312,38 @@
         // three features off, so there was nothing for them to wire anyway.
         applyGuest(root, config);
         applyChunks(root, config);
+    }
+
+    /**
+     * Rob's alignment rule, v0.27.3: PER ITEM, not per paragraph.
+     *
+     * If ANY paragraph in an item's description runs to two or more
+     * sentences, EVERY paragraph in that item reads left. Otherwise every
+     * paragraph in it stays centred. One item, one alignment.
+     *
+     * It used to be decided paragraph by paragraph, which on Rules → "No
+     * Children" put a two-sentence paragraph left and the one-sentence
+     * paragraph under it centred — one rule, two alignments, which is what
+     * Rob picked up.
+     *
+     * Two things moved with it. It lives in CORE now rather than in
+     * widget-app.js, because the app chunk is only fetched on a page that
+     * holds the app shell and the rule has to reach /guest/ too; and its CSS
+     * lost the .dccgg-stage--app scoping for the same reason.
+     *
+     * The sentence test is unchanged — the same one the Cottage Selector and
+     * the Front Desk privacy note use. It reads the element's own text, so a
+     * host who rewrites a note gets the right alignment with nobody touching
+     * CSS.
+     */
+    const isMulti = (text) => /[.!?]["\u201D']?\s+\S/.test(String(text == null ? '' : text));
+    function markItemAlignment(root) {
+        root.querySelectorAll('.dccgg-item-body').forEach((body) => {
+            const parts = body.querySelectorAll('p, li');
+            let multi = false;
+            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });
+            body.classList.toggle('dccgg-body-left', multi);
+        });
     }
 
     /**

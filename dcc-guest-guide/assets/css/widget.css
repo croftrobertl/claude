@@ -5341,7 +5341,30 @@ dialog.dccgg-wrapper::backdrop {
    used !important, which shows a rule can be overridden, not that it does
    anything.) The left-alignment below is new and is the only thing here
    doing work. */
-.dccgg-stage.dccgg-stage--app .dccgg-item-body .dccgg-multi {
+/* v0.27.3: ONE ITEM, ONE ALIGNMENT, and on both layouts.
+   This used to be .dccgg-stage--app .dccgg-item-body .dccgg-multi — per
+   PARAGRAPH, and only on the app shell. Rules -> "No Children" has a
+   two-sentence paragraph followed by a one-sentence one, so it rendered one
+   rule in two alignments; and /guest/ never got the rule at all, because the
+   selector named the app stage and the code that set .dccgg-multi lived in
+   widget-app.js, a chunk only an app-shell page fetches.
+   The class now sits on the BODY, set by core when any paragraph or list
+   item in it runs to two sentences or more, and the three hosts are named
+   the same way as the font-weight rule above: the root for an inline
+   reveal, the stage for an open sheet (portaled to <body>), and the report
+   dialog. text-align is inherited, so matching the paragraph itself is what
+   beats the centre coming down from .dccgg-item.
+
+   No :is() here on purpose: build-min.sh's audience split counts :is(a, b)
+   as ONE selector and moves any selector naming .dccgg-report to the guest
+   bundle, so .dccgg-report-dialog must not host one. Written out, the two
+   public selectors stay in the public bundle and only the dialog's moves. */
+.dccgg-root .dccgg-item-body.dccgg-body-left p,
+.dccgg-root .dccgg-item-body.dccgg-body-left li,
+.dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left p,
+.dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left li,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body.dccgg-body-left p,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body.dccgg-body-left li {
     text-align: left;
 }
 

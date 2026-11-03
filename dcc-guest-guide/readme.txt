@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.2
+Stable tag: 0.27.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,16 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.3 =
+* One item, one alignment. If any paragraph in an item's description runs
+  to two sentences or more, every paragraph in that item reads left;
+  otherwise they all stay centred. Previously each paragraph decided for
+  itself, so a single rule could show one paragraph left and the next
+  centred.
+* The rule now applies on both layouts. It used to live in the app-shell
+  script and CSS, so the grid layout never got it at all.
+* No markup, behaviour or data changes.
 
 = 0.27.2 =
 * An item title now sits dead centre in its row: both sides reserve the

@@ -119,6 +119,22 @@ function dccgg_all_on(): array {
         // beats any author rule that is not !important, so this is the only
         // thing that exercises the !important on .dccgg-item-body — the host
         // inheriting 400 from the root cannot reach it.
+        // v0.27.3: the four shapes the per-item alignment rule has to tell
+        // apart. In AMENITIES rather than checkout, deliberately: checkout's
+        // item count is pinned by app-shell.test.php ("11:00 AM · 5 steps")
+        // and four more items there would have moved a number this release
+        // has nothing to do with. Rob's rule is ANY paragraph, so WHERE the multi-sentence one
+        // sits must not matter — first, middle or last, the whole item reads
+        // left. The all-single item is the control: without it, a mutant that
+        // simply left-aligns everything would pass.
+        ['_id' => 'a1', 'item_section' => 'amenities', 'item_title' => 'Multi first',
+         'item_content' => '<p>One. Two.</p><p>Only one here.</p><p>Also one.</p>'],
+        ['_id' => 'a2', 'item_section' => 'amenities', 'item_title' => 'Multi middle',
+         'item_content' => '<p>Only one here.</p><p>One. Two.</p><p>Also one.</p>'],
+        ['_id' => 'a3', 'item_section' => 'amenities', 'item_title' => 'Multi last',
+         'item_content' => '<p>Only one here.</p><p>Also one.</p><p>One. Two.</p>'],
+        ['_id' => 'a4', 'item_section' => 'amenities', 'item_title' => 'All single',
+         'item_content' => '<p>Only one here.</p><p>Also one.</p><p>And one.</p>'],
         ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',
          'item_content' => '<p style="font-weight:700">Someone pasted this in bold.</p>'],
         // Long enough to collapse, so Read more renders.

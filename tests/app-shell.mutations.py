@@ -20,6 +20,7 @@ PROP = 'includes/class-property.php'
 W = 'includes/class-widget.php'
 P = 'includes/class-plugin.php'
 CSS = 'assets/css/widget.css'
+CORE = 'assets/js/widget.js'
 
 MUTANTS = [
     # ---- the greeting: the property's clock, and its boundaries ---------
@@ -219,9 +220,11 @@ MUTANTS = [
     ('the tiles go back to left-aligned', CSS,
      "    text-align: center;\n    align-items: center;\n    /* No double-tap-to-zoom wait",
      "    text-align: left;\n    align-items: flex-start;\n    /* No double-tap-to-zoom wait"),
-    ('every paragraph is centred, multi-sentence ones included', APP,
-     "            if (isMulti(el.textContent)) { el.classList.add('dccgg-multi'); }", ""),
-    ('one long sentence is treated as many', APP,
+    # v0.27.3: both of these used to point at widget-app.js. The rule moved
+    # to core so it reaches /guest/, and they moved with it.
+    ('nothing is ever left-aligned, multi-sentence items included', CORE,
+     "            body.classList.toggle('dccgg-body-left', multi);", ""),
+    ('one long sentence is treated as many', CORE,
      "    const isMulti = (text) => /[.!?][\"\\u201D']?\\s+\\S/.test(String(text == null ? '' : text));",
      "    const isMulti = (text) => /[.!?]/.test(String(text == null ? '' : text));"),
     ('Reset gets its second border back', CSS,
@@ -245,6 +248,31 @@ MUTANTS = [
     # The four RESERVE mutants are in UNREACHABLE below, not here. They are
     # not unreachable because of the harness — they are unreachable because
     # the rule they attack is worth 1px on the host's real content.
+    # ---- v0.27.3: one item, one alignment -------------------------------
+    # Rob asked for this rule to be mutation-tested on WHERE the
+    # multi-sentence paragraph sits, so the first three are exactly that.
+    ("only the FIRST paragraph decides the item's alignment", CORE,
+     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
+     "            if (parts[0]) { multi = isMulti(parts[0].textContent); }"),
+    ("only the LAST paragraph decides the item's alignment", CORE,
+     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
+     "            multi = isMulti(parts[parts.length - 1].textContent);"),
+    ('EVERY paragraph must be multi-sentence, not any', CORE,
+     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
+     "            multi = parts.length > 0;\n            parts.forEach((el) => { if (!isMulti(el.textContent)) { multi = false; } });"),
+    ('the alignment goes back to being decided paragraph by paragraph', CORE,
+     "            body.classList.toggle('dccgg-body-left', multi);",
+     "            parts.forEach((el) => { el.classList.toggle('dccgg-body-left', isMulti(el.textContent)); });"),
+    ('every item reads left, whatever is in it', CORE,
+     "            body.classList.toggle('dccgg-body-left', multi);",
+     "            body.classList.add('dccgg-body-left');"),
+    ('list items stop counting towards the rule', CORE,
+     "            const parts = body.querySelectorAll('p, li');",
+     "            const parts = body.querySelectorAll('p');"),
+    ('the alignment pass never runs at all', CORE,
+     "        markItemAlignment(root);\n", ""),
+    ('the left-alignment is scoped back to the app stage only', CSS,
+     ".dccgg-root .dccgg-item-body.dccgg-body-left p,", ".dccgg-stage--app .dccgg-item-body.dccgg-body-left p,"),
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]
