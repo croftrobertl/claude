@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.56.0
+Stable tag: 0.57.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.57.0 =
+* Rob's text rule: every piece of text in the Selector, its pop-up and the Minis is centered and wraps with balanced lines. Newly centered: the capacity note (it was left-aligned), "Pick One to Continue" (now centered under Next), the step label and match pill, the result and Compare cards' chips and View Cottage, the See All cards (badges, reason, highlights, identical-layout note, View, Compare), the Compare button, the comparison table, the No Perfect Matches sentence and the date labels. Rows that pair two things (step label and pill, Back and Next) keep their row; the text in each is centered.
+* A block of more than one paragraph has a blank line's worth of space (1em) between its paragraphs, none before the first or after the last. Today that is the two-sentence capacity note.
+* No change to font, size, weight or line height. Scoring, strings and settings are unchanged.
 
 = 0.56.0 =
 * The page widget (home and /cottages/) opens Matching Quiz and Compare Mode in the same pop-up the cottage pages use, at every width: centered, its own scroll, above the site's falling-leaves layer, background scroll locked, Escape and the close button close it, focus returns to the button. New site setting (on by default): DCC > Cottage Selector > "Open the quiz and Compare Mode in a pop-up".

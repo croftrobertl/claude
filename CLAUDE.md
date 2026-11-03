@@ -765,10 +765,26 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   **ONE count** — `matchN(res)`: the quiz pill, the results pill, its "8 → N" ticker
   and the live region all read it; `resultsCount` only limits the See All cards.
   dom-smoke 104 runs a 2-card / 8-match config to tell the two apart.
-- **Rob's alignment rule (0.54.0): every title, section heading and card title is
-  centred; only a MULTI-sentence paragraph is left-aligned.** `para()` / `isMulti()`
-  class a paragraph `.dccs-multi` from its TEXT; the CSS block "ROB'S ALIGNMENT
-  RULE" sets both. This supersedes "the page's text-align is not ours" for titles.
+- **Rob's text rule (0.57.0, standing): ALL text is centered with balanced wrapping;
+  1em between the paragraphs of a multi-paragraph block.** Supersedes the 0.54.0 rule
+  ("only a multi-sentence paragraph is left-aligned") and, for this widget, the older
+  "the page's text-align is not ours". The block "ROB'S TEXT RULE" at the foot of
+  `selector.css` centres the containers (`.dccs-root`, `.dccs-entry`, the pop-up box —
+  the pop-up sits outside the page column and inherited START, which is why the big
+  cards' text was left in 0.56.0) and gives every text-bearing element `text-align:
+  center; text-wrap: balance` at (0,2,1). That is LOW: any class rule that sets
+  text-align beats it, so **no rule anywhere in the sheet may align text other than
+  center** (dom-smoke 108 parses every block, @media included; a Style-panel token
+  such as `var(--dccs-align, center)` is allowed — no live widget stores one).
+  Gap: `.dccs-q-note-s + .dccs-q-note-s { margin-top: 1em }` (the capacity note's two
+  sentences are its two paragraphs; one string, split for display), first 0, last 0;
+  a generic `p + p` rule is there too, and loses to every class rule that sets a
+  margin. One sentence-pair in ONE `<p>` (No Perfect Matches) is one paragraph. Rows
+  that pair things keep their row; "Pick One to Continue" sits in `.dccs-next-col`
+  with Next so it centres under the button. Highlights bullets stay `inside`, so they
+  travel with the centred text. `.dccs-multi` is still emitted, as a hook only.
+  Measured on live's theme (2026-11-03): 1,569 visible text elements across every
+  screen at 390/768/1440, all `center` + `balance`.
 - **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).**
   0.54.0: the compare table's ‹ › are now VISIBLY 44px (Rob) — no extension — and
   the Compare scroll thumb is at least 44px tall. An
