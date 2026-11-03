@@ -119,11 +119,13 @@ function dccgg_all_on(): array {
         // beats any author rule that is not !important, so this is the only
         // thing that exercises the !important on .dccgg-item-body — the host
         // inheriting 400 from the root cannot reach it.
-        // v0.27.3: the four shapes the per-item alignment rule has to tell
-        // apart. In AMENITIES rather than checkout, deliberately: checkout's
-        // item count is pinned by app-shell.test.php ("11:00 AM · 5 steps")
-        // and four more items there would have moved a number this release
-        // has nothing to do with. Rob's rule is ANY paragraph, so WHERE the multi-sentence one
+        // v0.27.5: paragraph shapes for the blank-line rule. These began
+        // life in 0.27.3 as "where does the multi-sentence paragraph sit",
+        // for a rule Rob has since rejected; they are kept because what they
+        // actually provide is items of three paragraphs and an item of one,
+        // which is what the gap needs. In AMENITIES rather than checkout,
+        // deliberately: checkout's item count is pinned by
+        // app-shell.test.php ("11:00 AM · 5 steps"). Rob's rule is ANY paragraph, so WHERE the multi-sentence one
         // sits must not matter — first, middle or last, the whole item reads
         // left. The all-single item is the control: without it, a mutant that
         // simply left-aligns everything would pass.
@@ -141,6 +143,12 @@ function dccgg_all_on(): array {
         // only the li can make this item read left.
         ['_id' => 'a5', 'item_section' => 'amenities', 'item_title' => 'Multi in a list',
          'item_content' => '<p>Short intro.</p><ul><li>One. Two.</li><li>Just one.</li></ul>'],
+        // v0.27.5: a SINGLE line break inside a paragraph. Rob's "Where to
+        // Launch" has six of them and they must not open a gap — the gap is
+        // between sibling <p>s, and a <br> is not one. Without this item the
+        // promise has nothing to be wrong about.
+        ['_id' => 'a6', 'item_section' => 'amenities', 'item_title' => 'Line break inside',
+         'item_content' => '<p>First line,<br>second line of the same sentence.</p>'],
         ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',
          'item_content' => '<p style="font-weight:700">Someone pasted this in bold.</p>'],
         // Long enough to collapse, so Read more renders.

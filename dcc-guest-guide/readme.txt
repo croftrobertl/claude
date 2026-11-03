@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.4
+Stable tag: 0.27.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,21 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.5 =
+* Item body text is centred everywhere, on both layouts and in every
+  reveal mode. The "two or more sentences reads left" rule introduced in
+  0.27.3 is removed completely, along with the older app-only version of
+  it; centred is the default.
+* Centred paragraphs use balanced line wrapping, so a centred block no
+  longer ends on a single short word. No change to font, size, weight or
+  line height.
+* One blank line of space between consecutive paragraphs in an item —
+  none above the first, none below the last. A single line break inside a
+  sentence is unaffected.
+* Under 390px, an item's emoji sits above its title rather than beside it,
+  so every title shares one centre line. 390px and wider are unchanged.
+* Stylesheet and script only: no markup, data or settings changes.
 
 = 0.27.4 =
 * Same behaviour as 0.27.3, with one unused stylesheet rule removed: the

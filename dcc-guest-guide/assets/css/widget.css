@@ -1491,6 +1491,63 @@ body.dccgg-detail-open {
         gap: 6px;
     }
 }
+
+/* v0.27.5: UNDER 390, THE EMOJI SITS ABOVE THE TITLE — Rob's pick A.
+   The title then shares one centre line down the whole list, which it could
+   not before: the lead (checkbox + emoji) runs to 76px against a 32px tail,
+   and that 44px of difference is what put the title 22px right of centre at
+   320. Reserving the wider side on both sides would have cost the middle
+   column the same 44px and broken a word, which is why 0.27.2 clamped the
+   reserve rather than paying it. Lifting the emoji out of the row pays it
+   from somewhere else: the lead becomes the 24px checkbox alone.
+
+   Measured at 320 on Rob's own content, both pages: 0px off centre, no
+   overlap, no split word, tap targets still 44px. It costs 28px a row.
+
+   `display: contents` is load-bearing. The emoji is a child of the lead
+   flexbox, so a grid-area on it does nothing while the lead is a box —
+   the first version of this measured a 26px overlap for exactly that
+   reason. Dissolving the lead makes the checkbox and the emoji grid items
+   of the title row itself, which is what lets them take separate cells.
+
+   389.98px, not 390: at exactly 390 both this and the wide layout would
+   match and the later one would win. 390 and wider are untouched. */
+@media (max-width: 389.98px) {
+    .dccgg-item-title.dccgg-item-title {
+        grid-template-areas: "lead emoji tail" "lead title tail";
+        /* minmax(min-content, 1fr), not minmax(44px, 1fr): a fixed minimum
+           is a FLOOR, not a promise to fit, so a track set to 44px holds a
+           wider tail only by letting it spill over the title. Measured in
+           the harness, whose tail carries two buttons and runs to 98px: the
+           title overlapped it by 44px at 320 while the live tail, a single
+           32px button, fitted and showed nothing. min-content keeps the
+           reserve where there is room — 1fr equalises the two sides, which
+           is what centres the title — and gives way to the controls where
+           there is not, rather than putting text under them. */
+        grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);
+        row-gap: 0;
+    }
+    .dccgg-item-title-lead.dccgg-item-title-lead { display: contents; }
+    .dccgg-item-title-lead .dccgg-item-check {
+        grid-area: lead; justify-self: start; align-self: center;
+    }
+    .dccgg-item-title-lead .dccgg-emoji-icon { grid-area: emoji; justify-self: center; }
+    .dccgg-item-title-tail.dccgg-item-title-tail {
+        grid-area: tail; min-width: 44px; justify-self: end;
+    }
+    /* The left reserve, as a grid item of its own rather than a floor on the
+       track. A fixed track minimum lets a wider tail spill over the title;
+       min-content alone collapses the lead column to nothing on the many
+       items that have no checkbox — measured, that put "Activities / Games"
+       22px off centre again, which is the whole defect this is fixing. An
+       empty cell in the lead area gives the column a 44px min-content that
+       the checkbox then shares, so the two sides match whatever a row
+       happens to hold, and either side still grows rather than overflowing. */
+    .dccgg-item-title.dccgg-item-title::before {
+        content: ""; grid-area: lead; min-width: 44px; height: 0;
+    }
+    .dccgg-item-title-text.dccgg-item-title-text { grid-area: title; }
+}
 .dccgg-item-title-tail {
     grid-column: 3;
     justify-self: end;
@@ -5341,39 +5398,58 @@ dialog.dccgg-wrapper::backdrop {
    used !important, which shows a rule can be overridden, not that it does
    anything.) The left-alignment below is new and is the only thing here
    doing work. */
-/* v0.27.3: ONE ITEM, ONE ALIGNMENT, and on both layouts.
-   This used to be .dccgg-stage--app .dccgg-item-body .dccgg-multi — per
-   PARAGRAPH, and only on the app shell. Rules -> "No Children" has a
-   two-sentence paragraph followed by a one-sentence one, so it rendered one
-   rule in two alignments; and /guest/ never got the rule at all, because the
-   selector named the app stage and the code that set .dccgg-multi lived in
-   widget-app.js, a chunk only an app-shell page fetches.
-   The class now sits on the BODY, set by core when any paragraph or list
-   item in it runs to two sentences or more.
+/* v0.27.5: BODY COPY IS CENTRED. Always, on both layouts, in every reveal
+   mode, however many sentences a paragraph runs to.
 
-   TWO hosts, not the three the font-weight rule above names. A .dccgg-root
-   arm was written first, for an inline reveal, and then measured away: in
-   every one of the plugin's three reveal modes (stage, accordion, flip)
-   and in all four fixture cases, and on both live pages, EVERY
-   .dccgg-item-body sits inside a .dccgg-stage — 12 renders and 62 live
-   bodies, none outside. The stage arm therefore answers everywhere and the
-   root arm was dead. It was found by a mutant that survived: scoping the
-   root arm back to the app stage changed nothing anywhere, which is what a
-   rule doing no work looks like. Removed rather than given a test that
-   could not fail. text-align is inherited, so matching the paragraph itself is what
-   beats the centre coming down from .dccgg-item.
+   What was here before was a "two or more sentences reads left" rule. It did
+   not come from Rob — it came from a brief written for him — and when he saw
+   all fourteen affected items he rejected every one: centred is the assumed
+   default. So the rule is gone rather than narrowed: the per-item version
+   from 0.27.3/.4, the per-paragraph .dccgg-multi version that lived in
+   widget-app.js before it, and the JS pass that set either. Nothing marks a
+   body paragraph for alignment any more, and `.dccgg-item { text-align:
+   center }` is left to do the whole job.
 
-   No :is() here on purpose: build-min.sh's audience split counts :is(a, b)
-   as ONE selector and moves any selector naming .dccgg-report to the guest
-   bundle, so .dccgg-report-dialog must not host one. Written out, the two
-   public selectors stay in the public bundle and only the dialog's moves. */
-.dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left p,
-.dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left li,
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body.dccgg-body-left p,
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body.dccgg-body-left li {
-    text-align: left;
+   Two things take its place, both of them Rob's own words.
+
+   BALANCE, because a centred block with one short last line reads badly.
+   Chrome balances roughly the first six lines of a block and leaves longer
+   ones alone, which is a graceful degradation rather than a failure: an
+   unbalanced centred paragraph is exactly what ships today. Engines that do
+   not know the value ignore it.
+
+   THE BLANK LINE, between consecutive paragraphs only — `p + p`, so there is
+   none above the first and none below the last, with no need to reset
+   anything. 1em is "one blank line" at the paragraph's own size, so it
+   tracks the type rather than a fixed pixel.
+
+   HOW A PARAGRAPH BREAK IS TOLD FROM A LINE BREAK: structurally, not by
+   guessing. Measured across all 62 item bodies on both live pages, every
+   paragraph break in Rob's content is a real sibling <p> and there is not a
+   single <br><br> anywhere; "Where to Launch" does carry six single <br>s,
+   inside its paragraphs, and those are line breaks within a sentence. A rule
+   on `p + p` gaps the first kind and cannot touch the second.
+
+   The margin beats the theme's reset easily — that reset is
+   `html, body, span, ..., p, ... { margin: 0 }` at (0,0,1), which is what
+   makes No Children's two paragraphs sit flush today. */
+.dccgg-stage.dccgg-stage .dccgg-item-body p,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p {
+    /* margin: 0 is declared rather than inherited from the theme's reset.
+       The reset is what zeroes it on doracanalcourt.com today, which is why
+       No Children's paragraphs sit flush — but a guide on a theme without
+       one would get the browser's own 1em above AND below every paragraph,
+       including the first and the last, which is exactly what "none before
+       the first, none after the last" rules out. Measured in the test
+       harness, which has no such reset: without this line the first
+       paragraph carried a 1em top margin and the last a 1em bottom. */
+    margin: 0;
+    text-wrap: balance;
 }
-
+.dccgg-stage.dccgg-stage .dccgg-item-body p + p,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {
+    margin-top: 1em;
+}
 /* ---- 6. the Reset button, with no second border round it ----
    The progress bar is a pill with its own border and background, and with
    the count hidden (v0.26.1) it had become a large empty capsule wrapped

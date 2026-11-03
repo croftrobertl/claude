@@ -459,8 +459,6 @@
         wireNow(root, config, app);
         wireTabs(root, config, app);
         wirePressFeedback(root);
-        // v0.27.3: the alignment pass moved to core (markItemAlignment), so
-        // it reaches /guest/ as well as the app shell. Nothing here now.
         preloadFirstDetail(root);
         wireSheetHistory(root, app);
     };

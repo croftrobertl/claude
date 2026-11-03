@@ -569,86 +569,115 @@ const check = (name, cond, detail) => {
                 const a = t.getBoundingClientRect(), b = row.getBoundingClientRect();
                 return Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) <= 6;
             }));
-        // v0.27.3, Rob's rule: ONE ITEM, ONE ALIGNMENT. If any paragraph in
-        // an item runs to two sentences or more, every paragraph in that item
-        // reads left; otherwise every paragraph in it stays centred. It used
-        // to be decided paragraph by paragraph, which put one rule in two
-        // alignments.
-        //
-        // The fixture carries the multi-sentence paragraph FIRST, MIDDLE and
-        // LAST in three otherwise identical items, plus an all-single item as
-        // the control — without that last one, a mutant that simply left-
-        // aligns everything would pass the other three.
+        // v0.27.5: BODY COPY IS CENTRED, FULL STOP. Rob rejected all
+        // fourteen items the "two sentences reads left" rule touched —
+        // centred is the assumed default — so the rule is gone and what is
+        // asserted now is that nothing reads left anywhere, on either
+        // layout, in any reveal.
         await v.page.keyboard.press('Escape');
         await v.page.waitForTimeout(350);
         await v.page.click('.dccgg-tile[data-key="amenities"]');
         await v.page.waitForTimeout(650);
-        const byItem = await v.page.$$eval(
-            '.dccgg-detail[data-key="amenities"] .dccgg-item', (items) => items.map((item) => {
-                const t = item.querySelector('.dccgg-item-title-text');
-                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
-                    .filter((el) => (el.textContent || '').trim());
-                if (!parts.length) { return null; }
-                const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
-                return {
-                    title: (t ? t.textContent : '').trim(),
-                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
-                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
-                };
-            }).filter(Boolean));
-        check('every item has ONE alignment, never a mix',
-            byItem.every((i) => new Set(i.aligns).size === 1),
-            JSON.stringify(byItem.filter((i) => new Set(i.aligns).size > 1)));
-        check('…left when ANY of its paragraphs has two sentences, centred otherwise',
-            byItem.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
-            JSON.stringify(byItem));
-        // And the three positions are really present, so the pair above
-        // cannot pass by having nothing to tell apart.
-        const named = (n) => byItem.find((i) => i.title === n);
-        check('the fixture carries the multi-sentence paragraph first, middle and last',
-            ['Multi first', 'Multi middle', 'Multi last'].every((n) => named(n) && named(n).anyMulti)
-            && !!named('All single') && named('All single').anyMulti === false,
-            JSON.stringify(byItem.map((i) => [i.title, i.anyMulti])));
-        check('…and each of those three reads left throughout',
-            ['Multi first', 'Multi middle', 'Multi last']
-                .every((n) => named(n).aligns.every((a) => a === 'left')),
-            JSON.stringify(['Multi first', 'Multi middle', 'Multi last'].map((n) => [n, named(n).aligns])));
-        check('…while the all-single item stays centred throughout',
-            named('All single').aligns.every((a) => a === 'center'),
-            JSON.stringify(named('All single')));
+        const readBodies = (sel) => (items) => items.map((item) => {
+            const t = item.querySelector('.dccgg-item-title-text');
+            const ps = [...item.querySelectorAll('.dccgg-item-body p')]
+                .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+            const lis = [...item.querySelectorAll('.dccgg-item-body li')]
+                .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+            if (!ps.length && !lis.length) { return null; }
+            const fs = ps.length ? parseFloat(getComputedStyle(ps[0]).fontSize) : 16;
+            return {
+                title: (t ? t.textContent : '').trim(),
+                aligns: [...ps, ...lis].map((el) => getComputedStyle(el).textAlign),
+                wraps: ps.map((el) => getComputedStyle(el).textWrap
+                    || getComputedStyle(el).textWrapStyle || ''),
+                // the gap ABOVE each paragraph, in ems of its own size
+                tops: ps.map((el) => Math.round(parseFloat(getComputedStyle(el).marginTop) / fs * 100) / 100),
+                lastBottom: ps.length
+                    ? Math.round(parseFloat(getComputedStyle(ps[ps.length - 1]).marginBottom) / fs * 100) / 100
+                    : 0,
+                count: ps.length,
+            };
+        }).filter(Boolean);
+        const bodies = await v.page.$$eval(
+            '.dccgg-detail[data-key="amenities"] .dccgg-item', readBodies());
+        check('every body paragraph is centred — nothing reads left any more',
+            bodies.every((i) => i.aligns.every((a) => a === 'center')),
+            JSON.stringify(bodies.filter((i) => i.aligns.some((a) => a !== 'center'))));
+        check('…and each one asks the browser to balance its lines',
+            bodies.every((i) => i.wraps.every((w) => w === 'balance')),
+            JSON.stringify(bodies.map((i) => [i.title, i.wraps])));
+        // THE BLANK LINE. 1em above every paragraph but the first, nothing
+        // below the last — so it cannot double up between two items, and an
+        // item with one paragraph gains nothing at all.
+        const multi = bodies.filter((i) => i.count > 1);
+        check('the fixture has items of more than one paragraph to gap',
+            multi.length >= 3, `${multi.length} such items`);
+        check('one blank line between consecutive paragraphs',
+            multi.every((i) => i.tops.slice(1).every((t) => Math.abs(t - 1) < 0.05)),
+            JSON.stringify(multi.map((i) => [i.title, i.tops])));
+        check('…none above the first paragraph',
+            bodies.every((i) => Math.abs(i.tops[0] || 0) < 0.05),
+            JSON.stringify(bodies.map((i) => [i.title, i.tops[0]])));
+        check('…and none below the last',
+            bodies.every((i) => Math.abs(i.lastBottom) < 0.05),
+            JSON.stringify(bodies.map((i) => [i.title, i.lastBottom])));
+        // A SINGLE LINE BREAK IS NOT A PARAGRAPH BREAK. Rob's "Where to
+        // Launch" carries six of them inside its paragraphs; they must not
+        // open a gap. The fixture carries one for the same reason.
+        const brItem = await v.page.$$eval(
+            '.dccgg-detail[data-key="amenities"] .dccgg-item', (items) => {
+                const it = items.find((x) => {
+                    const t = x.querySelector('.dccgg-item-title-text');
+                    return t && t.textContent.trim() === 'Line break inside';
+                });
+                if (!it) { return null; }
+                const ps = [...it.querySelectorAll('.dccgg-item-body p')];
+                const r = document.createRange();
+                r.selectNodeContents(ps[0]);
+                return { paras: ps.length, lines: r.getClientRects().length,
+                         brs: it.querySelectorAll('.dccgg-item-body br').length,
+                         tops: ps.map((x) => parseFloat(getComputedStyle(x).marginTop)) };
+            });
+        check('a single <br> makes a line, not a paragraph',
+            !!brItem && brItem.brs === 1 && brItem.paras === 1
+                && brItem.lines >= 2 && brItem.tops[0] === 0,
+            JSON.stringify(brItem));
         await shut(v);
     }
     {
-        // ON THE GRID LAYOUT TOO, and this is not ceremony: every alignment
-        // check above runs on the app markup, whose stage carries
-        // .dccgg-stage--app — so scoping the rule back to the app stage,
-        // which is exactly what it used to be and what one mutant restores,
-        // passed all of them. The grid layout is the half of Rob's ask that
-        // had no coverage at all.
+        // The same four promises on the GRID layout. Every check above runs
+        // on the app markup, whose stage carries .dccgg-stage--app — so a
+        // rule scoped to that stage passes all of them, which is how an
+        // earlier mutant survived. The grid layout is the other half of
+        // what Rob asked for.
         const v = await open({ markup: 'grid' });
         await v.page.click('.dccgg-tile[data-key="amenities"]');
         await v.page.waitForTimeout(700);
-        const grid = await v.page.$$eval('.dccgg-item', (items) => {
-            const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
-            return items.map((item) => {
-                const t = item.querySelector('.dccgg-item-title-text');
-                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
-                    .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
-                if (!parts.length) { return null; }
-                return {
-                    title: (t ? t.textContent : '').trim(),
-                    appStage: !!item.closest('.dccgg-stage--app'),
-                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
-                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
-                };
-            }).filter(Boolean);
-        });
+        const grid = await v.page.$$eval('.dccgg-item', (items) => items.map((item) => {
+            const ps = [...item.querySelectorAll('.dccgg-item-body p')]
+                .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+            if (!ps.length) { return null; }
+            const fs = parseFloat(getComputedStyle(ps[0]).fontSize);
+            return {
+                appStage: !!item.closest('.dccgg-stage--app'),
+                aligns: ps.map((el) => getComputedStyle(el).textAlign),
+                wraps: ps.map((el) => getComputedStyle(el).textWrap
+                    || getComputedStyle(el).textWrapStyle || ''),
+                tops: ps.map((el) => Math.round(parseFloat(getComputedStyle(el).marginTop) / fs * 100) / 100),
+            };
+        }).filter(Boolean));
         check('the grid layout really is not on the app stage',
             grid.length > 0 && grid.every((i) => !i.appStage),
             `${grid.length} items, ${grid.filter((i) => i.appStage).length} on an app stage`);
-        check('…and one item, one alignment holds there as well',
-            grid.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
-            JSON.stringify(grid));
+        check('…centred there too',
+            grid.every((i) => i.aligns.every((a) => a === 'center')), JSON.stringify(grid));
+        check('…balanced there too',
+            grid.every((i) => i.wraps.every((w) => w === 'balance')), JSON.stringify(grid));
+        check('…and gapped there too',
+            grid.filter((i) => i.tops.length > 1)
+                .every((i) => i.tops.slice(1).every((t) => Math.abs(t - 1) < 0.05)),
+            JSON.stringify(grid.map((i) => i.tops)));
         await shut(v);
     }
 
@@ -671,26 +700,29 @@ const check = (name, cond, detail) => {
         await v.page.waitForTimeout(600);
         await v.page.click('.dccgg-tile[data-key="amenities"]');
         await v.page.waitForTimeout(700);
-        const inline = await v.page.$$eval('.dccgg-item', (items) => {
-            const multi = (x) => /[.!?]["\u201D']?\s+\S/.test(x);
-            return items.map((item) => {
-                const t = item.querySelector('.dccgg-item-title-text');
-                const parts = [...item.querySelectorAll('.dccgg-item-body p, .dccgg-item-body li')]
-                    .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
-                if (!parts.length) { return null; }
-                return {
-                    title: (t ? t.textContent : '').trim(),
-                    inRoot: !!item.closest('.dccgg-root') && !item.closest('body > .dccgg-stage'),
-                    aligns: parts.map((el) => getComputedStyle(el).textAlign),
-                    anyMulti: parts.some((el) => multi((el.textContent || '').trim())),
-                };
-            }).filter(Boolean);
-        });
+        const inline = await v.page.$$eval('.dccgg-item', (items) => items.map((item) => {
+            const t = item.querySelector('.dccgg-item-title-text');
+            const ps = [...item.querySelectorAll('.dccgg-item-body p')]
+                .filter((el) => (el.textContent || '').trim() && el.getClientRects().length);
+            if (!ps.length) { return null; }
+            const fs = parseFloat(getComputedStyle(ps[0]).fontSize);
+            return {
+                title: (t ? t.textContent : '').trim(),
+                inRoot: !!item.closest('.dccgg-root') && !item.closest('body > .dccgg-stage'),
+                aligns: ps.map((el) => getComputedStyle(el).textAlign),
+                wraps: ps.map((el) => getComputedStyle(el).textWrap
+                    || getComputedStyle(el).textWrapStyle || ''),
+                tops: ps.map((el) => Math.round(parseFloat(getComputedStyle(el).marginTop) / fs * 100) / 100),
+            };
+        }).filter(Boolean));
         const shown = inline.filter((i) => i.inRoot);
         check('the inline reveal renders items inside the root, not a portaled stage',
             shown.length > 0, `${inline.length} items, ${shown.length} in the root`);
-        check('…and the alignment rule reaches them there too',
-            shown.every((i) => i.aligns.every((a) => a === (i.anyMulti ? 'left' : 'center'))),
+        check('…centred, balanced and gapped there too',
+            shown.every((i) => i.aligns.every((a) => a === 'center')
+                && i.wraps.every((w) => w === 'balance')
+                && Math.abs(i.tops[0]) < 0.05
+                && i.tops.slice(1).every((t) => Math.abs(t - 1) < 0.05)),
             JSON.stringify(shown));
         await shut(v);
     }
@@ -823,11 +855,29 @@ const check = (name, cond, detail) => {
                             const t = row.querySelector('.dccgg-item-title-text');
                             if (!t) { return; }
                             const a = t.getBoundingClientRect();
-                            ['lead', 'tail'].forEach((which) => {
-                                const el = row.querySelector('.dccgg-item-title-' + which);
-                                if (!el || !el.getClientRects().length) { return; }
+                            // v0.27.5: measure the CONTROLS, not the lead and
+                            // tail wrappers. Under 390 the lead is
+                            // display: contents — Rob's pick A lifts the emoji
+                            // onto its own line — so it has no box of its own
+                            // and its getClientRects() spans whatever its
+                            // children ended up in, which read as a 48px
+                            // overlap that is not on the screen. The checkbox,
+                            // the emoji and the tail button are real boxes
+                            // wherever they sit.
+                            const controls = [
+                                ...row.querySelectorAll('.dccgg-item-check, .dccgg-emoji-icon'),
+                                ...row.querySelectorAll('.dccgg-item-title-tail > *'),
+                            ];
+                            controls.forEach((el) => {
+                                if (!el.getClientRects().length) { return; }
                                 const c = el.getBoundingClientRect();
-                                const d = Math.round(which === 'tail' ? a.right - c.left : c.right - a.left);
+                                // Only a clash on the SAME LINE is an overlap.
+                                // With the emoji above the title the two boxes
+                                // share columns by design and never touch.
+                                if (c.bottom <= a.top + 1 || c.top >= a.bottom - 1) { return; }
+                                const d = Math.round(c.left < a.left
+                                    ? c.right - a.left      // something to the left
+                                    : a.right - c.left);    // something to the right
                                 if (d > out.over) { out = { over: d, t: (t.textContent || '').trim() }; }
                             });
                         });

@@ -220,13 +220,10 @@ MUTANTS = [
     ('the tiles go back to left-aligned', CSS,
      "    text-align: center;\n    align-items: center;\n    /* No double-tap-to-zoom wait",
      "    text-align: left;\n    align-items: flex-start;\n    /* No double-tap-to-zoom wait"),
-    # v0.27.3: both of these used to point at widget-app.js. The rule moved
-    # to core so it reaches /guest/, and they moved with it.
-    ('nothing is ever left-aligned, multi-sentence items included', CORE,
-     "            body.classList.toggle('dccgg-body-left', multi);", ""),
-    ('one long sentence is treated as many', CORE,
-     "    const isMulti = (text) => /[.!?][\"\\u201D']?\\s+\\S/.test(String(text == null ? '' : text));",
-     "    const isMulti = (text) => /[.!?]/.test(String(text == null ? '' : text));"),
+    # v0.27.5: the two mutants that lived here attacked the multi-sentence
+    # rule — its regex, and the class it set. Rob rejected the rule itself,
+    # so the code is gone and so are they. What replaces them is "the
+    # left-alignment rule comes back", further down.
     ('Reset gets its second border back', CSS,
      ".dccgg-stage.dccgg-stage--app .dccgg-checklist-progress {\n    border: 0;\n    background: transparent;\n    padding: 0;\n    max-width: none;\n}", ""),
     ('the per-section Front Desk pill comes back', W,
@@ -234,46 +231,48 @@ MUTANTS = [
      "        $label = 'Wi-Fi Not Working? Tell the Front Desk';"),
     # ---- v0.27.1: a long title must not run under its controls ----------
     ('the side tracks can collapse to nothing again', CSS,
-     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
-     "    grid-template-columns: 1fr auto 1fr;"),
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);\n    align-items: center;",
+     "    grid-template-columns: 1fr auto 1fr;\n    align-items: center;"),
     ('only the lead is protected, not the tail', CSS,
-     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
-     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) 1fr;"),
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);\n    align-items: center;",
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) 1fr;\n    align-items: center;"),
     ('the centre track stops giving way, so the sides are pushed out', CSS,
-     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);",
-     "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);"),
+     "    grid-template-columns: minmax(min-content, 1fr) minmax(0, auto) minmax(min-content, 1fr);\n    align-items: center;",
+     "    grid-template-columns: minmax(min-content, 1fr) max-content minmax(min-content, 1fr);\n    align-items: center;"),
     ('a word longer than the track can neither hyphenate nor break', CSS,
      "    hyphens: auto;\n    overflow-wrap: break-word;", "    hyphens: auto;"),
     # ---- v0.27.2: dead centre, and the title's own leading ---------------
     # The four RESERVE mutants are in UNREACHABLE below, not here. They are
     # not unreachable because of the harness — they are unreachable because
     # the rule they attack is worth 1px on the host's real content.
-    # ---- v0.27.3: one item, one alignment -------------------------------
-    # Rob asked for this rule to be mutation-tested on WHERE the
-    # multi-sentence paragraph sits, so the first three are exactly that.
-    ("only the FIRST paragraph decides the item's alignment", CORE,
-     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
-     "            if (parts[0]) { multi = isMulti(parts[0].textContent); }"),
-    ("only the LAST paragraph decides the item's alignment", CORE,
-     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
-     "            multi = isMulti(parts[parts.length - 1].textContent);"),
-    ('EVERY paragraph must be multi-sentence, not any', CORE,
-     "            parts.forEach((el) => { if (!multi && isMulti(el.textContent)) { multi = true; } });",
-     "            multi = parts.length > 0;\n            parts.forEach((el) => { if (!isMulti(el.textContent)) { multi = false; } });"),
-    ('the alignment goes back to being decided paragraph by paragraph', CORE,
-     "            body.classList.toggle('dccgg-body-left', multi);",
-     "            parts.forEach((el) => { el.classList.toggle('dccgg-body-left', isMulti(el.textContent)); });"),
-    ('every item reads left, whatever is in it', CORE,
-     "            body.classList.toggle('dccgg-body-left', multi);",
-     "            body.classList.add('dccgg-body-left');"),
-    ('list items stop counting towards the rule', CORE,
-     "            const parts = body.querySelectorAll('p, li');",
-     "            const parts = body.querySelectorAll('p');"),
-    ('the alignment pass never runs at all', CORE,
-     "        markItemAlignment(root);\n", ""),
-    ('the left-alignment is scoped back to the app stage only', CSS,
-     ".dccgg-stage.dccgg-stage .dccgg-item-body.dccgg-body-left p,",
-     ".dccgg-stage--app .dccgg-item-body.dccgg-body-left p,"),
+    # ---- v0.27.5: centred, balanced, gapped, and pick A under 390 -------
+    ("the left-alignment rule comes back", CSS,
+     "    text-wrap: balance;\n}", "    text-wrap: balance;\n}\n"
+     ".dccgg-stage.dccgg-stage .dccgg-item-body p { text-align: left; }"),
+    ("balanced wrapping is dropped", CSS,
+     "    margin: 0;\n    text-wrap: balance;", "    margin: 0;"),
+    ("the blank line between paragraphs is dropped", CSS,
+     ".dccgg-stage.dccgg-stage .dccgg-item-body p + p,\n"
+     ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {\n"
+     "    margin-top: 1em;\n}", ""),
+    ("the blank line is doubled", CSS, "    margin-top: 1em;\n}", "    margin-top: 2em;\n}"),
+    ("the blank line lands above the FIRST paragraph too", CSS,
+     ".dccgg-stage.dccgg-stage .dccgg-item-body p + p,\n"
+     ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {",
+     ".dccgg-stage.dccgg-stage .dccgg-item-body p,\n"
+     ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p {"),
+    ("the declared margin: 0 goes, so the theme's default gaps the ends", CSS,
+     "    margin: 0;\n    text-wrap: balance;", "    text-wrap: balance;"),
+    ("pick A leaks past 390", CSS, "@media (max-width: 389.98px) {\n"
+     "    .dccgg-item-title.dccgg-item-title {\n"
+     "        grid-template-areas:", "@media (max-width: 900px) {\n"
+     "    .dccgg-item-title.dccgg-item-title {\n"
+     "        grid-template-areas:"),
+    ("pick A's emoji stays in the row instead of going above it", CSS,
+     "    .dccgg-item-title-lead.dccgg-item-title-lead { display: contents; }", ""),
+    ("pick A's left reserve goes, so the title drifts again under 390", CSS,
+     "        content: \"\"; grid-area: lead; min-width: 44px; height: 0;",
+     "        content: \"\"; grid-area: lead; min-width: 0; height: 0;"),
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]
