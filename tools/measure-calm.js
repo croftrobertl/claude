@@ -12,7 +12,7 @@
  *
  * contact: /contact/, the form in view, pieces drifting behind it.
  * cottages: the Cottage Selector on its landing, its buttons in view.
- * quiz: the selector's quiz open (the pieces paused, the tom walking off).
+ * quiz: the selector's quiz open (since 4.15.2 the pieces keep drawing behind it).
  * typing: /contact/ with the message box focused and typed into.
  */
 const { config, open } = require('./harness');

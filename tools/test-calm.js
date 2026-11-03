@@ -1,7 +1,8 @@
 'use strict';
 /**
- * DCC Seasons — Calmer Seasons (4.15.0, Rob's picks 2026-11-03), on the
- * real-theme fixture with the two plugins' own files (tools/calm-pages.js):
+ * DCC Seasons — Calmer Seasons (4.15.0, Rob's picks 2026-11-03; 4.15.2,
+ * occlusion alone and fewer feeding stops), on the real-theme fixture with
+ * the two plugins' own files (tools/calm-pages.js):
  *
  *  1. OCCLUDERS: on /contact/ and on the Cottage Selector, 120 frames on the
  *     mocked clock, the canvas carries NO ink inside any occluder on screen
@@ -9,18 +10,19 @@
  *     still draw around them — and with the clip off (calm:false) the same
  *     frames DO put ink there, so the check can see an overlap. The header
  *     photo is not an occluder.
- *  2. PAUSE (real time; the 5 s is the visitor's clock): a focused field
- *     fades the pieces out within 0.6 s, typing keeps them out, they come
- *     back 5 s after the last keystroke, and 5 s after the field loses
- *     focus; the quiz and a .dccs-modal hold them out while open.
+ *  2. NO PAUSE (4.15.2, Rob: occlusion alone): a focused, typed-into field,
+ *     a .dccs-modal, [data-dcc-seasons-busy] and the quiz all leave the
+ *     pieces drawing as before.
  *  3. WALKERS (Thanksgiving's tom, 390 and 1440): enters from an edge, turns
  *     about a third of the way in, through a squeeze (never a flip-cut),
  *     standing still with his poults, walks back off the side he came from
- *     and stays gone; a busy guest sends him back without a fade; he never
- *     enters while one is busy. Time on screen reported.
+ *     and stays gone; a .dccs-modal does not hold him off or send him back.
+ *     Feeding stops: few (at most one per 15 s of walking, after the first)
+ *     and never the same feed twice running, read from the jabs he DRAWS.
+ *     Time on screen reported.
  *
  *   node tools/test-calm.js [--only=occ|pause|walk]
- *   DCC_CALM_MUT=noclip|timer|noturn (a copy of the engine, one line broken)
+ *   DCC_CALM_MUT=noclip|noturn|flip|repeat|often|hold (a copy of the engine, one line broken)
  */
 const fs = require('fs');
 const os = require('os');
@@ -41,8 +43,10 @@ if (MUT) {
   let e = fs.readFileSync(path.join(d, 'engine.js'), 'utf8');
   const M = {
     noclip: ['if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,', 'if (0) { occClip(p,'],
-    timer: ['calmBusy = calmPoll || t - calmKey < 5000 || t < calmFree;', 'calmBusy = calmPoll || t - calmKey < 500 || t < calmFree;'],
-    noturn: ["if (p.leg === 0 && !p.tn && p.fs !== 1 && ((p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3) || (calmBusy && inS))) { p.tn = 1; }", ''],
+    noturn: ["if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }", ''],
+    repeat: ['return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3;', 'return v < 0 ? MT.floor(rand() * 3) % 3 : v;'],
+    often: ["return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22);", 'return rnd(1.6, 3.0);'],
+    hold: ['if (p.leg === 3) { p.alpha = 0; break; }', "if (p.leg === 3) { p.alpha = 0; break; } if (p.leg === 0 && D.querySelector('.dccs-modal') && (p.dir > 0 ? p.x < 0 : p.x > vw)) { break; }"],
     flip: ['var sq = p.leg === 1 ? 0.3 + 0.7 * abs(cos(MT.PI * p.tq)) : 1;', 'var sq = 1;'],
   }[MUT];
   if (!M || !e.includes(M[0])) { throw new Error('mutation does not apply: ' + MUT); }
@@ -112,41 +116,28 @@ async function inkRun(pg, n) {
   }
 
   if (!ONLY || ONLY === 'pause') {
-    console.log('\n  --- 2. the pause: a busy guest sees no pieces ---');
-    const ses = await boot(cp.contact, 390, 'halloween', {}, 5), pg = ses.page;
-    await pg.evaluate(() => document.querySelector('.dcc-contact-form').scrollIntoView({ block: 'center' }));
-    await pg.waitForTimeout(1500);
-    const st = () => pg.evaluate(() => { const c = window.DCCSeasonsEngine._state.calm; return { a: c.a, busy: c.busy }; });
-    ok((await st()).a === 1, 'pieces show before anything is focused', JSON.stringify(await st()));
-    await pg.focus('#dcc-f-message'); await pg.waitForTimeout(700);
-    let s = await st(); ok(s.busy && s.a < 0.05, 'a focused textarea: faded out within 0.7 s', JSON.stringify(s));
-    for (let i = 0; i < 6; i++) { await pg.keyboard.type('hello ', { delay: 40 }); await pg.waitForTimeout(500); }
-    s = await st(); ok(s.busy && s.a === 0, 'still out while typing (6 s of typing)', JSON.stringify(s));
-    await pg.waitForTimeout(3800);
-    s = await st(); ok(s.busy, '4 s after the last keystroke: still out', JSON.stringify(s));
-    await pg.waitForTimeout(2600);
-    s = await st(); ok(!s.busy && s.a > 0, '6.4 s after the last keystroke: drifting back', JSON.stringify(s));
-    await pg.focus('#dcc-f-email'); await pg.waitForTimeout(400);
-    await pg.evaluate(() => document.activeElement.blur()); await pg.waitForTimeout(3500);
-    s = await st(); ok(s.busy, 'a field left 3.5 s ago: still out', JSON.stringify(s));
-    await pg.waitForTimeout(2500);
-    s = await st(); ok(!s.busy, 'and back 6 s after it lost focus', JSON.stringify(s));
-    await pg.focus('#dcc-f-copy'); await pg.waitForTimeout(700);
-    s = await st(); ok(!s.busy, 'a checkbox is not a text field: no pause', JSON.stringify(s));
-    await pg.evaluate(() => { document.activeElement.blur(); const m = document.createElement('div'); m.className = 'dccs-modal'; m.id = 'tm'; document.body.appendChild(m); }); await pg.waitForTimeout(800);
-    s = await st(); ok(s.busy && s.a < 0.05, 'a .dccs-modal open: out', JSON.stringify(s));
-    await pg.evaluate(() => document.getElementById('tm').remove()); await pg.waitForTimeout(3000);
-    s = await st(); ok(s.busy, '3 s after it closed: still out', JSON.stringify(s));
-    await pg.waitForTimeout(2800);
-    s = await st(); ok(!s.busy, '5.8 s after: back', JSON.stringify(s));
+    console.log('\n  --- 2. no pause (4.15.2): a busy guest still sees the pieces, behind what they read ---');
+    /* ink on the canvas over 30 frames of the mocked clock, the field and its
+     * occluder rects excluded by the clip anyway */
+    const ink = pg => pg.evaluate(() => { const S = window.DCCSeasonsEngine._state; S.manual(true); let n = 0;
+      const cv = document.querySelector('canvas.dcc-seasons-canvas'), g = cv.getContext('2d');
+      for (let f = 0; f < 30; f++) { S.tick(1000 / 30, 1); if (f % 10 === 9) { const d = g.getImageData(0, 0, cv.width, cv.height).data; for (let i = 3; i < d.length; i += 16) { if (d[i] > 40) { n++; } } } }
+      return n; });
+    const ses = await boot(cp.contact, 390, 'thanksgiving', {}, 9), pg = ses.page;
+    await pg.evaluate(() => document.querySelector('#dcc-f-message').scrollIntoView({ block: 'center' }));
+    await pg.waitForTimeout(800);
+    const base = await ink(pg);
+    ok(base > 200, `pieces drawing before anything is focused (${base} inked samples)`, base);
+    const hasA = await pg.evaluate(() => 'a' in window.DCCSeasonsEngine._state.calm || 'busy' in window.DCCSeasonsEngine._state.calm);
+    ok(!hasA, 'the engine carries no busy state any more', hasA);
+    await pg.focus('#dcc-f-message'); await pg.keyboard.type('We would love a week in March.');
+    let n = await ink(pg); ok(n > 0.4 * base, `a focused, typed-into textarea: pieces still draw (${n})`, n);
+    await pg.evaluate(() => { const m = document.createElement('div'); m.className = 'dccs-modal'; document.body.appendChild(m); const b = document.createElement('div'); b.setAttribute('data-dcc-seasons-busy', ''); document.body.appendChild(b); document.body.classList.add('dcc-seasons-busy'); });
+    n = await ink(pg); ok(n > 0.4 * base, `.dccs-modal, [data-dcc-seasons-busy] and body.dcc-seasons-busy: pieces still draw (${n})`, n);
     await ses.close();
-    const s2 = await boot(cp.cottages, 390, 'halloween', {}, 5), p2 = s2.page;
-    await p2.waitForTimeout(1500);
-    let q = await p2.evaluate(() => window.DCCSeasonsEngine._state.calm.busy);
-    ok(!q, 'the Cottage Selector on its landing: no pause', q);
-    await cp.openQuiz(p2); await p2.waitForTimeout(800);
-    q = await p2.evaluate(() => { const c = window.DCCSeasonsEngine._state.calm; return { busy: c.busy, a: c.a }; });
-    ok(q.busy && q.a < 0.05, 'the quiz open: out', JSON.stringify(q));
+    const s2 = await boot(cp.cottages, 390, 'thanksgiving', {}, 9), p2 = s2.page;
+    await cp.openQuiz(p2); await p2.waitForTimeout(600);
+    n = await ink(p2); ok(n > 200, `the quiz open: pieces still draw (${n})`, n);
     await s2.close();
   }
 
@@ -157,6 +148,9 @@ async function inkRun(pg, n) {
       await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
       const r = await pg.evaluate(w => {
         const S = window.DCCSeasonsEngine._state; S.manual(true);
+        /* 4.15.2: a modal open the whole time at 390 changes nothing */
+        if (w < 768) { const m = document.createElement('div'); m.className = 'dccs-modal'; document.body.appendChild(m); }
+        const feeds = []; let walkS = 0, prevFs = 0;
         const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
         const P = CanvasRenderingContext2D.prototype, di = P.drawImage; let boxes = [];
         P.drawImage = function (src, x, y, ww, hh) {
@@ -173,6 +167,10 @@ async function inkRun(pg, n) {
         for (; f < 30 * 400; f++) {
           boxes = []; S.tick(1000 / 30, 1);
           const t = S.calm.tom[0]; if (!t) { break; }
+          if (t.leg !== 3 && t.leg !== 1 && t.fs !== 1) { walkS += 1 / 30; }
+          if (t.fs === 1 && prevFs !== 1) { feeds.push({ f, fv: t.fv, jabs: 0, inJab: false, walkS }); }
+          if (t.fs === 1 && feeds.length) { const F = feeds[feeds.length - 1], j = boxes.some(b => b.k === 'pj'); if (j && !F.inJab) { F.jabs++; } F.inJab = j; }
+          prevFs = t.fs;
           const vis = boxes.some(b => b.R > 0 && b.L < w);
           if (vis) { onFrames++; if (firstOn < 0) { firstOn = f; } lastOn = f; }
           log.push({ f, leg: t.leg, x: t.x, dir: t.dir, tq: t.tq, alpha: t.alpha, boxes: boxes.map(b => [b.k, Math.round(b.cx * 10) / 10, Math.round((b.R - b.L) * 10) / 10]) });
@@ -180,7 +178,7 @@ async function inkRun(pg, n) {
           prevVis = vis;
           if (t.leg === 3 && f - lastOn > 60) { break; }
         }
-        return { goneVis, log: log.filter((e, i) => e.leg === 1 || i % 15 === 0 || (log[i - 1] && log[i - 1].leg !== e.leg)), onFrames, firstOn, lastOn, end: log[log.length - 1], first: log[0] };
+        return { feeds, walkS, goneVis, log: log.filter((e, i) => e.leg === 1 || i % 15 === 0 || (log[i - 1] && log[i - 1].leg !== e.leg)), onFrames, firstOn, lastOn, end: log[log.length - 1], first: log[0] };
       }, w);
       const legs = r.log.map(e => e.leg), d0 = r.first.dir;
       const startX = r.first.x, turn = r.log.filter(e => e.leg === 1), turnX = turn.length ? turn[0].x : NaN;
@@ -205,40 +203,22 @@ async function inkRun(pg, n) {
       ok(r.end.leg === 3 && exitSide === (d0 > 0 ? -1 : 1), `${w}: he walks back off the side he came from, and stays gone`, JSON.stringify(r.end));
       ok(r.goneVis === false, `${w}: he and both poults are off screen before he is gone (nothing vanishes in view)`, String(r.goneVis));
       ok(legs.every(l => l !== undefined), `${w}: on screen ${((r.lastOn - r.firstOn + 1) / 30).toFixed(1)} s`, '');
+      /* the feeds: few, and never the same twice running (read from the drawn jabs) */
+      const J = r.feeds.map(x => x.jabs), maxN = 1 + Math.floor(Math.max(0, r.walkS - 7) / 15);
+      ok(r.feeds.length >= 1 && r.feeds.length <= maxN, `${w}: ${r.feeds.length} feeding stop(s) in ${r.walkS.toFixed(1)} s of walking (at most ${maxN}; 4.15.0 stopped every 1.6-3 s)`, JSON.stringify(r.feeds));
+      ok(J.every(j => j >= 1 && j <= 3) && J.every((j, i) => i === 0 || j !== J[i - 1]), `${w}: jabs per feed ${J.join(', ') || '-'}: never the same feed twice running`, JSON.stringify(r.feeds));
+      ok(r.feeds.every((x, i) => i === 0 || x.walkS - r.feeds[i - 1].walkS >= 14.9), `${w}: at least 15 s of walking between stops`, JSON.stringify(r.feeds.map(x => x.walkS.toFixed(1))));
       console.log(`      ${w}: on screen ${((r.lastOn - r.firstOn + 1) / 30).toFixed(1)} s (${r.onFrames} frames with any of the three drawn)`);
       await ses.close();
     }
-    /* busy: never enters; sent back without a fade */
-    {
-      const ses = await boot(o => rt.page(o), 390, 'thanksgiving', {}, 14), pg = ses.page;
-      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
-      const r = await pg.evaluate(() => {
-        const S = window.DCCSeasonsEngine._state; S.manual(true);
-        const m = document.createElement('div'); m.className = 'dccs-modal'; m.id = 'tm'; document.body.appendChild(m);
-        let entered = false;
-        for (let f = 0; f < 30 * 4; f++) { S.tick(1000 / 30, 1); }
-        for (let f = 0; f < 30 * 30; f++) { S.tick(1000 / 30, 1); const t = S.calm.tom[0]; if (t.x > -20 && t.x < innerWidth + 20) { entered = true; } }
-        return { entered, busy: S.calm.busy };
-      });
-      ok(r.busy && !r.entered, 'busy: he does not enter (30 s held off screen)', JSON.stringify(r));
-      await ses.close();
-    }
+    /* the feeds' sequence over many walks: never the same twice running */
     {
       const ses = await boot(o => rt.page(o), 1440, 'thanksgiving', {}, 14), pg = ses.page;
       await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
-      const r = await pg.evaluate(() => {
-        const S = window.DCCSeasonsEngine._state; S.manual(true);
-        let t, f = 0;
-        for (; f < 30 * 200; f++) { S.tick(1000 / 30, 1); t = S.calm.tom[0]; if (t.leg === 0 && (t.dir > 0 ? t.x > 120 : t.x < innerWidth - 120)) { break; } }
-        const at = t.x, d0 = t.dir;
-        const m = document.createElement('div'); m.className = 'dccs-modal'; document.body.appendChild(m);
-        let turnedAt = null, minA = 1;
-        for (f = 0; f < 30 * 120; f++) { S.tick(1000 / 30, 1); t = S.calm.tom[0]; minA = Math.min(minA, t.alpha == null ? 1 : t.alpha); if (t.leg === 1 && turnedAt == null) { turnedAt = { x: t.x, f }; } if (t.leg === 3) { break; } }
-        return { at, d0, turnedAt, leg: t.leg, minA, inner: innerWidth };
-      });
-      const went = r.turnedAt ? Math.abs(r.turnedAt.x - r.at) : 1e9;
-      ok(r.turnedAt && went < 60 && r.leg === 3, `1440, busy mid-walk: he turns within ${Math.round(went)} px (a step) and walks off`, JSON.stringify(r));
-      ok(r.minA === 1 || r.leg === 3, 'and he never fades on the way', JSON.stringify(r));
+      const seq = await pg.evaluate(() => { const S = window.DCCSeasonsEngine._state; S.manual(true); const out = []; let pf = 0;
+        for (let f = 0; f < 30 * 600; f++) { S.tick(1000 / 30, 1); const t = S.calm.tom[0]; if (!t) { break; } if (t.fs === 1 && pf !== 1) { out.push(t.fv); } pf = t.fs; if (t.leg === 3) { break; } }
+        return out; });
+      ok(seq.length >= 2 && seq.every((v, i) => i === 0 || v !== seq[i - 1]), `1440, a whole walk: feeds ${seq.join(' ')}: no repeat`, JSON.stringify(seq));
       await ses.close();
     }
   }

@@ -2733,9 +2733,9 @@
 			cx.restore();
 		}
 		function drawSubtle() {
-			if (!subEff || calmA <= 0) { return; }
-			/* 4.15.0: the background layer passes behind the occluders and
-			 * fades with the pieces while a guest is busy: one clip for all */
+			if (!subEff) { return; }
+			/* 4.15.0: the background layer passes behind the occluders: one
+			 * clip for all */
 			var oc = occVis.length && !(DEBUG && CFG.occClip === false);
 			if (oc) {
 				cx.save(); cx.beginPath(); cx.rect(-2, -2, vw + 4, vh + 4);
@@ -2753,7 +2753,7 @@
 			 * so much as absent. The sprite-opacity slider still moves it,
 			 * but with a floor — Layer 1 is the baseline face of the site
 			 * and should not vanish because the sprites were turned down. */
-			var a = subEff.a * (0.55 + subIntensity * 0.75) * clamp(alphaBase / 0.35, 0.6, 1.4) * calmA;
+			var a = subEff.a * (0.55 + subIntensity * 0.75) * clamp(alphaBase / 0.35, 0.6, 1.4);
 			for (var i = 0; i < subParts.length; i++) {
 				var p = subParts[i];
 				cx.save();
@@ -2881,13 +2881,9 @@
 		 *    plugin is named, and nothing in another plugin changes.
 		 *    Front layering in the content only: behind layering is already
 		 *    under the page, and the footer placement clips its own text.
-		 * 2. PAUSE (pick A): pieces fade out over 0.5 s while a guest is busy
-		 *    — a text field, textarea or select focused, the Cottage
-		 *    Selector's quiz, review or Compare Mode on screen, any
-		 *    .dccs-modal open, or anything marked [data-dcc-seasons-busy] —
-		 *    and drift back in 5 s after the last keystroke, the field losing
-		 *    focus or the selector closing. Walkers finish their walk off
-		 *    screen instead of fading.
+		 * 2. (4.15.2, Rob: occlusion alone) the 4.15.0 pause — pieces faded
+		 *    while a field was focused or the selector's quiz was open — is
+		 *    gone, with [data-dcc-seasons-busy] and the tom's busy hold.
 		 * CFG.calm === false (debug and the Untouched proof) turns all of it,
 		 * and the walkers' turn-back, off. */
 		var CALM = CFG.calm !== false;
@@ -2991,43 +2987,6 @@
 			W.addEventListener('scroll', function () { clearTimeout(occDue); occDue = setTimeout(function () { occQueue(0); }, 150); }, { passive: true });
 			setInterval(function () { if (!D.hidden) { occQueue(0); } }, 2000);
 			occQueue(0);
-		}
-
-		/* the pause */
-		var calmA = 1, calmBusy = false, calmFree = 0, calmKey = -1e9, calmPoll = 0, calmPollAt = -1e9, calmPollN = 0;
-		var CALM_TEXT = /^(text|email|tel|number|search|url|password|date|datetime-local|month|week|time)$/i;
-		function calmField(el) {
-			if (!el || el === D.body) { return false; }
-			var tn = el.tagName;
-			return tn === 'TEXTAREA' || tn === 'SELECT' || (tn === 'INPUT' && CALM_TEXT.test(el.type || 'text')) || !!el.isContentEditable;
-		}
-		function calmOpen() {
-			if (D.querySelector('.dccs-modal, [data-dcc-seasons-busy]') || (D.body && D.body.classList.contains('dcc-seasons-busy'))) { return true; }
-			var roots = D.querySelectorAll('.dccs-root');
-			for (var i = 0; i < roots.length; i++) {
-				if (roots[i].firstElementChild && !roots[i].querySelector('.dccs-landing') && roots[i].querySelector('.dccs-wizard, .dccs-review, .dccs-compare, .dccs-results, .dccs-body')) { return true; }
-			}
-			return false;
-		}
-		if (CALM) {
-			var calmTap = function (e) { if (calmField(e.target)) { calmKey = nowMs(); } };
-			D.addEventListener('keydown', calmTap, true);
-			D.addEventListener('input', calmTap, true);
-			D.addEventListener('focusin', function (e) { if (calmField(e.target)) { calmKey = nowMs(); } }, true);
-			D.addEventListener('focusout', function (e) { if (calmField(e.target)) { calmKey = nowMs(); } }, true);
-		}
-		/* once a frame: busy now? and the fade toward it */
-		function calmStep(dt) {
-			if (!CALM) { return; }
-			var t = nowMs();
-			if (t - calmPollAt > 400 || ++calmPollN >= 12) { calmPollAt = t; calmPollN = 0; calmPoll = calmOpen(); }   /* ~2.5 a second */
-			/* calmKey is stamped when a field takes focus, on every keystroke
-			 * in it and when it loses focus: the pieces stay away until 5 s
-			 * after the last of those. A selector or modal on screen holds
-			 * them away while it is open, and 5 s after it closes. */
-			if (calmPoll) { calmFree = t + 5000; }
-			calmBusy = calmPoll || t - calmKey < 5000 || t < calmFree;
-			calmA = calmBusy ? mx2(0, calmA - dt / 0.5) : mn(1, calmA + dt / 1.2);
 		}
 
 		/* Usable = built, and enough of the page open that steering into it
@@ -3472,7 +3431,7 @@
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
 				/* 4.13.2 forage (Thanksgiving's tom): walk, stop, feed, walk on */
-				if (b === 'forage') { if (CALM) { anywhere = 0; p.leg = 0; p.tq = 0; p.ko = null; p.kw = null; p.tsh = 0; } if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = rnd(1.6, 3.0); p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
+				if (b === 'forage') { if (CALM) { anywhere = 0; p.leg = 0; p.tq = 0; p.ko = null; p.kw = null; p.tsh = 0; } if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = tkGap(1); p.fv = -1; p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
 			}
 			if (b === 'dart') {
 				spreadPlace(p, vw * 0.1, vw * 0.9, vh * 0.1, vh * 0.66);
@@ -3725,13 +3684,9 @@
 					/* 4.15.0 (Rob's pick B): enter, walk about a third of the
 					 * screen at his own pace, TURN (a squeeze through the
 					 * narrow side, about his planted feet, never a flip-cut),
-					 * walk back off the side he came from, and stay gone. A
-					 * busy guest sends him back at once; he never enters
-					 * while one is busy. */
+					 * walk back off the side he came from, and stay gone. */
 					if (CALM) {
 						if (p.leg === 3) { p.alpha = 0; break; }
-						var inS = p.dir > 0 ? p.x > -p.size * 1.2 : p.x < vw + p.size * 1.2;
-						if (p.leg === 0 && !inS && calmBusy) { break; }   /* waits off screen */
 						if (p.leg === 1) {
 							p.tq += dt / TK_TURN;
 							if (p.tq >= 0.5 && !p.tflip) {
@@ -3746,10 +3701,10 @@
 								p.kw = [1, 1];
 								p.tflip = 1; p.dir = -p.dir; p.vx = -p.vx;
 							}
-							if (p.tq >= 1) { p.leg = 2; p.tq = 0; p.tflip = 0; p.fs = 0; p.ft = rnd(2.2, 3.0); }
+							if (p.tq >= 1) { p.leg = 2; p.tq = 0; p.tflip = 0; p.fs = 0; p.ft = mx2(p.ft, tkGap(2)); }
 							break;
 						}
-						if (p.leg === 0 && !p.tn && p.fs !== 1 && ((p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3) || (calmBusy && inS))) { p.tn = 1; }
+						if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }
 						if (p.leg === 2 && (p.dir > 0 ? p.x > vw + p.size * 4.6 : p.x < -p.size * 4.6)) { p.leg = 3; p.alpha = 0; p.gone = vt; break; }
 					}
 					p.ft -= dt;
@@ -3772,11 +3727,11 @@
 							if (p.tn) { if ((p.wp % 1) < adv / cyc) { p.wp = 0; p.tn = 0; p.leg = 1; p.tq = 0; p.fs = 0; } }   /* both feet down: he turns */
 							else {
 								if (p.fs === 0 && p.ft <= 0) { p.fs = 2; }
-								if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.ft = p.ftS = rnd(2.5, 3.1); }   /* both feet down: he feeds */
+								if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.fv = tkNextV(p.fv); p.ft = p.ftS = tkFeedEnd(p.fv) + 0.4 + rnd(0.5, 1.1); }   /* both feet down: he feeds */
 							}
 						} else {
 							p.gap = mx2(0.55, g0 - mn(dt * 0.8, 1.2 * abs(p.vx) * dt / span));
-							if (p.ft <= 0) { p.fs = 0; p.ft = rnd(2.2, 3.0); }
+							if (p.ft <= 0) { p.fs = 0; p.ft = tkGap(0); }
 						}
 						if (!p.kq) { p.kq = [0.67, 1.04]; p.kf = [0, 0]; }
 						for (c3 = 0; c3 < 2; c3++) {
@@ -3787,7 +3742,7 @@
 							var wait = false;
 							if (p.ko) {
 								var gN = (p.tsh || 0) + TK_REFW * tu * (0.22 + KP_OFF[c3] * p.gap);
-								if (p.kw[c3]) { p.ko[c3] += adv; if (p.ko[c3] >= gN) { p.kw[c3] = 0; p.ko[c3] = gN; } else { wait = true; } }
+								if (p.kw[c3]) { var kO = p.ko[c3]; p.ko[c3] += adv; if (p.ko[c3] >= gN) { p.kw[c3] = 0; p.ko[c3] = gN; ka = adv - (gN - kO); } else { wait = true; } }   /* 4.15.2: released, it walks only the ground it really covers */
 								else { p.ko[c3] = gN; }
 							}
 							if (wait) { ka = 0; }
@@ -3935,7 +3890,7 @@
 				}
 				if (sp.def.draw === 'tom') {
 					/* 4.13.2: one pre-drawn pose of the tom, then his poults */
-					var tf = tkGet(tkPose(p.wp || 0, TK_FR, p.fs, p.fs === 1 ? p.ftS - p.ft : 0, false));
+					var tf = tkGet(tkPose(p.wp || 0, TK_FR, p.fs, p.fs === 1 ? p.ftS - p.ft : 0, false, p.fv));
 					if (!tf) { return (flip ? cx.restore() : 0); }
 					var ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h;
 					var tw = tf.w * ts, th = tf.h * ts, gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts, fy = 10 * s;   /* his feet stand 10px below the walkers' line: they show */
@@ -4096,15 +4051,11 @@
 		function drawP(p, t) {
 			if (p.dormant || p.alpha <= 0 || p.yl < 0.02) { return; }
 			var b = p.b;
-			/* 4.15.0: a walker finishes its walk; everything else fades while
-			 * the guest is busy */
-			var cA = b === 'forage' ? 1 : calmA;
-			if (cA <= 0) { return; }
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
 			if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, b === 'forage' ? p.size * 7 : p.size * (p.sc || 1) * layerS * 1.7 + 6); }
-			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl) * cA;
+			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
 			if (b === 'dangle' && p.st !== 4) {
 				cx.strokeStyle = 'rgba(90,90,90,.6)';
 				cx.lineWidth = 1;
@@ -4516,11 +4467,22 @@
 			} catch (e) { tkLater(tkIdle); } });   /* started in idle time too, never in a frame */
 		}
 		/* which pose a walker is in this frame: walking, finishing its step,
-		 * or feeding (the head down over 0.4 s, two jabs, up again) */
-		function tkPose(ph, n, fs, fe, poult) {
+		 * or feeding: the head down over 0.4 s, the jabs of feed v, up again
+		 * over 0.4 s. 4.15.2 (Rob: "very repetitive"): three feeds — two
+		 * jabs (4.13.2's), one, three quick ones — and never the same one
+		 * twice running (tkNextV). Poults keep the plain lowering. */
+		function tkFeed(v) { return [[[0.8, 1.0], [1.25, 1.45], 1.6], [[0.85, 1.05], 1.25], [[0.8, 0.95], [1.1, 1.25], [1.4, 1.55], 1.75]][v]; }
+		function tkFeedEnd(v) { var F = tkFeed(v); return F[F.length - 1]; }
+		/* 4.15.2: seconds of walking before a stop — the first (1), the next
+		 * (0), at least this long after his turn (2). Until 4.15.0 he fed
+		 * every 1.6-3 s of walking, so he spent about half his time eating. */
+		function tkGap(k) { return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22); }
+		function tkNextV(v) { return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3; }
+		function tkPose(ph, n, fs, fe, poult, v) {
 			if (fs !== 1) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }
-			var d = fe < 0.3 ? 0 : fe < 0.7 ? (fe - 0.3) / 0.4 : fe < 1.6 ? 1 : fe < 2 ? 1 - (fe - 1.6) / 0.4 : 0;
-			var jab = (fe > 0.8 && fe < 1.0) || (fe > 1.25 && fe < 1.45);
+			var F = tkFeed(poult || !(v >= 0) ? 0 : v), up = F[F.length - 1], jab = false, i;
+			var d = fe < 0.3 ? 0 : fe < 0.7 ? (fe - 0.3) / 0.4 : fe < up ? 1 : fe < up + 0.4 ? 1 - (fe - up) / 0.4 : 0;
+			for (i = 0; i < F.length - 1; i++) { if (fe > F[i][0] && fe < F[i][1]) { jab = true; } }
 			if (d <= 0) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }   /* standing as it stopped, mid-stride (4.14.4) */
 			return (poult ? 'k' : '') + (jab && !poult ? 'pj' : 'p' + mx2(1, MT.round(d * 4)));
 		}
@@ -7587,7 +7549,7 @@
 				drawBgFills();
 				/* Layer 1 before everything else on the canvas: the subtle layer
 				 * is the calm baseline and every sprite belongs on top of it. */
-				calmStep(pdt);   /* 4.15.0: busy? and the occluders on screen, before anything is drawn */
+				/* 4.15.0: the occluders on screen, before anything is drawn */
 				occFrame();
 				stepSubtle(pdt);
 				drawSubtle();
@@ -7773,7 +7735,7 @@
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
-				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, a: calmA, busy: calmBusy, poll: calmPoll, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { leg: p.leg, x: p.x, dir: p.dir, tq: p.tq, ko: p.ko, kw: p.kw, alpha: p.alpha, gone: p.gone }; }) }; },
+				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { leg: p.leg, x: p.x, dir: p.dir, tq: p.tq, ko: p.ko, kw: p.kw, alpha: p.alpha, gone: p.gone, fs: p.fs, fv: p.fv }; }) }; },
 				occBuild: function () { occBuild(); occVisKey = ''; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },

@@ -2,7 +2,7 @@
 /**
  * DCC Seasons — 4.13.2, the strutting tom and his poults, in the engine:
  * he steps (a planted foot never slides), stops only with both feet down,
- * feeds 2.5-3.1 s without moving, walks on; he walks along the bottom of
+ * feeds 2.1-3.3 s without moving (4.15.2: three feeds, never one twice running), walks on; he walks along the bottom of
  * the screen with his feet showing; all 37 poses are pre-drawn after load
  * in idle time; and the check link (?dcc_scene=now) plays the scene at once
  * and again after each one, outside the moments queue, and only when asked.
@@ -63,7 +63,7 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
         if (f.fs !== 1 && st >= 0) { feeds.push((i - st) / 30); st = -1; }
       }
       ok(feeds.length >= 2, `he stops to feed, more than once (${feeds.length} times in 90 s)`, feeds.join(','));
-      ok(feeds.every(d => d >= 2.4 && d <= 3.2), `each feed lasts 2.5-3.1 s (${feeds.map(d => d.toFixed(1)).join(', ')})`, feeds.join(','));
+      ok(feeds.every(d => d >= 2.0 && d <= 3.4), `each feed lasts 2.1-3.3 s (${feeds.map(d => d.toFixed(1)).join(', ')})`, feeds.join(','));
       ok(drift === 0, 'and he does not move while he feeds', drift);
       const sp = fr.filter(f => !f.seed).map(f => Math.abs(f.vx));
       ok(sp.every(v => v >= 14 && v <= 20), `a strut: 14-20 px/s (${Math.min(...sp).toFixed(1)}-${Math.max(...sp).toFixed(1)})`, '');

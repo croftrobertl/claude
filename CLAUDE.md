@@ -1402,9 +1402,9 @@ Rob sees it (the overlay rows; sources named on the sheets).
      to 30% and back about his planted feet over `TK_TURN` 0.8 s, his
      poults turning in place, then standing where they were (`p.pw`) until
      he has walked back past them. Measured on screen: 40.8 s at 390,
-     110.9 s at 1440. Busy sends him back at the next planted step; he
-     never enters while busy and never fades.
-  4. **Pause (pick A)**: `calmStep()` (polled ~2.5/s) — `.dccs-modal`,
+     110.9 s at 1440. (4.15.0's busy hold and busy turn were removed in
+     4.15.2.) He never fades.
+  4. **Pause (pick A; REMOVED in 4.15.2)**: `calmStep()` (polled ~2.5/s) — `.dccs-modal`,
      `[data-dcc-seasons-busy]`, body.dcc-seasons-busy, or a `.dccs-root`
      showing a wizard/review/compare/results; or 5 s from the last focus,
      keystroke or blur of a text field. `calmA` fades pieces and the
@@ -1415,6 +1415,35 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `tools/measure-calm.js --page=contact|cottages|quiz|typing`,
   `tools/calm-reel.js`, pages in `tools/calm-pages.js` from the plugins'
   vendored files in `tests/calm/`.
+- **4.15.1 = the Anniversary color pick** (the Director, 2026-11-03,
+  after 4.15.0 went live; live by end of 10 Nov): only the date band and the
+  figures change color, on 4.15.0. Review: `build/Seasons - 4.15.1 color
+  review/` (the 4.14.6 candidates re-rendered on 4.15.0, with a 6 s clip of
+  each A). Set Rob's keys as `COLOR`'s defaults in `tools/anniv-build.js`,
+  regenerate and minify the pack, and run `tools/test-color-candidate.js`
+  with BASE = 4.15.0 (`dbfda4e`).
+- **4.15.2 (the Director, 2026-11-03): occlusion alone, and the tom feeds
+  less.** Built after 4.15.1.
+  - **The pause is GONE** (Rob wants occlusion alone): `calmStep`,
+    `calmA`, the field listeners, `calmOpen`, `[data-dcc-seasons-busy]`,
+    `body.dcc-seasons-busy`, and the tom's busy hold and busy turn. Never
+    reintroduce a fade for a guest who is typing or in the quiz. The
+    occluders are exactly 4.15.0's (the Untouched test now draws every
+    other theme with calm ON and has an occluder-clip mutation).
+  - **Feeding** (Rob: "very repetitive... going to get fat"): the first
+    stop after 7-11 s of walking, then 15-22 s between stops (`tkGap`), at
+    least 6 s after his turn; three feeds (`tkFeed`: two jabs, one, three)
+    and never the same one twice running (`tkNextV`, `p.fv`). The slow
+    strut and the third-in turn are unchanged. Measured (test-calm, seed
+    14): 2 stops at 390, 4 at 1440; on screen 26.9 s at 390 (was 43.4) and
+    84.9 s at 1440 (was 141). Poults keep their plain lowering.
+  - A poult released after his turn walks only the ground it really covers
+    (`ka = adv - (gN - kO)`): with no feed straight after the turn the old
+    snap showed as a 1.58 px foot slide (test-holidays).
+  - Tests: `test-calm.js` (DCC_CALM_MUT=noclip|noturn|flip|repeat|often|
+    hold; the stop count, the no-repeat read from the DRAWN jabs, 15 s
+    between stops, the no-pause checks), `test-untouched.js` against
+    `dbfda4e` with Thanksgiving exempt.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1847,7 +1876,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.0 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
