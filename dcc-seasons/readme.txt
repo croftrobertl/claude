@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.14.4
+Stable tag: 4.14.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,16 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.14.5 =
+The Anniversary (11 November), held to the house style (approved by Rob).
+* No outline round any falling piece: the heart, the crystal drop and the
+  year crystal, the flutes, the date band, the rings and the two figures
+  take their shape from their own shading. The figures' dark rim is now
+  their own dark-gold shadow, set down and to the right.
+* Nothing whiter than the house cream; the toast's two loose sparkle dots
+  are gone. Only the Anniversary's art changes: every other theme draws
+  exactly what 4.14.4 draws.
 
 = 4.14.4 =
 Rob's Thanksgiving and Christmas corrections (his picks A1, B1, C1, D2).
