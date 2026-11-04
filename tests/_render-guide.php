@@ -52,8 +52,12 @@ namespace Elementor {
                 . '<div class="elementor-widget-container">'
                 . '<p>Templates hold prose too. It should read centred.</p>'
                 . '<p>A second paragraph, which needs a blank line above it.</p>'
-                . '<ul><li>A real bullet, long enough to wrap onto a second line in the sheet.</li>'
-                . '<li>Another bullet.</li></ul>'
+                // SHORT bullets, deliberately: a sentence-long one makes the
+                // list as wide as the item, and a block that already fills
+                // its parent sits in the same place centred or not — which
+                // is how the mutant that deletes margin-inline: auto
+                // survived its first run.
+                . '<ul><li>Towels</li><li>Keys</li><li>Remote</li></ul>'
                 . '</div></div>'
                 . '<div class="elementor-element elementor-widget elementor-widget-button">'
                 . '<a class="elementor-button" href="#"><span class="elementor-button-text">'

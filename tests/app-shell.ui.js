@@ -816,6 +816,8 @@ const check = (name, cond, detail) => {
                     return Math.round(Math.abs((u.left + u.right) / 2 - (parent.left + parent.right) / 2));
                 })() : null,
                 listPos: ul ? getComputedStyle(ul).listStylePosition : null,
+                listWidth: ul ? Math.round(ul.getBoundingClientRect().width) : null,
+                listParentWidth: ul ? Math.round(ul.parentElement.getBoundingClientRect().width) : null,
                 // the things that must NOT follow the rule
                 menuAligns: menuLis.map((x) => getComputedStyle(x).textAlign),
                 btnWrap: btn ? (getComputedStyle(btn).textWrap || '') : null,
@@ -840,6 +842,16 @@ const check = (name, cond, detail) => {
             new Set(tpl.bulletColumn).size === 1, JSON.stringify(tpl.bulletColumn));
         check('…and outside the text, so the column is the bullets',
             tpl.listPos === 'outside', String(tpl.listPos));
+        // SHORT bullets on purpose. The first version of this fixture used a
+        // sentence-long one, which made the list as wide as the item it sits
+        // in — and a block that already fills its parent is in the same place
+        // centred or not, so the mutant that deletes margin-inline: auto
+        // survived. The list has to be narrower than the item for centring to
+        // mean anything.
+        check('…and is narrower than the item, so centring it is visible at all',
+            tpl.listWidth !== null && tpl.listParentWidth !== null
+                && tpl.listWidth < tpl.listParentWidth - 20,
+            `list ${tpl.listWidth} in ${tpl.listParentWidth}`);
         check('…while the list BLOCK is centred in the item',
             tpl.listCentred !== null && tpl.listCentred <= 1, String(tpl.listCentred));
         // The exclusions, which are exclusions by never matching.
