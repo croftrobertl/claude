@@ -1037,7 +1037,23 @@
 			 * it was not going to keep. Two frames later the real height is
 			 * final and the floor can go; within the estimate, nothing moves.
 			 */
-			var release = function () { host.removeAttribute('data-dccwl-map-wait'); };
+			/*
+			 * The reservation already counts the layer chips, which init()
+			 * has just un-hidden BELOW the host — so for those two frames the
+			 * host's floor drops by exactly their height, or the chips would
+			 * add theirs on top (measured on live: content below moved down
+			 * 98px and back at 390).
+			 */
+			var chips = document.querySelector('[data-dccwl-map-chips]');
+			if (chips && !chips.hidden) {
+				var below = chips.getBoundingClientRect().bottom - host.getBoundingClientRect().bottom;
+				var floor = parseFloat(getComputedStyle(host).minHeight) || 0;
+				if (below > 0 && floor > below) { host.style.minHeight = Math.round(floor - below) + 'px'; }
+			}
+			var release = function () {
+				host.removeAttribute('data-dccwl-map-wait');
+				host.style.minHeight = '';
+			};
 			if (typeof requestAnimationFrame === 'function') {
 				requestAnimationFrame(function () { requestAnimationFrame(release); });
 			} else {

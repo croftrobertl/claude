@@ -419,10 +419,20 @@
 	});
 
 	if (searchEl) {
+		/*
+		 * 1.48.0: THE LETTER PAINTS FIRST, the list follows when typing
+		 * pauses — the same 250ms the /explore/ search waits (widget.js
+		 * SEARCH_PAUSE). Filtering 402 rows took ~220ms per keystroke at 390
+		 * on a 4x-throttled phone, inside the keystroke. The clear button
+		 * shows at once; the clear button itself, a pill and the scope
+		 * switch still apply immediately.
+		 */
+		var searchTimer = 0;
 		searchEl.addEventListener('input', function () {
 			state.q = searchEl.value || '';
 			if (clearEl) { clearEl.hidden = '' === state.q; }
-			refresh();
+			if (searchTimer) { clearTimeout(searchTimer); }
+			searchTimer = setTimeout(function () { searchTimer = 0; refresh(); }, 250);
 		});
 	}
 	if (clearEl) {
@@ -431,6 +441,7 @@
 			searchEl.value = '';
 			state.q = '';
 			clearEl.hidden = true;
+			if (searchTimer) { clearTimeout(searchTimer); searchTimer = 0; }
 			refresh();
 			searchEl.focus();
 		});

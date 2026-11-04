@@ -181,7 +181,7 @@ section('the pills and the search');
 
   /* The search runs inside the chosen pill. */
   await page.fill('[data-dccwl-gp-search]', 'heron');
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(600);
   const herons = await page.evaluate(() =>
     [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
       .map((r) => r.getAttribute('data-name')));
@@ -192,7 +192,7 @@ section('the pills and the search');
   /* A scientific name, from a clean search. */
   await page.click('[data-dccwl-gp-group="all"]');
   await page.fill('[data-dccwl-gp-search]', 'Ardea herodias');
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(600);
   const sci = await page.evaluate(() =>
     [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
       .map((r) => r.getAttribute('data-name')));
@@ -204,7 +204,7 @@ section('the pills and the search');
    * appear under it because somebody typed its name.
    */
   await page.fill('[data-dccwl-gp-search]', 'chigger');
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(600);
   checkSame(0, await shownCount(page), 'a Wider Florida species stays out of a Seen Here search');
   const empty = await page.evaluate(() => {
     const e = document.querySelector('[data-dccwl-gp-empty]');

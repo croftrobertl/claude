@@ -759,23 +759,20 @@
 				closeAllLabel: CFG.i18n.closeAll,
 				opener: tile,
 				build: function (body) {
-					buildDetail(body, sp);
-					proseMark(body);
 					/*
-					 * Built twice only when it has to be. Warmed on the first
-					 * interaction, the detail is almost always here already
-					 * and 'ready' short-circuits this. When it is not, the
-					 * sheet opens NOW with what the index has — name,
-					 * photograph, field mark, the twelve-month strip — and
-					 * fills in when the rest lands, provided the guest is
-					 * still looking at the same species.
+					 * 1.48.0 (Irwin audit, item 5): THE SHEET ANSWERS THE TAP
+					 * FIRST. Building the entry — photograph, twelve-month
+					 * strip, look-alikes — inside the tap was most of the
+					 * plugin's own share of a 300ms+ "Open a Species" at 390 /
+					 * 4x. The sheet (with its title) now opens at once and the
+					 * body is filled on the next frame, while it is still
+					 * sliding in, so nothing is seen arriving late. Guarded:
+					 * a guest who closes or switches before then gets no stale
+					 * build.
 					 */
-					if ('ready' === detail.state) { return; }
-					ensureDetail().then(function (ok) {
-						if (!ok || state.openId !== id) { return; }
-						body.textContent = '';
-						buildDetail(body, sp);
-						proseMark(body);
+					afterPaint(function () {
+						if (state.openId !== id) { return; }
+						fillDetail(body);
 					});
 				},
 				onClose: function () {
@@ -783,6 +780,28 @@
 					markOpen(null);
 				}
 			});
+
+			function fillDetail(body) {
+				body.textContent = '';
+				buildDetail(body, sp);
+				proseMark(body);
+				/*
+				 * Built twice only when it has to be. Warmed on the first
+				 * interaction, the detail is almost always here already
+				 * and 'ready' short-circuits this. When it is not, the
+				 * sheet opens NOW with what the index has — name,
+				 * photograph, field mark, the twelve-month strip — and
+				 * fills in when the rest lands, provided the guest is
+				 * still looking at the same species.
+				 */
+				if ('ready' === detail.state) { return; }
+				ensureDetail().then(function (ok) {
+					if (!ok || state.openId !== id) { return; }
+					body.textContent = '';
+					buildDetail(body, sp);
+					proseMark(body);
+				});
+			}
 		}
 
 		function wireTile(tile) {

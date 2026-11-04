@@ -193,6 +193,19 @@ section('3. the guide page: one write per view change, reads before writes');
   const w2 = await page.evaluate(() => ({ rows: window.__rowWrites }));
   checkSame(0, w2.rows, 'the scope switch writes nothing on the rows either');
   checkAtLeast(n0 + 1, await shown(), 'and Wider Florida shows more than Seen Here');
+
+  /* The guide's search, like /explore/'s, paints the letter first. */
+  const before = await shown();
+  const inTask = await page.evaluate(() => {
+    const i = document.querySelector('[data-dccwl-gp-search]');
+    i.value = 'heron';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    return [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length).length;
+  });
+  checkSame(before, inTask, 'a keystroke in the guide search does not filter 402 rows inside the keystroke');
+  await page.waitForTimeout(700);
+  const after = await shown();
+  check(after > 0 && after < before, `and the rows follow once typing pauses (${before} -> ${after})`);
   await page.close();
 }
 
@@ -272,10 +285,21 @@ section('5. taps: two tiles per opened species, and the keystroke paints first')
   await page.waitForTimeout(400);
   const first = await page.evaluate(() => window.__exp);
   checkAtMost(1, first, 'opening a species writes aria-expanded on one tile (it wrote every tile)');
+  /* The sheet answers the tap first and fills on the next frame. */
+  const sameTaskBody = await page.evaluate(() => {
+    const t = [...document.querySelectorAll('.dccwl-panel-species .dccwl-tile[data-dccwl-species]')].filter((x) => x.getBoundingClientRect().width > 0)[1];
+    document.querySelector('.dccwl-sheet [data-dccwl-sheet-close], .dccwl-sheet button');
+    t.click();
+    const b = document.querySelector('.dccwl-sheet-body');
+    return { open: !!document.querySelector('[data-dccwl-open="true"]'), kids: b ? b.children.length : -1 };
+  });
+  check(sameTaskBody.open && 0 === sameTaskBody.kids, 'a second species opens the sheet at once, its body still empty inside the tap', JSON.stringify(sameTaskBody));
+  await page.waitForTimeout(400);
+  checkAtLeast(3, await page.evaluate(() => document.querySelector('.dccwl-sheet-body').children.length), 'and filled on the next frame');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
   const afterClose = await page.evaluate(() => window.__exp);
-  checkAtMost(2, afterClose, 'and closing it on that tile only');
+  checkAtMost(4, afterClose, 'switching to a second species and closing it writes four times: on, off-and-on, off');
 
   const vis = () => page.evaluate(() => [...document.querySelectorAll('.dccwl-panel-species .dccwl-tile[data-dccwl-species]')].filter((t) => t.getClientRects().length).length);
   const before = await vis();
