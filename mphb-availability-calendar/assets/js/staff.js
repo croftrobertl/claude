@@ -2423,7 +2423,9 @@
                 if (c[0] === 'delta') {
                     th.textContent = '';
                     (S.stColVs || 'vs {year}').split('{year}').forEach(function (part, i) {
-                        if (i) th.appendChild(document.createTextNode(lyYear));
+                        // The year kept whole ("2025–26" never broken at its dash) when
+                        // a narrow phone sets this header on two lines (0.57.0).
+                        if (i) th.appendChild(el('span', 'mphbac-staff-percot-year', lyYear));
                         if (part) th.appendChild(el('span', 'mphbac-staff-percot-as-typed', part));
                     });
                 }
@@ -2520,7 +2522,11 @@
             out.appendChild(drawHeat(got[3], plan.year, w, n.cottages.length));
             // THE TOP (0.53.0, Rob): built last, so every tip below keeps the
             // number it had, and put above the tiles.
-            out.insertBefore(drawTop(n, ly, w, plan, data, got[2]), grid);
+            // Since 0.57.0 (Rob's pick C) Booking Pace is its own section,
+            // right after the headline and before the tiles, as it sat.
+            var topBlock = drawTop(n, ly, w, plan, data, got[2]);
+            out.insertBefore(topBlock, grid);
+            out.insertBefore(topBlock.paceBlock, grid);
 
             statsOut.textContent = '';
             statsOut.appendChild(out);
@@ -2564,7 +2570,13 @@
                     sec.appendChild(pill);
                 }
             }
-            sec.appendChild(drawCurve(w, plan, data, plan.ly.why ? null : lyData));
+            // BOOKING PACE, A SECTION OF ITS OWN (0.57.0, Rob's pick C): titled
+            // through blockHead like every other, its ⓘ in the heading; the
+            // key under the chart is a plain caption.
+            var pace = el('section', 'mphbac-staff-stats-block is-curve');
+            blockHead(pace, 'curve', S.stCurve, S.stCurveTip, [plan.ly.why ? noCompareText(plan.ly.why) : S.stCurveLy, S.stCurveLow]);
+            pace.appendChild(drawCurve(w, plan, data, plan.ly.why ? null : lyData));
+            sec.paceBlock = pace;
             return sec;
         }
 
@@ -2720,17 +2732,9 @@
             box.appendChild(plot);
             box.appendChild(axis);
             box.appendChild(read);
-            // The key in one line, the ⓘ held to its last word.
-            var key = el('p', 'mphbac-staff-curve-key');
-            var words = String((ago ? S.stCurveKey : S.stCurveKeyNow) || '').split(' ');
-            var last = words.pop();
-            if (words.length) key.appendChild(document.createTextNode(words.join(' ') + ' '));
-            var hold = el('span', 'mphbac-staff-stats-hlast', last);
-            var t = tipParts('curve', S.stCurve || '', S.stCurveTip, [plan.ly.why ? noCompareText(plan.ly.why) : S.stCurveLy, S.stCurveLow]);
-            hold.appendChild(t.btn);
-            key.appendChild(hold);
-            box.appendChild(key);
-            box.appendChild(t.box);
+            // The key: a 14px caption (0.57.0) — the ⓘ is the section's, in
+            // its "Booking Pace" heading.
+            box.appendChild(el('p', 'mphbac-staff-curve-key', (ago ? S.stCurveKey : S.stCurveKeyNow) || ''));
             return box;
         }
 

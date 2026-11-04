@@ -296,7 +296,8 @@ const RGB = { direct: 'rgb(7, 135, 50)', airbnb: 'rgb(188, 0, 62)', booking: 'rg
     const heads = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-stats-h')].map(h => h.textContent));
     // 0.47.0 (Rob's pick N1): one "what by what" pattern.
     check('...headed in Rob\'s 0.47.0 names, in the 0.46.0 order',
-      JSON.stringify(heads) === JSON.stringify(['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arrivals & Departures by Day',
+      // 0.57.0 (Rob's pick C): Booking Pace is a titled section of its own, first.
+      JSON.stringify(heads) === JSON.stringify(['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arrivals & Departures by Day',
         'Days Booked Ahead by Source', 'Upcoming Nights vs Last Year', 'Nights Booked in 2026']), heads);
     const per = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.mphbac-staff-percot-row')].map(r =>
       [r.querySelector('.mphbac-staff-percot-name').textContent, [r.querySelector('.mphbac-staff-percot-num').textContent, r.querySelector('.mphbac-staff-percot-fill').style.width]])));

@@ -37,7 +37,8 @@ const REMOVED = {
   stTurnoversOnce: 'One per cottage per day.',
   stLeadAfter: 'Bookings made after their check-in are left out.',
 };
-const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arrivals & Departures by Day',
+// 0.57.0 (Rob's pick C): Booking Pace, its own titled section, first.
+const NAMES = ['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arrivals & Departures by Day',
   'Days Booked Ahead by Source', 'Upcoming Nights vs Last Year', 'Nights Booked in 2026'];
 
 (async () => {
@@ -166,10 +167,14 @@ const NAMES = ['Nights by Cottage', 'Nights by Source', 'Stays by Length', 'Arri
             .filter(e => { const r = e.getBoundingClientRect(); return r.right > o.right + 0.5 || r.left < o.left - 0.5; }).map(e => e.className.baseVal !== undefined ? 'svg' : e.className).slice(0, 5); })(),
       };
     });
-    const want = { heading: '16px', tileNum: '24px', tileLabel: '16px', tileDelta: '14px', cottage: '15px', cottageNum: '15px', cottageDelta: '15px', mix: '15px',
-      srcKey: '16px', wkNum: '13px', wkName: '14px', wkKey: '15px', lead: '16px', pace: '16px', paceDelta: '15px', heatName: '14px', heatKey: '14px', tip: '15px' };
+    // 0.57.0 (Rob's pick C) CHANGED these on purpose to one scale: section
+    // titles 19, body and rows 16 (cottage rows, Stays by Length 15 → 16),
+    // small labels 14 (weekday counts 13 → 14, their key and the ▲▼ of
+    // Upcoming Nights 15 → 14). The tiles, the tips' dark box: as they were.
+    const want = { heading: '19px', tileNum: '24px', tileLabel: '16px', tileDelta: '14px', cottage: '16px', cottageNum: '16px', cottageDelta: '16px', mix: '16px',
+      srcKey: '16px', wkNum: '14px', wkName: '14px', wkKey: '14px', lead: '16px', pace: '16px', paceDelta: '14px', heatName: '14px', heatKey: '14px', tip: '15px' };
     const off = Object.keys(want).filter(k => m[k] !== want[k]);
-    check(`${w}px: every size +2 — headings 16, rows 15, tiles 24 / 16 / 14, source lines 16, weekdays 13 / 14 / 15, lists 16 (▲▼ 15), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
+    check(`${w}px: the 0.57.0 scale — titles 19, rows 16, tiles 24 / 16 / 14, source lines 16, weekdays 14 / 14 / 14, lists 16 (▲▼ 14), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
     check(`${w}px: the tile label 16px even under a theme's \`dt { font-size: 14px }\` (live measured 14)`, m.tileLabel === '16px', m.tileLabel);
     check(`${w}px: headings balanced, their line box grown with the type (${m.lh}px ≥ 16 × 1.3), nothing clipped, no word broken across lines`,
       m.balance === 'balance' && m.lh >= 20.8 && !m.clipped && !m.wordBroken, m);

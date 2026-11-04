@@ -105,7 +105,8 @@ const pct = (v, of) => Math.round(100 * v / of);
     check('the pill reads "' + arrow + ' vs Nov 2025" — the tile\'s ▲▼', top.pillSeen === arrow + ' vs Nov 2025' && top.tileDelta === arrow, top.pillSeen + ' / tile ' + top.tileDelta);
     check('…read as a sentence', top.pillSaid === (d > 0 ? 'up ' : 'down ') + Math.abs(d) + (Math.abs(d) === 1 ? ' point' : ' points') + ' vs Nov 2025', top.pillSaid);
     check('…in the ▲ colours (is-up / is-down)', /is-(up|down|same)/.test(top.pillCls), top.pillCls);
-    check('the six tiles come straight after it', /mphbac-staff-stats-kpis/.test(top.before), top.before);
+    // 0.57.0 (Rob's pick C): Booking Pace, its own section, sits between.
+    check('Booking Pace comes straight after it, then the six tiles', /is-curve/.test(top.before) && /mphbac-staff-stats-kpis/.test(await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-curve').nextElementSibling.className)), top.before);
     const bt = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').textContent);
     check('0.53.1: the Booked tile\'s ⓘ says its ▲▼ are occupancy percentage points vs the same dates last year', /▲▼ are occupancy percentage points vs the same dates last year \(Nov\s1\s–\s30, 2025\)\./.test(bt) && !/% booked\./.test(bt), bt);
     // October 2025 cannot be compared (records complete from Oct 1, 2025, and
@@ -209,7 +210,8 @@ const pct = (v, of) => Math.round(100 * v / of);
         tip: document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent };
     });
     check('it renders "vs 2025" (innerText, after text-transform)', h.seen === 'vs 2025' && h.text === 'vs 2025', JSON.stringify(h.seen));
-    check('…the row is still in capitals; only "vs" is exempt', h.tt === 'uppercase' && h.spanTt === 'none' && h.others.join('|') === 'COTTAGE|NIGHTS|OCCUPANCY', h.others.join('|'));
+    // 0.57.0 (Rob's pick C: no uppercase micro-labels): the row in Title Case.
+    check('…CHANGED (0.57.0): the row in Title Case, no capitals at all', h.tt === 'none' && h.spanTt === 'none' && h.others.join('|') === 'Cottage|Nights|Occupancy', h.others.join('|'));
     check('…named "vs 2025" to a screen reader, as before', h.aria === 'vs 2025');
     check('the tip says the figures are occupancy percentage points', /▲▼ are occupancy percentage points vs the same dates last year/.test(h.tip), h.tip);
     await still(p, 'Nights by Cottage header 390px', '.mphbac-staff-stats-block.is-percot');

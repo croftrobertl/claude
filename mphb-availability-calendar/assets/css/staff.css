@@ -1421,7 +1421,7 @@ body.mphbac-staff-open { overflow: hidden; }
     min-width: 0;
     margin: 0;
     color: var(--staff-text);
-    font-size: 30px;
+    font-size: 28px;                   /* 30 until 0.57.0 (Rob's pick C: one type scale) */
     font-weight: 700;
     line-height: 1.2;
     text-align: center;
@@ -1470,7 +1470,7 @@ body.mphbac-staff-open { overflow: hidden; }
    14px there against this file's 12 (the WD, 0.47.0). Rob's +2 is from what
    he sees, so 16px — said at (0,3,0), where a theme's dt rule cannot reach. */
 .mphbac-staff .mphbac-staff-kpi .mphbac-staff-kpi-label { font-size: 16px; }
-.mphbac-staff-stats-block { position: relative; margin-top: 18px; }
+.mphbac-staff-stats-block { position: relative; margin-top: 30px; }   /* 18 until 0.57.0: 30 between sections (Rob's pick C) */
 .mphbac-staff-stats-h {
     margin: 0 0 8px;
     color: var(--staff-text);
@@ -1507,7 +1507,7 @@ body.mphbac-staff-open { overflow: hidden; }
     border-collapse: separate;
     border-spacing: 0;
     background: none;
-    font-size: 15px;                   /* the rows: 13 until 0.47.0 (Rob: +2) */
+    font-size: 16px;                   /* the rows: 13 until 0.47.0 (Rob: +2), 15 until 0.57.0 (the 16 body size) */
     line-height: 1.3;
 }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot thead,
@@ -1550,11 +1550,13 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h {
     color: var(--staff-muted);
-    font-size: 12px;
+    /* Title Case at the 14 small-label size since 0.57.0 (Rob's pick C: no
+       uppercase micro-labels); 12px capitals, letter-spaced, until then. */
+    font-size: 14px;
     font-weight: 700;
     line-height: 1.2;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    letter-spacing: normal;
+    text-transform: none;
     align-self: end;
 }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h.is-name,
@@ -1568,7 +1570,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-name { color: var(--staff-text); font-weight: 600; }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-num { color: var(--staff-muted); font-weight: 400; }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-pct { color: var(--staff-text); font-weight: 700; }
-.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-delta { font-size: 15px; }
+.mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-delta { font-size: 16px; }
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-barcell {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -1588,11 +1590,15 @@ body.mphbac-staff-open { overflow: hidden; }
    "#23 Lighthouse" needs 110; at 390, 136px. */
 @media (max-width: 479px) {
     .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 8px; }
-    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h { letter-spacing: 0.02em; }
 }
 @media (max-width: 369px) {
-    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 6px; }
-    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h { letter-spacing: 0; font-size: 11px; }
+    /* 0.57.0: the headers stay 14px Title Case (they were 11px capitals here),
+       so the room comes from elsewhere: the gaps 4px (were 6), and the year
+       column's header on two lines — "vs" over "2025–26", still flush right
+       over its figures. Measured at 360: "#31 Hibiscus Hut" needs 127px. */
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 4px; }
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h.is-delta { width: min-content; justify-self: end; white-space: normal; }
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-year { white-space: nowrap; }
 }
 
 /* ---- 0.46.0 STATS (Rob): ‹ › round the date line, ⓘ tips, ▲ ▼, and the
@@ -1732,7 +1738,16 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 .mphbac-staff .mphbac-staff-tipbox .mphbac-staff-tiplist li { margin: 2px 0 0; padding: 0; }
 
-.mphbac-staff-stats-hrow { margin: 0 0 8px; }
+.mphbac-staff-stats-hrow { margin: 0 0 12px; }
+/* TITLE BANDS (0.57.0, Rob's pick C): every section's title on a light-blue
+   band, its content on white below — so where one statistic ends and the
+   next begins is plain. Inside the panel's edges, as everything in Stats. */
+.mphbac-staff-stats-block > .mphbac-staff-stats-hrow {
+    margin: 0 0 14px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #e7eef8;
+}
 /* EVERY HEADING CENTRED (0.46.2), the ⓘ straight after its last word and
    kept with it (a nowrap span), so heading and ⓘ centre together. (0,3,0)
    holds a theme's h3 rules off it. */
@@ -1740,7 +1755,7 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 0;
     padding: 0;
     color: var(--staff-text);
-    font-size: 16px;                   /* 14 until 0.47.0 (Rob: +2) */
+    font-size: 19px;                   /* 14 until 0.47.0 (Rob: +2); 16 until 0.57.0 (pick C: titles a step above the 16 body) */
     font-weight: 700;
     /* A line box that grows with the type (was a fixed 24px), never less
        than the ⓘ's 24px; and a heading that wraps does so evenly. */
@@ -1759,7 +1774,7 @@ body.mphbac-staff-open { overflow: hidden; }
     align-items: center;
     gap: 8px;
     padding: 3px 0;
-    font-size: 15px;                   /* 13 until 0.47.0 (Rob: +2) */
+    font-size: 16px;                   /* 13 until 0.47.0 (Rob: +2), 15 until 0.57.0 */
     line-height: 1.3;
 }
 .mphbac-staff-mix-name { font-weight: 600; white-space: nowrap; }
@@ -1791,10 +1806,10 @@ body.mphbac-staff-open { overflow: hidden; }
     min-width: 0;
     height: 100%;
 }
-.mphbac-staff-wk-num { color: var(--staff-text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mphbac-staff-wk-num { color: var(--staff-text); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mphbac-staff-wk-bar { display: block; width: 100%; border-radius: 3px 3px 0 0; }
 .mphbac-staff-wk-name { color: var(--staff-muted); font-size: 14px; font-weight: 600; }
-.mphbac-staff-wk-key { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; font-size: 15px; }
+.mphbac-staff-wk-key { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; font-size: 14px; }
 .mphbac-staff-wk-keyitem { display: inline-flex; align-items: center; gap: 6px; }
 .mphbac-staff-wk-swatch { width: 12px; height: 12px; border-radius: 3px; }
 .mphbac-staff-wk-col.is-in .mphbac-staff-wk-bar,
@@ -1820,7 +1835,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-pace-row { display: contents; }
 .mphbac-staff-pace-name { font-weight: 700; }
 .mphbac-staff-pace-num { font-variant-numeric: tabular-nums; }
-.mphbac-staff-pace-delta { font-size: 15px; }
+.mphbac-staff-pace-delta { font-size: 14px; }
 
 /* THE YEAR AS A HEAT MAP: twelve small months, one square a night, in nine
    steps of the site's button blue (#0A50B2, --staff-header): grey for none,
@@ -2558,7 +2573,7 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 0;
     padding: 0;
     color: var(--staff-text);
-    font-size: 28px;
+    font-size: 24px;                   /* 28 until 0.57.0: below the 28px range, not competing with it */
     font-weight: 700;
     line-height: 1.2;
     text-align: center;
@@ -2572,7 +2587,7 @@ body.mphbac-staff-open { overflow: hidden; }
     border-radius: 999px;
     background: #f1f3f4;
     color: var(--staff-muted);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.3;
     white-space: nowrap;
@@ -2602,13 +2617,13 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-curve-now { stroke: #0a50b2; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
 .mphbac-staff-curve-max {
     position: absolute;
-    top: -8px;
+    top: -10px;
     left: 0;
     padding-right: 4px;
     background: var(--staff-bg, #ffffff);
     color: var(--staff-muted);
-    font-size: 12px;
-    line-height: 16px;
+    font-size: 14px;
+    line-height: 18px;
     pointer-events: none;
 }
 .mphbac-staff-curve-dot {
@@ -2648,7 +2663,7 @@ body.mphbac-staff-open { overflow: hidden; }
    starts just after the dot, from the right third it ends just before. */
 .mphbac-staff-curve-tag.is-left { transform: translateX(10px); }
 .mphbac-staff-curve-tag.is-right { transform: translateX(-10px); }
-.mphbac-staff-curve-axis { position: relative; height: 18px; margin: 4px 6px 0; color: var(--staff-muted); font-size: 12px; line-height: 18px; }
+.mphbac-staff-curve-axis { position: relative; height: 20px; margin: 4px 6px 0; color: var(--staff-muted); font-size: 14px; line-height: 20px; }
 .mphbac-staff-curve-tick { position: absolute; top: 0; white-space: nowrap; transform: translateX(-50%); }
 .mphbac-staff-curve-tick.is-first { transform: none; }
 .mphbac-staff-curve-tick.is-end { right: 0; transform: none; }
@@ -2657,7 +2672,7 @@ body.mphbac-staff-open { overflow: hidden; }
     margin: 6px 0 0;
     padding: 0;
     color: var(--staff-text);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.3;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -2665,14 +2680,13 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-curve-when { display: block; color: var(--staff-muted); font-size: 14px; }
 .mphbac-staff-curve-vals { display: block; font-weight: 700; }
 .mphbac-staff .mphbac-staff-curve .mphbac-staff-curve-key {
-    margin: 2px 0 0;
+    margin: 6px 0 0;                   /* a 14px caption since 0.57.0; the ⓘ is in the Booking Pace heading */
     padding: 0;
     color: var(--staff-muted);
     font-size: 14px;
-    line-height: max(24px, 1.3em);
+    line-height: 1.3;
     text-align: center;
 }
-.mphbac-staff .mphbac-staff-curve-key .mphbac-staff-tip.mphbac-staff-tip { margin-left: 4px; vertical-align: top; }
 
 /* Nights by Cottage's "vs": the row is in capitals, this word as typed. */
 .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h .mphbac-staff-percot-as-typed { text-transform: none; }
@@ -2717,7 +2731,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-lead-head .mphbac-staff-pie-swatch { flex: none; }
 .mphbac-staff-lead-count { color: var(--staff-muted); font-weight: 400; }
 .mphbac-staff-lead-fig { display: flex; flex-direction: column; align-items: center; margin-top: 2px; text-align: center; }
-.mphbac-staff-lead-label { color: var(--staff-muted); font-size: 13px; font-weight: 600; line-height: 1.2; }
+.mphbac-staff-lead-label { color: var(--staff-muted); font-size: 14px; font-weight: 600; line-height: 1.2; }
 .mphbac-staff .mphbac-staff-lead .mphbac-staff-lead-num { margin: 0; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ======================================================================

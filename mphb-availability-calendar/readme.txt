@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.56.0
+Stable tag: 0.57.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.57.0 =
+* **Stats on /staff/ are easier to read (Rob's pick C, "Title Bands").** Each section's title now sits on a light-blue band, with its content on white below and more space between sections, so where one statistic ends and the next begins is plain.
+* **One type scale:** the date line 28px, the headline 24px, section titles 19px, rows and figures 16px, small labels 14px. No more uppercase micro-labels: Nights by Cottage's column headers are in Title Case. On the narrowest phones the "vs 2025" header takes two lines so cottage names stay on one.
+* **Booking Pace is its own section,** with a title and ⓘ like the others; "Blue this year, dashed last year." is a caption under the chart.
+* Everything else is unchanged. Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.56.0 =
 * **The booking pop-up on /staff/, "Summary on Top" (Rob's pick, layout C).** Under the title: the cottage, unlabelled and bold (one line per cottage), then three tiles, Check-In, Check-Out and Nights, with dates as "Fri, Nov 6" (the year only when it isn't this year). Below them, small chips: an import's channel ("Booking.com", "Airbnb", "Vrbo") and, when the channel sent no guest count, "Guest Count Not Sent". These replace the Accommodation Type, Check-In and Check-Out rows, the long "came from an external channel" banner and the "count not provided by …" row. A confirmed guest count is still its own Number of Guests row.
