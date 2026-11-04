@@ -1333,9 +1333,9 @@
                 sheetBody.appendChild(banner);
             }
             var sec = d.sections || {};
-            [[S.secBooking, sec.booking], [S.secCustomer, sec.customer], [S.secNotes, sec.notes]]
+            [[S.secBooking, sec.booking], [S.secCustomer, sec.customer], [S.secNotes, sec.notes, 'notes']]
                 .forEach(function (pair) {
-                    var el = rowsSection(pair[0], pair[1], d.id);
+                    var el = rowsSection(pair[0], pair[1], d.id, pair[2]);
                     if (el) sheetBody.appendChild(el);
                 });
             // OPEN IN WP-ADMIN (0.44.0): the server sends the link ONLY to a
@@ -1381,14 +1381,20 @@
         // The server has already dropped every empty field, so anything that
         // arrives here has a value. A section with nothing in it is omitted
         // outright rather than left as a bare heading.
-        function rowsSection(title, rows, bookingId) {
+        function rowsSection(title, rows, bookingId, kind) {
             if (!rows || !rows.length) return null;
             var s = section(title);
+            // NOTES (0.54.0, Rob): the section is named, so its values alone
+            // can be set in plain weight (staff.css), and every note carries
+            // its own Copy button under its date and author.
+            if (kind === 'notes') s.className += ' is-notes';
             var dl = document.createElement('dl');
             rows.forEach(function (r) {
                 if (!r || !r.label) return;
                 if (r.photo) { photoRow(dl, r, bookingId); return; }
+                var before = dl.childNodes.length;
                 addRow(dl, r.label, r.value, r);
+                if (kind === 'notes' && dl.childNodes.length > before) copyButton(dl.lastChild.previousSibling, r.label, r.value);
             });
             s.appendChild(dl);
             return s;
@@ -1453,6 +1459,66 @@
                 dd.className = 'is-money';
             }
             dl.appendChild(dt); dl.appendChild(dd);
+        }
+
+        // COPY A NOTE (0.54.0, Rob: "so I can just tap that and send it to
+        // Tony without reformatting"). Under the note's date and author, in
+        // the label column: the Phone line's "Text" pill, as a button. It
+        // copies THAT note's text only — never its date or author — as plain
+        // text: the server's string (tags already stripped, line breaks
+        // kept), each line's trailing spaces dropped. Nothing new is asked
+        // of the server.
+        function noteText(value) {
+            return String(value).replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').replace(/\s+$/, '');
+        }
+        function copyButton(dt, label, value) {
+            if (!dt || value === undefined || value === null || value === '') return;
+            var text = noteText(value);
+            var wrap = document.createElement('span');
+            wrap.className = 'mphbac-staff-copywrap';
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'mphbac-staff-copy';
+            b.textContent = S.copyNote || 'Copy';
+            b.setAttribute('aria-label', (S.copyNoteName || 'Copy note from {label}').replace('{label}', String(label)));
+            var timer = null;
+            var say = function (t) {
+                b.textContent = t;
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(function () { b.textContent = S.copyNote || 'Copy'; timer = null; }, 2000);
+            };
+            b.addEventListener('click', function () {
+                // Straight from the tap — no await, no timer before it — so
+                // Safari counts it as the user's own action on the first tap.
+                var done;
+                try { done = copyPlain(text); } catch (e) { done = Promise.reject(e); }
+                done.then(function () { say(S.copied || 'Copied'); }, function () { say(S.copyFailed || 'Couldn\'t Copy'); });
+            });
+            wrap.appendChild(b);
+            dt.appendChild(wrap);
+        }
+        // text/plain only: the Clipboard API's writeText, or — where there
+        // is none (an older browser, a page not served over https) — a
+        // hidden textarea, whose copy is plain text by nature.
+        function copyPlain(text) {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                return navigator.clipboard.writeText(text);
+            }
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.setAttribute('aria-hidden', 'true');
+            ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+            (sheet.parentNode || document.body).appendChild(ta);
+            var keep = document.activeElement;
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.parentNode.removeChild(ta);
+            if (keep && keep.focus) { try { keep.focus({ preventScroll: true }); } catch (e) { keep.focus(); } }
+            return ok ? Promise.resolve() : Promise.reject(new Error('copy'));
         }
 
         // ---- dialog open/close, portal, focus trap ---------------------------

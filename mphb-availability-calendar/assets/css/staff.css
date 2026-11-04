@@ -1298,6 +1298,12 @@ span.mphbac-staff-ico::before {
    never be mistaken for a real count. */
 .mphbac-staff-sheet.mphbac-staff-sheet dd.is-unknown { color: #5b6470; font-style: italic; }
 .mphbac-staff-sheet.mphbac-staff-sheet dd.is-money { font-variant-numeric: tabular-nums; font-weight: 600; }
+/* NOTES IN PLAIN WEIGHT (0.54.0, Rob: the bold went into his texts to
+   Tony). Where it came from: the dialog lives on <body>, outside the board,
+   and nothing on it gave a value a weight — so a value inherited the theme's
+   `html { font-weight: 700 }`. The labels set their own 600. Said here, on
+   the dialog's own root, for the Notes section's values only. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section.is-notes dd { font-weight: 400; }
 
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room {
     margin: 0 0 10px;
@@ -1671,10 +1677,12 @@ body.mphbac-staff-open { overflow: hidden; }
    is tappable within it (the ⓘ sits on a heading or a tile's corner). */
 .mphbac-staff .mphbac-staff-tip.mphbac-staff-tip,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-tel,
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms { position: relative; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy { position: relative; }
 .mphbac-staff .mphbac-staff-tip.mphbac-staff-tip::after,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-tel::after,
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms::after {
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms::after,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -2322,6 +2330,7 @@ body.mphbac-staff-open { overflow: hidden; }
     text-decoration: underline;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-adminlink {
     display: inline-flex;
     align-items: center;
@@ -2341,6 +2350,7 @@ body.mphbac-staff-open { overflow: hidden; }
    rule never reaches them — on either widget. */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:focus-visible,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms:focus-visible,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy:focus-visible,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-adminlink:focus-visible {
     background-color: var(--dcc-button-hover-bg, #f08080);
     color: var(--dcc-button-hover-fg, #ffffff);
@@ -2348,6 +2358,28 @@ body.mphbac-staff-open { overflow: hidden; }
     outline-offset: revert;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms { margin-left: 10px; min-height: 36px; padding: 0 12px; font-size: 0.9em; }
+/* THE NOTE'S COPY BUTTON (0.54.0): the "Text" pill above, the same size,
+   shape and colours — a <button>, so everything a theme's button rule could
+   set is said here too, at the same (0,4,0) as the pill's size line. On its
+   own line under the date and author. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy {
+    min-height: 36px;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    padding: 0 12px;
+    border: 0;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 0.9em;
+    font-style: normal;
+    line-height: 1.35;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copywrap { display: block; margin-top: 6px; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-admin { margin: 16px 0 0; text-align: center; }
 
 /* ---- phone ---- */
@@ -2621,6 +2653,7 @@ body.mphbac-staff-open { overflow: hidden; }
         color: var(--dcc-button-hover-fg, #ffffff);
     }
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sms:hover,
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copy.mphbac-staff-copy:hover,
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-adminlink:hover,
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:hover {
         background: var(--dcc-button-hover-bg, #f08080);

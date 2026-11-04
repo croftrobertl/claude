@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.53.1
+Stable tag: 0.54.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.54.0 =
+* **Booking pop-up on /staff/: notes in plain text weight (Rob).** The text of each note is no longer bold, so copying it into a message no longer carries bold with it. The bold came from the theme's sitewide bold, which the pop-up (moved to the page's body) inherited; only the note text changes. Labels and the other sections are as before.
+* **A Copy button on every note.** Under each note's date and author, the same size, shape and color as the Phone line's "Text" button. A tap copies that note's text alone as plain text: line breaks kept, no date, no author, no formatting. It reads "Copied" for about 2 seconds, or "Couldn't Copy" if the phone refuses. Nothing new is sent to or asked of the server.
+* Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.53.1 =
 * **/staff/ keeps clear of the iPhone's home bar (Rob's pick).** On the staff page only, the plugin now adds a viewport tag with the theme's own values plus viewport-fit=cover, so iOS reports the home bar's safe area. The bottom of the page, and the Ready / Not Ready popup, keep clear of it (and of the notch when the phone is turned sideways). Every other page's <head> is unchanged.
