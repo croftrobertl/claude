@@ -136,6 +136,29 @@ section('2. in an Elementor flexbox column the widget takes the full width');
   });
   note(`flex column ${r.con}px, widget ${r.root}px`);
   checkSame(r.con, r.root, 'the widget is as wide as the column it sits in (it shrank to 178px on /test/)');
+  /* The rule itself, isolated: Elementor's own flex-item rules (min-width 0,
+   * max-width 100%) and content narrower than the column, which is what
+   * squeezed it on live — this fixture's real app is naturally wider than
+   * 354px, so the check above alone cannot fail. */
+  const iso = await page.evaluate(() => {
+    const con = document.createElement('div');
+    con.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:354px';
+    const out = {};
+    for (const w of ['dccwl_canal', 'dccwl_month', 'dccwl_water', 'dccwl_countdown']) {
+      const el = document.createElement('div');
+      el.className = `elementor-element elementor-widget elementor-widget-${w}`;
+      el.style.cssText = 'min-width:0;max-width:100%';
+      el.innerHTML = '<div class="elementor-widget-container"><div class="dccwl-app">short</div></div>';
+      con.appendChild(el);
+    }
+    document.body.appendChild(con);
+    [...con.children].forEach((c) => { out[c.className.split('elementor-widget-')[1]] = Math.round(c.getBoundingClientRect().width); });
+    con.remove();
+    return out;
+  });
+  note(JSON.stringify(iso));
+  checkSame({ dccwl_canal: 354, dccwl_month: 354, dccwl_water: 354, dccwl_countdown: 354 }, iso,
+    'every DCC Wildlife widget wrapper fills a centred flex column even when its content is narrow');
   await page.close();
 }
 

@@ -5719,3 +5719,74 @@ and `ui-1470.mjs` count rendered rows. `ui-motion.mjs`'s month control was a
 typed 1499 — October's tile count — and failed on HEAD itself in November; it
 is now derived (twice the tiles built).
 
+#### Measured on live, 2026-11-04 (4× CPU, GET only, mean of two runs)
+
+"after" is this build swapped into the real pages (tools/live/swap.mjs);
+[bracketed] is the same with SpeedyCache's lazy-load script switched off.
+A tap figure is the Event Timing duration, input to next paint.
+
+**/explore/** — before (live 1.47.3) → after (1.48.0 on live) · [after, with SpeedyCache lazy-load off]
+
+| | 390 | 768 | 1440 |
+|---|---|---|---|
+| CLS | 0.658 → 0.004 [0.000] | 0.222 → 0.002 [0.002] | 0.149 → 0.013 [0.012] |
+| Longest task on load (ms) | 167 → 194 [155] | 168 → 174 [185] | 219 → 181 [156] |
+| Choose Wildlife tap (ms) | 136 → 212 [120] | 224 → 216 [136] | 124 → 196 [120] |
+| … tiles on screen after (ms) | 1614 → 1014 [627] | 1304 → 824 [701] | 1164 → 1001 [571] |
+| Open a Species tap (ms) | 396 → 236 [216] | 468 → 308 [216] | 352 → 284 [152] |
+| Tap into search (ms) | 224 → 172 [136] | 224 → 184 [208] | 148 → 180 [112] |
+| Type a Search, worst key (ms) | 360 → 52 [104] | 496 → 68 [72] | 496 → 80 [96] |
+
+**/test/** — before (live 1.47.3) → after (1.48.0 on live) · [after, with SpeedyCache lazy-load off]
+
+| | 390 | 768 | 1440 |
+|---|---|---|---|
+| CLS | 1.012 → 0.024 [0.021] | 0.706 → 0.007 [0.012] | 0.510 → 0.009 [0.009] |
+| Longest task on load (ms) | 168 → 196 [144] | 212 → 209 [183] | 251 → 224 [235] |
+| Choose Wildlife tap (ms) | 124 → 160 [104] | 224 → 180 [96] | 192 → 224 [96] |
+| … tiles on screen after (ms) | 1223 → 920 [579] | 1238 → 759 [576] | 1344 → 974 [679] |
+| Open a Species tap (ms) | 452 → 304 [176] | 444 → 352 [224] | 384 → 256 [144] |
+| Tap into search (ms) | 224 → 228 [272] | 228 → 232 [128] | 272 → 184 [88] |
+| Type a Search, worst key (ms) | 468 → 60 [56] | 612 → 56 [48] | 524 → 84 [64] |
+
+**/wildlife-guide/** — before (live 1.47.3) → after (1.48.0 on live) · [after, with SpeedyCache lazy-load off]
+
+| | 390 | 768 | 1440 |
+|---|---|---|---|
+| CLS | 0.025 → 0.028 [0.028] | 0.005 → 0.005 [0.005] | 0.008 → 0.008 [0.008] |
+| Longest task on load (ms) | 5126 → 4714 [402] | 4799 → 4711 [359] | 5167 → 4931 [453] |
+| Open a Species tap (ms) | 1144 → 1036 [184] | 916 → 980 [176] | 464 → 472 [128] |
+| Tap into search (ms) | 560 → 632 [104] | 552 → 492 [88] | 424 → 368 [48] |
+| Type a Search, worst key (ms) | 300 → 40 [96] | 260 → 52 [48] | 312 → 48 [80] |
+| Clear the Search (ms) | 5984 → 5868 [232] | 5280 → 5572 [216] | 5836 → 6200 [200] |
+| Tap Birds (ms) | 644 → 656 [504] | 652 → 688 [552] | 656 → 664 [480] |
+| Tap Wider Florida (ms) | 376 → 420 [312] | 436 → 464 [296] | 452 → 416 [224] |
+
+
+**Read it this way.** The map's jump is gone (CLS 0.66 → 0.004 on /explore/
+at 390, 1.01 → 0.024 on /test/). Keystrokes went from 300–600ms to 40–84ms.
+"Open a Species" and "Choose Wildlife" on /explore/ and /test/ are 160–352ms
+on live and 96–224ms with the site's lazy-load script off: the gap between
+the two is the Director's (above). The guide page's freeze, Clear and pill
+taps are almost all that script too; the pills still cost ~500ms without it,
+nearly all of it ONE style recalc of the 402 rows when the list's attribute
+changes (321ms traced) — selector matching measured at about 1ms, so the cost
+is rebuilding the rows that change display. That is the next thing to take
+on for the guide page, and it was not in this brief's tap list.
+
+**Mutations, 22, every one red** (applied from a copy, restored with `cp`,
+checked with `cmp`, never `git checkout`): reservation not held, no width
+rule (needed the isolated check — the first version passed it), rows written
+one by one, unclip interleaved, no placeholders, no menu-time fetch, every
+tile written on open, search in the keystroke (both pages), limits table
+back, veteran credit back, no prose class, a centred rule without balance,
+Measured for forecasts, depth map in Now, no past tense, 56px thumbnails,
+sheet images without data-no-lazy, two-line tile names, no space before the
+arrow, old search wording, sheet built inside the tap.
+
+**Page weight.** Raw gzip -9 of the changed assets is +7.1 KB, nearly all of
+it comments; SpeedyCache serves them minified, where the change is about
++0.35 KB CSS and +1.3 KB JS gz (comments stripped, estimated). The guide's
+thumbnails cost about 3–6 KB more each at 168px (Photon, measured: cane toad
+1.6 → 7.5 KB, alligator 1.2 → 3.9 KB), lazily loaded — roughly +50 KB for the
+rows on a phone's first screen.
