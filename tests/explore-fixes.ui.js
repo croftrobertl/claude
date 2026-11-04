@@ -210,6 +210,148 @@ const TILE = () => {
         await ctx.close();
     }
 
+    // ===================================================================
+    // The v0.27.7 add-on: the even column and the line-length cap.
+    // ===================================================================
+    const BODIES = () => {
+        const vis = (e) => e.getClientRects().length > 0;
+        return Array.from(document.querySelectorAll('.dccgg-item')).filter(vis).map((it) => {
+            const body = it.querySelector('.dccgg-item-body');
+            if (!body || !vis(body)) return null;
+            const ir = it.getBoundingClientRect(), br = body.getBoundingClientRect();
+            const p = body.querySelector('p');
+            const table = body.querySelector('table');
+            const frame = body.querySelector('iframe');
+            const wide = (el) => el ? Math.round(el.getBoundingClientRect().width) : null;
+            return {
+                title: (it.getAttribute('data-item-title') || '').slice(0, 30),
+                checkable: it.hasAttribute('data-checkable'),
+                inL: Math.round(br.left - ir.left), inR: Math.round(ir.right - br.right),
+                col: Math.round(br.width),
+                pW: wide(p),
+                pMaxWidth: p ? getComputedStyle(p).maxWidth : null,
+                pMarginLeft: p ? getComputedStyle(p).marginLeft : null,
+                tableW: wide(table), tableMax: table ? getComputedStyle(table).maxWidth : null,
+                frameW: wide(frame), frameMax: frame ? getComputedStyle(frame).maxWidth : null,
+                emptyParas: Array.from(body.querySelectorAll('p')).filter((x) => {
+                    const t = x.textContent.replace(/ /g, ' ').trim();
+                    return t === '' || (x.children.length === 1 && x.children[0].tagName === 'BR' && t === '');
+                }).length,
+            };
+        }).filter(Boolean);
+    };
+
+    async function openSection(page, label) {
+        const tiles = await page.$$('.dccgg-tile');
+        for (const t of tiles) {
+            const txt = (await t.textContent()).replace(/\s+/g, ' ').trim();
+            if (txt.toLowerCase().startsWith(label.toLowerCase())) {
+                await t.click(); await page.waitForTimeout(650); return true;
+            }
+        }
+        return false;
+    }
+
+    console.log('\nG. The even column — checkable items only');
+    for (const width of [390, 1440]) {
+        const { ctx, page } = await openGuide(browser, 'grid', width);
+        await openSection(page, 'Checkout');
+        const rows = await page.evaluate(BODIES);
+        const chk = rows.filter((r) => r.checkable);
+        check(`@${width} the fixture really has checkable items`, chk.length > 0, String(chk.length));
+        check(`@${width} every checkable body is inset 24px on the LEFT`,
+            chk.every((r) => r.inL === 24), JSON.stringify(chk.map((r) => r.inL)));
+        check(`@${width} ...and 24px on the RIGHT — the insets are EQUAL`,
+            chk.every((r) => r.inR === 24), JSON.stringify(chk.map((r) => r.inR)));
+        check(`@${width} so the column is centred under the title`,
+            chk.every((r) => r.inL === r.inR), 'uneven insets would read as a ragged column');
+        await ctx.close();
+    }
+    {
+        // ...and NOT on an item without a checkbox: the inset exists to line
+        // the text up with the checkbox, so an item that has none must keep
+        // the full width it has today.
+        const { ctx, page } = await openGuide(browser, 'grid', 390);
+        await openSection(page, 'Rules');
+        const rows = await page.evaluate(BODIES);
+        const plain = rows.filter((r) => !r.checkable);
+        check('the fixture really has non-checkable items', plain.length > 0, String(plain.length));
+        check('a non-checkable body is NOT inset',
+            plain.every((r) => r.inL === 0 && r.inR === 0),
+            JSON.stringify(plain.map((r) => [r.title, r.inL, r.inR])));
+        await ctx.close();
+    }
+
+    console.log('\nH. The line-length cap');
+    for (const width of [390, 1440]) {
+        const { ctx, page } = await openGuide(browser, 'grid', width);
+        await openSection(page, 'Amenities');
+        const rows = await page.evaluate(BODIES);
+        const withP = rows.filter((r) => r.pW !== null);
+        check(`@${width} bodies with a paragraph are present`, withP.length > 0);
+        check(`@${width} the cap is declared on the paragraph`,
+            withP.every((r) => r.pMaxWidth === '520px'), JSON.stringify(withP.map((r) => r.pMaxWidth)));
+        if (width === 1440) {
+            // the column is wider than the cap here, so the cap must BITE and
+            // the paragraph must be centred in what is left.
+            const wide = withP.filter((r) => r.col > 560);
+            check('@1440 the column really is wider than the cap',
+                wide.length > 0, JSON.stringify(withP.map((r) => r.col)));
+            check('@1440 no paragraph is wider than the cap',
+                wide.every((r) => r.pW <= 521), JSON.stringify(wide.map((r) => r.pW)));
+            check('@1440 and it is centred, not left-aligned in the column',
+                wide.every((r) => r.pMarginLeft !== '0px'), JSON.stringify(wide.map((r) => r.pMarginLeft)));
+        } else {
+            // phones are narrower than the cap and must be untouched by it
+            check('@390 the column is narrower than the cap, so nothing is clipped',
+                withP.every((r) => r.col <= 520 && r.pW <= r.col), JSON.stringify(withP.map((r) => [r.col, r.pW])));
+        }
+        await ctx.close();
+    }
+
+    console.log('\nI. The cap does not reach content it was never meant to');
+    {
+        const { ctx, page } = await openGuide(browser, 'grid', 1440);
+        await openSection(page, 'Amenities');
+        const rows = await page.evaluate(BODIES);
+        const t = rows.find((r) => r.tableW !== null);
+        const f = rows.find((r) => r.frameW !== null);
+        check('the fixture holds a table inside a body', !!t, JSON.stringify(rows.map((r) => r.title)));
+        check('the fixture holds an embed inside a body', !!f);
+        if (t) {
+            check('the table carries no cap', t.tableMax === 'none', String(t.tableMax));
+            check('and is free to be wider than 520px', t.tableW > 520, String(t.tableW));
+        }
+        if (f) {
+            check('the embed carries no cap', f.frameMax === 'none', String(f.frameMax));
+            check('and is free to be wider than 520px', f.frameW > 520, String(f.frameW));
+        }
+        await ctx.close();
+    }
+
+    console.log('\nJ. The empty-paragraph guard, in the rendered DOM');
+    {
+        const { ctx, page } = await openGuide(browser, 'grid', 390);
+        await openSection(page, 'Amenities');
+        const rows = await page.evaluate(BODIES);
+        const stray = rows.find((r) => /Stray empty lines/.test(r.title));
+        check('the fixture item with stray blank lines is present', !!stray,
+            JSON.stringify(rows.map((r) => r.title)));
+        check('no empty paragraph survives into the DOM',
+            rows.every((r) => r.emptyParas === 0),
+            JSON.stringify(rows.filter((r) => r.emptyParas).map((r) => [r.title, r.emptyParas])));
+        const kept = await page.evaluate(() => {
+            const a = Array.from(document.querySelectorAll('.dccgg-item'))
+                .find((x) => /Stray empty lines/.test(x.getAttribute('data-item-title') || ''));
+            const b = a && a.querySelector('.dccgg-item-body');
+            return b ? { n: b.querySelectorAll('p').length, text: b.textContent.replace(/\s+/g, ' ').trim() } : null;
+        });
+        check('the two real paragraphs are kept', kept && kept.n === 2, JSON.stringify(kept));
+        check('and their words are still there, in order',
+            kept && /Before the gap\.\s*After the gap\./.test(kept.text), JSON.stringify(kept && kept.text));
+        await ctx.close();
+    }
+
     await browser.close();
     console.log('');
     if (fail) { console.log(`FAILED (${fail}):`); failures.forEach((f) => console.log(`  - ${f}`)); }

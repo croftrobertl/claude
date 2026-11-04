@@ -167,6 +167,37 @@ function dccgg_all_on(): array {
          'content_source' => 'template', 'item_template' => '99'],
         ['_id' => 'a6', 'item_section' => 'amenities', 'item_title' => 'Line break inside',
          'item_content' => '<p>First line,<br>second line of the same sentence.</p>'],
+        // v0.27.7: the three shapes the add-on is about, and none of them
+        // existed in this fixture before.
+        //
+        // a7 — a line long enough to exceed the 520px cap at a desktop
+        // width. Rob's own worst is "Key & Lock" at 647px on one line at
+        // 1440; without a line of that order here the cap has nothing to
+        // act on and a mutant that deletes it passes unnoticed.
+        ['_id' => 'a7', 'item_section' => 'amenities', 'item_title' => 'A very long single line',
+         'item_content' => '<p>The laundromat is open from eight in the morning '
+            . 'until eight at night and takes quarters only, so bring change.</p>'],
+        // a8 — EMPTY PARAGRAPHS, in the three spellings the guard accepts.
+        // The two real ones on pages 4645 and 17685 have been removed at
+        // source by the Website Director, so live carries none and only a
+        // fixture can show the guard working.
+        ['_id' => 'a8', 'item_section' => 'amenities', 'item_title' => 'Stray empty lines',
+         'item_content' => '<p>Before the gap.</p><p>&nbsp;</p><p> </p><p><br></p>'
+            . '<p>After the gap.</p>'],
+        // a9 — content the cap must NOT touch. A table and an iframe are
+        // wider than 520px by nature; the rule is an allow-list naming p,
+        // ul and ol, so these are untouched because they were never matched.
+        ['_id' => 'a9', 'item_section' => 'amenities', 'item_title' => 'A table and an embed',
+         'item_content' => '<p>Rates below.</p>'
+            // Wide ENOUGH to want more than the 520px cap on its own: a
+            // table sizes to its content, so a narrow one would sit under
+            // the cap whether the rule reached it or not, and the test
+            // would be measuring the fixture instead of the rule. Measured
+            // at 458px before this was lengthened.
+            . '<table><tr><td>Washing machine</td><td>Two dollars in quarters</td>'
+            . '<td>Open eight in the morning to eight at night</td>'
+            . '<td>Quarters from the office</td><td>Beside the lower dock</td></tr></table>'
+            . '<iframe src="https://dccgg.test/map" width="900" height="200"></iframe>'],
         ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',
          'item_content' => '<p style="font-weight:700">Someone pasted this in bold.</p>'],
         // Long enough to collapse, so Read more renders.

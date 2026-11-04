@@ -12,6 +12,7 @@ import os, shutil, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(ROOT, 'dcc-guest-guide')
 SUITES = [['php', os.path.join(ROOT, 'tests', 'search-index.test.php')],
+          ['php', os.path.join(ROOT, 'tests', 'item-text.test.php')],
           ['node', os.path.join(ROOT, 'tests', 'explore-fixes.ui.js')],
           ['php', os.path.join(ROOT, 'tests', 'public-mode.test.php')]]
 C, P, W = 'assets/css/widget.css', 'includes/class-plugin.php', 'includes/class-widget.php'
@@ -125,6 +126,59 @@ MUTANTS = [
     ('apply_public_mode keeps guest sections', W,
      "            if ($audience !== 'public' && $audience !== 'both') { continue; }",
      "            if ($audience === 'nope') { continue; }"),
+
+    # ---- the add-on: the even column -------------------------------------
+    ('the even column reaches NON-checkable items too', C,
+     '.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-body,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item--checkable .dccgg-item-body {',
+     '.dccgg-stage.dccgg-stage .dccgg-item-body,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body {'),
+    ('the column is gone, so the text runs past the controls again', C,
+     '    max-width: calc(100% - 48px);\n    margin-inline: auto;\n}',
+     '    max-width: 100%;\n}'),
+    ('the insets are UNEVEN — inset one side only', C,
+     '    max-width: calc(100% - 48px);\n    margin-inline: auto;\n}',
+     '    max-width: calc(100% - 48px);\n    margin-inline: 0 auto;\n}'),
+    ('the inset is the wrong size, so it no longer matches the checkbox', C,
+     '    max-width: calc(100% - 48px);\n    margin-inline: auto;\n}',
+     '    max-width: calc(100% - 20px);\n    margin-inline: auto;\n}'),
+
+    # ---- the add-on: the line-length cap ---------------------------------
+    ('the cap is missing, so a desktop line runs the full column', C,
+     '    max-width: var(--dccgg-measure, 520px);\n    margin-inline: auto;\n}',
+     '    margin-inline: auto;\n}'),
+    ('the cap is there but the text is not centred under it', C,
+     '    max-width: var(--dccgg-measure, 520px);\n    margin-inline: auto;\n}',
+     '    max-width: var(--dccgg-measure, 520px);\n}'),
+    ('the cap is applied to the BODY, so it reaches a table and an embed', C,
+     '.dccgg-stage.dccgg-stage .dccgg-item-body > p,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-item-body > ul,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-item-body > ol,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > p,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > ul,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > ol {',
+     '.dccgg-stage.dccgg-stage .dccgg-item-body,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-item-body *,\n'
+     '.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body {'),
+
+    # ---- the add-on: the empty-paragraph guard ---------------------------
+    ('the empty-paragraph guard is removed', W,
+     '            $body_html = self::drop_empty_paragraphs(\n'
+     '                wpautop(self::auto_link_html(wp_kses_post($content))));',
+     '            $body_html = wpautop(self::auto_link_html(wp_kses_post($content)));'),
+    ('the guard keeps a paragraph holding only &nbsp;', W,
+     "            '~<p(?:\\s[^>]*)?>(?:\\s|&nbsp;|&#160;|&#xa0;|\\x{00A0}|<br\\s*/?>)*</p>~iu',",
+     "            '~<p(?:\\s[^>]*)?>(?:\\s|<br\\s*/?>)*</p>~iu',"),
+    ('the guard eats a paragraph that HAS text', W,
+     "            '~<p(?:\\s[^>]*)?>(?:\\s|&nbsp;|&#160;|&#xa0;|\\x{00A0}|<br\\s*/?>)*</p>~iu',",
+     "            '~<p(?:\\s[^>]*)?>.*?</p>~iu',"),
+    ('the guard rewrites the stored content as well as the render', W,
+     '    public static function drop_empty_paragraphs(string $html): string\n'
+     '    {\n'
+     "        if ($html === '' || stripos($html, '<p') === false) { return $html; }",
+     '    public static function drop_empty_paragraphs(string $html): string\n'
+     '    {\n'
+     "        if ($html === '' || stripos($html, '<p') === false) { return ''; }"),
 ]
 
 # Recorded rather than run, with the measurement that explains each.

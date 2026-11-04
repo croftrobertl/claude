@@ -560,6 +560,47 @@ final class Widget extends Widget_Base
      * pre-formatted content or breaking nested anchors. Returns the modified
      * HTML; the input is assumed to have already passed through `wp_kses_post`.
      */
+    /**
+     * Drop body paragraphs that hold nothing a guest can read.
+     *
+     * v0.27.7, Rob: a stray empty line in an item's description rendered as
+     * a gap, because v0.27.5 gives every `p + p` a 1em top margin and an
+     * empty paragraph is still a paragraph. Two of them were found on pages
+     * 4645 and 17685 and the Website Director has removed those at source;
+     * this is the guard that stops the next one, and it changes nothing on
+     * either live page today.
+     *
+     * RENDER-TIME ONLY, and that is the instruction: the stored content is
+     * untouched, so the host's text is exactly as they typed it, and the
+     * search index, the read-time estimate and the read-aloud text all go on
+     * reading the raw value rather than this.
+     *
+     * "Empty" is whitespace, &nbsp; in any of its spellings, and <br> — in
+     * any combination and any number, not just one. A paragraph holding
+     * `<br><br>` is as much an accidental gap as one holding a single <br>,
+     * and a rule that dropped one but not the other would be arbitrary. A
+     * paragraph with so much as one readable character is never touched,
+     * because the whole content has to match.
+     */
+    public static function drop_empty_paragraphs(string $html): string
+    {
+        if ($html === '' || stripos($html, '<p') === false) { return $html; }
+        // The delimiter is ~ and not the usual #, because the pattern itself
+        // contains `&#160;` and `&#xa0;` — with # as the delimiter the first
+        // entity closes the pattern and PHP reads `160;...` as modifiers,
+        // which fails with "Unknown modifier '1'" and quietly returns null.
+        // Caught by the unit cases below rather than in the wild.
+        $out = preg_replace(
+            '~<p(?:\s[^>]*)?>(?:\s|&nbsp;|&#160;|&#xa0;|\x{00A0}|<br\s*/?>)*</p>~iu',
+            '',
+            $html
+        );
+        // preg_replace returns null on failure (a bad subject encoding, say).
+        // Falling back to the original is the safe direction: a stray gap is
+        // a blemish, an empty body is a lost answer.
+        return $out === null ? $html : $out;
+    }
+
     public static function auto_link_html(string $html): string
     {
         if ($html === '' || stripos($html, '<') === false && stripos($html, '@') === false && !preg_match('/\d/', $html)) {
@@ -4874,7 +4915,8 @@ final class Widget extends Widget_Base
         // Auto-link + read-time apply to WYSIWYG content only.
         $body_html = '';
         if ($source === 'wysiwyg') {
-            $body_html = wpautop(self::auto_link_html(wp_kses_post($content)));
+            $body_html = self::drop_empty_paragraphs(
+                wpautop(self::auto_link_html(wp_kses_post($content))));
         }
         $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';

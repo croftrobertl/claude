@@ -83,8 +83,17 @@ After upload + activation:
 * The search endpoint now applies public mode before answering, so a guide
   set to public can only ever return its public sections. No change for the
   full guest guide.
-* Stylesheet and one endpoint guard: no markup, data, settings or template
-  changes.
+* On a checklist item, the description now sits in the same column as the
+  tick box above it, with an equal margin on both sides, instead of running
+  wider than the controls.
+* Long lines of description text no longer stretch the full width of a
+  desktop screen. They wrap into a comfortable column, centred under the
+  title. Phones and tablets are narrower than the limit and are unchanged.
+  Tables, maps, embeds, buttons, menus and galleries keep their full width.
+* A blank line left in an item's description no longer shows as a gap. The
+  text itself is not altered in any way.
+* Stylesheet, one endpoint guard and one render-time tidy: no markup, data,
+  settings or template changes.
 
 = 0.27.6 =
 * The guide's default text styling now also applies inside items built

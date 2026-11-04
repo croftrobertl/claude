@@ -5528,6 +5528,70 @@ dialog.dccgg-wrapper::backdrop {
     margin-top: 1em;
 }
 
+/* ==========================================================================
+   v0.27.7 add-on, Rob 2026-11-04: an even text column, and a cap on the
+   line length. Two separate complaints with two separate causes, which is
+   why they are two rules.
+
+   WHAT WAS ACTUALLY WRONG, measured on live /guest/ (0.27.6) before writing
+   either of them:
+
+     at 390   the item box runs 24 -> 366 (342 wide). The checkbox's right
+              edge sits 24px in from the left and the audio button's right
+              edge 44px in from the right — but .dccgg-item-body had NO
+              inset at all, bodyLeft 0 / bodyRight 0, the full 342. So the
+              text ran out past the controls above it on both sides. On a
+              checklist item that reads as a ragged column, and it is the
+              iPhone complaint: "Checkout Time's text runs wider than the
+              other Checkout items'" — its one line is 340px of the 342
+              available, where the others wrap at 245-300.
+
+     at 1440  the column is 732 and "Key & Lock" is 647px on ONE line. That
+              is the Windows/Mac complaint, and an even inset does NOT fix
+              it: 732 - 48 is still 684, and 647 still fits. A line that
+              long is also simply hard to read — about 80 characters.
+
+   1. THE EVEN COLUMN, checkable items only, as asked. 24px each side, taken
+      from the checkbox's own measured inset so the text lines up with the
+      control that owns it rather than with a number somebody picked.
+      max-width + margin-inline:auto rather than padding, so the cap below
+      composes with it instead of fighting it. */
+.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-body,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item--checkable .dccgg-item-body {
+    max-width: calc(100% - 48px);
+    margin-inline: auto;
+}
+
+/* 2. THE LINE-LENGTH CAP, every section and every item.
+
+      AN ALLOW-LIST, exactly like v0.27.6 and for the same reason: it names
+      the text elements, so a table, a map, an embed, a button, a menu or a
+      gallery inside a body is untouched because it was never matched — not
+      because somebody remembered to exclude it. The child combinator keeps
+      it off anything nested inside such a block as well.
+
+      520px was checked against the real content, not picked. Surveyed on
+      live at 1440, where the column is 732: fourteen bodies carry a line
+      over 520px and five of them are a single unbroken line — Fire Pit
+      677, Key & Lock 647, No Smoking 644, Boat Slips 645, Coffee 643. The
+      widest line that stays on one line under this cap is Dirty Linens at
+      499. At 18px that is roughly 60-65 characters, inside the 45-75 a
+      measure wants. Phones are untouched: the column there is 342 (294 on
+      a checkable item), both already far under the cap.
+
+      AFTER the margin:0 rule above, deliberately. That rule sets all four
+      margins; this one sets only the inline pair, so the 1em gap `p + p`
+      puts on top survives. Reversing the order would centre nothing. */
+.dccgg-stage.dccgg-stage .dccgg-item-body > p,
+.dccgg-stage.dccgg-stage .dccgg-item-body > ul,
+.dccgg-stage.dccgg-stage .dccgg-item-body > ol,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > p,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > ul,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body > ol {
+    max-width: var(--dccgg-measure, 520px);
+    margin-inline: auto;
+}
+
 /* v0.27.6: THE SAME TEXT RULE INSIDE A TEMPLATE ITEM. Rob: "Yes, plugin
    owns it."
 
