@@ -154,6 +154,17 @@ function dccgg_all_on(): array {
         // Launch" has six of them and they must not open a gap — the gap is
         // between sibling <p>s, and a <br> is not one. Without this item the
         // promise has nothing to be wrong about.
+        // v0.27.6: TEMPLATE ITEMS. Their content is an Elementor template,
+        // rendered verbatim, with no .dccgg-item-body anywhere in it — so
+        // every text rule written before this release misses them. t1 holds
+        // the shapes the live templates hold: prose, a real bulleted list,
+        // and beside them a button, a nav menu and an iframe map that must
+        // not follow the rule. t2's paragraph carries the template's OWN
+        // inline style, which has to keep winning.
+        ['_id' => 't1', 'item_section' => 'amenities', 'item_title' => 'From a template',
+         'content_source' => 'template', 'item_template' => '77'],
+        ['_id' => 't2', 'item_section' => 'amenities', 'item_title' => 'Template sets its own',
+         'content_source' => 'template', 'item_template' => '99'],
         ['_id' => 'a6', 'item_section' => 'amenities', 'item_title' => 'Line break inside',
          'item_content' => '<p>First line,<br>second line of the same sentence.</p>'],
         ['_id' => 'c3', 'item_section' => 'checkout', 'item_title' => 'Pasted from an email',

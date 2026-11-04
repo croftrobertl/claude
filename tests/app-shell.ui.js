@@ -774,6 +774,88 @@ const check = (name, cond, detail) => {
         }
     }
 
+    {
+        // v0.27.6: THE TEXT RULE INSIDE A TEMPLATE ITEM. Rob: "Yes, plugin
+        // owns it." An ALLOW-LIST — prose in an Elementor text widget — so
+        // the map, the embed, the button and the nav menu beside it are
+        // untouched because they were never matched.
+        const v = await open({ width: 390, height: 1200 });
+        await v.page.click('.dccgg-tile[data-key="amenities"]');
+        await v.page.waitForTimeout(800);
+        const tpl = await v.page.evaluate(() => {
+            const find = (name) => [...document.querySelectorAll('.dccgg-item')].find((i) => {
+                const t = i.querySelector('.dccgg-item-title-text');
+                return t && t.textContent.trim() === name;
+            });
+            const item = find('From a template');
+            const own = find('Template sets its own');
+            if (!item) { return null; }
+            const el = (sel, root = item) => root.querySelector(sel);
+            const all = (sel, root = item) => [...root.querySelectorAll(sel)];
+            const box = (x) => x ? Math.round(x.getBoundingClientRect().left) : null;
+            const te = '.elementor-widget-text-editor ';
+            const ps = all(te + 'p');
+            const fs = ps.length ? parseFloat(getComputedStyle(ps[0]).fontSize) : 16;
+            const lis = all(te + 'li');
+            const menuLis = all('.eael-simple-menu li');
+            const btn = el('.elementor-button');
+            const frame = el('iframe');
+            const ul = el(te + 'ul');
+            return {
+                isTemplate: !item.querySelector('.dccgg-item-body') && !!item.querySelector('.elementor'),
+                paras: ps.map((x) => ({
+                    align: getComputedStyle(x).textAlign,
+                    wrap: getComputedStyle(x).textWrap || getComputedStyle(x).textWrapStyle || '',
+                    top: Math.round(parseFloat(getComputedStyle(x).marginTop) / fs * 100) / 100,
+                })),
+                listAligns: lis.map((x) => getComputedStyle(x).textAlign),
+                bulletColumn: lis.map(box),
+                listCentred: ul ? (() => {
+                    const u = ul.getBoundingClientRect();
+                    const parent = ul.parentElement.getBoundingClientRect();
+                    return Math.round(Math.abs((u.left + u.right) / 2 - (parent.left + parent.right) / 2));
+                })() : null,
+                listPos: ul ? getComputedStyle(ul).listStylePosition : null,
+                // the things that must NOT follow the rule
+                menuAligns: menuLis.map((x) => getComputedStyle(x).textAlign),
+                btnWrap: btn ? (getComputedStyle(btn).textWrap || '') : null,
+                frameWrap: frame ? (getComputedStyle(frame).textWrap || '') : null,
+                ownStyleAlign: own ? getComputedStyle(own.querySelector('.elementor-widget-text-editor p')).textAlign : null,
+            };
+        });
+        check('the fixture really has a template item to test',
+            !!tpl && tpl.isTemplate && tpl.paras.length === 2, JSON.stringify(tpl && tpl.paras));
+        check('a template item\'s prose is centred',
+            tpl.paras.every((p) => p.align === 'center'), JSON.stringify(tpl.paras));
+        check('…and balanced',
+            tpl.paras.every((p) => p.wrap === 'balance'), JSON.stringify(tpl.paras));
+        check('…with a blank line between its paragraphs and none above the first',
+            Math.abs(tpl.paras[0].top) < 0.05 && Math.abs(tpl.paras[1].top - 1) < 0.05,
+            JSON.stringify(tpl.paras.map((p) => p.top)));
+        // Rob: the bullets stay left and line up; the block itself is centred.
+        check('a real list keeps its text left, not centred',
+            tpl.listAligns.length > 0 && tpl.listAligns.every((a) => a === 'left'),
+            JSON.stringify(tpl.listAligns));
+        check('…its bullets sit in one straight column',
+            new Set(tpl.bulletColumn).size === 1, JSON.stringify(tpl.bulletColumn));
+        check('…and outside the text, so the column is the bullets',
+            tpl.listPos === 'outside', String(tpl.listPos));
+        check('…while the list BLOCK is centred in the item',
+            tpl.listCentred !== null && tpl.listCentred <= 1, String(tpl.listCentred));
+        // The exclusions, which are exclusions by never matching.
+        check('the nav menu beside it is NOT pulled left',
+            tpl.menuAligns.length > 0 && tpl.menuAligns.every((a) => a !== 'left'),
+            JSON.stringify(tpl.menuAligns));
+        check('balance does not reach the button',
+            tpl.btnWrap !== 'balance', String(tpl.btnWrap));
+        check('…nor the iframe',
+            tpl.frameWrap !== 'balance', String(tpl.frameWrap));
+        // And the template still owns what it sets itself.
+        check("a template's own inline style still wins",
+            tpl.ownStyleAlign === 'right', String(tpl.ownStyleAlign));
+        await shut(v);
+    }
+
     console.log('\nG4. The guarantees the first mutation run found untested');
     {
         // --- no jump on Back ---------------------------------------------

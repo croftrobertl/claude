@@ -5450,6 +5450,70 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {
     margin-top: 1em;
 }
+
+/* v0.27.6: THE SAME TEXT RULE INSIDE A TEMPLATE ITEM. Rob: "Yes, plugin
+   owns it."
+
+   An item whose content_source is `template` renders an Elementor template
+   verbatim, with no .dccgg-item-body anywhere in it, so every rule above
+   misses it. That is why the "Use the menu below..." line on /guest/ had to
+   be balanced by hand in the template.
+
+   AN ALLOW-LIST, NOT A DENY-LIST, and that is the whole safety argument.
+   The rule reaches prose in an Elementor TEXT widget and nothing else, so a
+   map, an embed, a button, a menu, a table or a form is untouched because
+   it was never matched — not because somebody remembered to exclude it.
+   Surveyed on both live pages before writing this: five distinct template
+   items, and exactly ONE of them holds any text at all.
+
+     User Manuals    1 paragraph, in a text widget   <- the only thing this
+                     + a 7-link eael-simple-menu        release changes
+                     + 1 button
+     Amenities Map   an iframe map, no text
+     Property Map    an iframe map, no text
+     Tour Video      a Facebook video embed, no text
+     Google          a button, no text
+
+   THE MENU IS WHY THE ALLOW-LIST MATTERS. Those seven "list items" are an
+   Essential Addons navigation menu — list-style-type: none, already
+   centred, each row full width. Left-aligning them, which is what Rob's
+   bullet rule says to do to an li, would pull a nav menu apart. It is not a
+   list in the sense he means, and inside a text widget it cannot be reached.
+
+   NO BULLETED OR NUMBERED LIST EXISTS IN ANY TEMPLATE ITEM TODAY, so the
+   list half of this rule changes nothing now and is written for the first
+   real list a host adds. It is covered by fixture tests only; said so in
+   the report rather than implying it was proven on live content.
+
+   .dccgg-stage, not .dccgg-root: the stage is portaled to <body> when a
+   section opens, which is where every one of these items is read. No
+   !important anywhere — the doubled class takes the selector to (0,4,1),
+   comfortably past Elementor's own element rules, and a style the host set
+   on the template itself still wins, which is the intended order. */
+.dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor p {
+    margin: 0;
+    text-align: center;
+    text-wrap: balance;
+}
+.dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor p + p {
+    margin-top: 1em;
+}
+/* A real prose list: the BLOCK is centred, its text is not. list-style-position
+   outside keeps every bullet on one vertical line, which is the part Rob
+   asked for by name; width: fit-content with auto margins is what centres
+   the block without centring the rows inside it. */
+.dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor ul,
+.dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor ol {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline-start: 1.4em;
+    text-align: left;
+    list-style-position: outside;
+}
+.dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor li {
+    text-align: left;
+}
 /* ---- 6. the Reset button, with no second border round it ----
    The progress bar is a pill with its own border and background, and with
    the count hidden (v0.26.1) it had become a large empty capsule wrapped

@@ -23,6 +23,55 @@ namespace Elementor {
     class Group_Control_Box_Shadow extends Group_Control_Base {}
     class Group_Control_Typography extends Group_Control_Base {}
     class Icons_Manager { public static function render_icon($icon, $attrs = []) { echo '<i></i>'; } }
+    /*
+     * v0.27.6: a saved template, rendered.
+     *
+     * Widget::render_template() asks Elementor's frontend for the built
+     * markup of a template id; with no such stub it returned '' and every
+     * template item in the fixture was an empty div — which is why the rule
+     * that reaches INSIDE template items had nothing to be tested against.
+     *
+     * The shapes below are taken from what the live templates actually
+     * contain, surveyed before any of this was written: prose in a text
+     * widget, and beside it the things that must NOT follow the text rule —
+     * an Essential Addons nav menu whose <li>s are links, an iframe map, and
+     * a button. Template 99 carries its own inline style, so "the template
+     * still wins" can be asserted rather than assumed.
+     */
+    class DCCGG_Test_Frontend {
+        public function get_builder_content_for_display($id, $with_css = false) {
+            if ((int) $id === 99) {
+                return '<div class="elementor elementor-99">'
+                    . '<div class="elementor-element elementor-widget elementor-widget-text-editor">'
+                    . '<div class="elementor-widget-container">'
+                    . '<p style="text-align: right;">The template set this one itself.</p>'
+                    . '</div></div></div>';
+            }
+            return '<div class="elementor elementor-' . (int) $id . '">'
+                . '<div class="elementor-element elementor-widget elementor-widget-text-editor">'
+                . '<div class="elementor-widget-container">'
+                . '<p>Templates hold prose too. It should read centred.</p>'
+                . '<p>A second paragraph, which needs a blank line above it.</p>'
+                . '<ul><li>A real bullet, long enough to wrap onto a second line in the sheet.</li>'
+                . '<li>Another bullet.</li></ul>'
+                . '</div></div>'
+                . '<div class="elementor-element elementor-widget elementor-widget-button">'
+                . '<a class="elementor-button" href="#"><span class="elementor-button-text">'
+                . 'Open the thing</span></a></div>'
+                . '<nav class="elementor-element elementor-widget eael-simple-menu-wrapper">'
+                . '<ul class="eael-simple-menu"><li><a href="#">Keurig K-Mini Plus</a></li>'
+                . '<li><a href="#">Microwave Air Fryer</a></li></ul></nav>'
+                . '<div class="elementor-element elementor-widget elementor-widget-google_maps">'
+                . '<iframe title="map" src="about:blank"></iframe></div>'
+                . '</div>';
+        }
+    }
+    class DCCGG_Test_Elementor {
+        public $frontend;
+        public function __construct() { $this->frontend = new DCCGG_Test_Frontend(); }
+        public static function instance() { static $i; return $i ?: ($i = new self()); }
+    }
+    if (!class_exists('Elementor\\Plugin')) { class_alias('Elementor\\DCCGG_Test_Elementor', 'Elementor\\Plugin'); }
     class Repeater {
         private $c = [];
         public function add_control($id, $args) { $this->c[$id] = $args; }

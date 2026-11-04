@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.5
+Stable tag: 0.27.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,19 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.6 =
+* The guide's default text styling now also applies inside items built
+  from a saved template: centred text with balanced wrapping, and a blank
+  line between paragraphs.
+* A bulleted or numbered list inside such an item keeps its text
+  left-aligned with its bullets in a single column, while the list itself
+  sits centred in the item.
+* It reaches prose in text widgets only, so maps, embeds, buttons,
+  navigation menus, tables and forms inside a template are untouched. A
+  style set on the template itself still takes precedence.
+* Stylesheet only: no markup, data or settings changes, and no changes to
+  any template.
 
 = 0.27.5 =
 * Item body text is centred everywhere, on both layouts and in every

@@ -247,7 +247,8 @@ MUTANTS = [
     # the rule they attack is worth 1px on the host's real content.
     # ---- v0.27.5: centred, balanced, gapped, and pick A under 390 -------
     ("the left-alignment rule comes back", CSS,
-     "    text-wrap: balance;\n}", "    text-wrap: balance;\n}\n"
+     "    margin: 0;\n    text-wrap: balance;\n}",
+     "    margin: 0;\n    text-wrap: balance;\n}\n"
      ".dccgg-stage.dccgg-stage .dccgg-item-body p { text-align: left; }"),
     ("balanced wrapping is dropped", CSS,
      "    margin: 0;\n    text-wrap: balance;", "    margin: 0;"),
@@ -255,7 +256,9 @@ MUTANTS = [
      ".dccgg-stage.dccgg-stage .dccgg-item-body p + p,\n"
      ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {\n"
      "    margin-top: 1em;\n}", ""),
-    ("the blank line is doubled", CSS, "    margin-top: 1em;\n}", "    margin-top: 2em;\n}"),
+    ("the blank line is doubled", CSS,
+     ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {\n    margin-top: 1em;\n}",
+     ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {\n    margin-top: 2em;\n}"),
     ("the blank line lands above the FIRST paragraph too", CSS,
      ".dccgg-stage.dccgg-stage .dccgg-item-body p + p,\n"
      ".dccgg-report-dialog.dccgg-report-dialog .dccgg-item-body p + p {",
@@ -270,6 +273,30 @@ MUTANTS = [
      "        grid-template-areas:"),
     ("pick A's emoji stays in the row instead of going above it", CSS,
      "    .dccgg-item-title-lead.dccgg-item-title-lead { display: contents; }", ""),
+    # ---- v0.27.6: the text rule inside template items -------------------
+    ("the rule stops reaching template items at all", CSS,
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor p {\n"
+     "    margin: 0;\n    text-align: center;\n    text-wrap: balance;\n}",
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap .dccgg-nope p {\n"
+     "    margin: 0;\n    text-align: center;\n    text-wrap: balance;\n}"),
+    ("a template list is centred like the prose around it", CSS,
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor li {\n"
+     "    text-align: left;\n}",
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor li {\n"
+     "    text-align: center;\n}"),
+    ("the bullets move inside the text, so the column breaks up", CSS,
+     "    list-style-position: outside;", "    list-style-position: inside;"),
+    ("the list block stops being centred", CSS,
+     "    margin-inline: auto;\n    padding-inline-start: 1.4em;",
+     "    margin-inline: 0;\n    padding-inline-start: 1.4em;"),
+    ("balance is scoped so widely it reaches the button and the map", CSS,
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap .elementor-widget-text-editor p {\n"
+     "    margin: 0;\n    text-align: center;\n    text-wrap: balance;\n}",
+     ".dccgg-stage.dccgg-stage .dccgg-item-content-wrap * {\n"
+     "    margin: 0;\n    text-align: center;\n    text-wrap: balance;\n}"),
+    ("the rule shouts, so a template's own style loses", CSS,
+     "    margin: 0;\n    text-align: center;\n    text-wrap: balance;\n}",
+     "    margin: 0;\n    text-align: center !important;\n    text-wrap: balance;\n}"),
     ('the title inherits the theme 1.8 again', CSS,
      "    line-height: 1.25;\n}", "}"),
 ]
