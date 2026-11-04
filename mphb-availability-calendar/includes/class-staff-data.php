@@ -261,6 +261,56 @@ final class Staff_Data
      */
     public static function booking_detail(int $booking_id): ?array
     {
+        $full = self::detail_rows($booking_id);
+        return $full === null ? null : self::for_sheet($full);
+    }
+
+    /**
+     * THE POP-UP'S SHAPE (0.56.0, Rob's layout C, "Summary on Top"). The
+     * rows are built exactly as before (detail_rows); the ones the summary
+     * shows instead — the cottage, Check-In, Check-Out, and an import's
+     * "count not provided by …" — are taken OUT of the Booking section and
+     * sent once, as `summary`, in the same answer. Search keeps reading the
+     * full rows (search_doc), so what it finds cannot change.
+     *
+     * @param array<string,mixed> $full
+     * @return array<string,mixed>
+     */
+    private static function for_sheet(array $full): array
+    {
+        $summary = ['cottages' => [], 'checkin' => '', 'checkout' => '', 'source' => '', 'sourceName' => '', 'guestCountNotSent' => false];
+        $booking = [];
+        foreach ((array) $full['sections']['booking'] as $row) {
+            $kind = (string) ($row['summary'] ?? '');
+            if ($kind === 'cottages') {
+                $summary['cottages'] = array_values(array_map('strval', (array) ($row['names'] ?? [])));
+            } elseif ($kind === 'checkin' || $kind === 'checkout') {
+                $summary[$kind] = (string) $row['value'];
+            } elseif (!empty($row['muted'])) {
+                $summary['guestCountNotSent'] = true;
+            } else {
+                $booking[] = $row;
+            }
+        }
+        if (!empty($full['source']['imported'])) {
+            $summary['source'] = (string) ($full['source']['key'] ?? 'other');
+            $summary['sourceName'] = (string) ($full['source']['ota'] ?? '');
+        }
+        $full['sections']['booking'] = $booking;
+        $full['summary'] = $summary;
+        return $full;
+    }
+
+    /**
+     * Every row, in the shape every release up to 0.55.0 sent the pop-up —
+     * what search indexes. The summary rows carry a `summary` mark (and the
+     * cottage row its `names`) for for_sheet(); search reads only label and
+     * value, so the marks change nothing it sees.
+     *
+     * @return array<string,mixed>|null
+     */
+    private static function detail_rows(int $booking_id): ?array
+    {
         $post = get_post($booking_id);
         if (!$post || $post->post_type !== 'mphb_booking') {
             return null;
@@ -315,7 +365,7 @@ final class Staff_Data
      */
     public static function search_doc(int $booking_id): ?array
     {
-        $detail = self::booking_detail($booking_id);
+        $detail = self::detail_rows($booking_id);   // the full rows, as up to 0.55.0 (0.56.0)
         if ($detail === null) {
             return null;
         }
@@ -442,9 +492,11 @@ final class Staff_Data
         }
 
         $out = [];
-        self::push($out, __('Accommodation Type', 'mphb-availability-calendar'), implode(', ', $names));
-        self::push($out, __('Check-In', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
-        self::push($out, __('Check-Out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
+        // The pop-up shows these three in its summary (0.56.0); search still
+        // reads them here, as rows.
+        self::push($out, __('Accommodation Type', 'mphb-availability-calendar'), implode(', ', $names), ['summary' => 'cottages', 'names' => $names]);
+        self::push($out, __('Check-In', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN), ['summary' => 'checkin']);
+        self::push($out, __('Check-Out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT), ['summary' => 'checkout']);
 
         // OTA HONESTY. An imported booking's occupancy is never the guest's
         // party: Airbnb, Booking.com and Vrbo send none, so what is stored is
@@ -1096,7 +1148,8 @@ final class Staff_Data
         // exist in 6.3.0), not the mphb_note meta, per Rob's 2026-09-03
         // decision that the sheet is sourced through the entity getters.
         $out = [];
-        self::push($out, __('Customer Note', 'mphb-availability-calendar'), self::scalar($b, ['getNote'], ''));
+        // The guest's own note is marked (0.56.0): the pop-up tags it "From Guest".
+        self::push($out, __('Customer Note', 'mphb-availability-calendar'), self::scalar($b, ['getNote'], ''), ['guest' => true]);
         $internal = self::first_of($b, ['getInternalNotes', 'getInternalNote']);
         return array_merge($out, self::entry_rows($internal, __('Internal Notes', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']));
     }

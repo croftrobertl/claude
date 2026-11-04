@@ -1,0 +1,196 @@
+{
+  "release": "0.56.0",
+  "title": "Booking pop-up: Summary on Top (layout C)",
+  "note": "Sample bookings only (invented guests). BEFORE = 0.55.0, AFTER = 0.56.0, each fed by its own server code. Chromium, not a real iPhone.",
+  "items": [
+    {
+      "booking": 801,
+      "case": "direct booking with Total, Paid and Balance Due",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 801 direct booking with Total, Paid and Balance Due 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 801 direct booking with Total, Paid and Balance Due 320px.png"
+    },
+    {
+      "booking": 801,
+      "case": "direct booking with Total, Paid and Balance Due",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 801 direct booking with Total, Paid and Balance Due 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 801 direct booking with Total, Paid and Balance Due 390px.png"
+    },
+    {
+      "booking": 801,
+      "case": "direct booking with Total, Paid and Balance Due",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 801 direct booking with Total, Paid and Balance Due 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 801 direct booking with Total, Paid and Balance Due 1440px.png"
+    },
+    {
+      "booking": 802,
+      "case": "Booking.com with no guest count",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 802 Booking.com with no guest count 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 802 Booking.com with no guest count 320px.png"
+    },
+    {
+      "booking": 802,
+      "case": "Booking.com with no guest count",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 802 Booking.com with no guest count 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 802 Booking.com with no guest count 390px.png"
+    },
+    {
+      "booking": 802,
+      "case": "Booking.com with no guest count",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 802 Booking.com with no guest count 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 802 Booking.com with no guest count 1440px.png"
+    },
+    {
+      "booking": 803,
+      "case": "Airbnb import with a confirmed guest count",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 803 Airbnb import with a confirmed guest count 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 803 Airbnb import with a confirmed guest count 320px.png"
+    },
+    {
+      "booking": 803,
+      "case": "Airbnb import with a confirmed guest count",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 803 Airbnb import with a confirmed guest count 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 803 Airbnb import with a confirmed guest count 390px.png"
+    },
+    {
+      "booking": 803,
+      "case": "Airbnb import with a confirmed guest count",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 803 Airbnb import with a confirmed guest count 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 803 Airbnb import with a confirmed guest count 1440px.png"
+    },
+    {
+      "booking": 804,
+      "case": "three notes including the guest's",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 804 three notes including the guests 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 804 three notes including the guests 320px.png"
+    },
+    {
+      "booking": 804,
+      "case": "three notes including the guest's",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 804 three notes including the guests 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 804 three notes including the guests 390px.png"
+    },
+    {
+      "booking": 804,
+      "case": "three notes including the guest's",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 804 three notes including the guests 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 804 three notes including the guests 1440px.png"
+    },
+    {
+      "booking": 805,
+      "case": "Vrbo with no notes",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 805 Vrbo with no notes 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 805 Vrbo with no notes 320px.png"
+    },
+    {
+      "booking": 805,
+      "case": "Vrbo with no notes",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 805 Vrbo with no notes 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 805 Vrbo with no notes 390px.png"
+    },
+    {
+      "booking": 805,
+      "case": "Vrbo with no notes",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 805 Vrbo with no notes 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 805 Vrbo with no notes 1440px.png"
+    },
+    {
+      "booking": 806,
+      "case": "two cottages",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 806 two cottages 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 806 two cottages 320px.png"
+    },
+    {
+      "booking": 806,
+      "case": "two cottages",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 806 two cottages 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 806 two cottages 390px.png"
+    },
+    {
+      "booking": 806,
+      "case": "two cottages",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 806 two cottages 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 806 two cottages 1440px.png"
+    },
+    {
+      "booking": 807,
+      "case": "Dog, Boat and Guest 2 rows",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 807 Dog, Boat and Guest 2 rows 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 807 Dog, Boat and Guest 2 rows 320px.png"
+    },
+    {
+      "booking": 807,
+      "case": "Dog, Boat and Guest 2 rows",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 807 Dog, Boat and Guest 2 rows 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 807 Dog, Boat and Guest 2 rows 390px.png"
+    },
+    {
+      "booking": 807,
+      "case": "Dog, Boat and Guest 2 rows",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 807 Dog, Boat and Guest 2 rows 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 807 Dog, Boat and Guest 2 rows 1440px.png"
+    },
+    {
+      "booking": 808,
+      "case": "a long cottage name",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 808 a long cottage name 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 808 a long cottage name 320px.png"
+    },
+    {
+      "booking": 808,
+      "case": "a long cottage name",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 808 a long cottage name 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 808 a long cottage name 390px.png"
+    },
+    {
+      "booking": 808,
+      "case": "a long cottage name",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 808 a long cottage name 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 808 a long cottage name 1440px.png"
+    },
+    {
+      "booking": 809,
+      "case": "a stay crossing New Year",
+      "width": 320,
+      "before": "Availability Calendar - 0.56.0 BEFORE 809 a stay crossing New Year 320px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 809 a stay crossing New Year 320px.png"
+    },
+    {
+      "booking": 809,
+      "case": "a stay crossing New Year",
+      "width": 390,
+      "before": "Availability Calendar - 0.56.0 BEFORE 809 a stay crossing New Year 390px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 809 a stay crossing New Year 390px.png"
+    },
+    {
+      "booking": 809,
+      "case": "a stay crossing New Year",
+      "width": 1440,
+      "before": "Availability Calendar - 0.56.0 BEFORE 809 a stay crossing New Year 1440px.png",
+      "after": "Availability Calendar - 0.56.0 AFTER 809 a stay crossing New Year 1440px.png"
+    }
+  ]
+}

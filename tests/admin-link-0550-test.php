@@ -44,6 +44,18 @@ $PLAIN = "https://example.test/wp-admin/post.php?post=$ID&action=edit";
 [$s3, $adOld] = ask($OLDP, $B, ['MPHBAC_LOGGED_IN' => '1']);
 [$s4, $pwOld] = ask($OLDP, $B);
 $pw = json_decode($pwNew, true); $ad = json_decode($adNew, true);
+// 0.56.0 (Rob's layout C) reshapes the answer ON PURPOSE: a `summary`, the
+// Booking section without the rows it now holds, the guest's note marked.
+// That split is proved row for row in popup-0560-test.php; here it is set
+// aside, and everything ELSE must still be 0.54.0's, byte for byte.
+$same = static function (string $json): string {
+    $d = json_decode($json, true);
+    if (isset($d['data']['sections'])) {
+        unset($d['data']['summary'], $d['data']['sections']['booking']);
+        foreach ($d['data']['sections']['notes'] ?? [] as $i => $r) { unset($d['data']['sections']['notes'][$i]['guest']); }
+    }
+    return json_encode($d);
+};
 check('(instrument check) all four answered 200 with the booking', $s1 === 200 && $s2 === 200 && $s3 === 200 && $s4 === 200 && ($pw['data']['id'] ?? 0) === $ID, [$s1, $s2, $s3, $s4]);
 check('(instrument check) WordPress\'s own get_edit_post_link() gives the password visitor NOTHING, the admin the plain address', $wpPw === '' && $wpAd === $PLAIN, [$wpPw, $wpAd]);
 
@@ -52,12 +64,12 @@ check('gets adminUrl: the plain edit address ' . $PLAIN, ($pw['data']['adminUrl'
 parse_str((string) parse_url($pw['data']['adminUrl'] ?? '', PHP_URL_QUERY), $q);
 check('...its query is post and action, nothing else: no nonce, no token, no credential', $q === ['post' => (string) $ID, 'action' => 'edit'] && !preg_match('/nonce|token|key|auth|login|pass|user/i', $pw['data']['adminUrl'] ?? ''), $q);
 check('...byte-equal to what a logged-in admin gets for the same booking', ($pw['data']['adminUrl'] ?? '') === ($ad['data']['adminUrl'] ?? null));
-check('...its whole answer byte-equal to 0.54.0\'s answer to a logged-in admin', $pwNew === $adOld);
+check('...its whole answer 0.54.0\'s answer to a logged-in admin, byte for byte but for the 0.56.0 summary split', $same($pwNew) === $same($adOld));
 $pwNoLink = $pw; unset($pwNoLink['data']['adminUrl']);
-check('...and to 0.54.0\'s answer to the same password visitor, but for adminUrl added', json_encode($pwNoLink) === $pwOld && !str_contains($pwOld, 'adminUrl'));
+check('...and to 0.54.0\'s answer to the same password visitor, but for adminUrl added (and the 0.56.0 split)', $same(json_encode($pwNoLink)) === $same($pwOld) && !str_contains($pwOld, 'adminUrl'));
 
 echo "\n-- a logged-in admin --\n";
-check('exactly 0.54.0\'s answer, byte for byte (adminUrl included)', $adNew === $adOld && str_contains($adOld, 'adminUrl'), [$adNew === $adOld]);
+check('0.54.0\'s answer, byte for byte but for the 0.56.0 summary split (adminUrl included, identical)', $same($adNew) === $same($adOld) && $ad['data']['adminUrl'] === json_decode($adOld, true)['data']['adminUrl'], [$same($adNew) === $same($adOld)]);
 
 echo "\n-- an unauthorized visitor --\n";
 [$s5, $body5] = ask($NEW, $B, ['MPHBAC_GATE' => 'closed']);

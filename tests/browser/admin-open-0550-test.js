@@ -5,8 +5,8 @@
  * bookings only (board-fixture.js, note-copy-054-fixture.js).
  *
  *   1  a normal tab: the https link, target=_blank, rel=noopener noreferrer —
- *      the pop-up byte-identical to 0.54.0's (5dae4cb), Notes and Copy
- *      included; a 1440px desktop admin sees exactly 0.54.0's
+ *      the link byte-identical to 0.54.0's (5dae4cb) — since 0.56.0 the
+ *      rest of the pop-up is Rob's layout C; a desktop admin, the same link
  *   2  the Home Screen web app (display-mode: standalone, or iOS's
  *      navigator.standalone): googlechromes:// (https) / googlechrome://
  *      (http), the same host, path and query; nothing else in the pop-up
@@ -80,7 +80,12 @@ const details = (origin, withLink = true) => {
     await c0.close();
     check(`${w}px, booking ${id}: the https link, a new tab, rel=noopener noreferrer, "Open in WP-Admin"`,
       l && l.href === `https://staff.test/wp-admin/post.php?post=${id}&action=edit` && l.target === '_blank' && l.rel === 'noopener noreferrer' && l.text === 'Open in WP-Admin', l);
-    check(`${w}px, booking ${id}: the whole pop-up byte-identical to 0.54.0's — Notes and Copy included (${s.length} bytes)`, s === s0);
+    // Until 0.56.0 the WHOLE pop-up was compared: since Rob's layout C the
+    // rest of it is new by design (popup-0560-test.js), so the guarantee
+    // this release made — the link itself unchanged in a tab — is checked
+    // on the link's own markup.
+    const admin = h => (h.match(/<p class="mphbac-staff-admin">[\s\S]*?<\/p>/) || [''])[0];
+    check(`${w}px, booking ${id}: Open in WP-Admin's markup byte-identical to 0.54.0's (${admin(s).length} bytes)`, admin(s) !== '' && admin(s) === admin(s0), [admin(s), admin(s0)]);
   }
 
   console.log('\n-- 2. the Home Screen web app: Chrome\'s scheme --');

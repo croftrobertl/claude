@@ -184,7 +184,16 @@ final class Staff_Widget
                 'text'         => __('Text', 'mphb-availability-calendar'),
                 // 0.54.0 (Rob): each note's Copy button.
                 'copyNote'     => __('Copy', 'mphb-availability-calendar'),
-                'copyNoteName' => __('Copy note from {label}', 'mphb-availability-calendar'),
+                // 0.56.0 (Rob's layout C): no date or author, so the names are the note's kind and place.
+                'copyNoteName' => __('Copy note', 'mphb-availability-calendar'),
+                'copyGuestNote' => __('Copy guest\'s note', 'mphb-availability-calendar'),
+                'copyNth'      => __('{name} {i} of {n}', 'mphb-availability-calendar'),
+                'fromGuest'    => __('From Guest', 'mphb-availability-calendar'),
+                'sumCheckIn'   => __('Check-In', 'mphb-availability-calendar'),
+                'sumCheckOut'  => __('Check-Out', 'mphb-availability-calendar'),
+                'sumNights'    => __('Nights', 'mphb-availability-calendar'),
+                'guestCountNotSent' => __('Guest Count Not Sent', 'mphb-availability-calendar'),
+                'srcExternal'  => __('External Channel', 'mphb-availability-calendar'),
                 'copied'       => __('Copied', 'mphb-availability-calendar'),
                 'copyFailed'   => __('Couldn\'t Copy', 'mphb-availability-calendar'),
                 'openAdmin'    => __('Open in WP-Admin', 'mphb-availability-calendar'),

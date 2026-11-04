@@ -1326,18 +1326,20 @@
             sheetText('');
             sheetTitle.textContent = (S.detailTitle || 'Booking') + ' #' + d.id;
 
-            if (d.imported) {
-                var banner = document.createElement('p');
-                banner.className = 'mphbac-staff-imported';
-                banner.textContent = (d.source && d.source.ota ? d.source.ota : 'External') + ' — ' + (S.importedTip || '');
-                sheetBody.appendChild(banner);
-            }
+            // SUMMARY ON TOP (0.56.0, Rob's layout C): the cottage, then
+            // Check-In · Check-Out · Nights, then the chips — in place of the
+            // Accommodation Type, Check-In and Check-Out rows and the long
+            // "came from an external channel" banner, which are gone.
+            var top = summaryBlock(d.summary);
+            if (top) sheetBody.appendChild(top);
             var sec = d.sections || {};
-            [[S.secBooking, sec.booking], [S.secCustomer, sec.customer], [S.secNotes, sec.notes, 'notes']]
+            [[S.secBooking, sec.booking], [S.secCustomer, sec.customer]]
                 .forEach(function (pair) {
-                    var el = rowsSection(pair[0], pair[1], d.id, pair[2]);
+                    var el = rowsSection(pair[0], pair[1], d.id);
                     if (el) sheetBody.appendChild(el);
                 });
+            var notes = notesSection(S.secNotes, sec.notes);
+            if (notes) sheetBody.appendChild(notes);
             // OPEN IN WP-ADMIN. Since 0.55.0 (Rob) the server sends the
             // booking's plain edit address to EVERY authorized staff visitor,
             // the password-cookie one included — never with a token; wp-admin's
@@ -1426,22 +1428,129 @@
         // The server has already dropped every empty field, so anything that
         // arrives here has a value. A section with nothing in it is omitted
         // outright rather than left as a bare heading.
-        function rowsSection(title, rows, bookingId, kind) {
+        function rowsSection(title, rows, bookingId) {
             if (!rows || !rows.length) return null;
             var s = section(title);
-            // NOTES (0.54.0, Rob): the section is named, so its values alone
-            // can be set in plain weight (staff.css), and every note carries
-            // its own Copy button under its date and author.
-            if (kind === 'notes') s.className += ' is-notes';
             var dl = document.createElement('dl');
             rows.forEach(function (r) {
                 if (!r || !r.label) return;
                 if (r.photo) { photoRow(dl, r, bookingId); return; }
-                var before = dl.childNodes.length;
                 addRow(dl, r.label, r.value, r);
-                if (kind === 'notes' && dl.childNodes.length > before) copyButton(dl.lastChild.previousSibling, r.label, r.value);
             });
             s.appendChild(dl);
+            return s;
+        }
+
+        // THE SUMMARY (0.56.0). From the booking answer's `summary` — the
+        // same request as ever. The cottage(s) unlabelled, one a line; three
+        // equal tiles; a chip for an import's channel and one for a guest
+        // count the channel did not send. A direct booking has no chip.
+        function summaryBlock(sum) {
+            if (!sum) return null;
+            var box = document.createElement('div');
+            box.className = 'mphbac-staff-summary';
+            (sum.cottages || []).forEach(function (name) {
+                if (!name) return;
+                var c = document.createElement('p');
+                c.className = 'mphbac-staff-sum-cottage';
+                c.textContent = String(name);
+                box.appendChild(c);
+            });
+            var tiles = document.createElement('div');
+            tiles.className = 'mphbac-staff-sum-tiles';
+            var iso = /^\d{4}-\d{2}-\d{2}$/;
+            var ci = String(sum.checkin || ''), co = String(sum.checkout || '');
+            var n = iso.test(ci) && iso.test(co) && co > ci ? nightsBetween(ci, co) : null;
+            [[S.sumCheckIn || 'Check-In', ci, 'in'], [S.sumCheckOut || 'Check-Out', co, 'out'], [S.sumNights || 'Nights', n === null ? '' : String(n), 'nights']]
+                .forEach(function (t) {
+                    var tile = document.createElement('div');
+                    tile.className = 'mphbac-staff-sum-tile is-' + t[2];
+                    var l = document.createElement('span');
+                    l.className = 'mphbac-staff-sum-label';
+                    l.textContent = t[0];
+                    tile.appendChild(l);
+                    var v = document.createElement('span');
+                    v.className = 'mphbac-staff-sum-value';
+                    var year = '';
+                    if (t[2] !== 'nights' && iso.test(t[1])) {
+                        v.textContent = tileDay(t[1]);
+                        // The year only when it is not this year — on a line of
+                        // its own, so the day never has to wrap at 320px.
+                        if (t[1].slice(0, 4) !== String(config.today || '').slice(0, 4)) year = t[1].slice(0, 4);
+                    } else {
+                        v.textContent = t[1] || '—';
+                    }
+                    tile.appendChild(v);
+                    if (year) {
+                        var y = document.createElement('span');
+                        y.className = 'mphbac-staff-sum-year';
+                        var sep = document.createElement('span');
+                        sep.className = 'mphbac-sr-only';
+                        sep.textContent = ', ';
+                        y.appendChild(sep);
+                        y.appendChild(document.createTextNode(year));
+                        tile.appendChild(y);
+                    }
+                    tiles.appendChild(tile);
+                });
+            box.appendChild(tiles);
+            var chips = [];
+            if (sum.source) {
+                var k = String(sum.source);
+                chips.push([(k === 'airbnb' || k === 'booking' || k === 'vrbo') ? S['src' + k.charAt(0).toUpperCase() + k.slice(1)] || k : (S.srcExternal || 'External Channel'), '']);
+            }
+            if (sum.guestCountNotSent) chips.push([S.guestCountNotSent || 'Guest Count Not Sent', ' is-muted']);
+            if (chips.length) {
+                var row = document.createElement('p');
+                row.className = 'mphbac-staff-sum-chips';
+                chips.forEach(function (c, i) {
+                    if (i) row.appendChild(document.createTextNode(' '));
+                    var chip = document.createElement('span');
+                    chip.className = 'mphbac-staff-chip' + c[1];
+                    chip.textContent = c[0];
+                    row.appendChild(chip);
+                });
+                box.appendChild(row);
+            }
+            return box;
+        }
+        // "Fri, Nov 6": weekday, month, day — the tiles' form (0.56.0).
+        function tileDay(iso) {
+            var d = new Date(iso + 'T00:00:00');
+            return ((CAL.weekdays || [])[d.getDay()] || '').slice(0, 3) + ', ' + ((CAL.months || [])[d.getMonth()] || '').slice(0, 3) + ' ' + d.getDate();
+        }
+
+        // NOTES (0.56.0, Rob's layout C): each note its own shaded box — its
+        // text on the left (plain weight, line breaks kept), its Copy pill
+        // on the right, level with the first line. No date, no author: "The
+        // author/date are irrelevant for our uses." The guest's own note
+        // carries a small "From Guest" tag; staff notes carry none.
+        function notesSection(title, rows) {
+            var list = (rows || []).filter(function (r) { return r && r.value !== undefined && r.value !== null && r.value !== ''; });
+            if (!list.length) return null;
+            var s = section(title);
+            s.className += ' is-notes';
+            list.forEach(function (r, i) {
+                var box = document.createElement('div');
+                box.className = 'mphbac-staff-note' + (r.guest ? ' is-guest' : '');
+                var body = document.createElement('div');
+                body.className = 'mphbac-staff-note-body';
+                if (r.guest) {
+                    var tag = document.createElement('span');
+                    tag.className = 'mphbac-staff-note-tag';
+                    tag.textContent = S.fromGuest || 'From Guest';
+                    body.appendChild(tag);
+                }
+                var text = document.createElement('p');
+                text.className = 'mphbac-staff-note-text';
+                text.textContent = String(r.value);
+                body.appendChild(text);
+                box.appendChild(body);
+                var name = r.guest ? (S.copyGuestNote || 'Copy guest\'s note') : (S.copyNoteName || 'Copy note');
+                if (list.length > 1) name = (S.copyNth || '{name} {i} of {n}').replace('{name}', name).replace('{i}', String(i + 1)).replace('{n}', String(list.length));
+                copyButton(box, name, r.value);
+                s.appendChild(box);
+            });
             return s;
         }
 
@@ -1507,8 +1616,8 @@
         }
 
         // COPY A NOTE (0.54.0, Rob: "so I can just tap that and send it to
-        // Tony without reformatting"). Under the note's date and author, in
-        // the label column: the Phone line's "Text" pill, as a button. It
+        // Tony without reformatting"). Since 0.56.0 on the right of its
+        // note's box: the Phone line's "Text" pill, as a button. It
         // copies THAT note's text only — never its date or author — as plain
         // text: the server's string (tags already stripped, line breaks
         // kept), each line's trailing spaces dropped. Nothing new is asked
@@ -1516,16 +1625,14 @@
         function noteText(value) {
             return String(value).replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').replace(/\s+$/, '');
         }
-        function copyButton(dt, label, value) {
-            if (!dt || value === undefined || value === null || value === '') return;
+        function copyButton(box, name, value) {
+            if (!box || value === undefined || value === null || value === '') return;
             var text = noteText(value);
-            var wrap = document.createElement('span');
-            wrap.className = 'mphbac-staff-copywrap';
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'mphbac-staff-copy';
             b.textContent = S.copyNote || 'Copy';
-            b.setAttribute('aria-label', (S.copyNoteName || 'Copy note from {label}').replace('{label}', String(label)));
+            b.setAttribute('aria-label', String(name));
             var timer = null;
             var say = function (t) {
                 b.textContent = t;
@@ -1539,8 +1646,7 @@
                 try { done = copyPlain(text); } catch (e) { done = Promise.reject(e); }
                 done.then(function () { say(S.copied || 'Copied'); }, function () { say(S.copyFailed || 'Couldn\'t Copy'); });
             });
-            wrap.appendChild(b);
-            dt.appendChild(wrap);
+            box.appendChild(b);
         }
         // text/plain only: the Clipboard API's writeText, or — where there
         // is none (an older browser, a page not served over https) — a

@@ -24,7 +24,8 @@ DETAILS[1].sections.notes = [{ label: 'Aug 4, 2026, 3:15 pm · Rob Croft', value
 DETAILS[7] = { id: 7, imported: false, source: { imported: false, key: 'direct', ota: '' },
   sections: { booking: [{ label: 'Accommodation Type', value: 'Cottage 22' }],
     customer: [{ label: 'First Name', value: 'Gus' }, { label: 'Phone', value: '+1 (555) 010-7788', tel: '+15550107788' }],
-    notes: [{ label: 'Customer Note', value: CUSTOMER },
+    // `guest: true` as the server marks the guest's own note since 0.56.0.
+    notes: [{ label: 'Customer Note', value: CUSTOMER, guest: true },
             { label: 'Oct 7, 2026, 9:02 am · Rob Croft', value: NOTE_2A },
             { label: 'Oct 1, 2026, 4:40 pm · Dana Admin', value: NOTE_2B }] } };
 

@@ -1252,14 +1252,8 @@ span.mphbac-staff-ico::before {
     text-align: left;
 }
 
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-imported {
-    margin: 0 0 14px;
-    padding: 8px 10px;
-    border-left: 4px solid #9a3412;
-    border-radius: 0 4px 4px 0;
-    background: #fff7ed;
-    font-size: 0.9em;
-}
+/* The OTA banner (.mphbac-staff-imported) is gone since 0.56.0: the summary's
+   source chip and "Guest Count Not Sent" chip say it (Rob's layout C). */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section { margin: 0 0 18px; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section:last-child { margin-bottom: 0; }
 /* The four MotoPress headings. Explicit size: the theme sizes h3 at 25px. */
@@ -1278,7 +1272,10 @@ span.mphbac-staff-ico::before {
 /* Label / value rows: left-aligned, label column fixed, value takes the rest. */
 .mphbac-staff-sheet.mphbac-staff-sheet dl {
     display: grid;
-    grid-template-columns: minmax(7em, 36%) minmax(0, 1fr);
+    /* THE LABEL COLUMN SIZED TO ITS WORDS (0.56.0, Rob's layout C; was
+       minmax(7em, 36%)): as wide as the longest label, never past 42% —
+       a long label wraps there — and the value takes the rest. */
+    grid-template-columns: fit-content(42%) minmax(0, 1fr);
     gap: 0 12px;
     margin: 0;
     padding: 0;
@@ -1291,7 +1288,7 @@ span.mphbac-staff-ico::before {
     text-align: left;
     line-height: 1.35;
 }
-.mphbac-staff-sheet.mphbac-staff-sheet dt { color: #5b6470; font-weight: 600; }
+.mphbac-staff-sheet.mphbac-staff-sheet dt { min-width: 4.5em; color: #5b6470; font-weight: 600; }   /* a sensible floor for a short label (0.56.0) */
 .mphbac-staff-sheet.mphbac-staff-sheet dd { overflow-wrap: anywhere; white-space: pre-line; }
 .mphbac-staff-sheet.mphbac-staff-sheet dd.is-empty { color: #8a919b; }
 /* An OTA-defaulted occupancy is shown as text, greyed and italic, so it can
@@ -1302,8 +1299,8 @@ span.mphbac-staff-ico::before {
    Tony). Where it came from: the dialog lives on <body>, outside the board,
    and nothing on it gave a value a weight — so a value inherited the theme's
    `html { font-weight: 700 }`. The labels set their own 600. Said here, on
-   the dialog's own root, for the Notes section's values only. */
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section.is-notes dd { font-weight: 400; }
+   the dialog's own root, for the notes' text only (a box each since 0.56.0). */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section.is-notes .mphbac-staff-note-text { font-weight: 400; }
 
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room {
     margin: 0 0 10px;
@@ -1345,7 +1342,10 @@ body.mphbac-staff-open { overflow: hidden; }
 /* =====================================================================
    0.44.0 — tiles, filters, quick preview, "updated", sheet links
    ===================================================================== */
-.mphbac-staff .mphbac-sr-only {
+/* The pop-up too (0.56.0): it lives on <body>, outside .mphbac-staff, so
+   the board's rule alone left a tile's ", " before its year on screen. */
+.mphbac-staff .mphbac-sr-only,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-sr-only {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -2379,7 +2379,102 @@ body.mphbac-staff-open { overflow: hidden; }
     white-space: nowrap;
     cursor: pointer;
 }
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-copywrap { display: block; margin-top: 6px; }
+/* ===== 0.56.0 — SUMMARY ON TOP; A BOX A NOTE (Rob's layout C) ===== */
+/* The cottage: unlabelled, centred, bold, about 20px; one line each. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-cottage {
+    margin: 0 0 4px;
+    padding: 0;
+    color: #111111;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    text-wrap: balance;
+}
+/* Check-In · Check-Out · Nights: three equal tiles in one row. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin: 10px 0 0;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 7px 2px;
+    border-radius: 10px;
+    background: #f1f3f6;
+    text-align: center;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-label { color: #5b6470; font-size: 12px; font-weight: 600; line-height: 1.2; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-value {
+    margin-top: 2px;
+    color: #111111;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-year { color: #5b6470; font-size: 12px; font-weight: 600; line-height: 1.2; }
+/* The narrowest phones (320px): "Wed, Sep 30", the longest date, is 89px
+   at 15px bold and a tile holds 84 — so 14px (83px), and no side padding. */
+@media (max-width: 359px) {
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-tile { padding-left: 0; padding-right: 0; }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-value { font-size: 14px; }
+}
+/* Chips: small rounded light-gray pills, centred. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sum-chips { margin: 10px 0 0; padding: 0; text-align: center; line-height: 1.9; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-chip {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #eceff3;
+    color: #333a44;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-chip.is-muted { color: #5b6470; font-style: italic; font-weight: 500; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-summary { margin: 0 0 18px; }
+/* A note: its own shaded box, text left, Copy right, level with the first
+   line; the text takes all the room the pill leaves, even at 320px. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 8px;
+    padding: 10px 10px 10px 12px;
+    border-radius: 10px;
+    background: #f1f3f6;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note:last-child { margin-bottom: 0; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note-body { flex: 1 1 auto; min-width: 0; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note-tag {
+    display: inline-block;
+    margin: 0 0 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #dfe3e8;
+    color: #4a525d;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note-text {
+    margin: 0;
+    padding: 0;
+    color: #111111;
+    line-height: 1.35;
+    text-align: left;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-note .mphbac-staff-copy.mphbac-staff-copy { flex: none; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-admin { margin: 16px 0 0; text-align: center; }
 
 /* ---- phone ---- */
@@ -2440,7 +2535,7 @@ body.mphbac-staff-open { overflow: hidden; }
        on a phone. It was 52px, which put the title 6px under the X. */
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px calc(12px + 46px + 8px); }
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body { padding: 12px 14px 18px; }
-    .mphbac-staff-sheet.mphbac-staff-sheet dl { grid-template-columns: minmax(6em, 32%) minmax(0, 1fr); }
+    .mphbac-staff-sheet.mphbac-staff-sheet dl { grid-template-columns: fit-content(42%) minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

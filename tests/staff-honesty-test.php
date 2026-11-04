@@ -53,17 +53,23 @@ function guests(array $d): ?array {
     foreach ($d['sections']['booking'] as $r) { if ($r['label'] === 'Number of Guests') { return $r; } }
     return null;
 }
+// 0.56.0 (Rob's layout C): THE SAME HONESTY, SAID ANOTHER WAY. Until 0.56.0
+// an unconfirmed import's count was a muted "count not provided by Airbnb"
+// row; now the pop-up is sent NO Number of Guests row at all, and
+// summary.guestCountNotSent (the "Guest Count Not Sent" chip) beside the
+// channel (summary.source, its chip). No number can show either way.
+function not_sent(array $d): bool {
+    return guests($d) === null && ($d['summary']['guestCountNotSent'] ?? null) === true;
+}
 
 echo "-- an imported booking at capacity says so in words --\n";
 {
     $d = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 4, 'capacity' => 4]);
     $g = guests($d);
-    check('the value names the channel rather than printing a number',
-        str_contains($g['value'], 'not provided') && str_contains($g['value'], 'Airbnb'), $g['value'] ?? null);
-    check('NO DIGIT appears in it — a number is exactly what must not be shown',
-        !preg_match('/\d/', $g['value']), $g['value']);
-    check('it is flagged muted, so the UI can render it as an absence',
-        !empty($g['muted']), $g);
+    check('CHANGED (0.56.0): the pop-up says the count was not sent, and names the channel (summary: "airbnb"), rather than printing a number',
+        not_sent($d) && ($d['summary']['source'] ?? '') === 'airbnb', $d['summary'] ?? null);
+    check('NO DIGIT can appear — there is no Number of Guests row to carry one',
+        $g === null, $g);
     check('and the booking itself is marked imported, with the source attached',
         $d['imported'] === true && ($d['source']['ota'] ?? '') === 'Airbnb', $d['source'] ?? null);
 }
@@ -73,15 +79,15 @@ echo "\n-- a DIRECT booking is not muted and gets its real number --\n";
     $d = scene(['adults' => 2, 'capacity' => 4]);
     $g = guests($d);
     check('the count is printed', $g['value'] === '2', $g['value'] ?? null);
-    check('DIRECT: not muted', empty($g['muted']), $g);
+    check('DIRECT: not muted, and not flagged "not sent"', empty($g['muted']) && ($d['summary']['guestCountNotSent'] ?? null) === false, $g);
     check('imported is false', $d['imported'] === false);
 }
 
 echo "\n-- the default is identified by BOTH halves, not one --\n";
 {
-    $a = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2, 'capacity' => 4]));
-    check('imported and NOT at capacity is STILL not a count unless confirmed (0.45.2): not provided',
-        str_contains($a['value'] ?? '', 'not provided') && !empty($a['muted']), $a);
+    $a = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 2, 'capacity' => 4]);
+    check('imported and NOT at capacity is STILL not a count unless confirmed (0.45.2): not sent',
+        not_sent($a), $a['summary'] ?? null);
     $b = guests(scene(['adults' => 4, 'capacity' => 4]));
     check('at capacity but NOT imported is also shown — either half alone proves nothing',
         $b['value'] === '4', $b['value'] ?? null);
@@ -89,10 +95,11 @@ echo "\n-- the default is identified by BOTH halves, not one --\n";
 
 echo "\n-- a human-confirmed count beats all of it --\n";
 {
-    $g = guests(scene(['prodid' => '-//Booking.com//EN', 'adults' => 4, 'capacity' => 4, 'confirmed' => true]));
-    check('imported, at capacity, but CONFIRMED: the number is shown',
+    $c = scene(['prodid' => '-//Booking.com//EN', 'adults' => 4, 'capacity' => 4, 'confirmed' => true]);
+    $g = guests($c);
+    check('imported, at capacity, but CONFIRMED: the number is shown, as a row',
         $g['value'] === '4', $g['value'] ?? null);
-    check('...and it is not muted, because it is no longer an absence', empty($g['muted']), $g);
+    check('...and it is not muted, and NOT flagged "not sent" — a confirmed count is never replaced by the chip', empty($g['muted']) && $c['summary']['guestCountNotSent'] === false, [$g, $c['summary']]);
 }
 
 echo "\n-- 0.45.2: an UNCONFIRMED imported count is never a real count, whatever the number --\n";
@@ -100,9 +107,9 @@ echo "\n-- 0.45.2: an UNCONFIRMED imported count is never a real count, whatever
     // The Website Director's matrix: imports at 2 and at 4 in a 4-sleeper,
     // at 2 in a 2-sleeper, each without and with the staff marker.
     foreach ([[2, 4], [4, 4], [2, 2]] as [$n, $cap]) {
-        $g = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => $n, 'capacity' => $cap]));
-        check("import, $n in a $cap-sleeper, unconfirmed: \"count not provided by Airbnb\", muted",
-            ($g['value'] ?? '') === 'count not provided by Airbnb' && !empty($g['muted']), $g);
+        $u = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => $n, 'capacity' => $cap]);
+        check("import, $n in a $cap-sleeper, unconfirmed: not sent (CHANGED 0.56.0: was the muted \"count not provided by Airbnb\" row)",
+            not_sent($u), $u['summary']);
         $g = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => $n, 'capacity' => $cap, 'confirmed' => true]));
         check("import, $n in a $cap-sleeper, CONFIRMED: $n", ($g['value'] ?? '') === (string) $n && empty($g['muted']), $g);
     }
@@ -130,21 +137,21 @@ echo "\n-- 0.45.3: a dog recorded by staff, and nothing else said: a \"Dog: Yes\
 
 echo "\n-- with no capacity configured, nothing is claimed --\n";
 {
-    $g = guests(scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 4, 'capacity' => 0]));
-    check('an unconfigured capacity falls back to NOT trusting an imported count',
-        str_contains($g['value'], 'not provided'), $g['value'] ?? null);
+    $u = scene(['prodid' => '-//Airbnb Inc//EN', 'adults' => 4, 'capacity' => 0]);
+    check('an unconfigured capacity falls back to NOT trusting an imported count: not sent',
+        not_sent($u), $u['summary'] ?? null);
 }
 
-echo "\n-- the client is told, so it can render the banner --\n";
+echo "\n-- the client is told, so it can render the chips (the banner until 0.56.0) --\n";
 {
     $js = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/assets/js/staff.js');
     // 0.44.1: the letter badge is gone (Rob — the bar's colour is the
     // source); the sheet's banner and the source BY NAME remain.
-    check('the imported flag drives a visible banner, and the source is named, not just coloured',
-        str_contains($js, 'mphbac-staff-imported') && str_contains($js, 'function sourceName'));
+    check('CHANGED (0.56.0): the summary drives visible chips — the channel by name and "Guest Count Not Sent" — not a banner',
+        str_contains($js, 'mphbac-staff-chip') && str_contains($js, 'sum.guestCountNotSent') && str_contains($js, 'sum.source') && !str_contains($js, "'mphbac-staff-imported'"));
     $w = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-widget.php');
-    check('the explanation is a translatable string, not baked into the script',
-        str_contains($w, 'importedTip'));
+    check('the chip\'s words are a translatable string, not baked into the script',
+        str_contains($w, "'guestCountNotSent' => __('Guest Count Not Sent'"));
 }
 
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");

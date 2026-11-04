@@ -61,12 +61,13 @@ const show = s => JSON.stringify(s);
       const other = [...document.querySelectorAll('.mphbac-staff-sheet .mphbac-staff-section:not(.is-notes)')];
       // Where the bold comes from: the dialog is on <body>, and html is 700.
       return { html: fw(document.documentElement), sheetParent: document.querySelector('.mphbac-staff-sheet').parentNode.tagName, sheet: fw(document.querySelector('.mphbac-staff-sheet')),
-        noteDd: [...notes.querySelectorAll('dd')].map(fw), noteDt: [...notes.querySelectorAll('dt')].map(fw), head: fw(notes.querySelector('h3')),
+        // 0.56.0: a note is a box of its own, its text a <p>, no label shown.
+        noteDd: [...notes.querySelectorAll('.mphbac-staff-note-text')].map(fw), noteDt: [...notes.querySelectorAll('dt')].map(fw), head: fw(notes.querySelector('h3')),
         otherDd: other.flatMap(s => [...s.querySelectorAll('dd')].map(d => d.querySelector('a') ? 'link' : fw(d))), otherDt: other.flatMap(s => [...s.querySelectorAll('dt')].map(fw)) };
     });
     if (w === 390) check('the source of the bold: the theme\'s html { font-weight: 700 }, and the pop-up on <body> inherits it (' + m.html + ' → ' + m.sheet + ')', m.html === '700' && m.sheetParent === 'BODY' && m.sheet === '700');
     check(`${w}px: every note's text at 400`, m.noteDd.length === 3 && m.noteDd.every(x => x === '400'), m.noteDd);
-    check(`${w}px: the date and author labels unchanged (600), the heading unchanged (700)`, m.noteDt.every(x => x === '600') && m.head === '700', [m.noteDt, m.head]);
+    check(`${w}px: no date / author labels shown since 0.56.0 (Rob's layout C); the heading unchanged (700)`, m.noteDt.length === 0 && m.head === '700', [m.noteDt, m.head]);
     check(`${w}px: the other sections unchanged: values 700, labels 600`, m.otherDd.filter(x => x !== 'link').every(x => x === '700') && m.otherDt.every(x => x === '600'), [m.otherDd, m.otherDt]);
     await ctx.close();
   }
@@ -83,11 +84,12 @@ const show = s => JSON.stringify(s);
         // A pill's width is its word plus the same padding: the word measured
         // by a Range over its text, the rest is what the pill adds.
         const extra = e => { const rg = document.createRange(); rg.selectNodeContents(e); return e.getBoundingClientRect().width - rg.getBoundingClientRect().width; };
-        const rows = [...document.querySelectorAll('.mphbac-staff-section.is-notes dt')].map(dt => {
-          const b = dt.querySelector('button.mphbac-staff-copy'), dd = dt.nextElementSibling;
-          const label = [...dt.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('');
-          return b && { label, text: b.textContent, aria: b.getAttribute('aria-label'), type: b.type, inDt: dt.contains(b),
-            below: box(b).t >= box(dt).t + 10, leftCol: box(b).r <= box(dd).l, look: look(b), box: box(b), extra: extra(b) };
+        // 0.56.0 (Rob's layout C): each note's own box, Copy to the right of
+        // its text — no longer under the date and author in a label column.
+        const rows = [...document.querySelectorAll('.mphbac-staff-section.is-notes .mphbac-staff-note')].map(n => {
+          const b = n.querySelector('button.mphbac-staff-copy'), t = n.querySelector('.mphbac-staff-note-text');
+          return b && { text: b.textContent, aria: b.getAttribute('aria-label'), type: b.type, inBox: n.contains(b), inDt: !!b.closest('dt'),
+            right: box(b).l >= box(t).r - 0.5, look: look(b), box: box(b), extra: extra(b) };
         });
         return { sms: { look: look(sms), box: box(sms), text: sms.textContent, extra: extra(sms) }, rows, buttons: document.querySelectorAll('.mphbac-staff-copy').length,
           elsewhere: document.querySelectorAll('.mphbac-staff-section:not(.is-notes) .mphbac-staff-copy').length };
@@ -95,9 +97,10 @@ const show = s => JSON.stringify(s);
       const n = id === 1 ? 1 : 3;
       const tag = `${w}px, booking ${id} (${id === 1 ? 'one note' : 'two notes + the guest\'s note'})`;
       check(`${tag}: one Copy button per note (${n}), none in any other section`, m.rows.length === n && m.rows.every(Boolean) && m.buttons === n && m.elsewhere === 0, m.rows.length);
-      check(`${tag}: each under its date and author, in the label column (inside the dt, below the label, left of the text)`, m.rows.every(r => r.inDt && r.below && r.leftCol), m.rows.map(r => [r.below, r.leftCol]));
-      check(`${tag}: labelled "Copy", a real button, named for its note ("Copy note from Aug 4, 2026, 3:15 pm · Rob Croft")`,
-        m.rows.every(r => r.text === 'Copy' && r.type === 'button' && r.aria === 'Copy note from ' + r.label), m.rows.map(r => r.aria));
+      check(`${tag}: CHANGED (0.56.0): each in its note's box, to the right of the text, not in a label column`, m.rows.every(r => r.inBox && !r.inDt && r.right), m.rows.map(r => [r.inBox, r.right]));
+      const names = id === 1 ? ['Copy note'] : ["Copy guest's note 1 of 3", 'Copy note 2 of 3', 'Copy note 3 of 3'];
+      check(`${tag}: labelled "Copy", a real button, CHANGED (0.56.0) name: ${names.join(' / ')}`,
+        m.rows.every(r => r.text === 'Copy' && r.type === 'button') && m.rows.map(r => r.aria).join('|') === names.join('|'), m.rows.map(r => r.aria));
       check(`${tag}: the Text pill's size, shape and colours, property for property (height, padding, radius, colours, type); its height ${Math.round(m.sms.box.h)}px`,
         m.rows.every(r => r.look === m.sms.look && Math.abs(r.box.h - m.sms.box.h) < 0.5), m.rows.map(r => r.look === m.sms.look ? 'same' : r.look + ' ≠ ' + m.sms.look));
       check(`${tag}: …and as wide as its word plus the same padding as "Text" (${m.sms.extra.toFixed(1)}px) — "Copy" is the wider word (${Math.round(m.rows[0].box.w)} vs ${Math.round(m.sms.box.w)}px)`,

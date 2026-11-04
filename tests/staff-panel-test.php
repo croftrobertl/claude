@@ -117,14 +117,20 @@ check('3: NO guest 2/3/4 rows when those names are empty',
     !array_filter(labels($d, 'customer'), static fn($l) => str_starts_with($l, 'Guest')), labels($d, 'customer'));
 check('5: NO pet rows — dog_type is empty and there is no pet fee',
     !array_filter(labels($d, 'customer'), static fn($l) => str_starts_with($l, 'Dog')), labels($d, 'customer'));
-check('4: guest count stays honest when _mphb_adults equals capacity on an import',
-    str_contains((string) value_of($d, 'booking', 'Number of Guests'), 'not provided'),
-    value_of($d, 'booking', 'Number of Guests'));
+// 0.56.0 (Rob's layout C): an unconfirmed import's count, and the dates,
+// are sent in the pop-up's summary, not as Booking rows. CHANGED here:
+// "not provided" is now summary.guestCountNotSent with no Number of Guests
+// row; the dates are summary.checkin / checkout, shown in the tiles
+// labelled "Check-In" / "Check-Out" (Title Case, 0.46.7).
+check('4: guest count stays honest when _mphb_adults equals capacity on an import: not sent, no number',
+    value_of($d, 'booking', 'Number of Guests') === null && ($d['summary']['guestCountNotSent'] ?? null) === true,
+    [value_of($d, 'booking', 'Number of Guests'), $d['summary'] ?? null]);
 check('what IS entered still shows: the guest name and the dates',
     value_of($d, 'customer', 'First Name') === 'Dana'
-    && value_of($d, 'booking', 'Check-In') === '2026-09-20', labels($d, 'booking'));
-check('0.46.7 (Rob, Title Case): the sheet\'s date rows are labelled exactly "Check-In" and "Check-Out"',
-    array_values(array_intersect(labels($d, 'booking'), ['Check-In', 'Check-Out'])) === ['Check-In', 'Check-Out'], labels($d, 'booking'));
+    && ($d['summary']['checkin'] ?? '') === '2026-09-20', $d['summary'] ?? null);
+$w = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-widget.php');
+check('0.46.7 (Rob, Title Case): the date tiles are labelled exactly "Check-In" and "Check-Out"',
+    str_contains($w, "'sumCheckIn'   => __('Check-In'") && str_contains($w, "'sumCheckOut'  => __('Check-Out'"));
 
 echo "\n-- 1: a real photo ID must still appear --\n";
 $d = booking(18434, ['mphb_upload_id' => '904']);
@@ -182,8 +188,8 @@ check('2: an OVERPAYMENT shows a negative balance rather than being flattened to
 
 echo "\n-- 4: the guest count, and the provenance marker that settles it --\n";
 $d = booking(18437, [], ['adults' => 2]);
-check('4: two adults on an IMPORT in a four-capacity cottage, unconfirmed: not provided (0.45.2 — was shown as 2)',
-    str_contains((string) value_of($d, 'booking', 'Number of Guests'), 'not provided'), value_of($d, 'booking', 'Number of Guests'));
+check('4: two adults on an IMPORT in a four-capacity cottage, unconfirmed: not sent (0.45.2 — was shown as 2; a chip since 0.56.0)',
+    value_of($d, 'booking', 'Number of Guests') === null && ($d['summary']['guestCountNotSent'] ?? null) === true, $d['summary'] ?? null);
 
 // THE CASE THE MARKER EXISTS FOR. Four guests in a four-capacity cottage is
 // indistinguishable from MotoPress's default BY VALUE. Only provenance
@@ -193,9 +199,8 @@ $d = booking(18449, [], ['adults' => 4, 'confirmed' => true]);
 check('4: a CONFIRMED count of 4 shows as 4, even on an import, even at capacity',
     value_of($d, 'booking', 'Number of Guests') === '4', value_of($d, 'booking', 'Number of Guests'));
 $d = booking(18450, [], ['adults' => 4, 'confirmed' => false]);
-check('4: the same 4 WITHOUT the marker still reads as not provided',
-    str_contains((string) value_of($d, 'booking', 'Number of Guests'), 'not provided'),
-    value_of($d, 'booking', 'Number of Guests'));
+check('4: the same 4 WITHOUT the marker still reads as not sent',
+    value_of($d, 'booking', 'Number of Guests') === null && ($d['summary']['guestCountNotSent'] ?? null) === true, $d['summary'] ?? null);
 $d = booking(18451, [], ['adults' => 3, 'children' => 2, 'confirmed' => true]);
 check('4: a confirmed count with children reads as a total plus the breakdown',
     value_of($d, 'booking', 'Number of Guests') === '5 (3 adults, 2 children)',

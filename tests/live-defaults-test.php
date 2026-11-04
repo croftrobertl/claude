@@ -286,7 +286,8 @@ foreach ($cases as $case => $w) {
             'stCurveToday', 'stCurveTodayShort', 'stCurveEnd', 'stCurveStart', 'stCurveOut', 'stCurveOut1', 'stCurveNight', 'stCurveNow', 'stCurveAgo',
             'stSrcLine', 'stLeadMean', 'stLeadMedian', 'stLeadMode', 'stLeadNone',
             'stLeadTipMean', 'stLeadTipMedian', 'stLeadTipMode', 'stLeadTipPull', 'stLeadTipNone',
-            'copyNote', 'copyNoteName', 'copied', 'copyFailed'];                         // 0.54.0: each note's Copy button (Rob)
+            'copyNote', 'copyNoteName', 'copied', 'copyFailed',                          // 0.54.0: each note's Copy button (Rob)
+            'copyGuestNote', 'copyNth', 'fromGuest', 'sumCheckIn', 'sumCheckOut', 'sumNights', 'guestCountNotSent', 'srcExternal'];   // 0.56.0: Summary on Top (Rob's layout C)
         $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat',
             'stLeadTip',                                      // 0.53.0: "on average" dropped — it now shows mean, median and mode
             'stTipVsPct'];                                    // 0.53.1: the Booked tile's ▲▼ said to be occupancy percentage points (Rob)

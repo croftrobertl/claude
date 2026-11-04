@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.55.0
+Stable tag: 0.56.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.56.0 =
+* **The booking pop-up on /staff/, "Summary on Top" (Rob's pick, layout C).** Under the title: the cottage, unlabelled and bold (one line per cottage), then three tiles, Check-In, Check-Out and Nights, with dates as "Fri, Nov 6" (the year only when it isn't this year). Below them, small chips: an import's channel ("Booking.com", "Airbnb", "Vrbo") and, when the channel sent no guest count, "Guest Count Not Sent". These replace the Accommodation Type, Check-In and Check-Out rows, the long "came from an external channel" banner and the "count not provided by …" row. A confirmed guest count is still its own Number of Guests row.
+* Booking Information now holds only what's left (Number of Guests, Total, Paid, Balance Due) and isn't shown when there's nothing. Every other label and section is worded as before; the label column is now as wide as its labels, so values get more room.
+* **Notes:** each note is its own shaded box with the Copy button on the right. The date and author are no longer shown; the guest's own note is tagged "From Guest". Copy copies exactly what it did in 0.54.0.
+* Unchanged: Open in WP-Admin (and the Chrome hand-off), the board, Stats, search (it finds exactly what it did), the public calendar. Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.55.0 =
 * **"Open in WP-Admin" for every staff visitor (Rob).** The booking pop-up on /staff/ now shows the button to everyone the board lets in, including staff who signed in with the page password only (a Home Screen web app on iOS keeps its own cookies, so there it never knew Rob was logged in). The link is only the booking's plain edit address, never a login token or code: WordPress's own login is the gate, and after logging in it brings you back to that booking.
