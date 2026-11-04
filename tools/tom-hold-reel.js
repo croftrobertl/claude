@@ -36,7 +36,8 @@ const QUIET = '<style>.dcc-wx-banner{display:none!important} div[style*="2147482
   /* he fades in over 1.2 s: start once he is up */
   let t = await tick(45);
   const dir = OUT + '.frames'; fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
-  const group = t => { const g = t.geo, x0 = Math.max(0, g.lo[0] - 30), x1 = Math.min(W, g.hi[1] + 30); return { x: Math.floor(x0), y: H - BAND, width: Math.ceil(x1 - x0), height: BAND }; };
+  /* the group with some ground round it, at least 300 px wide and 130 tall */
+  const group = t => { const g = t.geo, m = (g.lo[0] + g.hi[1]) / 2, hw = Math.max(150, (g.hi[1] - g.lo[0]) / 2 + 30), x0 = Math.max(0, Math.min(W - 2 * hw, m - hw)), h = Math.max(130, g.th * 1.6); return { x: Math.floor(x0), y: Math.floor(H - h), width: Math.ceil(Math.min(W, 2 * hw)), height: Math.ceil(h) }; };
   if (MODE === 'clip') {
     /* the clock only runs forward, so film every frame from here and keep
      * SECS seconds starting 1.5 s before his first rattle */
