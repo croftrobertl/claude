@@ -35,6 +35,13 @@ if (!browser) { skipSuite('no browser'); }
 
 /** Elements inside `scope` with a non-zero transition or animation. */
 async function animating(page, scope) {
+  /* 1.48.0: the guide's tiles are built after the first paint (and, on a
+   * page that defers the index, after placeholder tiles), so a count taken
+   * the instant the page loads depends on how far the build has got.
+   * Count the finished guide: wait until no grid is still being filled
+   * and no placeholder remains. Bounded — a surface with no guide passes
+   * straight through. */
+  await page.waitForFunction(() => !document.querySelector('.dccwl-guide-grid[data-dccwl-lazy], .dccwl-ph'), null, { timeout: 15000 }).catch(() => {});
   return page.evaluate((sel) => {
     const root = document.querySelector(sel);
     if (!root) { return { found: false, count: 0, sample: [] }; }
@@ -70,7 +77,13 @@ async function animating(page, scope) {
  */
 const CONTROL = {
   '.dccwl-canal': 2,   // the open panel and one svg; the hub's own chrome is gone (1.44.0)
-  '.dccwl-root': 1499, // the species tiles, which still lift on hover
+  /* The species tiles, which still lift on hover: each tile's <li> and its
+   * button. DERIVED, not typed, since 1.48.0 — the standalone month widget
+   * builds the species in season for TODAY'S month, so a typed figure is a
+   * figure for one month: 1499 was October's, and in November the same
+   * fixture builds 357 tiles (1429). The floor is twice the tiles actually
+   * built, which still fails if hover motion is lost on any of them. */
+  '.dccwl-root': 'tiles',
   '.dccwl-water': 7,   // the moon card's svg and the link list
 };
 
@@ -82,8 +95,12 @@ for (const [which, scope] of [['canal', '.dccwl-canal'], ['month', '.dccwl-root'
   check(before.found, 'the surface rendered', scope);
   // The negative control: if this is near zero the measurement below is
   // meaningless, whatever it says.
-  checkAtLeast(CONTROL[scope], before.count,
-    `something animates with the setting OFF (${scope} measured ${CONTROL[scope]})`);
+  const control = 'tiles' === CONTROL[scope]
+    ? 2 * await warm.page.evaluate((sel) => document.querySelectorAll(sel + ' .dccwl-tile').length, scope)
+    : CONTROL[scope];
+  check(control > 0, `the control has something to count (${scope}: ${control})`);
+  checkAtLeast(control, before.count,
+    `something animates with the setting OFF (${scope} floor ${control})`);
   note(`animating normally: ${before.count} — e.g. ${before.sample.join(', ')}`);
   await warm.page.close();
 

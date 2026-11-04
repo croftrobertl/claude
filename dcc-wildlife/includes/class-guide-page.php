@@ -106,6 +106,38 @@ class Guide_Page {
 	 * their own pill, exactly as the old jump list gave them their own
 	 * heading.
 	 */
+	/**
+	 * THE VIEW IS ONE ATTRIBUTE ON THE LIST (1.48.0, Irwin audit item 3).
+	 *
+	 * Through 1.47.3 a pill or the scope switch set `hidden` row by row —
+	 * up to 402 writes, each invalidating its own row. Now guide.js writes
+	 * `data-gp-scope` and `data-gp-group` on the list ONCE and these rules
+	 * hide what the view leaves out. The scope rule is fixed and lives in
+	 * guide.css; the group rules are one per pill, and the pills come from
+	 * the data, so they are printed here beside the list they govern. Slugs
+	 * are reduced to [a-z0-9_-] before they reach a selector.
+	 *
+	 * The SEARCH still writes `hidden` on rows, but only where a row's own
+	 * answer changes, and only while typing — it depends on each row's text,
+	 * which no list-level rule can know.
+	 *
+	 * @param array<string,array> $pills slug => pill.
+	 */
+	private static function filter_style( array $pills ): void {
+		$rules = [];
+		foreach ( array_keys( $pills ) as $slug ) {
+			$slug = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $slug ) );
+			if ( '' === $slug || 'all' === $slug ) {
+				continue;
+			}
+			$rules[] = '.dccwl-gp .dccwl-gp-list[data-gp-group="' . $slug . '"]>.dccwl-gp-item:not([data-group="' . $slug . '"])';
+		}
+		if ( ! $rules ) {
+			return;
+		}
+		echo '<style id="dccwl-gp-filter">' . implode( ',', $rules ) . '{display:none}</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from sanitised slugs above.
+	}
+
 	public static function pill_of( array $sp ): string {
 		$browse = (string) ( $sp['browse'] ?? '' );
 		if ( '' !== $browse ) {
@@ -376,7 +408,7 @@ class Guide_Page {
 						<a class="dccwl-gp-spot-card" href="#<?php echo esc_attr( self::ANCHOR_PREFIX . $id ); ?>"
 							data-dccwl-gp-spot-key="<?php echo esc_attr( $id ); ?>">
 							<img class="dccwl-gp-spot-img" src="<?php echo esc_url( $photo ); ?>" alt=""
-								loading="lazy" decoding="async" />
+								loading="lazy" decoding="async" data-no-lazy="1" />
 							<span class="dccwl-gp-spot-name"><?php echo esc_html( (string) $sp['name'] ); ?><?php if ( Species::is_hazard( $sp ) ) : ?><span aria-hidden="true"> · <?php esc_html_e( 'Keep Away', 'dcc-wildlife' ); ?></span><span class="dccwl-sr"><?php esc_html_e( ', Keep Away', 'dcc-wildlife' ); ?></span><?php endif; ?></span>
 						</a>
 					</li>
@@ -511,7 +543,7 @@ class Guide_Page {
 					<input type="search" id="dccwl-gp-search" class="dccwl-search-input dccwl-gp-searchinput"
 						data-dccwl-gp-search
 						autocomplete="off" autocorrect="off" spellcheck="false"
-						placeholder="<?php echo esc_attr( sprintf( /* translators: %d: number of species. */ __( 'Search %d Species Seen Here', 'dcc-wildlife' ), $tally['here'] ) ); ?>" />
+						placeholder="<?php echo esc_attr( sprintf( /* translators: %d: number of species. */ __( 'Search %d Species', 'dcc-wildlife' ), $tally['here'] ) ); ?>" />
 					<button type="button" class="dccwl-search-clear dccwl-gp-clear" data-dccwl-gp-clear hidden
 						aria-label="<?php esc_attr_e( 'Clear the search', 'dcc-wildlife' ); ?>">
 						<svg viewBox="0 0 20 20" width="20" height="20" focusable="false" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -571,7 +603,8 @@ class Guide_Page {
 					}
 				?></aside>
 
-				<ol class="dccwl-gp-list<?php echo $spot ? ' dccwl-gp-list-split' : ''; ?>" data-dccwl-gp-list>
+				<?php self::filter_style( $pills ); ?>
+				<ol class="dccwl-gp-list<?php echo $spot ? ' dccwl-gp-list-split' : ''; ?>" data-dccwl-gp-list data-gp-scope="here" data-gp-group="all">
 					<?php foreach ( $rows as $sp ) { self::row( $sp ); } ?>
 				</ol>
 			</div>
@@ -663,9 +696,14 @@ class Guide_Page {
 		 * had) and that was most of a 479 ms task on a 4x-throttled CPU.
 		 */
 		$seen = Local::seen_here( $id );
+		/*
+		 * 1.48.0: and the rows no longer carry `hidden` for it at all. The
+		 * list says which view is on (`data-gp-scope` / `data-gp-group`)
+		 * and CSS hides the rest — see filter_style(). A view change is one
+		 * attribute on the list instead of hundreds on the rows.
+		 */
 		?>
 		<li class="dccwl-gp-item<?php echo $hazard ? ' dccwl-gp-item-hazard' : ''; ?>" id="<?php echo esc_attr( self::ANCHOR_PREFIX . $id ); ?>"
-			<?php echo $seen ? '' : 'hidden'; ?>
 			<?php echo $hazard ? 'data-hazard="1"' : ''; ?>
 			data-dccwl-gp-item
 			data-key="<?php echo esc_attr( $id ); ?>"
@@ -679,12 +717,24 @@ class Guide_Page {
 			<details class="dccwl-gp-details" data-dccwl-gp-details>
 				<summary class="dccwl-gp-row">
 					<?php if ( '' !== $thumb ) : ?>
-						<?php /* 56px, lazy, and the existing -320 rendition — no new
-						         image is generated for this page. `alt` is empty
-						         because the name is right beside it: a screen
-						         reader reading both would say the species twice. */ ?>
+						<?php /* 56px ON SCREEN, lazy, and the existing -320 rendition —
+						         no new image is generated for this page. `alt` is empty
+						         because the name is right beside it: a screen reader
+						         reading both would say the species twice.
+
+						         168 x 168 IN THE ATTRIBUTES (1.48.0, Irwin audit item 9):
+						         Jetpack's Photon sizes the image it serves from these two
+						         attributes, so "56" fetched a 56px file for a 56px box —
+						         one third of what a 3x phone screen draws there, and the
+						         thumbnails were visibly soft. 168 is that box at 3x; the
+						         CSS still draws it at 56 (guide.css .dccwl-gp-thumb), and
+						         the -320 file it is cut from is wider than 168 either way.
+
+						         data-no-lazy (1.48.0, the Director's request): the
+						         plugin's images load with the browser's own lazy loading
+						         and never through a script's. */ ?>
 						<img class="dccwl-gp-thumb" src="<?php echo esc_url( $thumb ); ?>"
-							width="56" height="56" loading="lazy" decoding="async" alt="" />
+							width="168" height="168" loading="lazy" decoding="async" alt="" data-no-lazy="1" />
 					<?php else : ?>
 						<span class="dccwl-gp-thumb dccwl-gp-thumb-none" aria-hidden="true"></span>
 					<?php endif; ?>
@@ -887,9 +937,17 @@ class Guide_Page {
 					'counts'     => $tally,
 					'i18n'       => [
 						/* translators: %d: number of species. */
-						'searchHere'  => __( 'Search %d Species Seen Here', 'dcc-wildlife' ),
+						/*
+						 * 1.48.0 (Irwin audit, item 7): ONE WORDING ON BOTH
+						 * PAGES, IN TITLE CASE. /explore/ said "Search 402
+						 * species" and this page "Search 395 Species Seen
+						 * Here" for the same box. Both now read "Search %d
+						 * Species"; the number follows the scope switch, which
+						 * sits right beside the box and already says which.
+						 */
+						'searchHere'  => __( 'Search %d Species', 'dcc-wildlife' ),
 						/* translators: %d: number of species. */
-						'searchWider' => __( 'Search All %d Species', 'dcc-wildlife' ),
+						'searchWider' => __( 'Search %d Species', 'dcc-wildlife' ),
 						/* translators: %s: what the visitor typed. */
 						'none'        => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
 						/* translators: %d: number of matching species. */

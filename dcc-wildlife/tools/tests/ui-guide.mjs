@@ -41,7 +41,7 @@ async function guide(w, h = 844) {
 }
 
 const shownCount = (page) => page.evaluate(() =>
-  document.querySelectorAll('[data-dccwl-gp-item]:not([hidden])').length);
+  [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length).length);
 
 /* ====================================================================== */
 section('the switch: Seen Here 395, Wider Florida 402');
@@ -120,7 +120,7 @@ section('the switch: Seen Here 395, Wider Florida 402');
   checkSame('402', await page.evaluate(() =>
     document.querySelector('[data-dccwl-gp-count="all"]').textContent),
   'and the count follows the switch');
-  checkSame('Search All 402 Species', await page.evaluate(() =>
+  checkSame('Search 402 Species', await page.evaluate(() =>
     document.querySelector('[data-dccwl-gp-search]').placeholder),
   'as does the search placeholder');
 
@@ -134,19 +134,19 @@ section('the switch: Seen Here 395, Wider Florida 402');
   checkSame(WIDER, wider.length, 'seven species are classified Wider Florida');
   note(`wider: ${wider.join(', ')}`);
   const widerShownNow = await page.evaluate(() => [...document.querySelectorAll('[data-scope="wider"]')]
-    .filter((r) => !r.hidden).length);
+    .filter((r) => r.getClientRects().length).length);
   checkSame(WIDER, widerShownNow, 'and all seven are visible under Wider Florida');
 
   await page.click('[data-dccwl-gp-scope="here"]');
   await page.waitForTimeout(200);
   const widerShownHere = await page.evaluate(() => [...document.querySelectorAll('[data-scope="wider"]')]
-    .filter((r) => !r.hidden).length);
+    .filter((r) => r.getClientRects().length).length);
   checkSame(0, widerShownHere, 'and none of them under Seen Here');
   checkSame(HERE, await shownCount(page), 'back to 395');
 
   /* The "Lake County" chip is the NEAR species, and they are under Seen Here. */
   const nearVisible = await page.evaluate(() => [...document.querySelectorAll('.dccwl-gp-chip-near')]
-    .filter((c) => !c.closest('[data-dccwl-gp-item]').hidden).length);
+    .filter((c) => c.closest('[data-dccwl-gp-item]').getClientRects().length).length);
   checkAtLeast(40, nearVisible, 'the Lake County species show under Seen Here, chipped');
 
   await page.close();
@@ -175,7 +175,7 @@ section('the pills and the search');
   await page.waitForTimeout(200);
   checkSame(birds.n, await shownCount(page), 'tapping Birds shows exactly the number on the pill');
   const onlyBirds = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]:not([hidden])')]
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
       .every((r) => 'birds' === r.getAttribute('data-group')));
   check(onlyBirds, 'and nothing else');
 
@@ -183,7 +183,7 @@ section('the pills and the search');
   await page.fill('[data-dccwl-gp-search]', 'heron');
   await page.waitForTimeout(250);
   const herons = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]:not([hidden])')]
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
       .map((r) => r.getAttribute('data-name')));
   note(`search "heron" in Birds: ${herons.join(', ')}`);
   checkAtLeast(3, herons.length, 'searching "heron" finds herons');
@@ -194,7 +194,7 @@ section('the pills and the search');
   await page.fill('[data-dccwl-gp-search]', 'Ardea herodias');
   await page.waitForTimeout(250);
   const sci = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]:not([hidden])')]
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
       .map((r) => r.getAttribute('data-name')));
   checkSame('Great Blue Heron', sci.join(', '), 'a scientific name finds its species');
 

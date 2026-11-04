@@ -26,6 +26,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Render {
 
+	/**
+	 * IS THIS TEXT TWO OR MORE SENTENCES? (1.48.0, Rob's text rules.)
+	 *
+	 * A sentence end is . ! or ? — optionally followed by a closing quote or
+	 * bracket — and then whitespace and more text. Two sentences means at
+	 * least one such boundary inside the string. The same test runs in
+	 * widget.js and water.js (proseMark), so a paragraph is classed the same
+	 * way whichever side writes it. An abbreviation can read as a boundary
+	 * ("U.S. Fish"); that only ever errs towards left-aligning a line, which
+	 * is the harmless direction.
+	 */
+	public static function is_prose( string $text ): bool {
+		return (bool) preg_match( '/[.!?][\x{201D}\x{2019}"\')\]]?\s+\S/u', trim( $text ) );
+	}
+
+	/** ' dccwl-prose' for a multi-sentence paragraph, '' otherwise. */
+	public static function prose_class( string $text ): string {
+		return self::is_prose( $text ) ? ' dccwl-prose' : '';
+	}
+
+
 	/*
 	 * `PEAK_TAB` IS GONE (1.44.0). Peak Now was a fourth tab carrying the
 	 * slug `__peak`; it is "This Month" in the Month menu now, which needs
@@ -445,7 +466,7 @@ final class Render {
 								aria-label="<?php esc_attr_e( 'Search the field guide', 'dcc-wildlife' ); ?>"
 								placeholder="<?php
 									/* translators: %d: number of species in the guide. */
-									echo esc_attr( sprintf( __( 'Search %d species', 'dcc-wildlife' ), count( Species::dataset() ) ) );
+									echo esc_attr( sprintf( __( 'Search %d Species', 'dcc-wildlife' ), count( Species::dataset() ) ) );
 								?>"
 								autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
 							<button type="button" class="dccwl-search-clear" data-dccwl-search-clear hidden aria-label="<?php esc_attr_e( 'Clear search', 'dcc-wildlife' ); ?>">

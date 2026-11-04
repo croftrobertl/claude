@@ -164,9 +164,17 @@
 	 * and its exact date are all still on the card either way — nothing is
 	 * hidden, the CLAIM is what changes.
 	 */
+	/* A forecast is ISSUED (1.48.0): the NWS cards. */
+	var ISSUED_KEYS = { forecast: 1, wind: 1 };
+
 	function freshLine(f, i18n) {
 		var days = ageDaysOf(f.date, f.datePrecision);
 		if (null === days) { return { text: '', stale: false }; }
+		if (ISSUED_KEYS[f.key || '']) {
+			if (0 === days) { return { text: i18n.issuedToday || 'Issued Today', stale: false }; }
+			if (1 === days) { return { text: i18n.issuedYesterday || 'Issued Yesterday', stale: false }; }
+			return { text: fmt(i18n.issuedDays || 'Issued %d Days Ago', days), stale: false };
+		}
 		var limit = ageLimitFor(f);
 		var stale = limit > 0 && days > limit;
 
@@ -209,10 +217,20 @@
 		if (!iso) { return ''; }
 		var days = ageDaysOf(iso, precision);
 		if (null === days) { return ''; }
-		if (days === 0) { return i18n.ageToday || 'today'; }
+		if (days === 0) { return i18n.ageToday || 'Today'; }
 		if (days < 45) { return days + (i18n.ageDays || 'd'); }
 		if (days < 730) { return Math.round(days / 30) + (i18n.ageMonths || 'mo'); }
 		return Math.round(days / 365) + (i18n.ageYears || 'y');
+	}
+
+	/* Rob's text rule (1.48.0): two or more sentences read left-aligned.
+	 * The same test as Render::is_prose() and widget.js's proseMark(). */
+	var PROSE_RE = /[.!?][\u201D\u2019"')\]]?\s+\S/;
+	function proseMark(scope) {
+		if (!scope || !scope.querySelectorAll) { return; }
+		scope.querySelectorAll('p').forEach(function (p) {
+			if (PROSE_RE.test((p.textContent || '').trim())) { p.classList.add('dccwl-prose'); }
+		});
 	}
 
 	/* One reading = one data card.
@@ -279,7 +297,17 @@
 		 * this file does not get to decide what a reading says, and the
 		 * level card's sentence is Water_Live's, not ours.
 		 */
-		li.appendChild(el('p', 'dccwl-card-value', f.value));
+		/*
+		 * 1.48.0 (Irwin audit, item 8): PAST THE TENSE AGE, THE PAST TENSE.
+		 * A sample older than CFG.tenseDays (30, Water_Render::TENSE_DAYS)
+		 * is not the water now, so where the builder wrote the sentence's
+		 * past form ("was clearer than usual here") that is what prints.
+		 * Chosen, never composed: both sentences are the server's.
+		 */
+		var tense = +(CFG.tenseDays || 0);
+		var ageDays = ageDaysOf(f.date, f.datePrecision);
+		var shownValue = (f.valuePast && tense > 0 && null !== ageDays && ageDays > tense) ? f.valuePast : f.value;
+		li.appendChild(el('p', 'dccwl-card-value', shownValue));
 		if (fresh.text) {
 			li.appendChild(el('p', 'dccwl-card-fresh' + (fresh.stale ? ' dccwl-card-fresh-stale' : ''),
 				fresh.text));
@@ -319,6 +347,7 @@
 			attr.appendChild(el('span', 'dccwl-water-note', f.note));
 		}
 		li.appendChild(attr);
+		proseMark(li);
 		return li;
 	}
 
@@ -595,8 +624,23 @@
 		var wholeShown = 0;
 		var placeHas = {};
 
+		/* 1.48.0: the depth map goes to the About fold (Water_Render's
+		 * about_fold, `data-dccwl-about-live`), filled afresh each render. */
+		var aboutLive = document.querySelector('[data-dccwl-about-live]');
+		if (aboutLive) { aboutLive.textContent = ''; aboutLive.hidden = true; }
+
 		facts.forEach(function (f) {
 			var key = f.key || '';
+			if ('depth' === key) {
+				if (!aboutLive || !isPrimary) { return; }
+				var drow = buildCard(f);
+				if (!drow) { return; }
+				aboutLive.appendChild(drow);
+				aboutLive.hidden = false;
+				var block = aboutLive.closest('[data-dccwl-about-block]');
+				if (block) { block.hidden = false; }
+				return;
+			}
 			/* The whole-chain row first, whichever place is chosen: these
 			 * three are not about a place at all. */
 			if (WHOLE_CHAIN_KEYS[key]) {
@@ -971,6 +1015,7 @@
 
 		function fail() {
 			loading = false;
+			host.removeAttribute('data-dccwl-map-wait');
 			host.textContent = '';
 			var p = el('p', 'dccwl-map-intro');
 			p.textContent = (CFG.i18n && CFG.i18n.mapFailed) || 'Map unavailable';
@@ -985,6 +1030,19 @@
 				mapCfg.wind = windParts;
 			}
 			handle = window.DCCWL_Map.init(host, mapData, mapCfg, (CFG.i18n || {}));
+			/*
+			 * 1.48.0 — LET GO OF THE RESERVATION ONLY ONCE THE MAP HAS SETTLED.
+			 * The bar picks its shape by measurement on the next frame
+			 * (water-map.js fit()), so for one frame the host holds the shape
+			 * it was not going to keep. Two frames later the real height is
+			 * final and the floor can go; within the estimate, nothing moves.
+			 */
+			var release = function () { host.removeAttribute('data-dccwl-map-wait'); };
+			if (typeof requestAnimationFrame === 'function') {
+				requestAnimationFrame(function () { requestAnimationFrame(release); });
+			} else {
+				setTimeout(release, 50);
+			}
 			/* Published for the stat tiles below and for the suites, which
 			 * need Leaflet's own events to wait on rather than a delay. */
 			host.dccwlMap = handle;
@@ -999,6 +1057,9 @@
 			 * the thing a guest is waiting for: an empty box for two seconds
 			 * reads as broken, and there is no button left to re-label. */
 			host.textContent = '';
+			/* 1.48.0: the box keeps the map's full drawn height while it
+			 * waits (water.css, [data-dccwl-map-wait]). */
+			host.setAttribute('data-dccwl-map-wait', '');
 			var wait = el('p', 'dccwl-map-intro');
 			wait.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading the map…';
 			host.appendChild(wait);

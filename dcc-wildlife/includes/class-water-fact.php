@@ -91,7 +91,20 @@ final class Water_Fact {
 		 * water's own readings carry none, because "the place the section is
 		 * about" is what an untagged reading already means.
 		 */
-		private string $place = ''
+		private string $place = '',
+		/*
+		 * 1.48.0 — THE SAME READING, SAID IN THE PAST TENSE (Irwin audit,
+		 * item 8). A comparison such as "clearer than usual here" is a claim
+		 * about NOW; on a sample months old it must read "was clearer than
+		 * usual here". The builder that composes the sentence states its
+		 * past form, so the browser never rewrites a sentence itself — it
+		 * only chooses between two this codebase wrote, by the reading's age.
+		 *
+		 * Presentation metadata, exactly like `short` and `detail`: optional,
+		 * never a gate, and unable to admit an unsourced fact. Absent, the
+		 * card prints `value` at every age, as before.
+		 */
+		private string $value_past = ''
 	) {}
 
 	/**
@@ -100,7 +113,7 @@ final class Water_Fact {
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
 	 * Optional: source_url, note, date_label, group, date_precision, key,
-	 * short, detail, place.
+	 * short, detail, place, value_past.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
@@ -143,6 +156,7 @@ final class Water_Fact {
 		$place  = (string) preg_replace( '/\D/', '', (string) ( $raw['place'] ?? '' ) );
 		$short  = trim( (string) ( $raw['short'] ?? '' ) );
 		$detail = trim( (string) ( $raw['detail'] ?? '' ) );
+		$vpast  = trim( (string) ( $raw['value_past'] ?? '' ) );
 		$dprec  = trim( (string) ( $raw['date_precision'] ?? '' ) );
 		if ( ! in_array( $dprec, [ 'day', 'minute' ], true ) ) {
 			$dprec = '';
@@ -169,7 +183,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key, $short, $detail, $place );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec, $key, $short, $detail, $place, $vpast );
 	}
 
 	/**
@@ -215,6 +229,7 @@ final class Water_Fact {
 			'short'      => $this->short,
 			'detail'     => $this->detail,
 			'place'      => $this->place,
+			'valuePast'  => $this->value_past,
 			/*
 			 * THE DATE AS A GUEST READS IT (1.40.0). Computed once, here, so
 			 * every surface in the water module shows the same format and

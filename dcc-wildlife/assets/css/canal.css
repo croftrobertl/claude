@@ -16,6 +16,7 @@
 	margin: 0 auto;
 	max-width: 100%;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-canal > * + * { margin-top: var(--dccwl-gap-lg); }
@@ -34,6 +35,7 @@
 	margin: 0 auto var(--dccwl-gap-lg);
 	max-width: 620px;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-canal .dccwl-hero-stat .dccwl-hero-value { justify-content: center; }
@@ -88,7 +90,7 @@
  * default to left-aligned prose; inside the hub they centre. */
 
 .dccwl-canal .dccwl-root,
-.dccwl-canal .dccwl-water { text-align: center; }
+.dccwl-canal .dccwl-water { text-align: center; text-wrap: balance; }
 
 .dccwl-canal .dccwl-title,
 .dccwl-canal .dccwl-sub,
@@ -101,7 +103,7 @@
 .dccwl-canal .dccwl-water-disclaimer,
 .dccwl-canal .dccwl-card-label,
 .dccwl-canal .dccwl-card-value,
-.dccwl-canal .dccwl-empty { text-align: center; }
+.dccwl-canal .dccwl-empty { text-align: center; text-wrap: balance; }
 
 /* Water cards: label and value centre, and their head stacks so the
  * source chip sits under the label rather than pushed to one edge. */
@@ -138,6 +140,7 @@
 	margin-right: auto;
 	max-width: 34ch;
 	text-align: left;
+	text-wrap: wrap;
 }
 
 @media (max-width: 600px) {
@@ -341,6 +344,7 @@
 	min-height: 44px;
 	padding: 10px 24px;
 	text-align: center;
+	text-wrap: balance;
 	text-transform: none;
 	width: 100%;
 }

@@ -21,6 +21,7 @@
 	line-height: 1.2;
 	margin: 0;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-gp .dccwl-gp-sub {
@@ -29,6 +30,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 4px 0 var(--dccwl-gap);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ======================================================================
@@ -100,6 +102,7 @@
 	min-width: 0;
 	padding: 0 40px;
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-gp .dccwl-gp-searchinput::placeholder { color: var(--dccwl-text-muted); opacity: 1; }
 .dccwl-gp .dccwl-gp-searchinput:focus,
@@ -160,6 +163,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: var(--dccwl-gap) 0;
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ======================================================================
@@ -185,6 +189,8 @@
 	margin: 0;
 	padding: 0;
 }
+
+.dccwl-gp .dccwl-gp-list[data-gp-scope="here"] > .dccwl-gp-item[data-scope="wider"] { display: none; }
 
 .dccwl-gp .dccwl-gp-item {
 	border-bottom: 1px solid var(--dccwl-line);
@@ -248,6 +254,7 @@
 	 * text beside a thumbnail reads from the start, while every heading on
 	 * the page is centred. */
 	text-align: start;
+	text-wrap: wrap;
 }
 .dccwl-gp .dccwl-gp-thumb { grid-column: 1; grid-row: 1 / span 2; }
 .dccwl-gp .dccwl-gp-name { grid-column: 2; grid-row: 1; align-self: end; }
@@ -363,6 +370,7 @@
 	margin: 0 0 var(--dccwl-gap);
 	padding: 8px 12px;
 	text-align: center;
+	text-wrap: balance;
 	text-transform: uppercase;
 }
 
@@ -508,6 +516,7 @@
 	margin: 0;
 	padding: 10px 12px;
 	text-align: center;
+	text-wrap: balance;
 }
 
 /*
@@ -559,11 +568,12 @@
 .dccwl-gp-pane .dccwl-fg-fact,
 .dccwl-gp-pane .dccwl-fg-line {
 	text-align: left;
+	text-wrap: wrap;
 }
 /* The two tiles are an exception INSIDE that exception: they are cards,
  * and a card's title and its one short value centre (the mockup, and the
  * 1.18.0 rule that a tile is a tile). */
-.dccwl-gp-tiles .dccwl-fg-line.dccwl-fg-line { text-align: center; }
+.dccwl-gp-tiles .dccwl-fg-line.dccwl-fg-line { text-align: center; text-wrap: balance; }
 
 /* The photo credit under a sheet's photograph is a LICENCE SURFACE — the
  * sheet is where the photograph is shown at size (1.24.0). */
@@ -573,6 +583,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 0 0 var(--dccwl-gap);
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-gp-credit a { color: var(--dccwl-text-muted); text-decoration: underline; text-underline-offset: 2px; }
 
@@ -607,6 +618,7 @@
 	margin: 0 0 2px;
 	padding: 0;
 	text-align: center;
+	text-wrap: balance;
 	text-transform: none;
 }
 .dccwl-gp .dccwl-gp-spot-sub {
@@ -615,6 +627,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 0 0 var(--dccwl-gap-lg);
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-gp .dccwl-gp-spot-grid {
 	display: grid;
@@ -638,6 +651,7 @@
 	overflow: hidden;
 	padding: 0;
 	text-align: center;
+	text-wrap: balance;
 	text-decoration: none;
 }
 .dccwl-app .dccwl-gp-spot-card.dccwl-gp-spot-card:hover {
@@ -684,4 +698,4 @@
 }
 .dccwl-gp .dccwl-photo-credits .dccwl-fullguide-text { align-items: center; }
 .dccwl-app .dccwl-photo-credits .dccwl-fullguide-h.dccwl-fullguide-h,
-.dccwl-gp .dccwl-photo-credits .dccwl-fullguide-meta { text-align: center; }
+.dccwl-gp .dccwl-photo-credits .dccwl-fullguide-meta { text-align: center; text-wrap: balance; }

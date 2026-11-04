@@ -348,6 +348,23 @@ month-specific is baked into cached HTML.
   predictions (guide marketing, not FWC), and any claim that reads as the owner's
   personal local knowledge.
 
+**1.48.0 (2026-11-04), Rob's ruling on the Irwin audit:**
+
+- **The regulations above are no longer restated.** The block links FWC's page
+  once ("Current Limits on FWC ↗"); the five limits and their "verified" date
+  are deleted from the data. Link FWC, never restate limits that change.
+- **The "veteran-guide reports" credit is removed.** Rob: remove it unless a
+  real, published source can be named and linked. The 2026-09-01 note above
+  names publishers (Bassmaster, BassOnline) but no article, and none could be
+  checked line by line against the season lines from the 1.48.0 session (no
+  route to myfwc.com; a search found candidates — BassOnline's "11 Best Times to
+  Fish the Harris Chain", Bassmaster's "Elite Destinations: Harris Chain of
+  Lakes" — but reading them against each line was not done). So nothing is
+  named. The source line now credits FWC only for the season lines that end
+  "(FWC)" and labels the others as general angling patterns, not measured on
+  this water. If a specific article is confirmed later, it can be credited by
+  name and link, line by line.
+
 ### 2. Wildlife guide accuracy pass (`Species::registry()` / `calendar()`)
 
 Every species carries a scientific name and its facts were re-verified against

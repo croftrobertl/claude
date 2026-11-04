@@ -1255,9 +1255,9 @@ rounded boxes at the same weight. The rule now:
 
 ## Small rules added in 1.17.0
 
-- **Keep-limits carry `regs_verified`** (`Water_Data::defaults()`), rendered
-  as "Limits as verified with FWC in August 2026". Update the date whenever
-  the limits are re-checked; it is a fixed setting, so it is cache-safe.
+- ~~**Keep-limits carry `regs_verified`**~~ — RETIRED in 1.48.0 with the
+  table itself (Rob, 2026-11-04: one link to FWC's current limits, never the
+  limits). See §49.
 - **Photos ship a `-600.jpg` variant** beside each original; `srcset` uses
   `Species::PHOTO_W` for the full-size descriptor. Regenerate the variant
   (GD, quality 80, 600px wide) whenever an original is replaced, and update
@@ -5584,3 +5584,138 @@ focused search never hides (tested with "a", which leaves a long list).
   positions only while the bar is part-way in. With reduced motion, never.
   63 pass. Four mutants fail: the three above, plus sliding under reduced
   motion.
+
+### 49. 1.48.0 — the Irwin audit, fixed: every finding in one release
+
+The audit of 2026-11-03 ranked the faults on live 1.47.3; Rob approved every
+fix on 2026-11-04 and ruled on the Fishing tab himself. Two things were the
+Director's and stay the Director's — the theme's back-to-top button over the
+map at 390, and the missing visible h1 on /explore/ and /test/ — and nothing
+here works around them. One more is now the Director's too: SpeedyCache's
+lazy-load SCRIPT (below).
+
+#### The fixes, and the rule each one leaves behind
+
+1. **The map box holds the map's full drawn height until the map is in it.**
+   The host went 506 → 45 → 678px at 390: the empty floor held the canvas
+   only, the loading line then replaced it with one line, and the bar, legend
+   and chips arrived on top. Now `data-dccwl-map-wait` holds
+   `--dccwl-map-reserve` = canvas (`--dccwl-map-h`, exact) + chrome
+   (`--dccwl-map-chrome`) while loading, and water.js releases it two frames
+   after the map is built (the bar picks its shape on the next frame). The
+   chrome is MEASURED on live, in Raleway, across host widths 244–980px, and
+   keyed with container queries on `.dccwl-map-wrap` (default 270 = the 390
+   phone; ≥400 189; ≥500 249; ≥650 189; ≥710 158; <300 358). These bands are
+   an estimate of where the bar's measured shape lands — never the switch,
+   which stays a measurement in water-map.js (§7, 1.33.0). **If the bar or the
+   legend ever changes size, re-measure and re-cut the bands.** The loading
+   line sits centred in the canvas area of the reserved box.
+2. **Every DCC Wildlife widget wrapper is `width: 100%`** (app.css,
+   `.elementor-widget-dccwl_canal` etc. — Elementor's widget-type class, which
+   is ours). On /test/ the widget sits in a flexbox container that centres its
+   items, and a centred flex item is sized to its content: the app was 178px.
+3. **The guide page changes view with ONE attribute on the list.**
+   `data-gp-scope` and `data-gp-group` on `[data-dccwl-gp-list]`; guide.css
+   hides Wider Florida under Seen Here, and `Guide_Page::filter_style()`
+   prints one rule per pill (pills come from the data, slugs reduced to
+   [a-z0-9_-]). Rows no longer ship `hidden`. Only the SEARCH writes rows, and
+   only rows whose answer changed. Suites count rendered rows
+   (`getClientRects().length`), never `:not([hidden])`. **The unclip reads
+   every ancestor before it writes any, from the first animation frame** —
+   1.47.2 read-wrote-read-wrote and forced three style passes over 10,896
+   elements in the load task.
+4. **Wildlife never shows an empty panel.** The `/species` fetch starts when a
+   guest reaches for the view menu (pointerdown, focus, hover) — NOT on load
+   and not in idle time, so 1.45.0's saving for a guest who stays on Water
+   stands. While it runs, twelve placeholder tiles fill the visible grid with
+   the real deck class, the real tile box, a 4:3 band, two name lines and the
+   sub line; the search row and the arrows' row are held open invisibly. They
+   go in the same task the first real tiles arrive, and the build runs after
+   the tap's own paint (`afterPaint`). Measured offline: placeholder and real
+   tile identical at 390/768/1440, grid unmoved, footer within 3px.
+5. **Taps.** `markOpen()` touches the old and the new tile only (it wrote
+   `aria-expanded` on all 402). The search filters 250ms after typing pauses
+   (`SEARCH_PAUSE`); Enter, Escape, clear and a tab change still apply at once.
+6. **Fishing: one link, no table** (Rob). "Current Limits on FWC ↗" →
+   `regs_url`; the five restated limits and `regs_verified` are deleted from
+   the data, not hidden, and the bottom link row no longer repeats it. **The
+   "veteran-guide reports" credit is gone**: no published source could be
+   named (myfwc.com could not even be reached from the session), so the source
+   line now credits FWC only for season lines that say "(FWC)" and calls the
+   rest general angling patterns. That wording is for Rob to approve.
+7. **Rob's text rules, as a mechanism.** (a) **Balance travels with
+   centring:** every rule that centres text declares `text-wrap: balance`, and
+   every rule that aligns left declares `text-wrap: wrap`, in the same rule —
+   both inherit, so a line always inherits the pair together. A blanket
+   `balance` on the root was tried first and failed: a left-aligned container
+   handed its centred cards `wrap`. test-1480.php lints all five stylesheets
+   for it (comments stripped — one rule hid behind braces inside a comment).
+   (b) **Multi-sentence = `dccwl-prose`**, added by the code that writes the
+   paragraph after counting sentences in it: `Render::is_prose()` in PHP,
+   `proseMark()` in widget.js and water.js, one regex in all three. It is a
+   fact about the words, so it cannot be a class per role. The Fishing pane's
+   (0,3,1) "centre every p" rule had out-ranked the intro's own 1.44.0 left
+   alignment since 1.44.0; water.css's prose rule is (0,4,0). (c) One search
+   wording, "Search N Species", on both pages; source chips in Title Case,
+   including the stored Surface Area row (`Water_Data::upgrade()`, exact
+   match only).
+8. **Wording.** Forecasts and wind say "Issued Today / Yesterday / N Days
+   Ago" (`ISSUED_KEYS`). The depth map is keyed `depth` and water.js puts it in
+   About (`data-dccwl-about-live`), never in Now. **The tense age is 30 days**
+   (`Water_Render::TENSE_DAYS`, the Atlas's shortest sampling round): past it,
+   a card prints `valuePast` where its builder wrote one — today the clarity
+   comparison and the chain lakes' rows ("was clearer than usual here").
+   `value_past` is presentation metadata on `Water_Fact`, never a gate; the
+   browser chooses between two sentences, it never composes one. "See The
+   Full Entry →" has a real no-break space before the arrow.
+9. **The guide's thumbnails ask for 168×168** (3× their 56px box) in their
+   attributes, because Jetpack Photon sizes the file it serves from them; the
+   CSS still draws 56. Every plugin `<img>` (PHP and JS) carries
+   `data-no-lazy="1"`, the Director's request.
+10. **A tile name reserves no second line.** The card already fills its slot,
+    which is what kept a deck's rows even; the 2.5em reservation only made a
+    row of one-line names a line taller than anything in it. Placeholders keep
+    it, because the full list's rows always hold a two-line name.
+
+#### SpeedyCache's lazy-load SCRIPT is what is left of the freeze — the Director's
+
+The Director's exclusion works: none of the plugin's 405 images on
+/wildlife-guide/ goes through SpeedyCache's lazy-load any more. But its inline
+script (`speedycachell`) still runs on window `load` and on EVERY click,
+scroll and resize, and on every DOM change: it walks all
+img/iframe/div/a/span/noscript in the document (4,983 on the guide page) and
+calls getBoundingClientRect on each and its parent. On the guide page each
+of those calls lands inside a row with `content-visibility: auto`, so each
+forces a layout: 776 layouts, 5.3s, measured by trace at 390 / 4×. The same
+scan runs on every tap. With the script switched off (what-if only), the
+guide's longest load task fell from ~4.6s to ~0.4s and its taps to 150–210ms.
+Dropping `content-visibility` instead halves the load but makes taps worse,
+so it stays. **The fix is site-side: turn SpeedyCache's lazy-load off on
+these pages (the plugin's images already use the browser's own lazy
+loading).** `tools/live/swap.mjs` takes `DCC_NO_SC_LAZY=1` for that what-if.
+Elementor 4.3.6 adds a second site-side cost: a MutationObserver on
+`document.body` (childList, subtree) runs its sticky/anchor scan after any
+DOM change, 50–140ms at 4×; the search's debounce keeps it out of keystrokes.
+
+#### Proof tools (tools/live/, GET only, not in run-all.sh)
+
+- `swap.mjs` — the shared route: blocks non-GETs; in `after` mode serves this
+  checkout's JS, appends all five stylesheets, applies `html-patches.mjs` (the
+  served-HTML equivalent of each PHP change, each reporting if it stopped
+  matching) and patches `/conditions` the way Water_Live now builds it.
+  Removed CSS rules are still in SpeedyCache's combined file in an after run;
+  the offline harness covers removals.
+- `proof.mjs` — CLS, LCP, long tasks and tap/keystroke times, before/after,
+  390/768/1440, three pages, 4× CPU from navigation, scrolling straight to the
+  widget so the map's jump is on screen to be counted.
+- `text-rules.mjs` — the audit's own text-rules checker, before/after.
+- `map-clip.mjs` — a 12s video of the map loading at 390 / 4×, with the box
+  height and the content-below position every 250ms.
+
+#### Harness: 44 suites
+
+`ui-1480.mjs` (browser) and `test-1480.php` (server) are new. `ui-guide.mjs`
+and `ui-1470.mjs` count rendered rows. `ui-motion.mjs`'s month control was a
+typed 1499 — October's tile count — and failed on HEAD itself in November; it
+is now derived (twice the tiles built).
+

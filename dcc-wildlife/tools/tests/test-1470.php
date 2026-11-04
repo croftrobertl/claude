@@ -93,7 +93,7 @@ dcc_section( 'the order, and the box' );
 
 check( $a_from > 0 && $a_from < (int) strpos( $guide, '<ol class="dccwl-gp-list' ),
 	'the pane comes BEFORE the list in the source, so Tab from the last row leaves the list' );
-check_contains( $guide, '<ol class="dccwl-gp-list dccwl-gp-list-split" data-dccwl-gp-list>', 'the list ships boxed, because the pane is never empty' );
+check_contains( $guide, '<ol class="dccwl-gp-list dccwl-gp-list-split" data-dccwl-gp-list data-gp-scope="here" data-gp-group="all">', 'the list ships boxed, because the pane is never empty' );
 check_lacks( substr( $guide, $a_from, 200 ), ' hidden', 'and the pane ships shown (CSS hides it below 900px)' );
 
 /* =====================================================================

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.47.3
+Stable tag: 1.48.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,36 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.48.0 =
+* **The map no longer jumps the page while it loads.** Its box keeps the
+  map's full height from the start, with "Loading the map…" in the middle
+  of it, so nothing below moves when the map arrives.
+* **On a page built with Elementor's newer containers the app is full
+  width** instead of squeezed into a narrow column (as on /test/).
+* **Choosing Wildlife shows placeholder tiles straight away** while the
+  species list arrives, and the list starts downloading as soon as you reach
+  for the menu. Nothing pops in or pushes the page about.
+* **Faster taps.** Opening a species changes two tiles instead of all of
+  them; each letter typed in the search appears at once and the list
+  follows when you pause; the guide page changes its view with one change
+  to the list instead of hundreds.
+* **Fishing: one link to FWC's current limits** ("Current Limits on FWC ↗")
+  instead of a table that could go out of date. The "veteran-guide reports"
+  credit is gone: only the season lines marked (FWC) are credited to FWC,
+  and the rest are labeled as general patterns.
+* **Text follows Rob's rules everywhere:** centered lines are balanced;
+  paragraphs of two or more sentences (including the sheet's main fact and
+  "What To Do") read left-aligned; the source chips and the search box are
+  in Title Case, with one wording on both pages.
+* **Wording:** forecasts say "Issued", not "Measured"; the 2013 depth map
+  moved to About; a reading more than 30 days old is described in the past
+  tense ("was clearer than usual"); "See The Full Entry →" has a space
+  before its arrow.
+* **Sharper guide thumbnails** (fetched at three times their size for phone
+  screens), and the plugin's images are marked for the browser's own lazy
+  loading only (`data-no-lazy`).
+* A one-line species name no longer reserves room for two.
 
 = 1.47.3 =
 * **On a phone or tablet the guide's search and filters ride with the

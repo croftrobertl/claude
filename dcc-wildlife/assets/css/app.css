@@ -349,6 +349,7 @@
 	padding: calc(var(--dccwl-pad) * 0.6) calc(var(--dccwl-pad) * 0.6) calc(var(--dccwl-pad) * 0.85);
 	position: relative;
 	text-align: center;
+	text-wrap: balance;
 	transition: transform var(--dccwl-t) var(--dccwl-ease),
 		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
 		border-color var(--dccwl-t-fast) var(--dccwl-ease-color),
@@ -572,6 +573,7 @@
 	margin: 0;
 	min-width: 6em;
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ======================================================================
@@ -644,12 +646,14 @@
 	margin: 0;
 	padding: 0;
 	text-align: left;
+	text-wrap: wrap;
 	text-transform: none;
 }
 .dccwl-fullguide-meta {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	text-align: left;
+	text-wrap: wrap;
 	font-weight: var(--dccwl-fw-body);
 }
 /* Scoped to .dccwl-app, NOT .dccwl-root: the prose guide appears both inside
@@ -663,6 +667,7 @@
 .dccwl-fullguide-body {
 	padding: var(--dccwl-gap-lg) 16px 16px;
 	text-align: left;
+	text-wrap: wrap;
 }
 .dccwl-fullguide-body > * { margin-left: auto; margin-right: auto; max-width: 68ch; }
 
@@ -865,6 +870,7 @@
 	font-size: var(--dccwl-fs-lg);
 	font-weight: var(--dccwl-fw-strong);
 	text-align: center;
+	text-wrap: balance;
 	margin: 0;
 	min-width: 0;
 }
@@ -992,6 +998,7 @@
 	color: var(--dccwl-text);
 	font-weight: var(--dccwl-fw-body);
 	text-align: start;
+	text-wrap: wrap;
 }
 
 .dccwl-app p,
@@ -1516,3 +1523,58 @@
 .dccwl-app .dccwl-chip-round .dccwl-chip-i { font-size: 1.4em; }
 .dccwl-app .dccwl-pick-chev,
 .dccwl-app .dccwl-chip .dccwl-caret { font-size: .8em; line-height: 1; }
+
+/* ======================================================================
+ * 1.48.0 (Irwin audit, item 2) — THE WIDGET TAKES THE WIDTH IT IS GIVEN.
+ *
+ * On /test/ the widget sits in an Elementor flexbox container (`e-con`,
+ * flex column, `align-items: center`). A centred flex item is sized to its
+ * CONTENT, so the whole app shrank to 178px inside a 354px column at 390 and
+ * inside a 1000px column at 1440. On /explore/ (classic sections) the same
+ * widget is block-level and full width, so only one page showed it.
+ *
+ * The wrapper Elementor puts round the widget is the flex item, so that is
+ * the element that takes the width — named by its widget-type class, which
+ * is ours (`elementor-widget-<our widget name>`) and cannot match anyone
+ * else's widget. Every DCC Wildlife widget gets it, not only the hub, since
+ * any of them can be dropped into a flexbox container.
+ * ====================================================================== */
+.elementor-widget-dccwl_canal,
+.elementor-widget-dccwl_month,
+.elementor-widget-dccwl_water,
+.elementor-widget-dccwl_countdown {
+	width: 100%;
+}
+
+/* ======================================================================
+ * 1.48.0 (Irwin audit, item 7) — ROB'S TEXT RULES, AS DEFAULTS.
+ *
+ * "Text centered with `text-wrap: balance` by default; multi-sentence
+ * paragraphs and bulleted lists are the left-aligned exceptions."
+ *
+ * BALANCE TRAVELS WITH CENTRING. Every rule in this plugin that centres
+ * text also says `text-wrap: balance`, and every rule that aligns it left
+ * says `text-wrap: wrap` — the two are declared together, in the same rule,
+ * always. Both properties inherit, so whatever a line inherits its alignment
+ * from, it inherits the matching wrap from the same place: a centred line
+ * is balanced, a left-aligned one wraps as ordinary text, and no container
+ * can hand one to a child without the other. (A blanket `balance` on the app
+ * root was tried first and failed exactly there: a left-aligned container
+ * gave its centred cards `wrap`.) The audit found balance on 7 elements and
+ * missing on 53; test-1480.php fails any rule that centres text without it.
+ *
+ * `.dccwl-prose` IS THE EXCEPTION FOR PARAGRAPHS OF TWO OR MORE SENTENCES.
+ * It is added by the code that writes the paragraph — Render::prose_class()
+ * in PHP, proseMark() in widget.js and water.js — by counting sentences in
+ * the text it is about to print, because "multi-sentence" is a fact about
+ * the words, not about the element: the same sheet line is one sentence for
+ * one species and three for another. Doubled class, so it outranks the
+ * role rules (`.dccwl-sheet .dccwl-safe`, the fishing notes) that centre
+ * the block it sits in. The text above a list stays centred: it is a lead-in
+ * line, and it is only marked if it is itself two sentences.
+ * ====================================================================== */
+.dccwl-app .dccwl-prose.dccwl-prose,
+.dccwl-sheet .dccwl-prose.dccwl-prose {
+	text-align: left;
+	text-wrap: wrap;
+}

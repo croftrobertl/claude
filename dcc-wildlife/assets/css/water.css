@@ -86,6 +86,7 @@
 	letter-spacing: -0.01em;
 	margin: 0;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-water-scope .dccwl-water-sub {
@@ -95,6 +96,7 @@
 	letter-spacing: 0.06em;
 	margin: 0 0 var(--dccwl-gap);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* =====================================================================
@@ -682,6 +684,7 @@
 	min-height: 44px;
 	padding: 10px 12px;
 	text-align: left;
+	text-wrap: wrap;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 	width: 100%;
 }
@@ -815,6 +818,7 @@
 	gap: var(--dccwl-gap-lg);
 	padding: var(--dccwl-pad);
 	text-align: left;
+	text-wrap: wrap;
 }
 
 .dccwl-moon[hidden] { display: none; }
@@ -885,15 +889,22 @@
  * than against the left of the panel.
  * ================================================================== */
 
-.dccwl-fishing { text-align: center; }
+.dccwl-fishing { text-align: center; text-wrap: balance; }
 
-/* The two multi-sentence paragraphs, per Rob's 2026-10-19 exception. */
+/* The intro and the season lines, held to a reading measure.
+ *
+ * 1.48.0: the `text-align: left` that stood here never took effect — the
+ * Fishing pane's (0,3,1) "centre every p" rule below out-ranks it, so on
+ * live both rendered centred — and it was the wrong test anyway: a season
+ * line is one sentence for one fish and three for another. Rob's rule is
+ * about sentences, so the renderer now marks each paragraph that has two or
+ * more (`dccwl-prose`, Render::prose_class) and that class left-aligns it;
+ * a one-sentence line stays centred and balanced like everything else. */
 .dccwl-fishing-intro,
 .dccwl-fishing-line {
 	margin-left: auto;
 	margin-right: auto;
 	max-width: 46ch;
-	text-align: left;
 }
 
 .dccwl-fishing-intro {
@@ -971,25 +982,17 @@
 	margin: 0 0 6px;
 }
 
-.dccwl-fishing-reglist {
-	list-style: none;
+/* The keep-limits table went in 1.48.0 (Rob: one link to FWC, never the
+ * limits themselves), and its row rules with it. The one link: */
+.dccwl-fishing-limits {
 	margin: 0;
-	padding: 0;
+	text-align: center;
+	text-wrap: balance;
 }
-
-.dccwl-fishing-reglist li {
-	border-bottom: 1px solid var(--dccwl-line);
-	display: flex;
-	flex-wrap: wrap;
-	gap: 2px 12px;
-	justify-content: space-between;
-	padding: 6px 0;
+.dccwl-fishing-limits-link {
+	color: var(--dccwl-primary);
+	font-weight: var(--dccwl-fw-label);
 }
-
-.dccwl-fishing-reglist li:last-child { border-bottom: 0; }
-
-.dccwl-fishing-reg-k { color: var(--dccwl-text); font-weight: 600; }
-.dccwl-fishing-reg-v { color: var(--dccwl-text-muted); }
 
 .dccwl-fishing-license {
 	color: var(--dccwl-text-muted);
@@ -1173,6 +1176,7 @@
 	line-height: 1.45;
 	margin: 0 0 var(--dccwl-gap-lg);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ITEM 7 — the Water tab bar gets the panel's standard block gap above and
@@ -1192,15 +1196,27 @@
 	flex-direction: column;
 	align-items: center;
 	text-align: center;
+	text-wrap: balance;
 }
-.dccwl-moon-text { text-align: center; }
+.dccwl-moon-text { text-align: center; text-wrap: balance; }
 
 /* ITEM 9 — the Fishing tab is centre-aligned by default, including the text
  * inside each card. */
 .dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"],
 .dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] p,
 .dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] li,
-.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] .dccwl-card { text-align: center; }
+.dccwl-water-scope .dccwl-water-tab[data-dccwl-water-tab="fishing"] .dccwl-card { text-align: center; text-wrap: balance; }
+
+/* 1.48.0 (Irwin audit, item 7): THE MULTI-SENTENCE EXCEPTION WINS HERE TOO.
+ * The rule above centres every <p> in the Fishing pane at (0,3,1), which
+ * out-ranked the intro's own 1.44.0 left alignment — so the intro, the
+ * season advice and the notes all rendered centred on live. A paragraph the
+ * renderer marked `dccwl-prose` is left-aligned at (0,4,0). */
+.dccwl-water-scope .dccwl-water-tab .dccwl-prose.dccwl-prose,
+.dccwl-water-scope .dccwl-prose.dccwl-prose {
+	text-align: left;
+	text-wrap: wrap;
+}
 
 /* ITEM 10 (his pick: A) — season picker, then a labelled block per species,
  * with ruled breaks between the seasons, the map/ramps, the licences and the
@@ -1469,6 +1485,7 @@
  * ====================================================================== */
 .dccwl-water-scope .dccwl-map-intro {
 	text-align: center;
+	text-wrap: balance;
 }
 
 
@@ -1533,6 +1550,7 @@
 	 * a scannable left edge, and item 6 centres the section's TEXT, not the
 	 * rows of a listbox. Noted with the others. */
 	text-align: left;
+	text-wrap: wrap;
 	text-transform: none;
 	width: 100%;
 }
@@ -1636,7 +1654,54 @@
  * an EMPTY host holds the space open. `overflow: hidden` lives on the canvas,
  * which is the element with the corners to round.
  */
-.dccwl-map-inline:empty { min-height: var(--dccwl-map-h); }
+.dccwl-map-inline:empty,
+.dccwl-map-inline[data-dccwl-map-wait] { min-height: var(--dccwl-map-reserve); }
+
+/*
+ * 1.48.0 (Irwin audit, item 1) — THE BOX KEEPS THE MAP'S FULL DRAWN HEIGHT
+ * UNTIL THE MAP IS IN IT.
+ *
+ * Through 1.47.3 the host went 506 -> 45 -> 678px at 390: the empty floor
+ * held only the CANVAS height, the "Loading the map…" line then replaced it
+ * with one line of text, and the finished map arrived 172px taller than the
+ * floor because of its control bar and legend — plus the layer chips, a
+ * sibling below, which appear in the same task. Everything under the map
+ * moved twice.
+ *
+ * So the reservation is the whole drawn block: canvas + bar + legend + the
+ * chips row. The canvas part is exact (it is the same token the canvas
+ * uses). The rest is MEASURED on live, in the theme's own Raleway, across
+ * host widths from 244 to 980px (1.48.0 report), because the bar's shape is
+ * chosen by measurement (1.33.0 section 7) and wraps differently in each
+ * band. The bands below are therefore an ESTIMATE of where that measurement
+ * lands — never the switch itself, which stays in water-map.js.
+ *
+ * Keyed on the WRAP's width with container queries, not the viewport: the
+ * same widget is 980px wide inside a 1440px page and the bar only cares
+ * about its own width. The default (no container-query support) is the
+ * 390px phone's value, the case that matters most.
+ */
+.dccwl-map-wrap { container-type: inline-size; }
+.dccwl-map-inline { --dccwl-map-chrome: 270px; --dccwl-map-reserve: calc(var(--dccwl-map-h) + var(--dccwl-map-chrome)); }
+@container (max-width: 299px) { .dccwl-map-inline { --dccwl-map-chrome: 358px; } }
+@container (min-width: 400px) { .dccwl-map-inline { --dccwl-map-chrome: 189px; } }
+@container (min-width: 500px) { .dccwl-map-inline { --dccwl-map-chrome: 249px; } }
+@container (min-width: 650px) { .dccwl-map-inline { --dccwl-map-chrome: 189px; } }
+@container (min-width: 710px) { .dccwl-map-inline { --dccwl-map-chrome: 158px; } }
+
+/* The waiting line sits INSIDE the reserved box, centred in the part the
+ * canvas will fill — not a 45px strip that the map then pushes open. */
+.dccwl-map-inline[data-dccwl-map-wait] > .dccwl-map-intro {
+	align-items: center;
+	display: flex;
+	height: var(--dccwl-map-h);
+	justify-content: center;
+	left: 0;
+	position: absolute;
+	right: 0;
+	text-wrap: balance;
+	top: 0;
+}
 
 /*
  * THE CANVAS FILLS THE HOST, and the floor is the sheet's own 240px — the
@@ -1661,6 +1726,7 @@
 	margin: 0;
 	padding: var(--dccwl-gap-lg) var(--dccwl-pad);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /*

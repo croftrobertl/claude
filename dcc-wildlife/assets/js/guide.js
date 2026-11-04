@@ -62,16 +62,32 @@
 	 * on this page, and only where the browser knows `clip`; anywhere else
 	 * the page is exactly as before.
 	 */
-	(function unclipAncestors() {
+	/*
+	 * 1.48.0 (Irwin audit, item 3): ALL THE READS, THEN ALL THE WRITES, AND
+	 * AFTER THE FIRST PAINT. 1.47.2 read an ancestor's computed style and
+	 * then wrote to it, ancestor by ancestor, so each read after a write
+	 * forced a fresh style pass over a 10,896-element page — three of them,
+	 * inside the load task. Reading every ancestor first costs one pass;
+	 * writing them together afterwards costs one more, which the browser
+	 * does with its next frame anyway. Running it from the first animation
+	 * frame keeps it out of the task that paints the page at all. Nothing
+	 * moves when it lands: `clip` clips exactly as `hidden` did.
+	 */
+	function unclipAncestors() {
 		if (!window.CSS || !CSS.supports || !CSS.supports('overflow', 'clip')) { return; }
+		var todo = [];
 		for (var e = root.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
 			var cs = getComputedStyle(e);
 			if ('hidden' !== cs.overflowX || 'hidden' !== cs.overflowY) { continue; }
-			if ('block' === cs.display) { e.style.display = 'flow-root'; }
-			e.style.overflow = 'clip';
-			e.setAttribute('data-dccwl-unclipped', '');
+			todo.push([e, 'block' === cs.display]);
 		}
-	})();
+		for (var i = 0; i < todo.length; i++) {
+			if (todo[i][1]) { todo[i][0].style.display = 'flow-root'; }
+			todo[i][0].style.overflow = 'clip';
+			todo[i][0].setAttribute('data-dccwl-unclipped', '');
+		}
+	}
+	if (window.requestAnimationFrame) { window.requestAnimationFrame(unclipAncestors); } else { unclipAncestors(); }
 
 	/* "Most Recorded Here" (1.47.0): server-rendered into the pane. Held by
 	 * reference so it can be put back when the pane is emptied by a width
@@ -130,19 +146,25 @@
 	 * ------------------------------------------------------------------ */
 	function refresh() {
 		var words = state.q ? norm(state.q).split(' ').filter(Boolean) : [];
+		/*
+		 * 1.48.0 (Irwin audit, item 3): THE VIEW IS TWO ATTRIBUTES ON THE
+		 * LIST. Scope and pill are decided by CSS from these (see
+		 * Guide_Page::filter_style()), so a pill or the switch is one write,
+		 * not one per row. Only the SEARCH touches rows — its answer depends
+		 * on each row's own names — and only the rows whose answer changed.
+		 */
+		if (list.getAttribute('data-gp-scope') !== state.scope) { list.setAttribute('data-gp-scope', state.scope); }
+		if (list.getAttribute('data-gp-group') !== state.group) { list.setAttribute('data-gp-group', state.group); }
 		var shown = 0;
 		for (var i = 0; i < items.length; i++) {
 			var it = items[i];
-			var ok = ('wider' === state.scope
-					? true                                   /* every species */
-					: 'here' === it.getAttribute('data-scope'))
-				&& ('all' === state.group || state.group === it.getAttribute('data-group'))
-				&& matches(it, words);
-			/* WRITE ONLY WHAT CHANGES. Setting `.hidden` to the value it
-			 * already has still invalidates the row's style, and 402 of
-			 * those was most of a 479 ms task on a throttled phone. */
-			if (it.hidden === ok) { it.hidden = !ok; }
-			if (ok) { shown += 1; }
+			var hit = matches(it, words);
+			if (it.hidden === hit) { it.hidden = !hit; }
+			if (hit
+				&& ('wider' === state.scope || 'here' === it.getAttribute('data-scope'))
+				&& ('all' === state.group || state.group === it.getAttribute('data-group'))) {
+				shown += 1;
+			}
 		}
 		counts();
 		say(shown, words.length > 0);
@@ -222,6 +244,7 @@
 		var photo = item.getAttribute('data-photo');
 		if (photo) {
 			var img = document.createElement('img');
+			img.setAttribute('data-no-lazy', '1'); // 1.48.0: browser lazy loading only
 			img.className = 'dccwl-gp-photo';
 			img.src = photo;
 			img.alt = '';

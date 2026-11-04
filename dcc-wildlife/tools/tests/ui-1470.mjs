@@ -160,7 +160,7 @@ for (const [w, h] of DESKTOP) {
   /* ---- the keyboard inside the box ---- */
   section(`${w}: the keyboard inside the box, and out of it`);
   await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('[data-dccwl-gp-list]').scrollTop = 0; });
-  await page.evaluate(() => document.querySelector('[data-dccwl-gp-item]:not([hidden]) .dccwl-gp-row').focus());
+  await page.evaluate(() => [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].find((r) => r.getClientRects().length).focus());
   const k0 = await state(page);
   await page.keyboard.press('PageDown');
   await page.waitForTimeout(400);
@@ -173,7 +173,7 @@ for (const [w, h] of DESKTOP) {
   check(k2.top > k1.top, 'and so does the down arrow', `${k1.top} -> ${k2.top}`);
 
   await page.evaluate(() => {
-    const rows = document.querySelectorAll('[data-dccwl-gp-item]:not([hidden]) .dccwl-gp-row');
+    const rows = [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].filter((r) => r.getClientRects().length);
     rows[rows.length - 1].focus();
   });
   await page.keyboard.press('Tab');

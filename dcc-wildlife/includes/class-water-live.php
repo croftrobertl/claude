@@ -423,20 +423,35 @@ final class Water_Live {
 			$ratio = $current / (float) $med;
 			if ( $ratio >= self::SECCHI_CLEARER ) {
 				$verdict = __( 'clearer than usual for this water', 'dcc-wildlife' );
+				$was     = __( 'was clearer than usual for this water', 'dcc-wildlife' );
 			} elseif ( $ratio <= self::SECCHI_MURKIER ) {
 				$verdict = __( 'murkier than usual for this water', 'dcc-wildlife' );
+				$was     = __( 'was murkier than usual for this water', 'dcc-wildlife' );
 			} else {
 				$verdict = __( 'about usual for this water', 'dcc-wildlife' );
+				$was     = __( 'was about usual for this water', 'dcc-wildlife' );
 			}
+			$reading = self::fmt_measure( $current, $c['precision'] ?? null, $units );
+			$median  = self::fmt_measure( $med, 2, $units );
 
 			$rows[] = [
 				'label'       => $w['name'],
 				'value'       => sprintf(
 					/* translators: 1: current reading, 2: verdict, 3: this water's median. */
 					__( '%1$s — %2$s (its median is %3$s)', 'dcc-wildlife' ),
-					self::fmt_measure( $current, $c['precision'] ?? null, $units ),
+					$reading,
 					$verdict,
-					self::fmt_measure( $med, 2, $units )
+					$median
+				),
+				/* 1.48.0: the same sentence in the past tense, for a sample
+				 * past Water_Render::TENSE_DAYS. Same format string, so the
+				 * two cannot drift apart in anything but the verb. */
+				'value_past'  => sprintf(
+					/* translators: 1: current reading, 2: verdict, 3: this water's median. */
+					__( '%1$s — %2$s (its median is %3$s)', 'dcc-wildlife' ),
+					$reading,
+					$was,
+					$median
 				),
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
@@ -1319,7 +1334,7 @@ final class Water_Live {
 						: __( 'the monthly norm', 'dcc-wildlife' )
 				),
 				'tier'        => Water_Fact::TIER_LIVE,
-				'source_name' => self::atlas_source_name( $c, __( 'SJRWMD station', 'dcc-wildlife' ) ),
+				'source_name' => self::atlas_source_name( $c, __( 'SJRWMD Station', 'dcc-wildlife' ) ),
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'reading', 'dcc-wildlife' ),
@@ -1557,7 +1572,7 @@ final class Water_Live {
 		return '' !== $station
 			? sprintf(
 				/* translators: 1: data source name, 2: station identifier. */
-				__( '%1$s, station %2$s — via the Lake County Water Atlas', 'dcc-wildlife' ),
+				__( '%1$s, Station %2$s — via the Lake County Water Atlas', 'dcc-wildlife' ),
 				$who,
 				$station
 			)
@@ -1604,14 +1619,17 @@ final class Water_Live {
 		 * its small one (1.39.0). Same two strings, said once each. */
 		$short  = $value;
 		$detail = '';
+		$past   = '';
 
 		if ( is_numeric( $med ) && (float) $med > 0 ) {
 			$ratio = $current / (float) $med;
 			if ( $ratio >= self::SECCHI_CLEARER ) {
 				$detail = __( 'clearer than usual here', 'dcc-wildlife' );
+				$past   = $value . __( ' — was clearer than usual here', 'dcc-wildlife' );
 				$value .= __( ' — clearer than usual here', 'dcc-wildlife' );
 			} elseif ( $ratio <= self::SECCHI_MURKIER ) {
 				$detail = __( 'murkier than usual here', 'dcc-wildlife' );
+				$past   = $value . __( ' — was murkier than usual here', 'dcc-wildlife' );
 				$value .= __( ' — murkier than usual here', 'dcc-wildlife' );
 			}
 
@@ -1640,6 +1658,9 @@ final class Water_Live {
 				'short'       => $short,
 				'detail'      => $detail,
 				'value'       => $value,
+				/* 1.48.0: the comparison in the past tense, for a sample past
+				 * the tense age (Water_Render::TENSE_DAYS). */
+				'value_past'  => $past,
 				'tier'        => Water_Fact::TIER_PUBLISHED,
 				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
 				'source_url'  => self::station_url( $c ),
@@ -1849,11 +1870,14 @@ final class Water_Live {
 		return [
 			[
 				'label'          => __( 'Depth Map', 'dcc-wildlife' ),
+				/* 1.48.0: the machine name water.js routes to the About fold
+				 * by — a survey is about the lake bed, not today's water. */
+				'key'            => 'depth',
 				'value'          => $value,
 				'tier'           => Water_Fact::TIER_PUBLISHED,
 				'source_name'    => sprintf(
 					/* translators: %s: the dataset name. */
-					__( '%s — open the depth map (PDF)', 'dcc-wildlife' ),
+					__( '%s — Open the Depth Map (PDF)', 'dcc-wildlife' ),
 					$source
 				),
 				'source_url'     => $best['url'],
@@ -1987,7 +2011,7 @@ final class Water_Live {
 				'tier'        => Water_Fact::TIER_LIVE,
 				'source_name' => sprintf(
 					/* translators: %s: USGS site number. */
-					__( 'USGS rain gauge (site %s)', 'dcc-wildlife' ),
+					__( 'USGS Rain Gauge (Site %s)', 'dcc-wildlife' ),
 					$site
 				),
 				'source_url'  => 'https://waterdata.usgs.gov/monitoring-location/' . rawurlencode( $site ) . '/',
@@ -2141,7 +2165,7 @@ final class Water_Live {
 		$wspd  = trim( (string) ( $period['windSpeed'] ?? '' ) );
 		$wdir  = trim( (string) ( $period['windDirection'] ?? '' ) );
 
-		$source = __( 'National Weather Service forecast', 'dcc-wildlife' );
+		$source = __( 'National Weather Service Forecast', 'dcc-wildlife' );
 		$rows   = [];
 
 		if ( '' !== $wspd ) {
@@ -2167,7 +2191,7 @@ final class Water_Live {
 				 * The full name still rides along and is what a screen reader
 				 * is given.
 				 */
-				'sourceShort' => __( 'NWS forecast', 'dcc-wildlife' ),
+				'sourceShort' => __( 'NWS Forecast', 'dcc-wildlife' ),
 				'date'   => $updated,
 			];
 		}

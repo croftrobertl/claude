@@ -33,6 +33,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Water_Render {
 
+	/**
+	 * THE TENSE AGE (1.48.0, Irwin audit item 8): 30 DAYS.
+	 *
+	 * A reading older than this is no longer described as the water NOW.
+	 * Where its builder stated a past-tense form (`value_past` — today, the
+	 * clarity comparison "was clearer than usual here"), the card prints that
+	 * instead of the present-tense sentence. Thirty days because it is the
+	 * shortest round the Atlas samples on (monthly): a sample from within it
+	 * is the latest there is; one older is history, whatever its own
+	 * staleness limit (age_max_*, which greys a card) says about it.
+	 */
+	const TENSE_DAYS = 30;
+
+
 	private static bool $config_added = false;
 
 	/**
@@ -588,11 +602,21 @@ final class Water_Render {
 			</summary>
 			<div class="dccwl-fullguide-body">
 				<?php self::render_almanac( $almanac ); ?>
-				<?php if ( $about ) : ?>
+				<?php $about_live = Water_Data::live_possible(); ?>
+				<?php if ( $about || $about_live ) : ?>
 					<?php /* Reference facts about the waterbody rather than today's
 					         conditions, and never enough on their own to make this
-					         fold appear. */ ?>
-					<div class="dccwl-water-about">
+					         fold appear.
+
+					         1.48.0 (Irwin audit, item 8): THE DEPTH MAP LIVES HERE NOW.
+					         A 2013 bathymetric survey is a fact about the lake bed,
+					         not a reading of today's water, so it does not belong in
+					         Now beside this week's gauge. It still arrives with the
+					         live readings (it comes from the same Atlas call), and
+					         water.js puts its card in the list below. With no static
+					         About facts the block ships hidden and is shown only if
+					         that card arrives — never an empty heading. */ ?>
+					<div class="dccwl-water-about" data-dccwl-about-block<?php echo $about ? '' : ' hidden'; ?>>
 						<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the Water', 'dcc-wildlife' ); ?></h3>
 						<?php foreach ( $about as $facts ) : ?>
 							<ul class="dccwl-cards dccwl-water-facts">
@@ -601,6 +625,9 @@ final class Water_Render {
 								<?php endforeach; ?>
 							</ul>
 						<?php endforeach; ?>
+						<?php if ( $about_live ) : ?>
+							<ul class="dccwl-cards dccwl-water-facts" data-dccwl-about-live hidden></ul>
+						<?php endif; ?>
 					</div>
 				<?php endif; ?>
 				<?php
@@ -667,7 +694,6 @@ final class Water_Render {
 
 	private static function render_fishing( array $f ): void {
 		$seasons = is_array( $f['seasons'] ?? null ) ? $f['seasons'] : [];
-		$regs    = is_array( $f['regs'] ?? null ) ? $f['regs'] : [];
 		$fish    = [
 			'bass'    => __( 'Bass', 'dcc-wildlife' ),
 			'crappie' => __( 'Crappie', 'dcc-wildlife' ),
@@ -677,7 +703,7 @@ final class Water_Render {
 		<div class="dccwl-fishing" data-dccwl-fishing>
 			<h3 class="dccwl-water-sub"><?php esc_html_e( 'Fishing the Harris Chain', 'dcc-wildlife' ); ?></h3>
 			<?php if ( ! empty( $f['intro'] ) ) : ?>
-				<p class="dccwl-fishing-intro"><?php echo esc_html( (string) $f['intro'] ); ?></p>
+				<p class="dccwl-fishing-intro<?php echo esc_attr( Render::prose_class( (string) $f['intro'] ) ); ?>"><?php echo esc_html( (string) $f['intro'] ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( $seasons ) : ?>
@@ -712,7 +738,7 @@ final class Water_Render {
 								<?php if ( ! empty( $s[ $k ] ) ) : ?>
 									<div class="dccwl-fish-species">
 										<h4><?php echo esc_html( $label ); ?></h4>
-										<p class="dccwl-fishing-line"><?php echo esc_html( (string) $s[ $k ] ); ?></p>
+										<p class="dccwl-fishing-line<?php echo esc_attr( Render::prose_class( (string) $s[ $k ] ) ); ?>"><?php echo esc_html( (string) $s[ $k ] ); ?></p>
 									</div>
 								<?php endif; ?>
 							<?php endforeach; ?>
@@ -723,11 +749,11 @@ final class Water_Render {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $f['sportfish'] ) ) : ?>
-				<p class="dccwl-fishing-note"><?php echo esc_html( (string) $f['sportfish'] ); ?></p>
+				<p class="dccwl-fishing-note<?php echo esc_attr( Render::prose_class( (string) $f['sportfish'] ) ); ?>"><?php echo esc_html( (string) $f['sportfish'] ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $f['attractors'] ) ) : ?>
-				<p class="dccwl-fishing-note">
+				<p class="dccwl-fishing-note<?php echo esc_attr( Render::prose_class( (string) $f['attractors'] ) ); ?>">
 					<?php echo esc_html( (string) $f['attractors'] ); ?>
 					<?php if ( ! empty( $f['attractors_url'] ) ) : ?>
 						<a href="<?php echo esc_url( (string) $f['attractors_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) ( $f['attractors_label'] ?? $f['attractors_url'] ) ); ?></a>
@@ -735,43 +761,32 @@ final class Water_Render {
 				</p>
 			<?php endif; ?>
 
-			<?php if ( $regs ) : ?>
+			<?php if ( ! empty( $f['regs_url'] ) || ! empty( $f['license'] ) ) : ?>
 				<?php /* ITEM 10 (pick A) — a ruled break, so the licences block reads
 				         as its own thing and not as more fishing advice. */ ?>
 				<hr class="dccwl-fish-rule">
 				<div class="dccwl-fishing-regs">
 					<?php /* A PLAIN AMPERSAND, because esc_html_e() escapes it.
 					 * This shipped as `&amp;` from 1.44.0 and rendered the
-					 * entity literally on live — "Licences &amp; Keep-
-					 * Limits" — for four releases, invisible in the source
-					 * because an entity in an HTML file looks right. Rob's
-					 * own instruction writes it with one character
-					 * ("'Licences & Keep-Limits' → 'Licenses &
-					 * Keep-Limits'"), and a translator must be handed the
-					 * text, never markup. */ ?>
+					 * entity literally on live for four releases. A translator
+					 * must be handed the text, never markup. */ ?>
 					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Licenses & Keep-Limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
-					<ul class="dccwl-fishing-reglist">
-						<?php foreach ( $regs as $r ) : ?>
-							<?php if ( is_array( $r ) && isset( $r[0], $r[1] ) ) : ?>
-								<li><span class="dccwl-fishing-reg-k"><?php echo esc_html( (string) $r[0] ); ?></span><span class="dccwl-fishing-reg-v"><?php echo esc_html( (string) $r[1] ); ?></span></li>
-							<?php endif; ?>
-						<?php endforeach; ?>
-					</ul>
-					<?php if ( ! empty( $f['regs_verified'] ) && false !== strtotime( (string) $f['regs_verified'] ) ) : ?>
-						<?php /* Bag and length limits change with the regulation year. The date
-						   is a fixed setting, not "now", so it is cache-safe (1.17.0). */ ?>
-						<p class="dccwl-fishing-note dccwl-fishing-verified">
-							<?php
-							printf(
-								/* translators: %s: month and year, e.g. "August 2026". */
-								esc_html__( 'Limits as verified with FWC in %s — seasons change, so check FWC before you keep a fish.', 'dcc-wildlife' ),
-								esc_html( date_i18n( 'F Y', strtotime( (string) $f['regs_verified'] ) ) )
-							);
-							?>
+					<?php
+					/*
+					 * ONE LINK, NO TABLE (1.48.0, Rob's decision of 2026-11-04).
+					 * The keep-limits change with FWC's regulation year, and the
+					 * standing rule is to link them, never restate them. The arrow
+					 * says "this leaves the site"; it is aria-hidden because the
+					 * link already opens a new tab and the words say where to.
+					 */
+					?>
+					<?php if ( ! empty( $f['regs_url'] ) ) : ?>
+						<p class="dccwl-fishing-limits">
+							<a class="dccwl-fishing-limits-link" href="<?php echo esc_url( (string) $f['regs_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) ( $f['regs_label'] ?? __( 'Current Limits on FWC', 'dcc-wildlife' ) ) ); ?> <span aria-hidden="true">&#8599;</span></a>
 						</p>
 					<?php endif; ?>
 					<?php if ( ! empty( $f['license'] ) ) : ?>
-						<p class="dccwl-fishing-note dccwl-fishing-license">
+						<p class="dccwl-fishing-note dccwl-fishing-license<?php echo esc_attr( Render::prose_class( (string) $f['license'] ) ); ?>">
 							<?php echo esc_html( (string) $f['license'] ); ?>
 							<?php if ( ! empty( $f['license_url'] ) ) : ?>
 								<a href="<?php echo esc_url( (string) $f['license_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php esc_html_e( 'FWC Licenses', 'dcc-wildlife' ); ?></a>
@@ -782,12 +797,13 @@ final class Water_Render {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $f['moon'] ) ) : ?>
-				<p class="dccwl-fishing-note dccwl-fishing-moon"><?php echo esc_html( (string) $f['moon'] ); ?></p>
+				<p class="dccwl-fishing-note dccwl-fishing-moon<?php echo esc_attr( Render::prose_class( (string) $f['moon'] ) ); ?>"><?php echo esc_html( (string) $f['moon'] ); ?></p>
 			<?php endif; ?>
 
 			<?php
 			$fish_links = [];
-			foreach ( [ 'forecast', 'regs' ] as $key ) {
+			/* The limits link is not repeated here (1.48.0): ONE link to them. */
+			foreach ( [ 'forecast' ] as $key ) {
 				if ( ! empty( $f[ $key . '_url' ] ) ) {
 					$fish_links[] = [
 						'url'   => (string) $f[ $key . '_url' ],
@@ -796,7 +812,7 @@ final class Water_Render {
 				}
 			}
 			?>
-			<p class="dccwl-fishing-src">
+			<p class="dccwl-fishing-src<?php echo esc_attr( Render::prose_class( (string) ( $f['source'] ?? '' ) ) ); ?>">
 				<?php if ( ! empty( $f['source'] ) ) : ?>
 					<span class="dccwl-fishing-src-note"><?php echo esc_html( (string) $f['source'] ); ?></span>
 				<?php endif; ?>
@@ -909,7 +925,7 @@ final class Water_Render {
 			return '';
 		}
 		if ( 0 === $days ) {
-			return __( 'today', 'dcc-wildlife' );
+			return __( 'Today', 'dcc-wildlife' );
 		}
 		if ( $days < 45 ) {
 			/* translators: %d: whole days. */
@@ -1000,6 +1016,7 @@ final class Water_Render {
 						'clarity' => Guide_Data::num( 'age_max_clarity' ),
 						'oxygen'  => Guide_Data::num( 'age_max_oxygen' ),
 					],
+					'tenseDays'  => self::TENSE_DAYS,
 					'i18n'     => [
 						'asOf'        => __( 'reading', 'dcc-wildlife' ),
 						/*
@@ -1014,6 +1031,16 @@ final class Water_Render {
 						 * with an unfortunate date on it, while "Last
 						 * Measured In April" does not claim to be now.
 						 */
+						/*
+						 * 1.48.0 (Irwin audit, item 8): A FORECAST IS ISSUED,
+						 * NOT MEASURED. The NWS card read "Measured Today",
+						 * which claims somebody measured tomorrow's weather.
+						 * Same shape, the right verb.
+						 */
+						'issuedToday'     => __( 'Issued Today', 'dcc-wildlife' ),
+						'issuedYesterday' => __( 'Issued Yesterday', 'dcc-wildlife' ),
+						/* translators: %d: whole days since the forecast was issued. */
+						'issuedDays'      => __( 'Issued %d Days Ago', 'dcc-wildlife' ),
 						'freshToday'  => __( 'Measured Today', 'dcc-wildlife' ),
 						'freshYesterday' => __( 'Measured Yesterday', 'dcc-wildlife' ),
 						/* translators: %d: whole days. */
@@ -1115,7 +1142,8 @@ final class Water_Render {
 						'creditLabel' => __( 'Map credits', 'dcc-wildlife' ),
 						/* The × at the top right of the sheet (1.36.0). */
 						'closeAll'    => __( 'Close', 'dcc-wildlife' ),
-						'ageToday'    => __( 'today', 'dcc-wildlife' ),
+						/* Title Case (1.48.0): it ends the source chip, a label. */
+						'ageToday'    => __( 'Today', 'dcc-wildlife' ),
 						'mapLoading'  => __( 'Loading the map…', 'dcc-wildlife' ),
 						'mapFailed'   => __( 'The map could not be loaded.', 'dcc-wildlife' ),
 						'colorBy'     => __( 'Color By:', 'dcc-wildlife' ),

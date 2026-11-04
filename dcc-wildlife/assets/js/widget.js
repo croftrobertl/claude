@@ -177,6 +177,20 @@
 		'<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">' +
 		'<path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
+	/*
+	 * ROB'S TEXT RULE, APPLIED BY THE WORDS (1.48.0, Irwin audit item 7): a
+	 * paragraph of two or more sentences is left-aligned, everything else
+	 * stays centred and balanced. The same test as Render::is_prose() in
+	 * PHP, so a paragraph is classed alike whichever side writes it.
+	 */
+	var PROSE_RE = /[.!?][\u201D\u2019"')\]]?\s+\S/;
+	function proseMark(scope) {
+		if (!scope || !scope.querySelectorAll) { return; }
+		scope.querySelectorAll('p').forEach(function (p) {
+			if (PROSE_RE.test((p.textContent || '').trim())) { p.classList.add('dccwl-prose'); }
+		});
+	}
+
 	function el(tag, cls, text) {
 		var node = document.createElement(tag);
 		if (cls) {
@@ -251,6 +265,7 @@
 		// the drawing and then the glyph, exactly as the server does.
 		if (sp.src && sp.src.thumb) {
 			var img = document.createElement('img');
+			img.setAttribute('data-no-lazy', '1'); // 1.48.0: browser lazy loading only
 			img.className = 'dccwl-tile-photo';
 			img.alt = '';
 			img.width = 320;
@@ -327,6 +342,7 @@
 		var thumb = sp.src && sp.src.thumb;
 		if (thumb) {
 			var img = document.createElement('img');
+			img.setAttribute('data-no-lazy', '1'); // 1.48.0: browser lazy loading only
 			img.className = 'dccwl-art-photo ' + (spriteCls || '');
 			img.src = thumb;
 			img.alt = '';
@@ -464,6 +480,7 @@
 				// URL is resolved server-side from the media library.
 				medallion = el('div', 'dccwl-medallion dccwl-medallion-photo');
 				var img = document.createElement('img');
+				img.setAttribute('data-no-lazy', '1'); // 1.48.0: browser lazy loading only
 				img.className = 'dccwl-photo';
 				img.loading = 'lazy';
 				img.decoding = 'async';
@@ -697,7 +714,11 @@
 				var moreLink = el('a', 'dccwl-detail-more-link',
 					CFG.i18n.fullEntry || 'See The Full Entry');
 				moreLink.href = CFG.guideUrl + '#' + (CFG.guideAnchor || '') + encodeURIComponent(sp.id);
-				var arrow = el('span', 'dccwl-detail-more-arrow', '\u2192');
+				/* 1.48.0 (Irwin audit, item 8): A REAL SPACE before the arrow,
+				 * not a 6px margin — copied, read or translated, the text is
+				 * "See The Full Entry →". No-break, so the arrow never wraps
+				 * onto a line of its own. */
+				var arrow = el('span', 'dccwl-detail-more-arrow', '\u00a0\u2192');
 				arrow.setAttribute('aria-hidden', 'true');
 				moreLink.appendChild(arrow);
 				more.appendChild(moreLink);
@@ -709,10 +730,18 @@
 			return root.querySelectorAll('.dccwl-tile');
 		}
 
+		/*
+		 * 1.48.0 (Irwin audit, item 5): ONLY THE TWO TILES THAT CHANGE.
+		 * This wrote `aria-expanded` on every tile in the guide — 402 writes,
+		 * 401 of them to the value already there — inside the tap that opens
+		 * a species, and each write invalidated that tile's style. Tiles are
+		 * built with "false"; the one marked "true" is remembered.
+		 */
+		var openTile = null;
 		function markOpen(tile) {
-			allTiles().forEach(function (t) {
-				t.setAttribute('aria-expanded', t === tile ? 'true' : 'false');
-			});
+			if (openTile && openTile !== tile) { openTile.setAttribute('aria-expanded', 'false'); }
+			if (tile && 'true' !== tile.getAttribute('aria-expanded')) { tile.setAttribute('aria-expanded', 'true'); }
+			openTile = tile || null;
 		}
 
 		function openDetail(tile) {
@@ -731,6 +760,7 @@
 				opener: tile,
 				build: function (body) {
 					buildDetail(body, sp);
+					proseMark(body);
 					/*
 					 * Built twice only when it has to be. Warmed on the first
 					 * interaction, the detail is almost always here already
@@ -745,6 +775,7 @@
 						if (!ok || state.openId !== id) { return; }
 						body.textContent = '';
 						buildDetail(body, sp);
+						proseMark(body);
 					});
 				},
 				onClose: function () {
@@ -1800,7 +1831,24 @@
 			var wrap = section.querySelector('[data-dccwl-search]');
 			if (wrap && input) {
 				wrap.hidden = false;   // the control only exists where it can work
-				input.addEventListener('input', function () { setQuery(input.value); });
+				/*
+				 * 1.48.0 (Irwin audit, item 5): THE KEYSTROKE PAINTS FIRST.
+				 * Filtering 402 tiles and re-fitting the deck took 280-340ms
+				 * per key at 390 on a 4x-throttled phone, inside the input
+				 * event — so each letter appeared a third of a second late,
+				 * and the next key queued behind the last filter. The letter
+				 * now paints at once and the list follows when typing pauses
+				 * (SEARCH_PAUSE). Enter, Escape, the clear button and a tab
+				 * change still apply at once: they are not typing.
+				 */
+				var searchTimer = 0;
+				input.addEventListener('input', function () {
+					if (searchTimer) { clearTimeout(searchTimer); }
+					searchTimer = setTimeout(function () {
+						searchTimer = 0;
+						setQuery(input.value);
+					}, SEARCH_PAUSE);
+				});
 				input.addEventListener('keydown', function (e) {
 					if ('Escape' === e.key && input.value) {
 						e.stopPropagation();   // clear the search, don't close the panel
@@ -2079,21 +2127,110 @@
 	 * halves, so a guest who opens the panel has the sheet data already and
 	 * the first species they tap opens with no wait at all.
 	 * ================================================================== */
+	/*
+	 * 1.48.0 (Irwin audit, item 4) — NOTHING POPS AND NOTHING JUMPS.
+	 *
+	 * Through 1.47.3 choosing Wildlife showed a panel with tabs and no tiles
+	 * for about a second (the /species fetch), then 649px of deck arrived
+	 * at 390 along with the search row and the deck's arrows — everything
+	 * below moved, and the guest looked at an empty panel meanwhile.
+	 *
+	 * Two changes. The fetch starts as soon as a guest reaches for the view
+	 * menu (pointer down, focus, or a pointer resting on it), so it is
+	 * usually done or nearly done by the time they choose. And while it
+	 * runs, the visible grid holds PLACEHOLDER TILES laid out by the very
+	 * rules the real deck uses — the deck class, the same tile box, a 4:3
+	 * media band, two name lines and the sub line — with the search row
+	 * and the arrows' row held open (invisibly) beside them. When the data
+	 * lands the placeholders go in the same task the first real tiles come
+	 * in, so the frame after them is the finished panel at the same size.
+	 *
+	 * The fetch is NOT started on load. 1.45.0 moved the index off the page
+	 * so a guest who stays on Water never pays for it, and that saving is
+	 * kept: reaching for the menu is the first sign of interest.
+	 *
+	 * The build itself runs AFTER the tap's own paint (afterPaint), so the
+	 * tap answers with the placeholders at once instead of waiting for
+	 * hundreds of tiles to be made inside it.
+	 */
+	var PH_TILES = 12;
+	/* How long typing has to pause before the list follows it (1.48.0). */
+	var SEARCH_PAUSE = 250;
+
+	function afterPaint(fn) {
+		if (window.requestAnimationFrame) {
+			window.requestAnimationFrame(function () { setTimeout(fn, 0); });
+		} else {
+			setTimeout(fn, 0);
+		}
+	}
+
+	function showPlaceholders(root) {
+		if (root.getAttribute('data-dccwl-waiting')) { return; }
+		var grid = null;
+		root.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+			if (!grid && !g.hidden && !g.children.length) { grid = g; }
+		});
+		if (!grid) { return; }
+		root.setAttribute('data-dccwl-waiting', '1');
+		grid.classList.add('dccwl-deck', 'dccwl-deck-waiting');
+		var frag = document.createDocumentFragment();
+		for (var i = 0; i < PH_TILES; i++) {
+			var li = el('li', 'dccwl-ph');
+			li.setAttribute('aria-hidden', 'true');
+			var card = el('span', 'dccwl-tile dccwl-tile-ph');
+			card.appendChild(el('span', 'dccwl-tile-media'));
+			card.appendChild(el('span', 'dccwl-tile-name', '\u00a0'));
+			card.appendChild(el('span', 'dccwl-tile-sub', '\u00a0'));
+			li.appendChild(card);
+			frag.appendChild(li);
+		}
+		grid.appendChild(frag);
+		var nav = el('div', 'dccwl-deck-nav dccwl-ph-nav');
+		nav.setAttribute('aria-hidden', 'true');
+		nav.setAttribute('data-dccwl-ph', '1');
+		grid.parentNode.insertBefore(nav, grid.nextSibling);
+	}
+
+	function clearPlaceholders(root) {
+		if (!root.getAttribute('data-dccwl-waiting')) { return; }
+		root.querySelectorAll('.dccwl-ph, [data-dccwl-ph]').forEach(function (n) { n.parentNode.removeChild(n); });
+		root.querySelectorAll('.dccwl-deck-waiting').forEach(function (g) {
+			g.classList.remove('dccwl-deck', 'dccwl-deck-waiting');
+		});
+		root.removeAttribute('data-dccwl-waiting');
+	}
+
 	function initDeferredRoot(root) {
 		var panel = root.closest('[data-dccwl-panel]');
 		var hidden = !!(panel && panel.hidden);
 		var start = function () {
+			showPlaceholders(root);
 			ensureDetail().then(function () {
 				/* Initialise even when the fetch FAILED. The page still has
 				 * its server-rendered furniture and the guide degrades to
 				 * what is in the markup — the 1.33.0 rule for the detail
 				 * half, applied to the index: what is missing is missing,
 				 * and nothing renders an error where a species should be. */
-				initRoot(root);
+				afterPaint(function () {
+					clearPlaceholders(root);
+					initRoot(root);
+				});
 			});
 		};
 		if (!hidden) { start(); return; }
 		panel.addEventListener('dccwl:panel-shown', start, { once: true });
+	}
+
+	/* Reaching for the view menu is the first sign a guest may want
+	 * Wildlife: start the one fetch then (see the note above). */
+	function warmOnViewMenu() {
+		if (!CFG.indexDeferred || CFG.species.length) { return; }
+		document.querySelectorAll('[data-dccwl-viewtrigger]').forEach(function (t) {
+			['pointerdown', 'focus', 'mouseenter', 'touchstart'].forEach(function (ev) {
+				t.addEventListener(ev, warmDetail, { once: true, passive: true });
+			});
+		});
 	}
 
 	function initAll() {
@@ -2106,6 +2243,7 @@
 		});
 		initFullguideClose(document);
 		initCountdown();
+		warmOnViewMenu();
 		/* The other routes in: a tab, a chip, the search box, a month. Any of
 		 * them means the guide is being used and a sheet is likely next.
 		 * `once` on each, and ensureDetail() is idempotent, so this costs one

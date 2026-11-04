@@ -119,6 +119,7 @@
 	margin: 0;
 	min-height: 1.4em;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-root .dccwl-sub {
@@ -130,6 +131,7 @@
 	/* It sits under a centred title; it was the only part of the heading
 	 * hard against the left edge (1.33.0). */
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ======================================================================
@@ -349,9 +351,18 @@
 	-webkit-line-clamp: 2;
 	line-clamp: 2;
 	overflow: hidden;
-	/* Reserve both lines so a one-line name does not make its card shorter
-	 * than its neighbour's. 1.25 is the line-height this element declares. */
-	min-height: 2.5em;
+	/*
+	 * NO TWO-LINE RESERVATION ANY MORE (1.48.0, Irwin audit item 10).
+	 *
+	 * 1.31.0 gave every name `min-height: 2.5em` so a one-line name would
+	 * not leave its card shorter than its neighbour's. The rule above —
+	 * the card fills its slot — already guarantees that on its own: a row
+	 * is as tall as its tallest tile and every card stretches to it. What
+	 * the reservation added was height NO tile needed: a row of one-line
+	 * names (a search for "heron", "Show: Mammals", a short month) stood a
+	 * whole empty line taller than its tallest card. Now a row is exactly
+	 * as tall as what is in it, and cards still line up.
+	 */
 }
 @media (min-width: 700px) {
 	.dccwl-app .dccwl-tiles.dccwl-deck {
@@ -445,8 +456,9 @@
 	 * what a guest types. Declared here because the host theme styles form
 	 * fields and would otherwise decide it. */
 	text-align: center;
+	text-wrap: balance;
 }
-.dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; }
+.dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; text-wrap: balance; }
 /* ITEM 6 (1.36.0) — the placeholder clears the moment the field is focused,
  * not when the first letter lands. Colour, not `content`, so the input keeps
  * its intrinsic width and nothing reflows as it empties. */
@@ -532,7 +544,7 @@
 .dccwl-sheet .dccwl-safe .dccwl-detail-p { margin-bottom: 0; }
 /* The safety panel centres with everything else, but keeps its coloured
  * left rule: that stripe is what marks it as the what-to-do block. */
-.dccwl-sheet .dccwl-safe { text-align: center; }
+.dccwl-sheet .dccwl-safe { text-align: center; text-wrap: balance; }
 .dccwl-sheet .dccwl-safe-danger    { border-left-color: var(--dccwl-flag-danger); }
 .dccwl-sheet .dccwl-safe-invasive  { border-left-color: var(--dccwl-flag-invasive); }
 .dccwl-sheet .dccwl-safe-protected { border-left-color: var(--dccwl-flag-protected); }
@@ -555,7 +567,7 @@
 /* Photo credits (1.19.0): the prose guide's card, one list inside. */
 /* 1.26.0: the blanket "these are cropped and resized" line that indicates
  * modification for every CC photo at once. */
-.dccwl-photo-credits-note { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); margin: 0 0 10px; text-align: start; }
+.dccwl-photo-credits-note { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); margin: 0 0 10px; text-align: start; text-wrap: wrap; }
 .dccwl-photo-credits-list { margin: 0; padding-left: 1.2em; }
 .dccwl-photo-credits-list li { margin: 0 0 6px; }
 .dccwl-fg-safe .dccwl-fg-k { color: var(--dccwl-accent-text); }
@@ -564,6 +576,7 @@
 	font-style: italic;
 	margin: var(--dccwl-gap-lg) 0;
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-guide-empty[hidden] { display: none; }
 
@@ -619,6 +632,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 0 0 var(--dccwl-gap);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* Real-photo hero (v1.11.0) — a licensed photo fills the medallion where we
@@ -673,6 +687,7 @@
 	/* ITEM 10 (1.37.0): centred under the photograph. The sheet has been
 	 * centred throughout since 1.33.0 and this line was the one hold-out. */
 	text-align: center;
+	text-wrap: balance;
 	font-weight: var(--dccwl-fw-body);
 }
 
@@ -728,6 +743,7 @@
 	margin: 0 0 var(--dccwl-gap-lg);
 	font-weight: var(--dccwl-fw-body);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ITEM 4 (1.44.1): the `text-transform: uppercase` is gone from here and
@@ -749,6 +765,7 @@
 	letter-spacing: 0.06em;
 	margin: var(--dccwl-gap-lg) 0 4px;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-sheet .dccwl-detail-p {
@@ -760,6 +777,7 @@
 	font-weight: var(--dccwl-fw-body);
 	margin: 0;
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* ======================================================================
@@ -778,6 +796,7 @@
 .dccwl-sheet .dccwl-detail-more {
 	margin: var(--dccwl-gap-lg) 0 0;
 	text-align: center;
+	text-wrap: balance;
 }
 
 .dccwl-sheet .dccwl-detail-more .dccwl-detail-more-link.dccwl-detail-more-link {
@@ -793,7 +812,7 @@
 }
 
 .dccwl-sheet .dccwl-detail-more-arrow {
-	margin-left: 6px;
+	/* The gap is a no-break space in the text since 1.48.0, not a margin. */
 	text-decoration: none;
 }
 
@@ -830,6 +849,7 @@
 	margin: 0;
 	max-width: 32em;
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* A photograph standing in for a drawing (1.33.0). It fills the same well the
@@ -855,7 +875,7 @@
 	width: 40px;
 }
 
-.dccwl-sheet .dccwl-lookalike-text { min-width: 0; text-align: center; }
+.dccwl-sheet .dccwl-lookalike-text { min-width: 0; text-align: center; text-wrap: balance; }
 
 .dccwl-sheet .dccwl-lookalike-name {
 	color: var(--dccwl-text);
@@ -1048,6 +1068,7 @@
 	margin: var(--dccwl-gap-lg) auto var(--dccwl-gap);
 	padding-top: var(--dccwl-gap-lg);
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-fg-group:first-child { border-top: 0; padding-top: 0; }
 
@@ -1285,6 +1306,7 @@
 	margin: 0;
 	padding: 0;
 	text-align: center;
+	text-wrap: balance;
 	/* ITEM 5: "No underline-and-arrow look; underline only on hover/focus."
 	 * `none` is declared rather than omitted because the host kit underlines
 	 * bare <a>s, and an omitted property is not an override. */
@@ -1691,6 +1713,7 @@
 	 * fourteen months needs. Listed in the notes as a deliberate
 	 * exception. */
 	text-align: left;
+	text-wrap: wrap;
 	text-transform: none;
 	width: 100%;
 }
@@ -1786,6 +1809,7 @@
 .dccwl-app .dccwl-guidepage-back {
 	margin: 0 0 var(--dccwl-gap-lg);
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-app .dccwl-guidepage-back-foot {
 	border-top: 1px solid var(--dccwl-line);
@@ -1817,6 +1841,7 @@
 .dccwl-app .dccwl-guidepage-toc {
 	margin: 0 0 var(--dccwl-gap-lg);
 	text-align: center;
+	text-wrap: balance;
 }
 .dccwl-app .dccwl-guidepage-toch {
 	color: var(--dccwl-text);
@@ -1825,6 +1850,7 @@
 	letter-spacing: 0;
 	margin: 0 0 var(--dccwl-gap);
 	text-align: center;
+	text-wrap: balance;
 }
 
 /* The group list wraps as a row of quiet pills. No bullets: a bullet makes
@@ -1918,4 +1944,39 @@
 .dccwl-guidepage .dccwl-fg-fact,
 .dccwl-guidepage .dccwl-fg-line {
 	text-align: left;
+	text-wrap: wrap;
+}
+
+
+/* ======================================================================
+ * 1.48.0 (Irwin audit, item 4) — THE PLACEHOLDER DECK.
+ *
+ * Shown while the species list is fetched (widget.js showPlaceholders).
+ * Each placeholder is a real `.dccwl-tile` box holding the same three parts
+ * a tile has — the 4:3 media band, a name and the sub line — inside a grid
+ * carrying the real `dccwl-deck` class, so the deck's own column and row
+ * rules size it at every width. The name keeps a two-line reservation HERE
+ * only: a deck's rows are as tall as the tallest tile anywhere in them,
+ * which in the full list is always a two-line name with its sub line.
+ *
+ * No colour is added: the placeholder is the tile's own white card and
+ * hairline, empty. It cannot be tapped or focused and is hidden from
+ * assistive technology (`aria-hidden` on each item).
+ *
+ * The search row and the arrows' row are held open but invisible, so the
+ * finished panel arrives at the height the placeholder panel already had.
+ * ====================================================================== */
+.dccwl-app .dccwl-tile.dccwl-tile.dccwl-tile-ph {
+	cursor: default;
+	pointer-events: none;
+	transition: none;
+}
+.dccwl-app .dccwl-tiles.dccwl-deck .dccwl-tile-ph .dccwl-tile-name { min-height: 2.5em; }
+.dccwl-root[data-dccwl-waiting] .dccwl-search[hidden] {
+	display: block !important;
+	visibility: hidden;
+}
+.dccwl-app .dccwl-deck-nav.dccwl-ph-nav {
+	min-height: 44px;
+	visibility: hidden;
 }

@@ -140,8 +140,8 @@ final class Water_Data {
 			// on by default. This is a DELIBERATE expansion, authorised by the
 			// owner on 2026-09-01, of the prior "fishing is link-only" policy
 			// (see class-water-data's dock-notes comment and WATER-SOURCES.md):
-			// every claim is attributed to FWC or flagged as veteran-guide
-			// guidance, the block never masquerades as a measured reading, and it
+			// every claim is attributed to FWC or labelled as general angling
+			// guidance (the "veteran-guide" credit went in 1.48.0), the block never masquerades as a measured reading, and it
 			// carries the same "check FWC, seasons change" disclaimer.
 			'fishing_enabled'   => 1,
 
@@ -419,6 +419,23 @@ final class Water_Data {
 		}
 
 		/*
+		 * 1.48.0: the same seeded row's SOURCE went Title Case ("…, retrieved"
+		 * -> "…, Retrieved") because the card's source chip shows it, and the
+		 * Irwin audit flagged that chip. Exact match on the old string only.
+		 */
+		if ( isset( $stored['almanac'] ) && is_array( $stored['almanac'] ) ) {
+			$seed = self::default_almanac()[0] ?? [];
+			$old  = 'Lake County Water Atlas — Lake Dora (WBID 2831B), retrieved';
+			$want = (string) ( $seed['source_name'] ?? '' );
+			foreach ( $stored['almanac'] as $i => $row ) {
+				if ( is_array( $row ) && '' !== $want && $old === trim( (string) ( $row['source_name'] ?? '' ) ) ) {
+					$stored['almanac'][ $i ]['source_name'] = $want;
+					$changed                                = true;
+				}
+			}
+		}
+
+		/*
 		 * 1.45.0: the bundled Leaflet's ?ver names LEAFLET's version, not the
 		 * plugin's. A site that has pressed Save holds the plugin-version
 		 * form of the URL, and wp_parse_args keeps it over the new default
@@ -507,7 +524,9 @@ final class Water_Data {
 				'label'       => __( 'Surface Area', 'dcc-wildlife' ),
 				'value'       => __( '4,385 acres', 'dcc-wildlife' ),
 				'tier'        => Water_Fact::TIER_PUBLISHED,
-				'source_name' => __( 'Lake County Water Atlas — Lake Dora (WBID 2831B), retrieved', 'dcc-wildlife' ),
+				/* "Retrieved", Title Case (1.48.0): the source name is what the
+				 * card's source chip shows, and the chip is a label. */
+				'source_name' => __( 'Lake County Water Atlas — Lake Dora (WBID 2831B), Retrieved', 'dcc-wildlife' ),
 				'source_url'  => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
 				'date'        => '2026-08-27',
 				'note'        => '',
@@ -577,7 +596,7 @@ final class Water_Data {
 	 * by the owner on 2026-09-01 as a deliberate expansion of the prior
 	 * "fishing is link-only" policy (see the dock-notes comment above and
 	 * WATER-SOURCES.md). Every claim is either FWC-official (regs, sportfish,
-	 * attractors) or FWC-plus-veteran-guide seasonal guidance, it is rendered
+	 * attractors) or seasonal guidance credited line by line, it is rendered
 	 * under its own honestly-labelled heading (never as a measured reading),
 	 * and it is SEASON-shaped rather than month-shaped so nothing time-specific
 	 * is baked into the cached page.
@@ -617,7 +636,7 @@ final class Water_Data {
 			'attractors_label' => __( 'FWC — Harris Chain fish-attractor list (PDF)', 'dcc-wildlife' ),
 
 			// Season-shaped so nothing month-specific enters cached HTML.
-			// bass / crappie / bream lines per season; FWC + veteran-guide.
+			// bass / crappie / bream lines per season; "(FWC)" marks FWC's.
 			'seasons'          => [
 				[
 					'name'    => __( 'Winter · Dec–Feb', 'dcc-wildlife' ),
@@ -647,26 +666,29 @@ final class Water_Data {
 
 			'moon'             => __( 'Bream bed on the full moon — FWC times redear to the March–April full moons and bluegill through the summer moons — and crappie spawning peaks on the February and March full moons. Broader “solunar” bite-time tables are angler tradition, not FWC science: water temperature, cold fronts, and plain old dawn and dusk are what actually move fish.', 'dcc-wildlife' ),
 
-			// FWC statewide limits (verified against the FWC page).
-			'regs'             => [
-				[ __( 'Largemouth bass', 'dcc-wildlife' ), __( '5 per day — only one may be 16″ or longer; no minimum size', 'dcc-wildlife' ) ],
-				[ __( 'Black crappie (specks)', 'dcc-wildlife' ), __( '25 per day — no size limit', 'dcc-wildlife' ) ],
-				[ __( 'Panfish (bluegill, shellcracker…)', 'dcc-wildlife' ), __( '50 per day, in total', 'dcc-wildlife' ) ],
-				[ __( 'Sunshine / striped / white bass', 'dcc-wildlife' ), __( '20 per day — only 6 may be 24″ or longer', 'dcc-wildlife' ) ],
-				[ __( 'Catfish, gar, bowfin, pickerel', 'dcc-wildlife' ), __( 'No statewide bag or size limit', 'dcc-wildlife' ) ],
-			],
-			// The date the limits above were last checked against FWC's page.
-			// Rendered beside them so a guest can judge freshness: bag and
-			// length limits change with the regulation year. Update when re-verified.
-			'regs_verified'    => '2026-08-27',
+			/*
+			 * THE LIMITS ARE A LINK, NOT A TABLE (1.48.0 — Rob's decision of
+			 * 2026-11-04, the Standards rule "link to FWC, never restate limits
+			 * that change"). Through 1.47.3 five bag-and-length rows were
+			 * restated here with an "as verified in August 2026" line; they
+			 * are gone, not hidden, so nothing can go stale. `regs_url` is
+			 * the ONE link the Fishing tab gives for them.
+			 */
 			'regs_url'         => 'https://myfwc.com/fishing/freshwater/regulations/general/',
-			'regs_label'       => __( 'FWC — statewide bag & length limits', 'dcc-wildlife' ),
+			'regs_label'       => __( 'Current Limits on FWC', 'dcc-wildlife' ),
 			'license'          => __( 'Anglers 16 and older need a Florida freshwater fishing license (some exemptions — under-16, resident seniors 65+, free-fishing days).', 'dcc-wildlife' ),
 			'license_url'      => 'https://myfwc.com/license/recreational/do-i-need-one/',
 
 			'forecast_url'     => 'https://myfwc.com/fishing/freshwater/sites-forecasts/ne/lake-harris/',
 			'forecast_label'   => __( 'FWC — Harris Chain fishing forecast', 'dcc-wildlife' ),
-			'source'           => __( 'Limits, sportfish and attractors from Florida FWC; seasonal patterns from FWC’s Harris Chain forecast and veteran-guide reports. The FWC forecast updates through the year — always check the FWC before you keep a fish.', 'dcc-wildlife' ),
+			/*
+			 * NO "VETERAN-GUIDE REPORTS" (1.48.0, Rob's decision). No published
+			 * source could be named for them, so the credit goes — and the
+			 * line no longer lets FWC stand behind a season line it may not
+			 * have said: only the lines that end "(FWC)" are credited to it,
+			 * and the rest are labelled for what they are, general patterns.
+			 */
+			'source'           => __( 'Sportfish and attractors from Florida FWC. Season lines marked (FWC) are from FWC’s Harris Chain forecast; the others are general angling patterns, not measured on this water. The FWC forecast updates through the year — always check FWC before you keep a fish.', 'dcc-wildlife' ),
 		];
 	}
 
