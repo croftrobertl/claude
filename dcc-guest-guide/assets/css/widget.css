@@ -841,6 +841,28 @@ body.dccgg-detail-open {
 .dccgg-public-intro {
     margin: 0 0 18px;
     text-align: center;
+    /* v0.27.7 (G1 of the /explore/ parity audit). Rob's standing default is
+       centred AND balanced, and this was the one piece of prose the plugin
+       renders that had only the first half of it: every 0.27.x text rule is
+       scoped to .dccgg-stage — the detail sheet — and this paragraph lives in
+       the hub, so none of them ever reached it.
+
+       Measured on live /explore/ before and after, at three widths. The line
+       COUNT and the box HEIGHT are identical either way, so there is no
+       layout risk; what changes is where the breaks fall:
+
+           320    32/26/30/19   ->  27/26/28/26
+           390    40/36/32      ->  40/32/36
+           1440   100/9         ->  54/55
+
+       1440 is the case that earns the declaration: today the second line is
+       the single word "wildlife." under a full 100-character first line,
+       which is precisely the orphan text-wrap: balance exists to remove.
+
+       The selector is single-class on purpose. Nothing in the Elementor kit
+       declares text-wrap, so there is no specificity contest here — unlike
+       the tile below, where there very much is. */
+    text-wrap: balance;
     color: var(--dccgg-text);
     font-size: 1.05em;
     line-height: 1.5;
@@ -1027,6 +1049,61 @@ body.dccgg-detail-open {
                 box-shadow var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 filter var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 background var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+/* v0.27.7 (S1 of the /explore/ parity audit): give the tile its card back on
+   the GRID layout.
+
+   The rule above asks for a 1px border and a 16px radius at (0,1,0). Measured
+   in the live combined stylesheet on 2026-11-04, this beats it:
+
+       .elementor-kit-331 button { border-style: groove;
+                                   border-width: 0 0 0 0;
+                                   border-radius: 30px }      (0,1,1)
+
+   So every .dccgg-tile on /guest/ and /explore/ rendered borderless with a
+   30px radius — a white card with no edge on a white page, which is the same
+   "flat icons with no card" v0.26.1 fixed. That fix raised the APP SHELL's
+   declarations to (0,4,0); the grid layout was never part of the sweep, and
+   both live guides are on grid.
+
+   TWO THINGS THIS SELECTOR IS SHAPED BY, both of them traps:
+
+   1. :not(.dccgg-app-shell) is load-bearing, and not for tidiness. The app
+      shell's own tile rule is .dccgg-root.dccgg-root.dccgg-app-shell
+      .dccgg-tile at (0,4,0). A plain (0,4,0) rule here would TIE with it and
+      win on source order, silently repainting the app shell's borders — the
+      exact failure mode v0.26.1 recorded when raising the tab bar outranked
+      the rule that hides it. Excluding the shell makes the outcome
+      independent of where in the file this sits.
+
+   2. The hover rule has to be raised with it. The existing border-colour
+      hover is .dccgg-root .dccgg-tile:hover at (0,3,0); left alone, this
+      stateless rule would outrank it and the tile would stop responding to a
+      pointer. It is re-asserted just below at one class more. It is NOT
+      wrapped in (hover: hover) — it was unconditional before and also serves
+      :focus-visible, and this release is restoring a border, not changing
+      when the colour moves.
+
+   A HOST-SET CONTROL STILL WINS, which is the point. Page 4645 sets tile
+   padding through an Elementor control, which compiles to
+   .elementor-element.elementor-element-2afb24b .dccgg-root.dccgg-root
+   .dccgg-tile — (0,5,0), and emitted inline in the document after this
+   stylesheet. This rule touches border and radius only and never padding, so
+   there is nothing of the host's to contest; and were the host to set a tile
+   border later, their rule would tie at (0,5,0) and win on order.
+
+   No .dccgg-stage arm, deliberately, and this one was measured rather than
+   assumed: the tiles live inside the stage, which is portaled to <body> when
+   a section opens — but .dccgg-menu is display:none in that state and the
+   tiles report getClientRects().length === 0, so there is nothing visible for
+   a stage arm to style. The app-shell rule above is the same shape. */
+.dccgg-root.dccgg-root:not(.dccgg-app-shell) .dccgg-tile.dccgg-tile {
+    border: 1px solid var(--dccgg-tile-border);
+    border-radius: 16px;
+}
+.dccgg-root.dccgg-root:not(.dccgg-app-shell) .dccgg-tile.dccgg-tile:hover,
+.dccgg-root.dccgg-root:not(.dccgg-app-shell) .dccgg-tile.dccgg-tile:focus-visible {
+    border-color: var(--dccgg-accent-tile-border-hover, var(--dccgg-tile-border));
 }
 .dccgg-tile::after {
     content: '';

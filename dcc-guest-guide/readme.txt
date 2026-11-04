@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.6
+Stable tag: 0.27.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,22 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.7 =
+* The intro line on the public guide now uses balanced line wrapping, like
+  the rest of the guide's text. On a wide screen it no longer ends with a
+  single word on its own line. The wording, size and spacing are unchanged,
+  and the paragraph occupies exactly the same height at every width.
+* Section tiles have their card back: a thin border and the guide's own
+  rounded corners. The site theme had been removing the border and
+  over-rounding the corners, which left the tiles looking like loose icons
+  on a white page. Guides using the app-shell layout are unchanged, and a
+  tile style set on the page itself still takes precedence.
+* The search endpoint now applies public mode before answering, so a guide
+  set to public can only ever return its public sections. No change for the
+  full guest guide.
+* Stylesheet and one endpoint guard: no markup, data, settings or template
+  changes.
 
 = 0.27.6 =
 * The guide's default text styling now also applies inside items built

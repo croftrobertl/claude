@@ -1695,6 +1695,42 @@ final class Plugin
         if (empty($settings)) {
             wp_send_json_success(['index' => []]);
         }
+        // v0.27.7 (S2 of the /explore/ parity audit). handle_ai_query() runs
+        // the named widget's settings through the one choke point before it
+        // builds anything; this endpoint did not, so a widget that is itself
+        // in public mode would still have answered with its FULL index —
+        // guest-only sections included. Nothing on the site was reachable
+        // that way (the public page carries its correct index inlined, and
+        // the widget id in its data-config is not one this post holds), but
+        // the guard was missing rather than unnecessary, and this endpoint is
+        // the one that returns Wi-Fi network names and every item's text to
+        // an anonymous caller.
+        //
+        // Public mode is NOT a property of the caller and cannot be: it is
+        // read off the widget being asked about — is_public_mode() is just
+        // guide_mode === 'public' — exactly as the AI endpoint reads it. A
+        // guest widget still answers with the guest index, which is parity
+        // with loading its page, and is why /guest/ and /test/ are unaffected.
+        //
+        // WHAT THIS DOES NOT COVER, because it cannot. A guest widget
+        // rendered publicly through source_post or the shortcode is public by
+        // virtue of the RENDER, not of its own settings — the shortcode
+        // deliberately leaves the source widget's Mode on Full. The endpoint
+        // receives only post_id + widget_id, so it has no way to know a
+        // request came from such a render, and naming that widget still
+        // returns its guest index. That is the same exposure as loading the
+        // guest page itself, which is published and ungated by the owner's
+        // decision; gating that page is the only thing that changes it.
+        //
+        // BEFORE the hash, because the key should describe what is stored.
+        // No collision is reachable today — guide_mode is itself part of the
+        // settings being hashed, so a public and a guest widget never share a
+        // key — but keying on one set of settings while storing the index
+        // built from another is the kind of near-miss that becomes a bug the
+        // first time the key stops including the mode.
+        if (Widget::is_public_mode($settings)) {
+            Widget::apply_public_mode($settings);
+        }
         $hash = substr(sha1((string) wp_json_encode($settings)), 0, 12);
         $key  = 'dccgg_searchidx_' . $post_id . '_' . $hash;
         $cached = get_transient($key);
