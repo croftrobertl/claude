@@ -1,6 +1,7 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.15.2 (the tom feeds less; the
+ * DCC Seasons — the Untouched test, for 4.16.0 against 4.15.2 (Thanksgiving
+ * exempt; the occluder clip off in both builds, see KNOBS). Before that, for 4.15.2 (the tom feeds less; the
  * busy pause removed) against 4.15.1 (4.15.0 + the Anniversary colors): Thanksgiving exempt, every other
  * theme drawn with calm ON (what guests get, occluders included) and
  * pixel-identical. Before that, for 4.15.0 (Calmer Seasons) against
@@ -33,15 +34,18 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = '6fa0a3e';   /* 4.15.1 = 4.15.0 + the Anniversary's colors (4.15.0's run: BASE 685f44c, calm:false) */
-const NEW = ['thanksgiving'];   /* 4.15.2: the tom's feeding stops */
+const BASE = 'ea416ea';   /* 4.15.2, live (4.15.2's run: BASE 6fa0a3e, calm on) */
+const NEW = ['thanksgiving'];   /* 4.16.0: the tom holds his strut, the poults peck in place */
 /* 4.15.0 (Calmer Seasons) changes the ENGINE: the occluders, the pause and
  * the walkers' turn-back, all behind CFG.calm, plus the removal of the
  * heron's unreachable landing step. So proof 2 holds everything else byte
  * for byte, and proof 3 draws every theme with calm:false against 4.14.5:
  * the same pixels mean nothing else moved. (The four behaviours are
  * proven by tools/test-calm.js; the gate by tools/test-scope.php.) */
-const KNOBS = JSON.stringify({});   /* 4.15.2: calm on, as guests see it */
+/* 4.16.0: text no longer occludes — a change to EVERY theme, by design, and
+ * proven by tools/test-calm.js (1, 1c). Here the occluder clip is off in both
+ * builds (debug occClip:false), so any other difference still shows. */
+const KNOBS = JSON.stringify({ occClip: false });
 
 let pass = 0, fail = 0; const problems = [];
 function ok(c, label, detail) {
@@ -71,7 +75,7 @@ function themesSame(both) {
 }
 
 /* ---- 2. text ---- */
-const SAME_FILES = ['ambient.js', 'matrix.js', 'art-thanksgiving.js', 'art-christmas.js', 'art-crane.js', 'art-anniversary.js'];
+const SAME_FILES = ['ambient.js', 'matrix.js', 'art-christmas.js', 'art-crane.js', 'art-anniversary.js'];   /* 4.16.0: the Thanksgiving pack gained the fan's rattle */
 
 /* ---- 3. pixels ---- */
 function hashes(assets, themes) {
@@ -92,7 +96,7 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme is 4.15.1's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme is 4.15.2's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - NEW.length} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
@@ -100,9 +104,9 @@ function folder(files, drop) {
 
   console.log('\n  --- 2. the text: the loader, the egg, every pack ---');
   const same = {}, base = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.15.1`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.15.2`, f); }
 
-  console.log('\n  --- 3. the pixels: every theme, calm on, both builds ---');
+  console.log('\n  --- 3. the pixels: every theme, calm on (the clip off), both builds ---');
   const now = {}, was = {};
   for (const f of fs.readdirSync(JS).filter(f => /\.js$/.test(f) && !/\.min\.js$/.test(f))) { now[f] = fs.readFileSync(path.join(JS, f), 'utf8'); }
   for (const f of SAME_FILES.concat(['engine.js'])) { was[f] = git(`dcc-seasons/assets/js/${f}`); }
@@ -127,7 +131,6 @@ function folder(files, drop) {
     ok(m1b !== thNew && JSON.stringify(t1b[0].anniversary) !== JSON.stringify(t1b[1].anniversary), "the Anniversary's mix changed in PHP fails proof 1", 'anheart w');
     const muts = [
       ['art-crane.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a crane colour changed (Florida Keys)'],
-      ['art-thanksgiving.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a Thanksgiving colour changed'],
       ['art-christmas.js', s => s.replace(/#[0-9A-F]{6}/, '#010203'), 'a Christmas colour changed'],
       ['matrix.js', s => s.replace('finaleFit', 'finaleFitX'), 'the egg changed'],
     ];
@@ -136,10 +139,11 @@ function folder(files, drop) {
     const dm = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);
     ok(JSON.stringify(hm.halloween) !== JSON.stringify(ho.halloween), 'a Halloween sprite resized in the engine fails proof 3 (the pixels)', JSON.stringify(hm.halloween));
-    /* 4.15.2: the occluder clip lost (it must stay exactly as 4.15.0's): the pixels must see it */
-    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace("if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,", 'if (0) { occClip(p,') }), []);
+    /* 4.16.0: a change to the occluders ONLY must not show here (the clip is off in both):
+     * a change to how pieces fall must */
+    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace("var OCC_SEL = 'button,", "var OCC_SEL = 'p, h1, button,") }), []);
     const hl = hashes(dl, ['halloween']);
-    ok(JSON.stringify(hl.halloween) !== JSON.stringify(ho.halloween), 'the occluder clip removed fails proof 3', JSON.stringify(hl));
+    ok(JSON.stringify(hl.halloween) === JSON.stringify(ho.halloween), 'an occluder-set change alone does not show here (the clip is off in both builds): test-calm.js holds it', JSON.stringify(hl));
     /* (the crane draws on Florida Keys only in its cranes scene, which the
      * 24 s pixel walk does not reach: proof 2 holds the crane byte for byte) */
   }

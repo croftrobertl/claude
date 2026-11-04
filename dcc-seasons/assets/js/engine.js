@@ -2863,10 +2863,10 @@
 
 		/* ---- 4.15.0, Calmer Seasons (Rob's picks, 2026-11-03) ----------------
 		 * 1. OCCLUDERS (pick A): the falling pieces and the walking animals
-		 *    pass BEHIND what a guest reads, fills in or taps. Buttons, fields,
-		 *    labels, links, headings, paragraphs and list items (anything
-		 *    with [data-dcc-seasons-occlude] too) are measured as rectangles
-		 *    — text by its LINES (a Range over its contents), controls by
+		 *    pass BEHIND what a guest fills in or taps (4.16.0: no longer
+		 *    behind text — see OCC_SEL). Buttons, fields, selects and links
+		 *    (anything with [data-dcc-seasons-occlude] too) are measured as
+		 *    rectangles — a link by its text LINES and its box, controls by
 		 *    their box — outside the page header (the header photo is not an
 		 *    occluder: pieces fall over it as before). Measured in idle time,
 		 *    never in a frame: after a debounced DOM change, a resize, a
@@ -2885,11 +2885,16 @@
 		 *    while a field was focused or the selector's quiz was open — is
 		 *    gone, with [data-dcc-seasons-busy] and the tom's busy hold.
 		 * CFG.calm === false (debug and the Untouched proof) turns all of it,
-		 * and the walkers' turn-back, off. */
+		 * off (the tom holds his strut either way since 4.16.0). */
 		var CALM = CFG.calm !== false;
 		var occOn = CALM && !CFG.layer && !footMode;
-		var OCC_SEL = 'button, input:not([type="hidden"]), textarea, select, label, a, h1, h2, h3, h4, h5, h6, p, li, [data-dcc-seasons-occlude]';
-		var OCC_TEXT = { P: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, A: 1, LABEL: 1 };
+		/* 4.16.0 (Rob): pieces fall IN FRONT of text — passing behind lines
+		 * of text was "more distracting and weird looking" — and still pass
+		 * under what a guest taps or fills in. Headings, paragraphs, list
+		 * items and labels are no longer occluders; a link is, by its text
+		 * lines and its tap box. */
+		var OCC_SEL = 'button, input:not([type="hidden"]), textarea, select, a, [data-dcc-seasons-occlude]';
+		var OCC_TEXT = { A: 1 };
 		var OCC_PAD = 2;
 		var occDoc = [], occY0 = 0, occY1 = 0, occStamp = 0, occMs = 0, occBuilds = 0, occDue = 0, occAt = 0, occQ = 0;
 		var occVis = [], occVisKey = '';
@@ -2915,7 +2920,7 @@
 					rg.selectNodeContents(el);
 					var rs = rg.getClientRects();
 					for (var k = 0; k < rs.length; k++) { occPush(d2, rs[k], sx, sy); }
-					if (el.tagName === 'A' || el.tagName === 'LABEL') { occPush(d2, b, sx, sy); }   /* the whole tap target */
+					occPush(d2, b, sx, sy);   /* a link: its whole tap target too */
 				} else { occPush(d2, b, sx, sy); }
 			}
 			var cb = cv.getBoundingClientRect();
@@ -3430,8 +3435,8 @@
 				p.vx = p.dir * (b === 'hop' ? rnd(40, 80) : b === 'chatter' ? rnd(50, 90) : rnd(15, 30));
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
-				/* 4.13.2 forage (Thanksgiving's tom): walk, stop, feed, walk on */
-				if (b === 'forage') { if (CALM) { anywhere = 0; p.leg = 0; p.tq = 0; p.ko = null; p.kw = null; p.tsh = 0; } if (!anywhere) { p.x = p.dir > 0 ? -p.size * 4.6 : vw + p.size * 4.6; } else if (!tkDone) { p.x = p.dir > 0 ? -p.size * 1.4 : vw + p.size * 1.4; } p.y = ground; p.vx = p.dir * rnd(14, 20); p.fs = 0; p.ft = tkGap(1); p.fv = -1; p.gap = 1; p.wp = 0; p.kq = [0.67, 1.04]; p.kf = [0, 0]; }   /* a strut */
+				/* forage: Thanksgiving's tom and poults (4.16.0: tomHoldStep) */
+				if (b === 'forage') { p.hl = 0; p.alpha = 0; p.dir = -1; p.x = vw + p.size * 4.6; p.y = ground; p.vx = 0; }   /* 4.16.0: placed and faded in by tomHoldStep */
 			}
 			if (b === 'dart') {
 				spreadPlace(p, vw * 0.1, vw * 0.9, vh * 0.1, vh * 0.66);
@@ -3674,84 +3679,8 @@
 					if (p.x < -60 || p.x > vw + 60) { seed(p); }
 					break;
 				case 'forage':
-					/* 4.13.2: the tom STEPS. His walk phase advances with the
-					 * ground he covers (a cycle is the stride / the stance share,
-					 * at his drawn scale), so a planted foot never slides; he
-					 * stops only when both feet are down, feeds ~2.8 s with the
-					 * fan up, and walks on. The bob is in the drawing, never in
-					 * p.y. p.gap closes while he feeds so the poults catch up. */
-					if (!tkDone) { break; }   /* waits just off the edge until his poses are drawn */
-					/* 4.15.0 (Rob's pick B): enter, walk about a third of the
-					 * screen at his own pace, TURN (a squeeze through the
-					 * narrow side, about his planted feet, never a flip-cut),
-					 * walk back off the side he came from, and stay gone. */
-					if (CALM) {
-						if (p.leg === 3) { p.alpha = 0; break; }
-						if (p.leg === 1) {
-							p.tq += dt / TK_TURN;
-							if (p.tq >= 0.5 && !p.tflip) {
-								/* the mirror at the narrowest moment: shift him so his feet
-								 * (the pivot) stay on the same spot, and carry the shift in
-								 * the poults' offset so they stay on theirs */
-								var tuF = (p.size * 1.3 * TK_H * p.sc) / TK_REF, sgO = p.dir > 0 ? -1 : 1;
-								p.x += 2 * sgO * TK_PV * tuF; p.tsh = 2 * TK_PV * tuF;
-								/* each poult's offset from him, mirrored with his frame, so it
-								 * stays on its own spot; it waits there (p.kw) until he is past */
-								p.ko = [p.tsh - TK_REFW * tuF * (0.22 + KP_OFF[0] * (p.gap == null ? 1 : p.gap)), p.tsh - TK_REFW * tuF * (0.22 + KP_OFF[1] * (p.gap == null ? 1 : p.gap))];
-								p.kw = [1, 1];
-								p.tflip = 1; p.dir = -p.dir; p.vx = -p.vx;
-							}
-							if (p.tq >= 1) { p.leg = 2; p.tq = 0; p.tflip = 0; p.fs = 0; p.ft = mx2(p.ft, tkGap(2)); }
-							break;
-						}
-						if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }
-						if (p.leg === 2 && (p.dir > 0 ? p.x > vw + p.size * 4.6 : p.x < -p.size * 4.6)) { p.leg = 3; p.alpha = 0; p.gone = vt; break; }
-					}
-					/* 4.15.2: the walk before a stop counts only while he is well on
-					 * screen, so he never stops half off the edge */
-					if (!CALM || (p.x > p.size * 1.5 && p.x < vw - p.size * 1.5)) { p.ft -= dt; }
-					{
-						/* 4.14.4 (Rob: the poults moonwalked): each poult's walk
-						 * cycle advances by the ground IT covers — his advance less
-						 * the change in its distance behind him — so its planted
-						 * foot stays put. The gap opens no faster than half his pace
-						 * (a poult never goes backward) and, while he feeds, closes
-						 * no faster than 1.2x his pace; a poult that has caught up
-						 * stops and feeds. */
-						var tu = (p.size * 1.3 * TK_H * p.sc) / TK_REF, cyc = TK_STRIDE / TK_STANCE * tu, ku = tu * TK_REF * KP_K / (KP_BOX[3] - KP_BOX[1]), kc = KP_STRIDE / TK_STANCE * ku;
-						var g0 = p.gap == null ? 1 : p.gap, adv = 0, span = TK_REFW * tu * KP_OFF[1], c3;
-						p.y = ground; p.rot = 0;
-						if (p.fs !== 1) {
-							adv = abs(p.vx) * dt;
-							p.x += p.vx * dt;
-							p.wp = (p.wp || 0) + adv / cyc;
-							p.gap = mn(1, g0 + mn(dt * 0.6, 0.5 * adv / span));
-							if (p.tn) { if ((p.wp % 1) < adv / cyc) { p.wp = 0; p.tn = 0; p.leg = 1; p.tq = 0; p.fs = 0; } }   /* both feet down: he turns */
-							else {
-								if (p.fs === 0 && p.ft <= 0) { p.fs = 2; }
-								if (p.fs === 2 && (p.wp % 1) < adv / cyc) { p.wp = 0; p.fs = 1; p.fv = tkNextV(p.fv); p.ft = p.ftS = tkFeedEnd(p.fv) + 0.4 + rnd(0.5, 1.1); }   /* both feet down: he feeds */
-							}
-						} else {
-							p.gap = mx2(0.55, g0 - mn(dt * 0.8, 1.2 * abs(p.vx) * dt / span));
-							if (p.ft <= 0) { p.fs = 0; p.ft = tkGap(0); }
-						}
-						if (!p.kq) { p.kq = [0.67, 1.04]; p.kf = [0, 0]; }
-						for (c3 = 0; c3 < 2; c3++) {
-							var ka = adv - TK_REFW * tu * KP_OFF[c3] * (p.gap - g0);   /* its own ground covered: never negative */
-							/* 4.15.0: since his turn a poult stands where it was, feeding,
-							 * until he has walked back past it, then falls in behind; its
-							 * offset is kept HERE and only read by the drawing */
-							var wait = false;
-							if (p.ko) {
-								var gN = (p.tsh || 0) + TK_REFW * tu * (0.22 + KP_OFF[c3] * p.gap);
-								if (p.kw[c3]) { var kO = p.ko[c3]; p.ko[c3] += adv; if (p.ko[c3] >= gN) { p.kw[c3] = 0; p.ko[c3] = gN; ka = adv - (gN - kO); } else { wait = true; } }   /* 4.15.2: released, it walks only the ground it really covers */
-								else { p.ko[c3] = gN; }
-							}
-							if (wait) { ka = 0; }
-							p.kq[c3] += mx2(0, ka) / kc;
-							p.kf[c3] = ((p.fs === 1 || wait) && ka < 0.02 * tu) ? p.kf[c3] + dt : 0;   /* stopped: feeding */
-						}
-					}
+					/* his poses are drawn after load (tkCache); until then he is not drawn */
+					if (tkDone) { tomHoldStep(p, dt); }
 					break;
 				case 'waddle': case 'chatter':
 					p.x += p.vx * dt;
@@ -3890,22 +3819,6 @@
 					cx.fill();
 					cx.restore();
 				}
-				if (sp.def.draw === 'tom') {
-					/* 4.13.2: one pre-drawn pose of the tom, then his poults */
-					var tf = tkGet(tkPose(p.wp || 0, TK_FR, p.fs, p.fs === 1 ? p.ftS - p.ft : 0, false, p.fv));
-					if (!tf) { return (flip ? cx.restore() : 0); }
-					var ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h;
-					var tw = tf.w * ts, th = tf.h * ts, gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts, fy = 10 * s;   /* his feet stand 10px below the walkers' line: they show */
-					var twR = TK_REFW * tf.u * ts;
-					var sq = p.leg === 1 ? 0.3 + 0.7 * abs(cos(MT.PI * p.tq)) : 1;   /* 4.15.0: the turn, never thinner than 30% */
-					tomPoults(p, s, twR, th, fy, ts, true, sq);
-					var pv = TK_PV * twR / TK_REFW;   /* his feet, in this draw's px */
-					if (sq < 1) { cx.save(); cx.translate(pv, 0); cx.scale(sq, 1); cx.translate(-pv, 0); }
-					cx.drawImage(tf.c, -tw / 2, fy - gy - th / 2, tw, th);
-					if (sq < 1) { cx.restore(); }
-					tomPoults(p, s, twR, th, fy, ts, false, sq);
-					return (flip ? cx.restore() : 0);
-				}
 				var im = sprite(key);
 				if (im.ready) {
 					var w = p.size * 1.3 * s, h = w * im.ratio;
@@ -3918,25 +3831,99 @@
 			if (flip) { cx.restore(); }
 		}
 
-		/* 4.13.2: two poults following the tom (art faces left, so behind
-		 * him is +x), on his ground line, each STEPPING on its own walk
-		 * phase; while he feeds they close up and feed too. The far one is
-		 * drawn behind him, the near one in front. */
-		function tomPoults(p, s, tw, th, gy, ts, far, sq) {
-			var c = far ? 2 : 1, gap = p.gap == null ? 1 : p.gap, q = p.kq || [0.67, 1.04], kf = p.kf || [0, 0];
-			{
-				var gx = tw * (0.22 + KP_OFF[c - 1] * gap);   /* tw: 4.14.3's box width at his scale */
-				/* 4.15.0: since his turn (his frame is mirrored) a poult keeps
-				 * its place on the ground — in front of him — until he has
-				 * walked back past it */
-				if (p.ko) { gx = p.ko[c - 1] * tw / (TK_REFW * ((p.size * 1.3 * TK_H * p.sc) / TK_REF)); }
-				var f = tkGet(kf[c - 1] > 0 ? tkPose(q[c - 1], KP_FR, 1, kf[c - 1] + 0.3, true) : tkPose(q[c - 1], KP_FR, 0, 0, true)), sc2 = ts;
-				if (!f) { return; }
-				var pw = f.w * sc2, phh = f.h * sc2, py = gy - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * sc2 + (far ? -th * 0.03 : th * 0.02);
-				var sqz = sq != null && sq < 1;
-				if (far || sqz) { cx.save(); if (far) { cx.globalAlpha *= 0.94; } if (sqz) { cx.translate(gx, 0); cx.scale(sq, 1); cx.translate(-gx, 0); } }   /* it turns with him, about its own feet */
-				cx.drawImage(f.c, gx - pw / 2, py - phh / 2, pw, phh);
-				if (far || sqz) { cx.restore(); }
+		/* 4.16.0 (Rob: the still picture "looks great. It's the movement that's
+		 * screwy"): the tom does NOT walk. He holds his strut in one place at
+		 * the foot of the screen, near the right edge, facing in; now and then,
+		 * ONE thing at a time, he gives the fan a short rattle (0.9 s, the
+		 * real display shiver) or feeds (his approved feed). His two poults
+		 * each have their OWN spot and ground line, never his: the near one
+		 * on his head side, a little lower (drawn after him), the far one on
+		 * his tail side, a little higher (drawn before him). Their ranges never
+		 * reach his box, so nothing passes in front of or behind anything. Each
+		 * takes a few short steps on its own timing (its walk phase advances by
+		 * the ground it covers, so a planted foot never slides), pauses, pecks,
+		 * and turns about its own feet when it reaches the end of its spot. */
+		var KP_FX = 18 + KP_STRIDE * (0.5 - 0.25 / TK_STANCE);   /* a poult's feet at rest, in its rig's units */
+		function tomGeom(p) {
+			var tu = p.size * 1.3 * TK_H * p.sc / TK_REF, ku = KP_K * TK_REF * tu / (KP_BOX[3] - KP_BOX[1]);
+			var fxC = KP_BOX[2] - KP_FX, kw = KP_BOX[2] - KP_BOX[0], E = mx2(KP_BOX[2] - KP_FX, KP_FX - KP_BOX[0]) * ku;
+			var tw = (TK_BOX[2] - TK_BOX[0]) * tu, th = (TK_BOX[3] - TK_BOX[1]) * tu, R = mx2(24, kw * ku * 1.3), G = 6;
+			return { tu: tu, ku: ku, kc: KP_STRIDE / TK_STANCE * ku, tw: tw, th: th, E: E, R: R, G: G, fxC: fxC,
+				kg: [th * 0.05, -th * 0.045],   /* the poults' ground lines, against his: the near one lower, the far one higher */
+				lo: [p.x - tw / 2 - G - E - R, p.x + tw / 2 + G + E], hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R] };
+		}
+		function tomHoldStep(p, dt) {
+			var g, c;
+			p.y = ground; p.rot = 0; p.vx = 0;
+			if (p.hl && p.hw !== vw) {   /* a real resize: his place moves with the edge, the poults with him */
+				g = tomGeom(p); var dx = vw - 8 - (g.G + 2 * g.E + g.R) - g.tw / 2 - p.x;
+				p.x += dx; p.kx[0] += dx; p.kx[1] += dx; p.hw = vw;
+			}
+			if (!p.hl) {
+				p.x = 0; g = tomGeom(p);
+				p.x = vw - 8 - (g.G + 2 * g.E + g.R) - g.tw / 2;
+				g = tomGeom(p);
+				p.hl = 1; p.hw = vw; p.alpha = 0; p.sv = -1; p.fs = 0; p.fv = -1; p.tt = rnd(3, 6);
+				p.kx = [rnd(g.lo[0], g.hi[0]), rnd(g.lo[1], g.hi[1])]; p.kd = [sgn(), sgn()];
+				p.kq = [0, 0.5]; p.kf = [0, 0]; p.ks = [0, 0]; p.kt = [rnd(0.4, 1.6), rnd(1.4, 3)]; p.kz = [0, 0]; p.ke = [0, 0];
+			}
+			p.alpha = mn(1, p.alpha + dt / 1.2);   /* he fades in where he stands: never walks or pops in */
+			/* his idle motions: one at a time, then a hold */
+			if (p.sv >= 0) { p.sv += dt; if (p.sv >= 0.9) { p.sv = -1; p.tt = rnd(5, 11); } }
+			else if (p.fs === 1) { p.ft -= dt; if (p.ft <= 0) { p.fs = 0; p.tt = rnd(5, 11); } }
+			else if ((p.tt -= dt) <= 0) {
+				if (rand() < 0.65) { p.sv = 0; }
+				else { p.fs = 1; p.fv = tkNextV(p.fv); p.ft = p.ftS = tkFeedEnd(p.fv) + 0.4 + rnd(0.3, 0.7); }
+			}
+			g = tomGeom(p);
+			for (c = 0; c < 2; c++) {
+				var st = p.ks[c];
+				if (st === 0) {
+					if ((p.kt[c] -= dt) <= 0) {
+						if (rand() < 0.45) { p.ks[c] = 2; p.kf[c] = 0; }
+						else {
+							var n = 1 + MT.floor(rand() * 3), to = p.kx[c] + p.kd[c] * n * 0.5 * g.kc;
+							if (to < g.lo[c] || to > g.hi[c]) {
+								var back = p.kx[c] - p.kd[c] * n * 0.5 * g.kc;
+								if (back >= g.lo[c] && back <= g.hi[c]) { p.ks[c] = 3; p.kz[c] = 0; continue; }   /* turn first, about its own feet */
+								while (n > 0 && (to < g.lo[c] || to > g.hi[c])) { n--; to = p.kx[c] + p.kd[c] * n * 0.5 * g.kc; }
+								if (!n) { p.ks[c] = 2; p.kf[c] = 0; continue; }
+							}
+							p.ks[c] = 1; p.ke[c] = p.kq[c] + n * 0.5;
+						}
+					}
+				} else if (st === 1) {
+					var dq = mn(dt * 1.5, p.ke[c] - p.kq[c]);
+					p.kq[c] += dq; p.kx[c] += p.kd[c] * g.kc * dq;
+					if (p.kq[c] >= p.ke[c] - 1e-9) { p.kq[c] = p.ke[c]; p.ks[c] = 0; p.kt[c] = rand() < 0.5 ? rnd(0.3, 0.9) : rnd(1.4, 3.2); }   /* both feet down */
+				} else if (st === 2) {
+					if ((p.kf[c] += dt) >= 1.9) { p.kf[c] = 0; p.ks[c] = 0; p.kt[c] = rnd(1, 3); }
+				} else {
+					var z0 = p.kz[c]; p.kz[c] += dt / 0.6;
+					if (z0 < 0.5 && p.kz[c] >= 0.5) { p.kd[c] = -p.kd[c]; }   /* the mirror at its narrowest */
+					if (p.kz[c] >= 1) { p.kz[c] = 0; p.ks[c] = 0; p.kt[c] = rnd(0.2, 0.6); }
+				}
+				p.kx[c] = clamp(p.kx[c], g.lo[c], g.hi[c]);
+			}
+		}
+		function tomHold(p, s) {
+			var key = p.sv >= 0 ? 'r' + (p.sv < 0.15 || p.sv > 0.75 ? 1 : 2) + (MT.floor(p.sv * 24) % 4) : p.fs === 1 ? tkPose(0, TK_FR, 1, p.ftS - p.ft, false, p.fv) : 'w0';
+			var tf = tkGet(key); if (!tf) { return; }
+			var g = tomGeom(p), ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts, fy = 10 * s;
+			var gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts;
+			/* drawn by ground line: higher on screen first */
+			var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });
+			for (var i = 0; i < 3; i++) {
+				var c = L[i][1];
+				if (c < 0) { cx.drawImage(tf.c, -tw / 2, fy - gy - th / 2, tw, th); continue; }
+				var f = tkGet(p.ks[c] === 2 ? tkPose(p.kq[c], KP_FR, 1, p.kf[c] + 0.3, true) : tkPose(p.kq[c], KP_FR, 0, 0, true));
+				if (!f) { continue; }
+				var pw = f.w * ts, ph = f.h * ts, feet = fy + L[i][0], py = feet - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * ts;
+				var sx = (p.kd[c] > 0 ? -1 : 1) * (p.ks[c] === 3 ? 0.3 + 0.7 * abs(cos(MT.PI * p.kz[c])) : 1);
+				cx.save(); cx.translate(p.kx[c] - p.x, 0); cx.scale(sx, 1);
+				if (c) { cx.globalAlpha *= 0.94; }
+				cx.drawImage(f.c, -g.fxC * f.u * ts, py - ph / 2, pw, ph);   /* its feet on x = 0, so a turn pivots on them */
+				cx.restore();
 			}
 		}
 
@@ -4121,6 +4108,8 @@
 				drawGlyph(p, s, flip, t);
 				cx.font = MT.round(p.size * 0.7) + FT;
 				cx.fillText(drawable('🪱') ? '🪱' : '~', 0, p.size * 0.8);
+			} else if (b === 'forage') {
+				if (p.hl) { tomHold(p, s); }   /* 4.16.0: the tom and his poults, each in its own place */
 			} else {
 				drawGlyph(p, s, flip, t);
 			}
@@ -4396,14 +4385,7 @@
 		var TK_FR = 16, KP_FR = 12, TK_H = 1.55, KP_K = 0.4, tkCache = {}, tkN = 0, tkSz = 0;
 		/* 4.14.4: his size is set by 4.14.3's box (107 units tall, 133 wide),
 		 * so the box can grow to his real extent without shrinking him */
-		var TK_TURN = 0.8;   /* 4.15.0: his turn, in seconds */
-		/* ...about his planted feet: in the standing frame (w0) the rig's feet
-		 * (hips at 74 and 81 units, the stride and stance from the pack) are
-		 * down at 81 + S/2 and 74 + S/2 - S/2/stance; the turn pivots on their
-		 * midpoint, TK_PV units from the drawing's centre (its cache is
-		 * mirrored: x = (box right - fx)) */
-		var TK_PV = TK_BOX ? (TK_BOX[2] - (155 + TK_STRIDE - TK_STRIDE * 0.5 / TK_STANCE) / 2) - (TK_BOX[2] - TK_BOX[0]) / 2 : 0;
-		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1, KP_OFF = [0.34, 0.62];
+		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1;
 		for (var tkI = 0; tkI < specs.length; tkI++) { if (specs[tkI].def.draw === 'tom' && TKM.length) { tkSz = mx2(tkSz, (specs[tkI].def.sz || [32, 32])[1]); } }
 		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R, k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2) };
 		function tkBuild(key) {
@@ -4424,6 +4406,7 @@
 			for (tkJ2 = 0; tkJ2 < TK_FR; tkJ2++) { tkTodo.push('w' + tkJ2); }
 			for (tkJ2 = 0; tkJ2 < KP_FR; tkJ2++) { tkTodo.push('kw' + tkJ2); }
 			tkTodo.push('p1', 'p2', 'p3', 'p4', 'pj', 'kp1', 'kp2', 'kp3', 'kp4');
+			for (tkJ2 = 0; tkJ2 < 8; tkJ2++) { tkTodo.push('r' + (1 + (tkJ2 >> 2)) + (tkJ2 & 3)); }   /* 4.16.0: the fan's rattle */
 			var tkLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			/* the scroll-quiet idle moment the pre-draw's last step (and the
 			 * fallback's every step) waits for */
@@ -4475,10 +4458,6 @@
 		 * twice running (tkNextV). Poults keep the plain lowering. */
 		function tkFeed(v) { return [[[0.8, 1.0], [1.25, 1.45], 1.6], [[0.85, 1.05], 1.25], [[0.8, 0.95], [1.1, 1.25], [1.4, 1.55], 1.75]][v]; }
 		function tkFeedEnd(v) { var F = tkFeed(v); return F[F.length - 1]; }
-		/* 4.15.2: seconds of walking before a stop — the first (1), the next
-		 * (0), at least this long after his turn (2). Until 4.15.0 he fed
-		 * every 1.6-3 s of walking, so he spent about half his time eating. */
-		function tkGap(k) { return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22); }
 		function tkNextV(v) { return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3; }
 		function tkPose(ph, n, fs, fe, poult, v) {
 			if (fs !== 1) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }
@@ -7737,7 +7716,7 @@
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
-				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { leg: p.leg, x: p.x, dir: p.dir, tq: p.tq, ko: p.ko, kw: p.kw, alpha: p.alpha, gone: p.gone, fs: p.fs, fv: p.fv }; }) }; },
+				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, kx: p.kx && p.kx.slice(), kd: p.kd && p.kd.slice(), ks: p.ks && p.ks.slice(), kq: p.kq && p.kq.slice(), geo: p.hl ? tomGeom(p) : null }; }) }; },
 				occBuild: function () { occBuild(); occVisKey = ''; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },

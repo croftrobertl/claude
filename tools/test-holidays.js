@@ -200,10 +200,13 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
            * proven by tools/test-calm.js (his feet and the poults stay put) */
           const tl = S.calm && S.calm.tom[0];
           if (tl && tl.leg === 1) { for (const k in track) { delete track[k]; } continue; }
+          /* 4.16.0: a poult turning in place pivots on its feet (test-calm.js holds them) */
+          const turnK = tl && tl.ks ? [tl.ks[0] === 3 ? 'k1' : null, tl.ks[1] === 3 ? 'k2' : null] : [];
           /* draw order: far poult, the tom, near poult */
           const who = fr.map((d, j) => d.k[0] === 'k' ? (j === 0 ? 'k2' : 'k1') : 't');
           fr.forEach((d, j) => {
             const id = who[j], poult = id !== 't', n = poult ? 12 : 16;
+            if (turnK.indexOf(id) >= 0) { delete track[id + 'A']; delete track[id + 'B']; return; }
             if (!/^k?w\d+$/.test(d.k)) { delete track[id + 'A']; delete track[id + 'B']; if (poult && /kp/.test(d.k)) { feeds++; } return; }
             const f = +d.k.replace(/\D/g, '');
             if (last[id] != null) { const dd = (f - last[id] + n) % n; if (dd > n / 2) { back[poult ? 'poult' : 'tom']++; } }

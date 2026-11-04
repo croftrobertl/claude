@@ -1455,6 +1455,52 @@ Rob sees it (the overlay rows; sources named on the sheets).
     often|edge|hold; the stop count, stops wholly on screen, the no-repeat read from the DRAWN jabs, 15 s
     between stops, the no-pause checks), `test-untouched.js` against
     4.15.1 (`6fa0a3e`) with Thanksgiving exempt.
+- **4.16.0 (Rob, via the Director, 2026-11-04): three changes, decided.**
+  Built on 4.15.2 (live). Rollback: 4.15.2.
+  1. **Pieces fall IN FRONT of text, under controls** (reverses 4.15.0's
+     "under words"; Rob: behind text rows was "more distracting and weird
+     looking"). `OCC_SEL` = button, input (not hidden), textarea, select,
+     a, `[data-dcc-seasons-occlude]`; `OCC_TEXT` = { A } (a link by its
+     lines and its box). Headings, paragraphs, list items and labels are
+     gone from it. The background layer shares the set. Walkers are still
+     never occluded (4.15.2's recorded pick). The brief said "they still go
+     behind forms", which conflicts with that pick; the conflict was
+     reported to the Director and NOT built. Stored layering=front and
+     front_z=999 are untouched.
+  2. **Thanksgiving: the tom holds his strut** (Rob: the still "looks great.
+     It's the movement that's screwy"). `tomHoldStep`/`tomHold`/`tomGeom`:
+     he stands in ONE place, `vw - 8 - (G + 2E + R) - tw/2`, facing in,
+     fades in over 1.2 s (never walks or pops in), and holds; every 5-11 s
+     ONE idle motion: the fan's rattle (0.9 s, `p.sv`, 8 pre-drawn poses
+     `'rLP'`: `tkPaint`'s new `sh` = [amplitude, phase], each feather
+     quivering about the pivot out of step with its neighbours) or his
+     approved feed (`tkNextV`, never the same feed twice running). Poults:
+     each has its own spot (`g.lo`/`g.hi`: the near one on his head side,
+     the far one on his tail side, never reaching his box) and its own
+     ground line (`g.kg`: 5% of his height below his, 4.5% above). Each
+     steps in whole half-cycles (feet planted: x by `kc` per cycle), pauses,
+     pecks (1.9 s) and turns about its OWN FEET (`fxC`, the squeeze, mirror
+     at the narrowest) at the end of its spot, on its own timing. Drawn by
+     ground line every frame (higher first). The walking code is GONE:
+     the tom holds his strut with calm on or off. On a real resize the group
+     moves with the edge (`p.hw`). 45 poses pre-drawn (37 + 8).
+     `test-calm.js` 3 (tom never moves sideways, no overlap, draw order,
+     ground lines, own spots, feet never jump including turns, own timing,
+     one idle motion at a time) and `test-tom.js` (hold, fade, motions).
+     `tools/tom-hold-reel.js --mode=clip|near` renders the review clips and
+     the sheet of every moment a poult is nearest him.
+  3. **The save purge** (`Cache_Purge::purge`): `\SpeedyCache\Delete::
+     all_cache()` first (what live has), the older SpeedyCache entry points
+     only if it did not run, then `do_action('epc_purge')` when something
+     listens ("Server cache", the host's nginx proxy). The notice names only
+     what ran; nothing ran = the honest warning. The upgrade
+     (`maybe_purge_after_upgrade`, on init) runs the same purge.
+     `php tools/test-purge.php` (DCC_PURGE_MUT=nodelete|noepc|liar).
+  - Mutations: `test-calm.js` DCC_CALM_MUT=text|controls|noclip|walkclip|
+    slide|cross|order|two. `test-untouched.js` against 4.15.2 (`ea416ea`),
+    Thanksgiving exempt, the occluder clip OFF in both builds (the
+    occluder change reaches every theme by design and is proven by
+    test-calm).
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1887,7 +1933,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

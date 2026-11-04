@@ -23,7 +23,7 @@
  *     Time on screen reported.
  *
  *   node tools/test-calm.js [--only=occ|pause|walk]
- *   DCC_CALM_MUT=noclip|walkclip|noturn|flip|repeat|often|edge|hold (a copy of the engine, one line broken)
+ *   DCC_CALM_MUT=text|controls|noclip|walkclip|slide|cross|order|two (a copy of the engine, one line broken)
  */
 const fs = require('fs');
 const os = require('os');
@@ -43,14 +43,14 @@ if (MUT) {
   for (const f of fs.readdirSync(JS)) { fs.copyFileSync(path.join(JS, f), path.join(d, f)); }
   let e = fs.readFileSync(path.join(d, 'engine.js'), 'utf8');
   const M = {
+    text: ["var OCC_SEL = 'button, input:not([type=\"hidden\"]), textarea, select, a, [data-dcc-seasons-occlude]';", "var OCC_SEL = 'button, input:not([type=\"hidden\"]), textarea, select, a, p, h1, h2, h3, li, label, [data-dcc-seasons-occlude]';"],
+    controls: ["var OCC_SEL = 'button, input:not([type=\"hidden\"]), textarea, select, a, [data-dcc-seasons-occlude]';", "var OCC_SEL = '[data-dcc-seasons-occlude]';"],
     noclip: ["if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p,", 'if (0) { occClip(p,'],
+    slide: ["p.alpha = mn(1, p.alpha + dt / 1.2);", "p.alpha = mn(1, p.alpha + dt / 1.2); p.x -= 2 * dt;"],
+    cross: ["hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R]", "hi: [p.x - tw / 2 - G - E + R + tw * 0.5, p.x + tw / 2 + G + E + R]"],
+    order: ["var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });", "var L = [[g.kg[0], 0], [0, -1], [g.kg[1], 1]];"],
+    two: ["else { p.fs = 1; p.fv = tkNextV(p.fv);", "else { p.sv = 0; p.fs = 1; p.fv = tkNextV(p.fv);"],
     walkclip: ["if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, p.size * (p.sc || 1) * layerS * 1.7 + 6); }", "if (occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, b === 'forage' ? p.size * 7 : p.size * (p.sc || 1) * layerS * 1.7 + 6); }"],
-    noturn: ["if (p.leg === 0 && !p.tn && p.fs !== 1 && (p.dir > 0 ? p.x >= vw / 3 : p.x <= vw - vw / 3)) { p.tn = 1; }", ''],
-    repeat: ['return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3;', 'return v < 0 ? MT.floor(rand() * 3) % 3 : v;'],
-    often: ["return k === 1 ? rnd(7, 11) : k === 2 ? 6 : rnd(15, 22);", 'return rnd(1.6, 3.0);'],
-    edge: ['if (!CALM || (p.x > p.size * 1.5 && p.x < vw - p.size * 1.5)) { p.ft -= dt; }', 'p.ft -= dt;'],
-    hold: ['if (p.leg === 3) { p.alpha = 0; break; }', "if (p.leg === 3) { p.alpha = 0; break; } if (p.leg === 0 && D.querySelector('.dccs-modal') && (p.dir > 0 ? p.x < 0 : p.x > vw)) { break; }"],
-    flip: ['var sq = p.leg === 1 ? 0.3 + 0.7 * abs(cos(MT.PI * p.tq)) : 1;', 'var sq = 1;'],
   }[MUT];
   if (!M || !e.includes(M[0])) { throw new Error('mutation does not apply: ' + MUT); }
   fs.writeFileSync(path.join(d, 'engine.js'), e.replace(M[0], M[1]));
@@ -75,6 +75,8 @@ async function boot(make, w, theme, knobs, seed) {
 async function inkRun(pg, n) {
   return pg.evaluate(n => {
     const S = window.DCCSeasonsEngine._state; S.manual(true); S.occBuild();
+    /* the falling pieces only: walkers are never cut (1b), and since 4.16.0 the tom stands in the corner */
+    S.parts.forEach(q => { if (q.b === 'forage') { q.alpha = -1e9; } });
     const cv = document.querySelector('canvas.dcc-seasons-canvas'), g = cv.getContext('2d'), k = cv.width / cv.getBoundingClientRect().width;
     let inside = 0, outside = 0, frames = 0, rects = 0;
     for (let f = 0; f < n; f++) {
@@ -119,12 +121,67 @@ async function inkRun(pg, n) {
   }
 
   if (!ONLY || ONLY === 'occ') {
-    console.log('\n  --- 1b. walkers are never occluded: the tom and poults cross text in front of it ---');
+    console.log('\n  --- 1c. (4.16.0, Rob) pieces fall IN FRONT of text and still pass UNDER controls ---');
+    for (const [name, make, prep] of [
+      ['/contact/', cp.contact, pg => pg.evaluate(() => document.querySelector('.dcc-contact-form').scrollIntoView({ block: 'center' }))],
+      ['/contact/ intro', cp.contact, pg => pg.evaluate(() => document.querySelector('.entry-content h2').scrollIntoView({ block: 'start' }))],
+      ['the Cottage Selector (landing)', cp.cottages, pg => pg.evaluate(() => document.querySelector('.dccs-root').scrollIntoView({ block: 'center' }))],
+    ]) {
+      const ses = await boot(make, 390, 'halloween', {}, 11), pg = ses.page;
+      await prep(pg); await pg.waitForTimeout(1500);
+      const r = await pg.evaluate(() => {
+        const S = window.DCCSeasonsEngine._state; S.manual(true); S.occBuild(); S.tick(33, 1);
+        const cv = document.querySelector('canvas.dcc-seasons-canvas'), cb = cv.getBoundingClientRect(), k = cv.width / cb.width, g = cv.getContext('2d');
+        const vis = S.calm.vis, inV = (x, y) => vis.some(o => x > o[0] && x < o[2] && y > o[1] && y < o[3]);
+        const on = b => b.width > 2 && b.height > 2 && b.bottom > 0 && b.top < innerHeight && b.right > 0 && b.left < innerWidth;
+        const CTRL = 'button, input:not([type="hidden"]), textarea, select, a, [data-dcc-seasons-occlude]';
+        const ctrls = [...document.querySelectorAll(CTRL)].filter(e => !e.closest('#masthead') && on(e.getBoundingClientRect()));
+        const ctrlBoxes = ctrls.map(e => e.getBoundingClientRect());
+        /* every control on screen is an occluder (its centre inside a hole) */
+        const missed = ctrls.filter((e, i) => { const b = ctrlBoxes[i]; return !inV(b.left + b.width / 2 - cb.left, b.top + b.height / 2 - cb.top); }).map(e => e.tagName + (e.type ? ':' + e.type : '') + ' ' + (e.textContent || '').trim().slice(0, 20));
+        /* text lines (p, h1-h6, li, label) away from any control: never a hole */
+        const lines = [];
+        for (const el of document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, label')) {
+          if (el.closest('#masthead') || el.closest('.dcc-seasons-diag')) { continue; }
+          const rg = document.createRange(); rg.selectNodeContents(el);
+          for (const q of rg.getClientRects()) {
+            if (!on(q) || q.width < 8) { continue; }
+            const cx = q.left + q.width / 2, cy = q.top + q.height / 2;
+            if (ctrlBoxes.some(b => cx >= b.left - 3 && cx <= b.right + 3 && cy >= b.top - 3 && cy <= b.bottom + 3)) { continue; }
+            lines.push({ x0: q.left - cb.left, y0: q.top - cb.top, x1: q.right - cb.left, y1: q.bottom - cb.top, tag: el.tagName });
+          }
+        }
+        const holed = lines.filter(l => inV((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2)).map(l => l.tag);
+        /* and the pieces DO draw over those lines */
+        let ink = 0;
+        for (let f = 0; f < 150; f++) {
+          S.tick(1000 / 30, 1);
+          if (f % 5) { continue; }
+          const d = g.getImageData(0, 0, cv.width, cv.height).data, W = cv.width;
+          for (const l of lines) {
+            for (let y = Math.ceil(l.y0 * k); y < Math.floor(l.y1 * k); y += 3) { for (let x = Math.ceil(l.x0 * k); x < Math.floor(l.x1 * k); x += 3) { if (x >= 0 && y >= 0 && x < W && y < cv.height && d[(y * W + x) * 4 + 3] > 8) { ink++; } } }
+          }
+        }
+        return { ctrls: ctrls.length, missed, lines: lines.length, holed, ink };
+      });
+      ok(r.ctrls > 0 && r.missed.length === 0, `${name}: all ${r.ctrls} controls and links on screen are occluders (pieces pass under them)`, JSON.stringify(r.missed));
+      ok(r.lines > 0 && r.holed.length === 0, `${name}: none of ${r.lines} text lines (headings, paragraphs, list items, labels) is an occluder`, JSON.stringify(r.holed.slice(0, 8)));
+      ok(r.ink > 0, `${name}: pieces draw over those text lines (${r.ink} inked samples in 150 frames)`, String(r.ink));
+      await ses.close();
+    }
+  }
+
+  if (!ONLY || ONLY === 'occ') {
+    console.log('\n  --- 1b. walkers are never occluded: the tom and poults stand in front of a control laid right under them ---');
     for (const w of [390, 1440]) {
       const ses = await boot(o => rt.page(o), w, 'thanksgiving', {}, 14), pg = ses.page;
       await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
       const r = await pg.evaluate(() => {
         const S = window.DCCSeasonsEngine._state; S.manual(true);
+        /* since 4.16.0 no text occludes; a full-width bar of buttons at the foot of the screen does */
+        const bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:90px;display:flex;z-index:5';
+        for (let i = 0; i < 6; i++) { const b = document.createElement('button'); b.textContent = 'Book'; b.style.cssText = 'flex:1;margin:4px'; bar.appendChild(b); }
+        document.body.appendChild(bar); S.occBuild();
         const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
         const cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype;
         const o = { save: P.save, restore: P.restore, clip: P.clip, di: P.drawImage };
@@ -150,7 +207,7 @@ async function inkRun(pg, n) {
         Object.assign(P, { save: o.save, restore: o.restore, clip: o.clip, drawImage: o.di });
         return st;
       });
-      ok(r.overText > 30, `${w}: the tom or a poult is drawn over an occluder's rect in ${r.overText} draws (the check has something to see)`, JSON.stringify(r));
+      ok(r.overText > 30, `${w}: the tom or a poult is drawn over a button's rect in ${r.overText} draws (the check has something to see)`, JSON.stringify(r));
       ok(r.walkerDraws > 100 && r.walkerClipped === 0, `${w}: ${r.walkerDraws} walker draws, none clipped: no notch at any moment`, JSON.stringify(r));
       ok(r.pieceClipped > 0, `${w}: the falling pieces ARE still cut (${r.pieceClipped} clipped draws)`, JSON.stringify(r));
       await ses.close();
@@ -184,84 +241,68 @@ async function inkRun(pg, n) {
   }
 
   if (!ONLY || ONLY === 'walk') {
-    console.log('\n  --- 3. the tom: a third of the way in, a real turn, back the way he came ---');
+    console.log('\n  --- 3. (4.16.0, Rob) the tom holds his strut; each poult steps and pecks on its own ground line ---');
     for (const w of [390, 1440]) {
       const ses = await boot(o => rt.page(o), w, 'thanksgiving', {}, 14), pg = ses.page;
       await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
       const r = await pg.evaluate(w => {
         const S = window.DCCSeasonsEngine._state; S.manual(true);
-        /* 4.15.2: a modal open the whole time at 390 changes nothing */
-        if (w < 768) { const m = document.createElement('div'); m.className = 'dccs-modal'; document.body.appendChild(m); }
-        const feeds = []; let walkS = 0, prevFs = 0;
         const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
-        const P = CanvasRenderingContext2D.prototype, di = P.drawImage; let boxes = [];
+        const cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype, di = P.drawImage;
+        let draws = [];
         P.drawImage = function (src, x, y, ww, hh) {
           const k = key.get(src);
-          if (k && ww !== undefined) {
-            const m = this.getTransform(), cv = this.canvas, z = cv.width / cv.getBoundingClientRect().width; const xs = [x, x + ww].map(a => (m.a * a + m.e) / z);
-            /* the tom is tracked by his feet (the pivot: 0.404 of his drawing from its left edge, in the cache's mirrored frame), a poult by its centre */
-            const fx = /^k/.test(k) ? 0.5 : (134 - 78.667) / 137, cxm = (m.a * (x + fx * ww) + m.e) / z;
-            boxes.push({ k, cx: cxm, L: Math.min(...xs), R: Math.max(...xs) });
+          if (k && this.canvas === cv && ww !== undefined) {
+            const m = this.getTransform(), z = cv.width / cv.getBoundingClientRect().width;
+            const xs = [x, x + ww].map(a => (m.a * a + m.e) / z), ys = [y, y + hh].map(a => (m.d * a + m.f) / z);
+            draws.push({ k, L: Math.min(...xs), R: Math.max(...xs), T: Math.min(...ys), B: Math.max(...ys), o: m.e / z });
           }
           return di.apply(this, arguments);
         };
-        const log = []; let f = 0, onFrames = 0, firstOn = -1, lastOn = -1, prevVis = false, goneVis = null;
-        for (; f < 30 * 400; f++) {
-          boxes = []; S.tick(1000 / 30, 1);
-          const t = S.calm.tom[0]; if (!t) { break; }
-          if (t.leg !== 3 && t.leg !== 1 && t.fs !== 1) { walkS += 1 / 30; }
-          if (t.fs === 1 && prevFs !== 1) { const tb = boxes.find(b => !/^k/.test(b.k)); feeds.push({ f, fv: t.fv, jabs: 0, inJab: false, walkS, inView: !!tb && tb.L >= 0 && tb.R <= w }); }
-          if (t.fs === 1 && feeds.length) { const F = feeds[feeds.length - 1], j = boxes.some(b => b.k === 'pj'); if (j && !F.inJab) { F.jabs++; } F.inJab = j; }
-          prevFs = t.fs;
-          const vis = boxes.some(b => b.R > 0 && b.L < w);
-          if (vis) { onFrames++; if (firstOn < 0) { firstOn = f; } lastOn = f; }
-          log.push({ f, leg: t.leg, x: t.x, dir: t.dir, tq: t.tq, alpha: t.alpha, boxes: boxes.map(b => [b.k, Math.round(b.cx * 10) / 10, Math.round((b.R - b.L) * 10) / 10]) });
-          if (t.leg === 3 && goneVis == null) { goneVis = prevVis; }
-          prevVis = vis;
-          if (t.leg === 3 && f - lastOn > 60) { break; }
+        const fr = [];
+        for (let f = 0; f < 30 * 90; f++) {
+          draws = []; S.tick(1000 / 30, 1);
+          const t = S.calm.tom[0]; if (!t || !t.hl) { continue; }
+          fr.push({ f, t, d: draws.slice() });
         }
-        return { feeds, walkS, goneVis, log: log.filter((e, i) => e.leg === 1 || i % 15 === 0 || (log[i - 1] && log[i - 1].leg !== e.leg)), onFrames, firstOn, lastOn, end: log[log.length - 1], first: log[0] };
+        P.drawImage = di;
+        return fr.map(e => ({ x: e.t.x, y: e.t.y, sv: e.t.sv, fs: e.t.fs, kx: e.t.kx, ks: e.t.ks, kd: e.t.kd, g: e.t.geo, d: e.d }));
       }, w);
-      const legs = r.log.map(e => e.leg), d0 = r.first.dir;
-      const startX = r.first.x, turn = r.log.filter(e => e.leg === 1), turnX = turn.length ? turn[0].x : NaN;
-      const inward = d0 > 0 ? turnX : w - turnX;
-      ok(d0 > 0 ? startX < 0 : startX > w, `${w}: he enters from the ${d0 > 0 ? 'left' : 'right'} edge (x ${Math.round(startX)})`, startX);
-      ok(turn.length > 0 && inward >= w / 3 - 2 && inward <= w / 3 + 60, `${w}: he turns ${Math.round(inward)} px in (a third is ${Math.round(w / 3)})`, inward);
-      /* during the turn he and his poults stand still: no sliding */
-      let slide = 0, minW = 1e9, maxW = 0, tomW0 = 0;
-      for (let i = 1; i < turn.length; i++) {
-        for (const b of turn[i].boxes) {
-          const same = turn[i - 1].boxes.filter(q => (q[0].charAt(0) === 'k') === (b[0].charAt(0) === 'k'));
-          if (same.length) { slide = Math.max(slide, Math.min(...same.map(q => Math.abs(q[1] - b[1])))); }
-        }
-        const tb = turn[i].boxes.find(b => !/^k/.test(b[0])); if (tb) { minW = Math.min(minW, tb[2]); maxW = Math.max(maxW, tb[2]); }
+      const g = r[0].g;
+      /* the tom: one place, one image box */
+      const tomBoxes = r.map(e => e.d.find(q => !/^k/.test(q.k))).filter(Boolean);
+      const tL = new Set(tomBoxes.map(b => b.L.toFixed(2)));
+      ok(r.length > 2000 && tL.size === 1, `${w}: the tom never moves sideways: one left edge in ${tomBoxes.length} draws (${[...tL].join(', ')})`, JSON.stringify([...tL].slice(0, 6)));
+      /* the poults: never over his box, and on their own ground lines */
+      let over = 0, ordBad = 0, groundBad = 0; const feetY = [new Set(), new Set()];
+      for (const e of r) {
+        const tb = e.d.find(q => !/^k/.test(q.k)), pb = e.d.filter(q => /^k/.test(q.k));
+        if (!tb || pb.length !== 2) { continue; }
+        for (const b of pb) { if (b.R > tb.L && b.L < tb.R) { over++; } }
+        /* draw order: each draw's foot line, which must not go up the screen */
+        const order = e.d.map(q => /^k/.test(q.k) ? q.B : tb.B);
+        const feet = e.d.map(q => q === tb ? 0 : (q.L + q.R) / 2 < (tb.L + tb.R) / 2 ? g.kg[0] : g.kg[1]);
+        for (let i = 1; i < feet.length; i++) { if (feet[i] < feet[i - 1] - 1e-6) { ordBad++; } }
       }
-      const tom0 = r.log.find(e => e.leg === 0 && e.boxes.some(b => !/^k/.test(b[0])));
-      tomW0 = tom0 ? tom0.boxes.find(b => !/^k/.test(b[0]))[2] : 0;
-      if (process.env.DCC_CALM_DUMP) { console.log(JSON.stringify(turn.map(e => [e.tq, e.dir, e.boxes]))); }
-      ok(turn.length >= 20 && slide < 1.5, `${w}: the turn takes ${(turn.length / 30).toFixed(2)} s and nobody slides: his feet and the poults stay put (largest step ${slide.toFixed(2)} px)`, JSON.stringify({ n: turn.length, slide }));
-      ok(minW >= 0.29 * tomW0 && minW < 0.5 * tomW0, `${w}: a squeeze through the narrow side, never thinner than 30% (${Math.round(100 * minW / tomW0)}%), never a flip-cut`, JSON.stringify({ minW, tomW0 }));
-      const exitSide = r.end.x < 0 ? -1 : 1;
-      ok(r.end.leg === 3 && exitSide === (d0 > 0 ? -1 : 1), `${w}: he walks back off the side he came from, and stays gone`, JSON.stringify(r.end));
-      ok(r.goneVis === false, `${w}: he and both poults are off screen before he is gone (nothing vanishes in view)`, String(r.goneVis));
-      ok(legs.every(l => l !== undefined), `${w}: on screen ${((r.lastOn - r.firstOn + 1) / 30).toFixed(1)} s`, '');
-      /* the feeds: few, and never the same twice running (read from the drawn jabs) */
-      const J = r.feeds.map(x => x.jabs), maxN = 1 + Math.floor(Math.max(0, r.walkS - 7) / 15);
-      ok(r.feeds.length >= 1 && r.feeds.length <= maxN, `${w}: ${r.feeds.length} feeding stop(s) in ${r.walkS.toFixed(1)} s of walking (at most ${maxN}; 4.15.0 stopped every 1.6-3 s)`, JSON.stringify(r.feeds));
-      ok(J.every(j => j >= 1 && j <= 3) && J.every((j, i) => i === 0 || j !== J[i - 1]), `${w}: jabs per feed ${J.join(', ') || '-'}: never the same feed twice running`, JSON.stringify(r.feeds));
-      ok(r.feeds.every(x => x.inView), `${w}: every stop with him wholly on screen (never half off the edge)`, JSON.stringify(r.feeds.map(x => x.inView)));
-      ok(r.feeds.every((x, i) => i === 0 || x.walkS - r.feeds[i - 1].walkS >= 14.9), `${w}: at least 15 s of walking between stops`, JSON.stringify(r.feeds.map(x => x.walkS.toFixed(1))));
-      console.log(`      ${w}: on screen ${((r.lastOn - r.firstOn + 1) / 30).toFixed(1)} s (${r.onFrames} frames with any of the three drawn)`);
-      await ses.close();
-    }
-    /* the feeds' sequence over many walks: never the same twice running */
-    {
-      const ses = await boot(o => rt.page(o), 1440, 'thanksgiving', {}, 14), pg = ses.page;
-      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
-      const seq = await pg.evaluate(() => { const S = window.DCCSeasonsEngine._state; S.manual(true); const out = []; let pf = 0;
-        for (let f = 0; f < 30 * 600; f++) { S.tick(1000 / 30, 1); const t = S.calm.tom[0]; if (!t) { break; } if (t.fs === 1 && pf !== 1) { out.push(t.fv); } pf = t.fs; if (t.leg === 3) { break; } }
-        return out; });
-      ok(seq.length >= 2 && seq.every((v, i) => i === 0 || v !== seq[i - 1]), `1440, a whole walk: feeds ${seq.join(' ')}: no repeat`, JSON.stringify(seq));
+      ok(over === 0, `${w}: neither poult ever overlaps the tom's drawing (they never pass in front of or behind him)`, over);
+      ok(ordBad === 0, `${w}: drawn by ground line every frame: the higher poult, then the tom, then the lower poult`, ordBad);
+      ok(g.kg[0] > 0.5 && g.kg[1] < -0.5, `${w}: each poult has its own ground line, never his (${g.kg[0].toFixed(1)} px below and ${(-g.kg[1]).toFixed(1)} px above his)`, JSON.stringify(g.kg));
+      ok(r.every(e => e.kx[0] <= g.hi[0] + 1e-6 && e.kx[1] >= g.lo[1] - 1e-6 && g.hi[0] < e.x - g.tw / 2 && g.lo[1] > e.x + g.tw / 2), `${w}: each poult keeps to its own spot, on its own side of him`, '');
+      /* they step: each moves some, in whole steps, both directions over the visit */
+      for (const c of [0, 1]) {
+        const xs = r.map(e => e.kx[c]), walked = r.filter(e => e.ks[c] === 1).length, pecked = r.filter(e => e.ks[c] === 2).length, turned = r.filter(e => e.ks[c] === 3).length;
+        ok(Math.max(...xs) - Math.min(...xs) > 5 && walked > 30 && pecked > 30, `${w}: poult ${c + 1} steps (${(walked / 30).toFixed(1)} s), pecks (${(pecked / 30).toFixed(1)} s) and turns (${(turned / 30).toFixed(1)} s) on its own spot (moved over ${(Math.max(...xs) - Math.min(...xs)).toFixed(0)} px)`, '');
+      }
+      /* a poult's feet (its draw's origin) move only by its steps: never a jump, turns included */
+      let fj = 0;
+      for (let i = 1; i < r.length; i++) {
+        const A = r[i - 1].d.filter(q => /^k/.test(q.k)).map(q => q.o).sort((a, b) => a - b), B = r[i].d.filter(q => /^k/.test(q.k)).map(q => q.o).sort((a, b) => a - b);
+        if (A.length === 2 && B.length === 2) { fj = Math.max(fj, Math.abs(A[0] - B[0]), Math.abs(A[1] - B[1])); }
+      }
+      ok(fj <= g.kc * 1.5 / 30 + 0.01, `${w}: a poult's feet never jump, turning included (largest step ${fj.toFixed(2)} px, a stride frame is ${(g.kc * 1.5 / 30).toFixed(2)})`, fj);
+      const sameT = r.filter(e => e.ks[0] === 1 && e.ks[1] === 1).length / Math.max(1, r.filter(e => e.ks[0] === 1 || e.ks[1] === 1).length);
+      ok(sameT < 0.6, `${w}: each on its own timing (both stepping together ${(sameT * 100).toFixed(0)}% of the stepping time)`, sameT);
+      ok(r.every(e => !(e.sv >= 0 && e.fs === 1)), `${w}: the tom: never two idle motions at once`, '');
       await ses.close();
     }
   }

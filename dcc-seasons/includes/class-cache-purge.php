@@ -36,15 +36,32 @@ class Cache_Purge {
     public static function purge(): array {
         $ran = [];
 
-        // SpeedyCache / SpeedyCache Pro — the cache actually running here.
-        foreach (['speedycache_clear_cache', 'speedycache_clear_all_cache', 'speedycache_purge_all'] as $fn) {
-            if (function_exists($fn)) {
-                try {
-                    $fn();
-                    $ran[] = 'SpeedyCache (' . $fn . '())';
-                    break;
-                } catch (\Throwable $e) {
-                    self::log($fn, $e);
+        /*
+         * SpeedyCache Pro as installed here (the Website Director, 2026-11-04,
+         * on live): \SpeedyCache\Delete::all_cache() exists, and none of the
+         * function or Cache:: entry points below do — which is why every save
+         * until 4.16.0 reported that nothing could be purged.
+         */
+        if (class_exists('\SpeedyCache\Delete') && method_exists('\SpeedyCache\Delete', 'all_cache') && is_callable(['\SpeedyCache\Delete', 'all_cache'])) {
+            try {
+                \SpeedyCache\Delete::all_cache();
+                $ran[] = 'SpeedyCache';
+            } catch (\Throwable $e) {
+                self::log('SpeedyCache\Delete::all_cache', $e);
+            }
+        }
+
+        // Older SpeedyCache entry points, tried only if the above did not run.
+        if (!$ran) {
+            foreach (['speedycache_clear_cache', 'speedycache_clear_all_cache', 'speedycache_purge_all'] as $fn) {
+                if (function_exists($fn)) {
+                    try {
+                        $fn();
+                        $ran[] = 'SpeedyCache (' . $fn . '())';
+                        break;
+                    } catch (\Throwable $e) {
+                        self::log($fn, $e);
+                    }
                 }
             }
         }
@@ -59,6 +76,21 @@ class Cache_Purge {
                         self::log($class . '::' . $method, $e);
                     }
                 }
+            }
+        }
+
+        /*
+         * The host's nginx proxy cache (HostGator / Endurance) sits in front of
+         * SpeedyCache and is purged through the epc_purge action; only fired
+         * when something listens, so the notice never names a purge with
+         * nobody behind it.
+         */
+        if (function_exists('has_action') && has_action('epc_purge')) {
+            try {
+                do_action('epc_purge');
+                $ran[] = 'Server cache';
+            } catch (\Throwable $e) {
+                self::log('epc_purge', $e);
             }
         }
 

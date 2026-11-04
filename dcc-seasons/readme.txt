@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.15.2
+Stable tag: 4.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,22 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.16.0 =
+Three changes from Rob.
+* The falling pieces and the background layer fall in front of text again
+  (headings, paragraphs, list items and labels). They still pass under
+  buttons, links, fields and selects, and anything marked
+  data-dcc-seasons-occlude.
+* Thanksgiving: the tom no longer walks. He holds his strut in one place
+  near the right edge at the foot of the screen, fades in where he stands,
+  and now and then, one thing at a time, rattles his fan or feeds. His two
+  poults each keep their own spot and ground line, one on either side of
+  him, taking a few real steps, pausing and pecking on their own timing.
+  They never pass in front of or behind him.
+* Saving the settings now purges SpeedyCache (SpeedyCache\Delete::all_cache)
+  and the host's server cache (the epc_purge action), and the notice names
+  what was purged. The same purge runs after an upgrade.
 
 = 4.15.2 =
 Occlusion alone, and a tom who eats less (Rob).

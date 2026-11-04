@@ -78,6 +78,9 @@ function watch(secs) {
     const ks = frame.slice().sort((a, b) => a - b);
     /* on screen only: a re-seed moves them between two off-screen spots */
     const inV = v => v > 0 && v < s.vw;
+    /* 4.16.0: a poult's turn pivots on its feet, so its box centre moves as it mirrors; test-calm.js holds its feet */
+    const turning = t && t.ks && (t.ks[0] === 3 || t.ks[1] === 3);
+    if (turning) { prevK = null; continue; }
     if (prevK && ks.length === prevK.length && ks.length === 2 && ks.concat(prevK).every(inV)) { jump = Math.max(jump, ...ks.map((v, j) => Math.abs(v - prevK[j]))); }
     prevK = ks.length ? ks : null;
   }

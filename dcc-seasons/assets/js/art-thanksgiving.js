@@ -148,9 +148,11 @@
 	 * leg, in that photo's pixels / 10 (origin 370, 1085). He faces RIGHT,
 	 * ~108 units wide, feet on y = 101.
 	 *
-	 * tkPaint(g, ph, d, j): ph = walk phase 0-1 (two steps; < 0 stands), d =
-	 * how far the head is down to feed (0 strut - 1 at the ground), j = the
-	 * peck's jab. The engine PRE-DRAWS the frames once after load
+	 * tkPaint(g, ph, d, j, sh): ph = walk phase 0-1 (two steps; < 0 stands),
+	 * d = how far the head is down to feed (0 strut - 1 at the ground), j =
+	 * the peck's jab, sh = the display rattle (4.16.0, Rob: a short tail-fan
+	 * shiver): [amplitude in radians, phase 0-1], each feather quivering about
+	 * the pivot a little out of step with its neighbours, as the quills do. The engine PRE-DRAWS the frames once after load
 	 * (`tkCache`): a crossing is one drawImage a frame. */
 	var TK = {
 		fan: '#5E4331', bar: 'rgba(28,17,11,.78)', sub: '#1B1310', tip0: '#A9744A', tip1: '#E6CDA4', cov: '#38231A', covEdge: '#8E6440', cov2: '#2E2018', cov2Edge: '#86603E', body: '#16110F', wing: '#1A1512', wbar: '#E4DED2', crown: '#F1F0F3', face: '#4F72D2', face2: '#86A6EA',
@@ -414,7 +416,7 @@
 		var u = (ph - TK_STANCE) / (1 - TK_STANCE), e = u * u * (3 - 2 * u);
 		return [hx - TK_STRIDE / 2 + TK_STRIDE * e, TK_GROUND - 1 - 4.5 * Math.sin(Math.PI * u), Math.sin(Math.PI * u)];
 	}
-	function tkPaint(g, ph, d, j) {
+	function tkPaint(g, ph, d, j, sh) {
 		var walk = ph >= 0, bob = walk ? -0.9 * Math.cos(ph * Math.PI * 4) : 0, i;
 		var h2 = walk ? (ph * 2) % 1 : 0, hb = walk ? (h2 < 0.65 ? 1.6 - 3.2 * h2 / 0.65 : -1.6 + 3.2 * (h2 - 0.65) / 0.35) : 0;
 		/* feeding (Rob's pick, fan up), from "Adult and young turkey" (NPS,
@@ -432,7 +434,7 @@
 		var A0 = 2.05, A1 = 5.5, N = 17, order = [], fw = (A1 - A0) / (N - 1);
 		for (i = 0; i < N; i++) { order.push(i); }
 		order.sort(function (a, b) { return Math.abs(b - 8.5) - Math.abs(a - 8.5); });
-		for (i = 0; i < N; i++) { var a = A0 + fw * order[i]; tkFeather(g, a, tkFanR(a), tkFanR(a) * fw * 1.35, order[i]); }
+		for (i = 0; i < N; i++) { var a = A0 + fw * order[i], qv = sh ? sh[0] * Math.sin(Math.PI * 2 * (sh[1] + order[i] * 0.37)) : 0; tkFeather(g, a + qv, tkFanR(a) * (1 + qv * 0.35), tkFanR(a) * fw * 1.35, order[i]); }
 		/* the coverts: a row of big rounded ones, a smaller copper row, then
 		 * the rump's pale-tipped feathers into the back */
 		tkCoverts(g, 0.72, 2.2, 5.3, 11, 13, TK.cov, TK.covEdge, 500);
@@ -642,7 +644,9 @@
 	 * worker), mirrored to face LEFT as every walker's art does. o: H his
 	 * height at the largest size the theme draws him, k a poult's share of
 	 * it, fr / kfr the walk frames, dpr. Keys: 'w0'-'w15' the walk,
-	 * 'p1'-'p4' the head lowering to feed, 'pj' the jab; 'k…' a poult. */
+	 * 'p1'-'p4' the head lowering to feed, 'pj' the jab, 'rLP' the fan's
+	 * rattle at level L (1, 2) and phase P (0-3), standing as in 'w0'; 'k…'
+	 * a poult. */
 	function tkDraw(c, key, o) {
 		var poult = key.charAt(0) === 'k', b = poult ? KP_BOX : TK_BOX, k2 = poult ? key.slice(1) : key;
 		var u = o.H * (poult ? o.k : 1) / (b[3] - b[1]), s2 = u * o.dpr, g;
@@ -651,7 +655,8 @@
 		if (g) {
 			g.setTransform(-s2, 0, 0, s2, b[2] * s2, -b[1] * s2);
 			var ph = k2.charAt(0) === 'w' ? +k2.slice(1) / (poult ? o.kfr : o.fr) : 0, d = k2.charAt(0) === 'p' ? (k2 === 'pj' ? 1 : +k2.slice(1) / 4) : 0;
-			if (poult) { kpPaint(g, ph, d); } else { tkPaint(g, ph, d, k2 === 'pj' ? 1 : 0); }
+			var sh = k2.charAt(0) === 'r' ? [+k2.charAt(1) * 0.012, +k2.charAt(2) / 4] : null;
+			if (poult) { kpPaint(g, ph, d); } else { tkPaint(g, ph, d, k2 === 'pj' ? 1 : 0, sh); }
 		}
 		return { w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u, u: u };
 	}
