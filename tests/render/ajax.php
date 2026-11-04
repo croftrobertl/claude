@@ -15,6 +15,8 @@
  * Environment, for the staff endpoints (0.48.0):
  *   MPHBAC_GATE=closed      the staff password cookie is not held
  *   MPHBAC_LOGGED_IN=1      a logged-in manager instead of the cookie
+ *   MPHBAC_EDIT_LINK=1      print get_edit_post_link(<booking_id>, 'raw') for
+ *                           this visitor to stderr as "EDITLINK <url>" (0.55.0)
  *   MPHBAC_METHOD=GET       the request's method (POST by default)
  *   MPHBAC_STATE=<file>     the plugin's mphbac_ready_* options, kept
  *                           between requests (each request is a process)
@@ -40,8 +42,15 @@ if (!function_exists('wp_unslash')) { function wp_unslash($v) { return $v; } }
 if (!function_exists('update_meta_cache')) { function update_meta_cache($t, $ids) { return true; } }
 if (!function_exists('_prime_post_caches')) { function _prime_post_caches($ids, $a = true, $b = true) {} }
 if (!function_exists('get_userdata')) { function get_userdata($id) { return false; } }
-if (!function_exists('get_edit_post_link')) { function get_edit_post_link($id, $c = '') { return ''; } }
+// As WordPress's own (0.55.0: was a stub returning ''): the edit address
+// only for a user who may edit_post it — so a test can tell the plugin's
+// own link (Staff::admin_link_for) from this capability-checked one.
+if (!function_exists('get_edit_post_link')) { function get_edit_post_link($id, $c = 'display') { if (!current_user_can('edit_post', $id)) { return null; } return admin_url('post.php?post=' . (int) $id . ($c === 'display' ? '&amp;' : '&') . 'action=edit'); } }
 
+if (getenv('MPHBAC_EDIT_LINK') === '1') {
+    parse_str($body, $q);
+    fwrite(STDERR, 'EDITLINK ' . (string) get_edit_post_link((int) ($q['booking_id'] ?? 0), 'raw') . "\n");
+}
 $state = (string) getenv('MPHBAC_STATE');
 if ($state !== '' && is_file($state)) {
     foreach ((array) json_decode((string) file_get_contents($state), true) as $k => $v) {

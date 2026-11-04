@@ -1338,9 +1338,11 @@
                     var el = rowsSection(pair[0], pair[1], d.id, pair[2]);
                     if (el) sheetBody.appendChild(el);
                 });
-            // OPEN IN WP-ADMIN (0.44.0): the server sends the link ONLY to a
-            // logged-in visitor with the staff capability who may edit this
-            // booking; its absence is the decision. Same-origin http(s) only.
+            // OPEN IN WP-ADMIN. Since 0.55.0 (Rob) the server sends the
+            // booking's plain edit address to EVERY authorized staff visitor,
+            // the password-cookie one included — never with a token; wp-admin's
+            // own login is the gate. Its absence (no such booking) is still the
+            // decision. Same-origin http(s) only (safeUrl).
             var admin = safeUrl(d.adminUrl);
             if (admin) {
                 var p = document.createElement('p');
@@ -1351,9 +1353,52 @@
                 a.target = '_blank';
                 a.rel = 'noopener noreferrer';
                 a.textContent = S.openAdmin || 'Open in WP-Admin';
+                // IN THE HOME SCREEN WEB APP (0.55.0, Rob): its cookies are its
+                // own, so wp-admin there is never logged in — the link opens in
+                // Chrome instead, where Rob is. Built only from the validated
+                // URL above. In a browser tab nothing changes.
+                var chrome = isStandalone() ? chromeUrl(admin) : '';
+                if (chrome) {
+                    a.href = chrome;
+                    a.removeAttribute('target');
+                    a.addEventListener('click', function () { chromeFallback(admin); });
+                }
                 p.appendChild(a);
                 sheetBody.appendChild(p);
             }
+        }
+
+        // The Home Screen web app: the standard display-mode query, or iOS
+        // Safari's own navigator.standalone.
+        function isStandalone() {
+            try { if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true; } catch (e) { /* none */ }
+            return window.navigator.standalone === true;
+        }
+        // Chrome's documented iOS scheme: http → googlechrome://,
+        // https → googlechromes://, the same host, path and query. Only ever
+        // called with a URL safeUrl() has already accepted.
+        function chromeUrl(u) {
+            var m = /^(https?):\/\/(.+)$/.exec(u);
+            if (!m) return '';
+            return (m[1] === 'https' ? 'googlechromes://' : 'googlechrome://') + m[2];
+        }
+        // CHROME NOT INSTALLED: the tap leaves the web app on screen. If the
+        // page has not gone hidden (visibilitychange / pagehide) about 1.5s
+        // after the tap, the plain https link opens instead.
+        var CHROME_WAIT_MS = 1500;
+        function chromeFallback(url) {
+            var left = false;
+            var gone = function () { left = true; };
+            var vis = function () { if (document.hidden) left = true; };
+            document.addEventListener('visibilitychange', vis);
+            window.addEventListener('pagehide', gone);
+            setTimeout(function () {
+                document.removeEventListener('visibilitychange', vis);
+                window.removeEventListener('pagehide', gone);
+                if (left || document.hidden) return;
+                var w = window.open(url, '_blank');
+                if (w) { try { w.opener = null; } catch (e) { /* cross-origin */ } } else { window.location.assign(url); }
+            }, CHROME_WAIT_MS);
         }
 
         function safeUrl(u) {

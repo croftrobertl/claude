@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.54.0
+Stable tag: 0.55.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.55.0 =
+* **"Open in WP-Admin" for every staff visitor (Rob).** The booking pop-up on /staff/ now shows the button to everyone the board lets in, including staff who signed in with the page password only (a Home Screen web app on iOS keeps its own cookies, so there it never knew Rob was logged in). The link is only the booking's plain edit address, never a login token or code: WordPress's own login is the gate, and after logging in it brings you back to that booking.
+* **From the Home Screen web app, it opens in Chrome.** Inside the web app the button hands the same address to Chrome (googlechromes://), where you are logged in. If Chrome isn't installed and nothing happens within about 1.5 seconds, the normal link opens instead. In a normal browser tab nothing changes.
+* Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.54.0 =
 * **Booking pop-up on /staff/: notes in plain text weight (Rob).** The text of each note is no longer bold, so copying it into a message no longer carries bold with it. The bold came from the theme's sitewide bold, which the pop-up (moved to the page's body) inherited; only the note text changes. Labels and the other sections are as before.

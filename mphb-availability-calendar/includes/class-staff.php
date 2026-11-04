@@ -387,12 +387,19 @@ final class Staff
             // other miss — no probing difference.
             wp_send_json_error(['message' => __('Booking not found.', 'mphb-availability-calendar')], 404);
         }
-        // OPEN IN WP-ADMIN (0.44.0) is decided HERE, server-side, and the link
-        // is simply absent otherwise — never sent and hidden. Only a visitor
-        // LOGGED IN with the staff capability who may edit this very booking
-        // gets it; a password-only visitor never does, whatever the client
-        // asks. mphb_booking has map_meta_cap, so edit_post maps to
-        // edit_mphb_booking (verified on live by the Website Director).
+        // OPEN IN WP-ADMIN — since 0.55.0 (Rob) for EVERY authorized staff
+        // visitor, the password-cookie visitor included: on iOS 26 a Home
+        // Screen web app has its own cookies, so inside it Rob is never
+        // logged in, and the 0.44.0 rule (logged in + the staff capability
+        // + edit_post on this booking) hid the button from him there.
+        // What is sent is ONLY the booking's plain edit address — no nonce,
+        // no token, no credential of any kind. wp-admin's own login check is
+        // the gate: someone not logged in lands on wp-login.php, and its
+        // redirect_to brings them back to this booking; someone logged in
+        // without the right to edit it is refused by wp-admin itself.
+        // Reached only past require_authorization() above (an unauthorized
+        // caller has had its empty 403) and only for a real booking staff
+        // may see ($detail non-null).
         $admin = self::admin_link_for($booking_id);
         if ($admin !== '') {
             $detail['adminUrl'] = $admin;
@@ -424,13 +431,24 @@ final class Staff
         wp_send_json_success(['results' => $results, 'count' => count($results)]);
     }
 
-    /** The booking's edit screen, or '' for anyone who may not use it. */
+    /**
+     * The booking's edit screen: the plain address, built as WordPress's
+     * get_edit_post_link($id, 'raw') builds it — admin_url() of the post
+     * type's _edit_link and '&action=edit', through the same filter — but
+     * without its "may the CURRENT user edit this?" check, which would
+     * return nothing for a password-cookie visitor (0.55.0). Byte-equal to
+     * what a logged-in admin got before. '' when there is no such post.
+     */
     public static function admin_link_for(int $booking_id): string
     {
-        if (!is_user_logged_in() || !current_user_can(self::capability()) || !current_user_can('edit_post', $booking_id)) {
+        $post = $booking_id > 0 ? get_post($booking_id) : null;
+        if (!$post) {
             return '';
         }
-        $url = get_edit_post_link($booking_id, 'raw');
+        $type = function_exists('get_post_type_object') ? get_post_type_object($post->post_type) : null;
+        $tpl = ($type && !empty($type->_edit_link)) ? (string) $type->_edit_link : 'post.php?post=%d';
+        $url = admin_url(sprintf($tpl . '&action=edit', $booking_id));
+        $url = apply_filters('get_edit_post_link', $url, $booking_id, 'raw');
         return is_string($url) ? $url : '';
     }
 

@@ -16,9 +16,11 @@
  *   sheet would not (an import carrying only the cottage's capacity shows
  *   nothing).
  *
- *   WP-ADMIN: decided on the server. Only a LOGGED-IN visitor with the staff
- *   capability who may edit_post THIS booking gets the link; a password-only
- *   visitor never does.
+ *   WP-ADMIN: decided on the server. Since 0.55.0 (Rob) EVERY authorized
+ *   staff visitor gets the booking's plain edit address, the password-cookie
+ *   visitor included — the same bytes a logged-in admin gets, never a token;
+ *   wp-admin's own login is the gate. (Until 0.55.0: only a LOGGED-IN
+ *   visitor with the staff capability who could edit_post the booking.)
  */
 namespace {
     $GLOBALS['t_auth'] = ['logged_in' => true, 'caps' => ['edit_mphb_bookings' => true, 'edit_post' => true]];
@@ -34,7 +36,9 @@ namespace {
     function delete_transient($k) { return true; }
     function _prime_post_caches($ids, $terms = true, $meta = false) {}
     function update_meta_cache($type, $ids) {}
-    function get_edit_post_link($id, $context = 'display') { return 'https://example.test/wp-admin/post.php?post=' . (int) $id . '&action=edit'; }
+    // As WordPress's own: nothing for a user who may not edit_post it.
+    function get_edit_post_link($id, $context = 'display') { if (!current_user_can('edit_post', $id)) { return null; } return admin_url('post.php?post=' . (int) $id . ($context === 'display' ? '&amp;' : '&') . 'action=edit'); }
+    function admin_url($p = '') { return 'https://example.test/wp-admin/' . ltrim((string) $p, '/'); }
     function is_email($e) { return (bool) filter_var($e, FILTER_VALIDATE_EMAIL); }
     function sanitize_email($e) { return filter_var($e, FILTER_SANITIZE_EMAIL); }
     class T_Json extends \Exception { public $payload; public $code_; }
@@ -310,31 +314,45 @@ namespace {
         check('an email that is not an address: shown, NOT linked', isset($rows['Email']) && !isset($rows['Email']['email']), $rows['Email'] ?? null);
     }
 
-    echo "\n-- Open in WP-Admin: decided on the server --\n";
+    // 0.55.0 (Rob): THE RULE CHANGED, ON PURPOSE. Until 0.55.0 four checks
+    // here said a visitor who was not logged in with the capability and
+    // edit_post got NO link; each now says the opposite, deliberately: every
+    // visitor the board answers gets the same plain edit address.
+    echo "\n-- Open in WP-Admin: every authorized visitor, the plain edit address (0.55.0) --\n";
     {
         $ask = static function (): array {
             $_POST = $_REQUEST = ['booking_id' => '900', 'nonce' => 'good'];
             try { Staff::handle_booking(); } catch (T_Json $e) { return (array) $e->payload; }
             return [];
         };
+        $PLAIN = 'https://example.test/wp-admin/post.php?post=900&action=edit';
         $GLOBALS['t_auth'] = ['logged_in' => true, 'caps' => ['edit_mphb_bookings' => true, 'edit_post' => true]];
-        $d = $ask();
-        check('logged in, staff capability, may edit this booking: the link is sent',
-            ($d['adminUrl'] ?? '') === 'https://example.test/wp-admin/post.php?post=900&action=edit', $d['adminUrl'] ?? null);
+        $admin = $ask();
+        $core = get_edit_post_link(900, 'raw');
+        check('a logged-in admin: the link, exactly what WordPress\'s get_edit_post_link(900, \'raw\') gives that admin (as 0.54.0 sent)',
+            ($admin['adminUrl'] ?? '') === $PLAIN && $core === $PLAIN, [$admin['adminUrl'] ?? null, $core]);
         $GLOBALS['t_auth'] = ['logged_in' => true, 'caps' => ['edit_mphb_bookings' => true]];
-        check('logged in with the capability but NOT edit_post on this booking: no link', !isset($ask()['adminUrl']));
-        $GLOBALS['t_auth'] = ['logged_in' => true, 'caps' => ['edit_post' => true, 'edit_mphb_bookings' => false]];
-        // Authorized for the board by the password instead, so the request is answered at all.
-        $GLOBALS['t_auth']['password_ok'] = true;
+        check('CHANGED: logged in with the capability but not edit_post on this booking: the same link (wp-admin refuses them itself)', ($ask()['adminUrl'] ?? '') === $PLAIN);
+        $GLOBALS['t_auth'] = ['logged_in' => true, 'caps' => ['edit_post' => true, 'edit_mphb_bookings' => false], 'password_ok' => true];
         update_option('mphbac_settings', ['staff_page_id' => 18102]);
         t_post(18102, 'page', 'publish', 'Staff');
         $GLOBALS['t_posts'][18102]->post_password = 'secret';
         $d = $ask();
         check('(instrument check) the password-only request IS answered', isset($d['id']), $d);
-        check('logged in WITHOUT the staff capability (password only): no link', !isset($d['adminUrl']));
-        $GLOBALS['t_auth'] = ['logged_in' => false, 'caps' => ['edit_mphb_bookings' => true, 'edit_post' => true], 'password_ok' => true];
+        check('CHANGED: logged in WITHOUT the staff capability (password only): the same link', ($d['adminUrl'] ?? '') === $PLAIN, $d['adminUrl'] ?? null);
+        $GLOBALS['t_auth'] = ['logged_in' => false, 'caps' => [], 'password_ok' => true];
         $d = $ask();
-        check('not logged in at all, password cookie only: no link, even if a capability check would pass', isset($d['id']) && !isset($d['adminUrl']), $d['adminUrl'] ?? null);
+        check('(instrument check) for this visitor WordPress\'s own get_edit_post_link() gives nothing', get_edit_post_link(900, 'raw') === null);
+        check('CHANGED: NOT logged in, password cookie only: the link, byte-equal to the logged-in admin\'s', isset($d['id']) && ($d['adminUrl'] ?? '') === $admin['adminUrl'], $d['adminUrl'] ?? null);
+        parse_str((string) parse_url($d['adminUrl'], PHP_URL_QUERY), $q);
+        check('...the plain edit address: https, /wp-admin/post.php, ?post=900&action=edit and nothing else — no nonce, no token, no key',
+            parse_url($d['adminUrl'], PHP_URL_SCHEME) === 'https' && parse_url($d['adminUrl'], PHP_URL_PATH) === '/wp-admin/post.php' && $q === ['post' => '900', 'action' => 'edit']
+            && !preg_match('/nonce|token|key|auth|login|pass/i', $d['adminUrl']), $d['adminUrl']);
+        unset($admin['adminUrl'], $d['adminUrl']);
+        check('...and the rest of the answer is the logged-in admin\'s, byte for byte', json_encode($d) === json_encode($admin));
+        $_POST = $_REQUEST = ['booking_id' => '424242', 'nonce' => 'good'];
+        try { Staff::handle_booking(); $nf = []; } catch (T_Json $e) { $nf = ['code' => $e->code_, 'p' => $e->payload]; }
+        check('no such booking: the 404, and no link', ($nf['code'] ?? 0) === 404 && !isset($nf['p']['adminUrl']), $nf);
     }
 
     echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
