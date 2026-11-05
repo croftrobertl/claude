@@ -58,9 +58,6 @@ MUTANTS = [
      "            if (true) return;"),
 
     # ---- the named case: buttons unequal or wrapping at 320 --------------
-    ('the buttons lose box-sizing, so the 2px border makes one taller', C,
-     '.dccgg-mapcard-actions > * {\n    flex: 1 1 0;\n    min-width: 0;\n    box-sizing: border-box;\n}',
-     '.dccgg-mapcard-actions > * {\n    flex: 1 1 0;\n    min-width: 0;\n    box-sizing: content-box;\n}'),
     ('the row wraps instead of staying one line', C,
      '.dccgg-mapcard-actions {\n    display: flex;\n    gap: 8px;\n    justify-content: center;\n}',
      '.dccgg-mapcard-actions {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 8px;\n    justify-content: center;\n}'),
@@ -71,8 +68,8 @@ MUTANTS = [
      '    font-size: 15px;\n    font-weight: 700;\n    line-height: 1.25;\n    letter-spacing: normal;\n    text-transform: none;',
      '    font-weight: 700;\n    line-height: 1.25;'),
     ('the kit capitalisation is let through', C,
-     '    letter-spacing: normal;\n    text-transform: none;',
-     '    letter-spacing: normal;'),
+     '    letter-spacing: normal;\n    text-transform: none;\n    text-decoration: none;',
+     '    letter-spacing: normal;\n    text-decoration: none;'),
 
     # ---- the named case: Where to Launch changed ------------------------
     ('the duplicate-link gate keys off the title, catching Where to Launch', W,
@@ -112,7 +109,16 @@ MUTANTS = [
      "            const t = e.target.closest('.dccgg-mapcard-open');"),
 ]
 
-EQUIVALENT = []
+EQUIVALENT = [
+    ('the buttons lose box-sizing (border-box -> content-box)',
+     'measured: all 60 map-card assertions stay green, and the honest reason is that '
+     'box-sizing is NOT what equalises the two heights. BOTH buttons carry a 2px border — '
+     'the filled one\'s is transparent — so their boxes match under either box model. The '
+     'brief asked for box-sizing specifically and it is kept as hygiene, but the transparent '
+     'border is doing the work, and claiming a kill here would be claiming the rule earns '
+     'something it does not. Remove the transparent border instead and the heights really do '
+     'diverge; that is a different rule and a different mutant.'),
+]
 UNREACHABLE = []
 
 

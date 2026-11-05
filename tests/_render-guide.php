@@ -84,7 +84,17 @@ namespace Elementor {
                 . 'data-widget_type="html.default"><div class="elementor-widget-container">'
                 . '<iframe src="https://www.google.com/maps/d/embed?mid=1mnhrewsiRpXeD9f_AvolglnCbpvLylo&amp;ehbc=2E312F&amp;noprof=1" '
                 . 'width="640" height="480"></iframe>'
-                . '</div></div></div>';
+                . '</div></div>'
+                // A SECOND iframe in the SAME template, and not a map. The
+                // swap's early return skips any template with no My Maps
+                // embed in it at all, so a template holding only one kind of
+                // iframe cannot tell a narrow regex from a greedy one — the
+                // "match any iframe" mutant survived until this was here.
+                . '<div class="elementor-element elementor-widget elementor-widget-video" '
+                . 'data-widget_type="video.default"><div class="elementor-widget-container">'
+                . '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" '
+                . 'width="640" height="360"></iframe></div></div>'
+                . '</div>';
         }
     }
     class DCCGG_Test_Elementor {

@@ -3379,7 +3379,14 @@
         const close = document.createElement('button');
         close.type = 'button';
         close.className = 'dccgg-maplayer-close';
-        close.innerHTML = '<span aria-hidden="true">&times;</span>';
+        // An SVG cross rather than &times;: the glyph is the only way out of
+        // the layer for a guest who does not know about Esc or the back
+        // gesture, and in the site's own Raleway the × character renders as
+        // a heavy four-pointed mark that does not read as "close". A path
+        // looks the same in every font.
+        close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" '
+            + 'width="20" height="20"><path fill="currentColor" d="M18.3 5.71 12 12.01l-6.29-6.3-1.42 1.42'
+            + ' 6.3 6.29-6.3 6.29 1.42 1.42 6.29-6.3 6.29 6.3 1.42-1.42-6.3-6.29 6.3-6.29z"/></svg>';
         bar.appendChild(h);
         bar.appendChild(close);
         const frameWrap = document.createElement('div');
