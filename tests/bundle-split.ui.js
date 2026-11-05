@@ -181,14 +181,25 @@ const check = (name, cond, detail) => {
         // The three-tap lesson: the poster must play on the FIRST press, which
         // means the chunk was already in place before the guest could press it.
         await page.tap('.dccgg-tile[data-key="map"]'); await page.waitForTimeout(700);
+        // COUNT THE DELTA, not every iframe in the panel. This asserted
+        // "0 before, 1 after", which quietly also asserted that the Map
+        // section contains no other iframe — and from v0.27.8 it does: the
+        // fixture's map template carries a second, non-map iframe on
+        // purpose, to prove the map swap matches a My Maps embed and not
+        // "any iframe". The panel then starts at 1 and this read 1 -> 2.
+        // What the three-tap lesson is actually about is that ONE press
+        // produces the player, so that is what is measured.
         const before = await page.$$eval('.dccgg-detail:not([hidden]) iframe', (e) => e.length);
         const poster = await page.$('.dccgg-detail:not([hidden]) .dccgg-video-poster');
         check('the video poster is there', !!poster);
         if (poster) {
             await poster.tap(); await page.waitForTimeout(500);
             const after = await page.$$eval('.dccgg-detail:not([hidden]) iframe', (e) => e.length);
-            check('one tap plays it — no second or third tap needed', before === 0 && after === 1,
+            check('one tap plays it — no second or third tap needed', after - before === 1,
                 `${before} -> ${after}`);
+            const played = await page.$$eval('.dccgg-detail:not([hidden]) iframe',
+                (els) => els.filter((e) => /youtube|vimeo|player/i.test(e.getAttribute('src') || '')).length);
+            check('…and what appeared is a video player', played >= 1, String(played));
         }
         await ctx.close();
     }
