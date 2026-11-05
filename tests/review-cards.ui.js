@@ -369,6 +369,13 @@ const READ = () => {
             JSON.stringify(r.cards.map((c) => c.sub)));
         check('the card is still a live link',
             g.href && g.target === '_blank', `${g.href} ${g.target}`);
+        // THE TICK MUST NOT BE GREEN EITHER. Section C checks the no-green
+        // rule on a fresh panel, where no card has been tapped — so it
+        // never saw the reviewed state, and a mutant that turned the tick
+        // green again survived the first run. The colour is only reachable
+        // after a tap, so the check belongs here.
+        check('the tick is the guide\'s blue, not green',
+            g.subColour === 'rgb(0, 107, 207)', String(g.subColour));
         // ...and it survives a reload, on this device only
         // A REAL reload, which only became possible once the page had an
         // origin: the first version used setContent, whose about:blank has

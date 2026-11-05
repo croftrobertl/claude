@@ -66,14 +66,18 @@ class DCCGG_Halt extends \Exception { public $payload; public $code_; }
 function wp_send_json_error($p = null, $c = 0) { $e = new DCCGG_Halt('error'); $e->payload = $p; $e->code_ = $c; throw $e; }
 function wp_send_json_success($p = null, $c = 0) { $e = new DCCGG_Halt('success'); $e->payload = $p; $e->code_ = $c; throw $e; }
 
+// v0.27.9: honour DCCGG_PLUGIN_DIR, so a mutation runner pointing this
+// suite at a mutant actually gets the mutant. It hard-coded the path and
+// loaded the real plugin instead — the trap CLAUDE.md records.
+$GLOBALS['PLUGIN'] = $PLUGIN = rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/') . '/';
 require __DIR__ . '/_elementor-stub.php';
 // v0.23.0: the renderer and the handlers read plugin settings.
 if (!function_exists('get_option'))    { function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; } }
 if (!function_exists('update_option')) { function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; } }
 if (!function_exists('did_action'))    { function did_action($h) { return 0; } }
-require __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
+require $PLUGIN . 'includes/class-settings.php';
 
-require __DIR__ . '/../dcc-guest-guide/includes/class-plugin.php';
+require $PLUGIN . 'includes/class-plugin.php';
 
 $pass = 0; $fail = 0; $failures = [];
 function check($name, $cond, $detail = '') {

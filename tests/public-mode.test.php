@@ -36,14 +36,21 @@ function sanitize_html_class($s) { return preg_replace('/[^A-Za-z0-9_-]/', '', (
 function wp_unique_id($p = '') { static $i = 0; return $p . (++$i); }
 function absint($n) { return abs((int) $n); }
 
+// v0.27.9: honour DCCGG_PLUGIN_DIR. This suite hard-coded the plugin path
+// and so loaded the REAL plugin even when a mutation runner pointed it at a
+// mutant — it has been in three runners contributing nothing, and a mutant
+// it should have killed survived the 0.27.9 run. CLAUDE.md records this
+// exact trap twice before. It was never credited with a kill, so no result
+// was ever wrong in the other direction.
+$GLOBALS['PLUGIN'] = $PLUGIN = rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/') . '/';
 require __DIR__ . '/_elementor-stub.php';
 // v0.23.0: the renderer and the handlers read plugin settings.
 if (!function_exists('get_option'))    { function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; } }
 if (!function_exists('update_option')) { function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; } }
 if (!function_exists('did_action'))    { function did_action($h) { return 0; } }
-require __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
+require $PLUGIN . 'includes/class-settings.php';
 
-require __DIR__ . '/../dcc-guest-guide/includes/class-widget.php';
+require $PLUGIN . 'includes/class-widget.php';
 
 $pass = 0; $fail = 0; $failures = [];
 function check($name, $cond, $detail = '') {

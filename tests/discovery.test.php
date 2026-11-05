@@ -56,9 +56,16 @@ class WP_Query {
     }
 }
 
+// v0.27.9: honour DCCGG_PLUGIN_DIR. This suite hard-coded the plugin path
+// and so loaded the REAL plugin even when a mutation runner pointed it at a
+// mutant — it has been in three runners contributing nothing, and a mutant
+// it should have killed survived the 0.27.9 run. CLAUDE.md records this
+// exact trap twice before. It was never credited with a kill, so no result
+// was ever wrong in the other direction.
+$GLOBALS['PLUGIN'] = $PLUGIN = rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/') . '/';
 require __DIR__ . '/_elementor-stub.php';
-require __DIR__ . '/../dcc-guest-guide/includes/class-widget.php';
-require __DIR__ . '/../dcc-guest-guide/includes/class-plugin.php';
+require $PLUGIN . 'includes/class-widget.php';
+require $PLUGIN . 'includes/class-plugin.php';
 
 $pass = 0; $fail = 0; $failures = [];
 function check($name, $cond, $detail = '') {

@@ -18,7 +18,11 @@ function sanitize_text_field($s) { return trim(strip_tags((string) $s)); }
 function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; }
 function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; }
 function did_action($h) { return $GLOBALS['did'][$h] ?? 0; }
-require __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
+// v0.27.9: honour DCCGG_PLUGIN_DIR, so a mutation runner pointing this
+// suite at a mutant actually gets the mutant. It hard-coded the path and
+// loaded the real plugin instead — the trap CLAUDE.md records.
+$GLOBALS['PLUGIN'] = $PLUGIN = rtrim(getenv('DCCGG_PLUGIN_DIR') ?: __DIR__ . '/../dcc-guest-guide', '/') . '/';
+require $PLUGIN . 'includes/class-settings.php';
 
 $pass = 0; $fail = 0; $failures = [];
 function check($name, $cond, $detail = '') {
