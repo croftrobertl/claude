@@ -1453,12 +1453,12 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-kpi-num {
     margin: 0;
     color: var(--staff-text);
-    font-size: 24px;                   /* 22 until 0.47.0: every Stats size +2px (Rob) */
+    font-size: 22px;                   /* 22 until 0.47.0, 24 until 0.57.1 (Rob: the figures slightly smaller, the ▲▼ larger) */
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
-.mphbac-staff-kpi-unit { font-size: 0.6em; font-weight: 700; }
+.mphbac-staff-kpi-unit { font-size: 14px; font-weight: 700; }   /* 0.6em of the figure until 0.57.1; 14, the small-label step, follows the 22px figure */
 .mphbac-staff-kpi-label {
     margin-top: 2px;
     color: var(--staff-muted);
@@ -1600,6 +1600,12 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-h.is-delta { width: min-content; justify-self: end; white-space: normal; }
     .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot .mphbac-staff-percot-year { white-space: nowrap; }
 }
+/* 320px phones (0.57.1, Rob): the gaps 2px, so "#23 Lighthouse" and "#35
+   Blue Heron" (118px) stay on one line; "#31 Hibiscus Hut" (127px) still
+   breaks between its words, as it did in 0.56.0. 360px and up unchanged. */
+@media (max-width: 340px) {
+    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 2px; }
+}
 
 /* ---- 0.46.0 STATS (Rob): ‹ › round the date line, ⓘ tips, ▲ ▼, and the
    new blocks. Every one is filled by staff.js with textContent. ---- */
@@ -1635,7 +1641,7 @@ body.mphbac-staff-open { overflow: hidden; }
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
-.mphbac-staff-kpi-delta { margin: 2px 0 0; }
+.mphbac-staff-kpi-delta { margin: 2px 0 0; font-size: 16px; }   /* 14 until 0.57.1 (Rob: the ▲▼ larger, read comfortably) */
 .mphbac-staff-kpi-delta.is-up,
 .mphbac-staff-percot-delta.is-up,
 .mphbac-staff-pace-delta.is-up { color: var(--staff-in); }
@@ -2531,7 +2537,12 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff-stats-pick.is-custom .mphbac-staff-stats-spanfield { grid-column: 1 / -1; }
     /* Two full rows of three tiles (the WD's order), at 320px too. */
     .mphbac-staff-stats-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-    .mphbac-staff-kpi { padding: 8px 2px; }
+    /* THE ⓘ'S CORNER KEPT CLEAR (0.57.1, the WD at 375: "15.0 nights" touched
+       it). The figure starts below the ⓘ (its glyph ends 20px down), and the
+       Length tile's "nights" takes a line of its own under the figure rather
+       than wrapping into the corner. */
+    .mphbac-staff-kpi { padding: 22px 2px 8px; }
+    .mphbac-staff-kpi-unit { display: block; margin-top: 1px; line-height: 1.1; }
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-period,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-span,
     .mphbac-staff.mphbac-staff .mphbac-staff-input.mphbac-staff-input.mphbac-staff-stats-month,
@@ -2732,6 +2743,7 @@ body.mphbac-staff-open { overflow: hidden; }
 .mphbac-staff-lead-count { color: var(--staff-muted); font-weight: 400; }
 .mphbac-staff-lead-fig { display: flex; flex-direction: column; align-items: center; margin-top: 2px; text-align: center; }
 .mphbac-staff-lead-label { color: var(--staff-muted); font-size: 14px; font-weight: 600; line-height: 1.2; }
+.mphbac-staff .mphbac-staff-stats-block .mphbac-staff-lead-note { margin: 10px 0 0; padding: 0; color: var(--staff-muted); font-size: 14px; line-height: 1.35; text-align: center; text-wrap: balance; }   /* 0.57.1 */
 .mphbac-staff .mphbac-staff-lead .mphbac-staff-lead-num { margin: 0; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ======================================================================

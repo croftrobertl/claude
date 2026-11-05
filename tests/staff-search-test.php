@@ -110,7 +110,10 @@ namespace {
     $nowY = (int) date('Y');
     $NOV = date('Y-m-d') < "$nowY-11-05" ? $nowY : $nowY + 1;       // the next November stay
     $book(108, 'confirmed', "$NOV-11-02", "$NOV-11-05", 3200, ['mphb_first_name' => 'Gus', 'mphb_last_name' => 'Hale']);
-    $book(109, 'confirmed', ($NOV - 3) . '-11-28', ($NOV - 3) . '-12-02', 3300, ['mphb_first_name' => 'Bodie', 'mphb_last_name' => 'Hart',
+    // Inside November (0.57.1): it ran Nov 28 – Dec 2, and from Nov 5, 2026
+    // on — when "the next November" became 2027 — that put it in December
+    // 2024, beside Carla's "12/2024" stay. A November stay, nothing else.
+    $book(109, 'confirmed', ($NOV - 3) . '-11-20', ($NOV - 3) . '-11-24', 3300, ['mphb_first_name' => 'Bodie', 'mphb_last_name' => 'Hart',
         'mphb_phone' => '555-777-2323']);
     $book(19600, 'confirmed', ($NOV + 1) . '-01-10', ($NOV + 1) . '-01-13', 230, ['mphb_first_name' => 'Betsy', 'mphb_last_name' => 'Novak']);
     $book(32, 'confirmed', '2020-01-01', '2020-01-03', 220, ['mphb_first_name' => 'Lou', 'mphb_last_name' => 'Park']);
@@ -229,7 +232,12 @@ namespace {
     check('"Nov." reads the same', $ids($find('Nov.')) === [108, 111, 109, 19600]);
 
     echo "\n-- 0.45.1: cottage numbers --\n";
-    $c23 = [106, 19600, 102, 104];            // cottage 23's stays, latest first
+    // Cottage 23's stays, latest first — worked out from their dates (0.57.1):
+    // 19600 moves with "the next November", so it is before or after 106
+    // (Mar 2027) depending on today.
+    $c23dates = [106 => '2027-03-14', 19600 => ($NOV + 1) . '-01-10', 102 => '2026-10-05', 104 => '2024-12-23'];
+    arsort($c23dates);
+    $c23 = array_keys($c23dates);
     foreach (['23', '#23', 'c23', 'C 23', 'cottage 23', 'Cottage #23'] as $cq) {
         $r = $find($cq);
         check("\"$cq\": exactly cottage 23's stays first, never 22, 32 or 33's; then a phone with 23 in it",

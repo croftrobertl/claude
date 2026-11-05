@@ -207,7 +207,8 @@ final class Staff_Widget
                 // 0.45.3 (Rob): no Pets / Couch / Boat tiles — those features
                 // are new, so there are no accurate figures for them yet.
                 'stBookings'   => __('Bookings', 'mphb-availability-calendar'),
-                'stBookingsTip'=> __('Bookings with at least one night in this period.', 'mphb-availability-calendar'),
+                // 0.57.1 (the WD): says it includes stays that began earlier — why it can exceed Days Booked Ahead's arrivals.
+                'stBookingsTip'=> __('Bookings with at least one night in this period, including stays that began before it.', 'mphb-availability-calendar'),
                 'stLength'     => __('Length', 'mphb-availability-calendar'),
                 'stLengthTip'  => __('The average stay, in nights, of the bookings counted in Bookings.', 'mphb-availability-calendar'),
                 'stDayLabel'   => __('Day', 'mphb-availability-calendar'),
@@ -272,6 +273,21 @@ final class Staff_Widget
                 'stLeadTipMode'   => __('Mode is the most common number of days.', 'mphb-availability-calendar'),
                 'stLeadTipPull'   => __('One very early booking pulls the mean up; the median doesn\'t move.', 'mphb-availability-calendar'),
                 'stLeadTipNone'   => __('A mode with no repeat shows —; on a tie, the smaller.', 'mphb-availability-calendar'),
+                // 0.57.1 (the WD): why All Sources can count fewer stays than the Bookings tile.
+                // 0.57.1 (Rob's pick): while a period is under way, ▲▼ compare with what was on the books by this date last year.
+                'stTipVsNow'       => __('▲▼ compare with {range} as booked by {date}.', 'mphb-availability-calendar'),
+                'stTipVsPctNow'    => __('▲▼: occupancy percentage points vs {range} as booked by {date}.', 'mphb-availability-calendar'),
+                'stTipVsNightsNow' => __('▲▼ compare with {range} as booked by {date}, in nights.', 'mphb-availability-calendar'),
+                'stTipVsOccNow'    => __('▲▼: occupancy percentage points vs {range} as booked by {date}.', 'mphb-availability-calendar'),
+                'stVsNowSr'        => __('vs this date last year', 'mphb-availability-calendar'),
+                'stHeadVsNow'      => __('vs this date last year', 'mphb-availability-calendar'),
+                'stLeadLeftNote'    => __('{n} of {total} bookings counted: {why}.', 'mphb-availability-calendar'),
+                'stLeadLeftBefore1' => __('{n} arrived before {date}', 'mphb-availability-calendar'),
+                'stLeadLeftBeforeN' => __('{n} arrived before {date}', 'mphb-availability-calendar'),
+                'stLeadLeftNoDate1' => __('{n} has no booked-on date', 'mphb-availability-calendar'),
+                'stLeadLeftNoDateN' => __('{n} have no booked-on date', 'mphb-availability-calendar'),
+                'stLeadLeftLate1'   => __('{n} was booked after check-in', 'mphb-availability-calendar'),
+                'stLeadLeftLateN'   => __('{n} were booked after check-in', 'mphb-availability-calendar'),
                 'stNoLead'     => __('No arrivals in this timeframe.', 'mphb-availability-calendar'),
                 'stAllSources' => __('All Sources', 'mphb-availability-calendar'),
                 'stDays'       => __('{n} days', 'mphb-availability-calendar'),

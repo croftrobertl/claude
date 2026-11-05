@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.57.0
+Stable tag: 0.57.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.57.1 =
+* **Stats compare like with like while a period is under way (Rob's pick).** Until a month (or any period) is over, every ▲▼ (the six tiles, the headline pill and Nights by Cottage) compares with what was on the books for the same dates on this date last year, and says so: "▲10 vs this date last year", with the tips naming the date. A finished period still compares final with final ("vs Oct 2025").
+* **Dock blocks are never turnovers.** A dock block ending (or starting) the day a guest arrives (or leaves) no longer shows a turnover ◇ on the board, in the Daily list, or in Stats. A guest-to-guest changeover beside one still does.
+* **Stats tiles:** the figures slightly smaller and the ▲▼ larger. On a phone the figure starts below the ⓘ, and "nights" sits on its own line, so "15.0 nights" no longer touches it.
+* **Bookings vs Days Booked Ahead:** the Bookings tip now says it includes stays that began before the period, and a line under Days Booked Ahead says how many bookings it counts and why the rest aren't (e.g. "10 of 11 bookings counted: 1 arrived before Nov 1.").
+* **320px phones:** Nights by Cottage's columns sit a little closer, so more cottage names stay on one line.
+* Includes 0.57.0 (the title bands). Nothing is stored and nothing is written on install, activation or upgrade; read-only on MotoPress.
 
 = 0.57.0 =
 * **Stats on /staff/ are easier to read (Rob's pick C, "Title Bands").** Each section's title now sits on a light-blue band, with its content on white below and more space between sections, so where one statistic ends and the next begins is plain.

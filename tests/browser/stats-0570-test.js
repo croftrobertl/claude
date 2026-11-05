@@ -32,7 +32,9 @@ execSync(`git -C ${REPO} archive dec1902 | tar -x -C ${OLD}`);
 fs.symlinkSync(path.join(__dirname, 'node_modules'), path.join(OLD, 'tests/browser/node_modules'));
 fs.symlinkSync(path.join(REPO, 'tools/node_modules'), path.join(OLD, 'tools/node_modules'));
 const S_OLD = require(path.join(OLD, 'tests/browser/staff-harness.js'));
-const SCALE = [28, 24, 19, 16, 14.4, 14];   // 14.4: the KPI "nights" unit, 0.6em of the 24px figure, as before
+// 0.57.1 (Rob): the tiles' figures 22 (were 24) — the one step off the 0.57.0
+// scale — and their "nights" 14 (was 0.6em of the figure, 14.4).
+const SCALE = [28, 24, 22, 19, 16, 14];
 
 (async () => {
   const browser = await chromium.launch(S.CHROMIUM);
@@ -89,7 +91,7 @@ const SCALE = [28, 24, 19, 16, 14.4, 14];   // 14.4: the KPI "nights" unit, 0.6e
     check(`${w}px: every section title 19px/700, centred, balanced: ${m.blocks.map(b => b.title).join(' · ')}`,
       m.blocks.every(b => b.size === '19px' && b.weight === '700' && b.align === 'center' && /balance/.test(b.wrap)), m.blocks.map(b => [b.title, b.size]));
     check(`${w}px: range ${m.range}px (28, or fitRange's step down at 320), headline 24px`, (w === 320 ? m.range <= 28 && m.range >= 18 : m.range === 28) && m.headline === '24px', [m.range, m.headline]);
-    check(`${w}px: every size in Stats on the scale (28 / 24 / 19 / 16 / 14, and the KPI unit's 14.4): ${m.sizes.join('/')}`,
+    check(`${w}px: every size in Stats on the scale (28 / 24 / 19 / 16 / 14, and the tiles' 22): ${m.sizes.join('/')}`,
       m.sizes.every(x => SCALE.includes(x) || (w === 320 && x === m.range)), m.sizes);
     check(`${w}px: no uppercase anywhere in Stats (Nights by Cottage's headers in Title Case)`, m.upper.length === 0, m.upper);
     check(`${w}px: Booking Pace its own section, after the headline and before the tiles, titled with its ⓘ`,

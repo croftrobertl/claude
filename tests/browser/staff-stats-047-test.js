@@ -114,13 +114,13 @@ const NAMES = ['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays b
     const by = Object.fromEntries(tips.map(t => [t.key, t]));
     const kept = {
       // 0.53.1 (Rob): the Booked tile's line says percentage points, as Nights by Cottage's.
-      'the Booked tile\'s ▲▼ line: occupancy percentage points vs the same dates last year': by.booked.items.some(i => /^▲▼ are occupancy percentage points vs the same dates last year \(Oct\s1\s–\s31, 2025\)\.$/.test(i)),
-      'every other tile\'s ▲▼ line': ['bookings', 'length', 'arrivals', 'departures', 'turnovers', 'inhouse'].every(k => by[k].items.some(i => /^▲▼ compare with the same dates last year/.test(i))),
+      'the Booked tile\'s ▲▼ line: occupancy percentage points vs the same dates last year': by.booked.items.some(i => /^▲▼: occupancy percentage points vs Oct\s1\s–\s31, 2025 as booked by Oct\s16, 2025\.$/.test(i)),
+      'every other tile\'s ▲▼ line': ['bookings', 'length', 'arrivals', 'departures', 'turnovers', 'inhouse'].every(k => by[k].items.some(i => /^▲▼ compare with (the same dates last year|Oct\s1\d?(\s–\s31)?, 2025 as booked by Oct\s16, 2025)/.test(i))),   // 0.57.1: under way, "as booked by" 
       'Length: the whole stay counts (stLengthWhole)': by.length.items.includes(strings.stLengthWhole),
       'In House: arrivals and departures on the day not included (stInHouseNot)': by.inhouse.items.includes(strings.stInHouseNot),
       'Upcoming Nights: last year a little low, and fixed (stPaceLow, stPaceFixed)': by.pace.items.includes(strings.stPaceLow) && by.pace.items.includes(strings.stPaceFixed),
       'the heat map\'s outline and tap lines': by.heat.items.includes(strings.stHeatOutline) && by.heat.items.includes(strings.stHeatTap),
-      'Nights by Cottage: its ▲▼ line, now the same dates last year': by.percot.items.some(i => /^▲▼ are occupancy percentage points vs the same dates last year \(Oct\s1\s–\s31, 2025\)\.$/.test(i)),   // 0.53.0 (Rob): "% occupancy" → percentage points
+      'Nights by Cottage: its ▲▼ line, now the same dates last year': by.percot.items.some(i => /^▲▼: occupancy percentage points vs Oct\s1\s–\s31, 2025 as booked by Oct\s16, 2025\.$/.test(i)),   // 0.53.0 (Rob): "% occupancy" → percentage points
     };
     for (const [label, ok] of Object.entries(kept)) check('kept: ' + label, ok, tips.map(t => [t.key, t.items]));
     check('every tip leads with its sentence — none empty', tips.every(t => t.lead.length > 10 && /\.$/.test(t.lead)), tips.map(t => [t.key, t.lead]));
@@ -171,10 +171,11 @@ const NAMES = ['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays b
     // titles 19, body and rows 16 (cottage rows, Stays by Length 15 → 16),
     // small labels 14 (weekday counts 13 → 14, their key and the ▲▼ of
     // Upcoming Nights 15 → 14). The tiles, the tips' dark box: as they were.
-    const want = { heading: '19px', tileNum: '24px', tileLabel: '16px', tileDelta: '14px', cottage: '16px', cottageNum: '16px', cottageDelta: '16px', mix: '16px',
+    // 0.57.1 (Rob): the tiles' figures 22 (were 24), their ▲▼ 16 (were 14).
+    const want = { heading: '19px', tileNum: '22px', tileLabel: '16px', tileDelta: '16px', cottage: '16px', cottageNum: '16px', cottageDelta: '16px', mix: '16px',
       srcKey: '16px', wkNum: '14px', wkName: '14px', wkKey: '14px', lead: '16px', pace: '16px', paceDelta: '14px', heatName: '14px', heatKey: '14px', tip: '15px' };
     const off = Object.keys(want).filter(k => m[k] !== want[k]);
-    check(`${w}px: the 0.57.0 scale — titles 19, rows 16, tiles 24 / 16 / 14, source lines 16, weekdays 14 / 14 / 14, lists 16 (▲▼ 14), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
+    check(`${w}px: the 0.57.0 scale — titles 19, rows 16, tiles 22 / 16 / 16, source lines 16, weekdays 14 / 14 / 14, lists 16 (▲▼ 14), heat map 14, tips 15`, !off.length, off.map(k => k + ' ' + m[k]));
     check(`${w}px: the tile label 16px even under a theme's \`dt { font-size: 14px }\` (live measured 14)`, m.tileLabel === '16px', m.tileLabel);
     check(`${w}px: headings balanced, their line box grown with the type (${m.lh}px ≥ 16 × 1.3), nothing clipped, no word broken across lines`,
       m.balance === 'balance' && m.lh >= 20.8 && !m.clipped && !m.wordBroken, m);
@@ -212,8 +213,9 @@ const NAMES = ['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays b
     check('...and each bar shows that same Occupancy %', t.rows.every(r => r.bar === r.occ), t.rows.map(r => [r.occ, r.bar]));
     check('vs 2025 is OCCUPANCY POINTS AGAINST THE SAME DATES LAST YEAR, as the tiles: #23 ▲62 (94 − 32), #36 ±0, #35 ▲39, #22 ▼42 (23 − 65), #32 ▼7 (3 − 10)',
       t.rows.every((r, i) => r.seen === exp[i].seen) && t.rows[0].seen === '▲62' && t.rows.find(r => r.id === '22').seen === '▼42', t.rows.map(r => [r.name, r.seen]));
-    check('...read out "up 62 points vs the same dates in 2025"', t.rows[0].said === 'up 62 points vs the same dates in 2025' && t.rows[1].said === 'no change vs the same dates in 2025'
-      && t.rows.find(r => r.id === '22').said === 'down 42 points vs the same dates in 2025', t.rows.map(r => r.said));
+    // 0.57.1: October is under way here, so it is read "vs this date last year".
+    check('...read out "up 62 points vs this date last year"', t.rows[0].said === 'up 62 points vs this date last year' && t.rows[1].said === 'no change vs this date last year'
+      && t.rows.find(r => r.id === '22').said === 'down 42 points vs this date last year', t.rows.map(r => r.said));
     // The tiles agree: Booked's ▲▼ is the same arithmetic on all cottages.
     const booked = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-kpi-delta [aria-hidden]').textContent);
     const all = c => X.COTTAGES.reduce((s, x) => s + X.nightsIn(x.id, c[0], c[1]), 0);
@@ -242,9 +244,11 @@ const NAMES = ['Booking Pace', 'Nights by Cottage', 'Nights by Source', 'Stays b
     const exp = X.COTTAGES.map((c, i) => { const n = X.nightsIn(c.id, '2026-12-27', '2027-01-02'), ly = X.nightsIn(c.id, '2025-12-27', '2026-01-02');
       return { i, n, seen: arrow(pct(n, 7) - pct(ly, 7)) }; }).sort((a, b) => b.n - a.n || a.i - b.i);
     check('the week of Dec 27, 2026 – Jan 2, 2027 compares with Dec 27, 2025 – Jan 2, 2026: the header reads "vs 2025–26"', d.head[3] === 'vs 2025–26', d.head);
-    check('...#22 ▼14 (86 − 100), #35 ▲57, #33 ▼29 — and read "… vs the same dates in 2025–26"',
+    // 0.57.1: a week still ahead compares with this date last year (every
+    // one of those stays was booked by then, so the figures are unchanged).
+    check('...#22 ▼14 (86 − 100), #35 ▲57, #33 ▼29 — and read "… vs this date last year"',
       d.rows.every((r, i) => r.seen === exp[i].seen) && d.rows.find(r => r.id === '22').seen === '▼14' && d.rows.find(r => r.id === '33').seen === '▼29'
-      && d.rows.find(r => r.id === '22').said === 'down 14 points vs the same dates in 2025–26', d.rows.map(r => [r.id, r.seen, r.said]));
+      && d.rows.find(r => r.id === '22').said === 'down 14 points vs this date last year', d.rows.map(r => [r.id, r.seen, r.said]));
     await ctx.close();
   }
   for (const w of [360, 390, 1280]) {

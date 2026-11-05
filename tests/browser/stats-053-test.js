@@ -82,7 +82,11 @@ const pct = (v, of) => Math.round(100 * v / of);
   const NOV = { from: '2026-11-01', to: '2026-11-30' }, LY = { from: '2025-11-01', to: '2025-11-30' };
   const now = own(overlapping(NOV.from, NOV.to), nightsOf(NOV.from, NOV.to));
   const ago = own(overlapping(LY.from, LY.to), nightsOf(LY.from, LY.to));
-  const P = pct(now.booked, 8 * 30), PL = pct(ago.booked, 8 * 30);
+  // 0.57.1 (Rob's pick): November is under way here (today Nov 3), so the
+  // pill compares with what was on the books for Nov 2025 BY Nov 3, 2025 —
+  // paceNights' filter (a made-on date, on or before that day).
+  const agoByThen = own(overlapping(LY.from, LY.to).filter(b => b.madeOn && b.madeOn <= yearBack(X.TODAY)), nightsOf(LY.from, LY.to));
+  const P = pct(now.booked, 8 * 30), PL = pct(agoByThen.booked, 8 * 30);
 
   console.log('\n-- 1: the headline and its pill --');
   {
@@ -102,13 +106,13 @@ const pct = (v, of) => Math.round(100 * v / of);
     check('…the Booked tile\'s own figure', top.tile === P + '%', top.tile);
     check('…centred, text-wrap: balance', top.align === 'center' && /balance/.test(top.wrap), top.align + ' ' + top.wrap);
     const d = P - PL, arrow = d === 0 ? '±0' : (d > 0 ? '▲' : '▼') + Math.abs(d);
-    check('the pill reads "' + arrow + ' vs Nov 2025" — the tile\'s ▲▼', top.pillSeen === arrow + ' vs Nov 2025' && top.tileDelta === arrow, top.pillSeen + ' / tile ' + top.tileDelta);
-    check('…read as a sentence', top.pillSaid === (d > 0 ? 'up ' : 'down ') + Math.abs(d) + (Math.abs(d) === 1 ? ' point' : ' points') + ' vs Nov 2025', top.pillSaid);
+    check('the pill reads "' + arrow + ' vs this date last year" — the tile\'s ▲▼ (0.57.1: November is under way)', top.pillSeen === arrow + ' vs this date last year' && top.tileDelta === arrow, top.pillSeen + ' / tile ' + top.tileDelta);
+    check('…read as a sentence', top.pillSaid === (d > 0 ? 'up ' : 'down ') + Math.abs(d) + (Math.abs(d) === 1 ? ' point' : ' points') + ' vs this date last year', top.pillSaid);
     check('…in the ▲ colours (is-up / is-down)', /is-(up|down|same)/.test(top.pillCls), top.pillCls);
     // 0.57.0 (Rob's pick C): Booking Pace, its own section, sits between.
     check('Booking Pace comes straight after it, then the six tiles', /is-curve/.test(top.before) && /mphbac-staff-stats-kpis/.test(await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-curve').nextElementSibling.className)), top.before);
     const bt = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-booked .mphbac-staff-tipbox').textContent);
-    check('0.53.1: the Booked tile\'s ⓘ says its ▲▼ are occupancy percentage points vs the same dates last year', /▲▼ are occupancy percentage points vs the same dates last year \(Nov\s1\s–\s30, 2025\)\./.test(bt) && !/% booked\./.test(bt), bt);
+    check('0.53.1: the Booked tile\'s ⓘ says its ▲▼ are occupancy percentage points vs the same dates last year', /▲▼: occupancy percentage points vs Nov\s1\s–\s30, 2025 as booked by Nov\s3, 2025\./.test(bt) && !/% booked\./.test(bt), bt);
     // October 2025 cannot be compared (records complete from Oct 1, 2025, and
     // its year-earlier dates are before it): the tile shows "—", no pill.
     await p.selectOption('.mphbac-staff-stats-month', '2025-10');
@@ -213,7 +217,7 @@ const pct = (v, of) => Math.round(100 * v / of);
     // 0.57.0 (Rob's pick C: no uppercase micro-labels): the row in Title Case.
     check('…CHANGED (0.57.0): the row in Title Case, no capitals at all', h.tt === 'none' && h.spanTt === 'none' && h.others.join('|') === 'Cottage|Nights|Occupancy', h.others.join('|'));
     check('…named "vs 2025" to a screen reader, as before', h.aria === 'vs 2025');
-    check('the tip says the figures are occupancy percentage points', /▲▼ are occupancy percentage points vs the same dates last year/.test(h.tip), h.tip);
+    check('the tip says the figures are occupancy percentage points', /▲▼: occupancy percentage points vs Nov\s1\s–\s30, 2025 as booked by/.test(h.tip), h.tip);
     await still(p, 'Nights by Cottage header 390px', '.mphbac-staff-stats-block.is-percot');
     await ctx.close();
   }

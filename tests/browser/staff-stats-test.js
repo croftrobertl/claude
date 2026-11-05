@@ -89,7 +89,18 @@ const DOCKS = [
   console.log('\n-- 0.46.0 B9 + C13: the tiles against a year earlier, the cottages ranked --');
   {
     const { ctx, p } = await open();
-    const k = await tiles(p);
+    // 0.57.1 (Rob's pick): while October 2026 is under way (today Oct 8) its
+    // ▲▼ compare with what was on the books by Oct 8, 2025 — proved in
+    // stats-0571-test.js against its own oracle. The hand-worked FINAL
+    // figures below are checked with October FINISHED: the same board with
+    // "today" Nov 15, October picked — final against final, as before.
+    const fin = await open({ html: shell({ today: '2026-11-15' }) });
+    await fin.p.selectOption('.mphbac-staff-stats-month', '2026-10');
+    await fin.p.waitForFunction(() => /^Oct 1/.test(document.querySelector('.mphbac-staff-stats-range').textContent));
+    await fin.p.waitForTimeout(300);
+    const k = await tiles(fin.p);
+    const inProgress = await tiles(p);
+    check('(0.57.1) with October under way (today Oct 8) every tile\'s ▲▼ is read "vs this date last year"', Object.values(inProgress).every(t => t[2] === '—' || /vs this date last year$/.test(t[2]) || t[1] === '—'), inProgress);
     // Oct 2026: 35 cottage-nights (22: 10, 23: 3+2, 24: 12, 25: 1, 26: 7) of
     // 248 = 14%; six bookings own a night (the echo owns none); Length
     // (10+3+2+31+4+7)/6 = 9.5; arrivals 5 and departures 5 — each STAY once
@@ -105,10 +116,10 @@ const DOCKS = [
     check('...each read as a sentence: "up 6 points on the same dates a year earlier"; Length in nights; counts plain',
       k.booked[2] === 'up 6 points on the same dates a year earlier' && k.length[2] === 'up 4.3 nights on the same dates a year earlier'
       && k.arrivals[2] === 'up 1 on the same dates a year earlier', [k.booked[2], k.length[2], k.arrivals[2]]);
-    const tipText = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
+    const tipText = await fin.p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
     check('...and the tip names the dates compared: Oct 1 – 31, 2025', /same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\)/.test(tipText), tipText);
 
-    const per = await p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => [
+    const per = await fin.p.evaluate(() => [...document.querySelectorAll('.mphbac-staff-percot-row')].map(r => [
       r.querySelector('.mphbac-staff-percot-name').textContent, r.querySelector('.mphbac-staff-percot-num').textContent,
       r.querySelector('.mphbac-staff-percot-pct').textContent, r.querySelector('.mphbac-staff-percot-delta [aria-hidden]').textContent,
       r.querySelector('.mphbac-staff-percot-fill').style.width]));
@@ -121,7 +132,8 @@ const DOCKS = [
       per[0][1] === '12' && per[0][2] === '39%' && per[0][4] === '39%', per[0]);
     check('▲ ▼ in occupancy points against the SAME DATES LAST YEAR (0.47.0): #24 ▲7 (39 − 32), #22 ▲9 (32 − 23), #26 ▲23, #23 ▲16, #25 ▼3 (3 − 6), #27 ▼6, #28 ±0',
       JSON.stringify(per.map(r => r[3])) === JSON.stringify(['▲7', '▲9', '▲23', '▲16', '▼3', '▼6', '±0', '±0']), per.map(r => r[3]));
-    const tip = await p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
+    const tip = await fin.p.evaluate(() => document.querySelector('.mphbac-staff-stats-block.is-percot .mphbac-staff-tipbox').textContent);
+    await fin.ctx.close();
     // 0.53.0 (Rob): the tip says the ▲▼ are occupancy percentage points.
     check('...its tip: the share of its 31 nights, and last year\'s dates named (Oct 1 – 31, 2025), in occupancy percentage points',
       /share of this period's 31 nights/.test(tip) && /▲▼ are occupancy percentage points vs the same dates last year \(Oct\u00a01\u00a0–\u00a031, 2025\)\./.test(tip) && !/period before/.test(tip), tip);
@@ -319,7 +331,8 @@ const DOCKS = [
     await p.selectOption('.mphbac-staff-stats-span', 'month');
     await p.selectOption('.mphbac-staff-stats-month', '2028-02'); await settle(p);
     const leap = await p.evaluate(() => document.querySelector('.mphbac-staff-kpi.is-bookings .mphbac-staff-tipbox').textContent);
-    check('Feb 2028 (29 days) against a year earlier: Feb 1 – 28, 2027 — a 29 February is the 28th', /\(Feb\u00a01\u00a0–\u00a028, 2027\)/.test(leap), leap);
+    // 0.57.1: Feb 2028 is ahead, so its tip reads "…Feb 1 – 28, 2027 as booked by …".
+    check('Feb 2028 (29 days) against a year earlier: Feb 1 – 28, 2027 — a 29 February is the 28th', /Feb\u00a01\u00a0–\u00a028, 2027/.test(leap), leap);
     await p.selectOption('.mphbac-staff-stats-span', 'year');
     await p.selectOption('.mphbac-staff-stats-year', '2029'); await settle(p);
     await p.selectOption('.mphbac-staff-stats-year', '2023'); await settle(p);
@@ -464,7 +477,8 @@ const DOCKS = [
     await p.selectOption('.mphbac-staff-stats-span', 'year'); await p.selectOption('.mphbac-staff-stats-year', '2026'); await settle(p);
     const r = await p.evaluate(() => { const row = document.querySelector('.mphbac-staff-percot-row[data-cottage="27"]');
       return [row.querySelector('.mphbac-staff-percot-delta [aria-hidden]').textContent, row.querySelector('.mphbac-staff-percot-delta .mphbac-sr-only').textContent]; });
-    check('one point is "1 point": ▼1 is read "down 1 point vs the same dates in 2025" (was "down 1 points")', r[0] === '▼1' && r[1] === 'down 1 point vs the same dates in 2025', r);
+    // 0.57.1: 2026 is under way, so the comparison is read "vs this date last year".
+    check('one point is "1 point": ▼1 is read "down 1 point vs this date last year" (was "down 1 points")', r[0] === '▼1' && r[1] === 'down 1 point vs this date last year', r);
     await ctx.close();
   }
 

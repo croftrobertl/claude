@@ -287,10 +287,14 @@ foreach ($cases as $case => $w) {
             'stSrcLine', 'stLeadMean', 'stLeadMedian', 'stLeadMode', 'stLeadNone',
             'stLeadTipMean', 'stLeadTipMedian', 'stLeadTipMode', 'stLeadTipPull', 'stLeadTipNone',
             'copyNote', 'copyNoteName', 'copied', 'copyFailed',                          // 0.54.0: each note's Copy button (Rob)
-            'copyGuestNote', 'copyNth', 'fromGuest', 'sumCheckIn', 'sumCheckOut', 'sumNights', 'guestCountNotSent', 'srcExternal'];   // 0.56.0: Summary on Top (Rob's layout C)
+            'copyGuestNote', 'copyNth', 'fromGuest', 'sumCheckIn', 'sumCheckOut', 'sumNights', 'guestCountNotSent', 'srcExternal',   // 0.56.0: Summary on Top (Rob's layout C)
+            'stLeadLeftNote', 'stLeadLeftBefore1', 'stLeadLeftBeforeN', 'stLeadLeftNoDate1', 'stLeadLeftNoDateN', 'stLeadLeftLate1', 'stLeadLeftLateN',   // 0.57.1: why All Sources counts fewer
+            'stTipVsNow', 'stTipVsPctNow', 'stTipVsNightsNow', 'stTipVsOccNow', 'stVsNowSr', 'stHeadVsNow'];   // 0.57.1: same-date ▲▼ while under way (Rob)
         $renamed = ['stPerCottage', 'stBySource', 'stMix', 'stWeekdays', 'stLead', 'stPace', 'stHeat',
             'stLeadTip',                                      // 0.53.0: "on average" dropped — it now shows mean, median and mode
-            'stTipVsPct'];                                    // 0.53.1: the Booked tile's ▲▼ said to be occupancy percentage points (Rob)
+            'stTipVsPct',                                     // 0.53.1: (below)
+            'stBookingsTip',                                  // 0.57.1: "including stays that began before it" (the WD)
+            ];                                                // 0.53.1: the Booked tile's ▲▼ said to be occupancy percentage points (Rob)
         $same = static function (array $x, array $y): bool { sort($x); sort($y); return $x === $y; };
         $changed = array_keys(array_filter($b, static fn($v, $k) => array_key_exists($k, $a) && $a[$k] !== $v, ARRAY_FILTER_USE_BOTH));
         check("$label strings: 0.47.0 removes the eight counting-rule lines and the previous-timeframe pair, adds last year's and the table's, renames the seven sections — and drops the Updated {time} line (0.47.1) and the Photo ID note (0.47.5), and adds the cleaning dot's six (0.48.0) — nothing else",

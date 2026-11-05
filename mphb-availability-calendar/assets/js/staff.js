@@ -548,9 +548,15 @@
 
         // TURNOVERS (0.44.0): a day on which one booking checks out of a
         // cottage and another checks in. Returns roomTypeId -> date -> {out, in}.
+        // DOCK BLOCKS ARE NEVER A TURNOVER (0.57.1, Rob: "count in neither"):
+        // a dock block's end and a guest's arrival the same day is not a
+        // changeover, nor is a guest leaving the day one starts. Left out
+        // here, so the board's ◇, the Daily list's Turnovers and Stats all
+        // agree; guest → guest beside a dock block still is one.
         function turnovers(bookings) {
             var outs = {}, ins = {}, out = {};
             bookings.forEach(function (b) {
+                if (b.notStay) return;
                 (b.cottages || []).forEach(function (c) {
                     ((outs[c.roomTypeId] = outs[c.roomTypeId] || {})[b.checkout] = outs[c.roomTypeId][b.checkout] || []).push(b);
                     ((ins[c.roomTypeId] = ins[c.roomTypeId] || {})[b.checkin] = ins[c.roomTypeId][b.checkin] || []).push(b);
@@ -2008,7 +2014,13 @@
             var y = w.from.slice(0, 4);
             var agoDay = yearBack(config.today);
             var plan = {
-                ly: { w: lyW, why: comparable(w, lyW) },
+                // SAME DATE LAST YEAR WHILE UNDER WAY (0.57.1, Rob's pick):
+                // while the timeframe includes today or later, every ▲▼ —
+                // the tiles, the headline pill, Nights by Cottage — compares
+                // with what was ON THE BOOKS for the same dates on this date
+                // last year (madeOn ≤ yearBack(today), as paceNights reads
+                // it); once it is wholly past, final with final, as before.
+                ly: { w: lyW, why: comparable(w, lyW), asOf: w.to >= config.today ? agoDay : null },
                 year: { y: y, w: clampCap({ from: y + '-01-01', to: y + '-12-31' }) },
                 pace: { now: { from: config.today, to: shiftDay(config.today, 89) },
                         ago: { from: agoDay, to: shiftDay(agoDay, 89) }, asOf: agoDay }
@@ -2121,6 +2133,12 @@
             return sorted.filter(function (b) { return keep[b.id] === b; });
         }
 
+        // The data as it stood on `asOf`: only bookings made by then (a
+        // booking with no made-on date cannot be placed, and is left out —
+        // paceNights' rule). Ownership is then own()'s, unchanged.
+        function onBooksBy(data, asOf) {
+            return Object.assign({}, data, { bookings: (data.bookings || []).filter(function (b) { return b.madeOn && b.madeOn <= asOf; }) });
+        }
         function statsNumbers(data, w) {
             var nights = daysBetween(w.from, w.to);
             var o = own(data.bookings || [], nights);
@@ -2185,10 +2203,17 @@
         // own check-in (13 on live, the WD) and one with no made-on date.
         // Since 0.53.0 each booking's days are kept (an array per source), so
         // the median and mode can be read from them, not only the mean.
+        // 0.57.1 (the WD: "11 Bookings" over "All Sources (10 stays)"): what
+        // is left out is counted too — by.left.before (arrived before the
+        // period: their lead time belongs to the month they arrived in),
+        // .noDate (no booked-on date), .late (booked after check-in) — so the
+        // page can say why the two counts differ.
         function leadTimes(mine, w) {
-            var by = { all: { n: 0, days: [] } };
+            var by = { all: { n: 0, days: [] }, left: { before: 0, noDate: 0, late: 0 } };
             mine.forEach(function (b) {
-                if (b.checkin < w.from || b.checkin > w.to || !b.madeOn || b.madeOn > b.checkin) return;
+                if (b.checkin < w.from || b.checkin > w.to) { if (b.checkin < w.from) by.left.before++; return; }
+                if (!b.madeOn) { by.left.noDate++; return; }
+                if (b.madeOn > b.checkin) { by.left.late++; return; }
                 var k = sourceOf(b), d = nightsBetween(b.madeOn, b.checkin);
                 by[k] = by[k] || { n: 0, days: [] };
                 by[k].n++; by[k].days.push(d);
@@ -2313,6 +2338,7 @@
         }
         // A date range inside a tip: "Oct 1 – 31" held together, so a line
         // never ends on the dash (0.46.2).
+        function tipDay(d) { return d ? mediumDay(d).replace(/^(\w+) (\d)/, '$1\u00a0$2') : ''; }
         function tipRange(from, to) { return rangeLabel(from, to).replace(/ – /g, '\u00a0–\u00a0').replace(/^(\w+) (\d)/, '$1\u00a0$2'); }
 
         // A SECTION'S HEADING (0.46.2, Rob: centred, every one): the ⓘ right
@@ -2336,7 +2362,7 @@
         function drawStats(got, w, plan) {
             var data = got[0];
             var n = statsNumbers(data, w);
-            var ly = got[2] ? statsNumbers(got[2], plan.ly.w) : null;
+            var ly = got[2] ? statsNumbers(plan.ly.asOf ? onBooksBy(got[2], plan.ly.asOf) : got[2], plan.ly.w) : null;
             // A pinned tip (or a focused ⓘ) survives the 3-minute refresh.
             var keepTip = tipOpen && tipOpen.pinned ? tipOpen.key : null;
             var focusTip = document.activeElement && document.activeElement.classList.contains('mphbac-staff-tip')
@@ -2349,8 +2375,12 @@
             // earlier (0.46.0): points for %, nights for Length, counts for the
             // rest.
             // ▲ ▼'s line in each tile's tip: what it compares with, in what.
-            var vsLine = function (str) {
-                return plan.ly.why ? noCompareText(plan.ly.why) : (str || '').replace('{range}', tipRange(plan.ly.w.from, plan.ly.w.to));
+            // Which comparison is said in words (0.57.1): "…by this date last
+            // year (Nov 4, 2025)" while under way, the final figure once past.
+            var vsLine = function (key) {
+                if (plan.ly.why) return noCompareText(plan.ly.why);
+                var str = plan.ly.asOf ? (S[key + 'Now'] || S[key]) : S[key];
+                return (str || '').replace('{range}', tipRange(plan.ly.w.from, plan.ly.w.to)).replace('{date}', tipDay(plan.ly.asOf || ''));
             };
             var grid = el('dl', 'mphbac-staff-stats-kpis');
             var minus = function (a, b) {
@@ -2361,7 +2391,7 @@
                 var box = el('div', 'mphbac-staff-kpi is-' + key);
                 box.appendChild(el('dt', 'mphbac-staff-kpi-label', label || ''));
                 box.appendChild(el('dd', 'mphbac-staff-kpi-num', String(value)));
-                box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, S.stVsYearSr, unit));
+                box.appendChild(deltaEl('dd', 'mphbac-staff-kpi-delta', delta, decimals, plan.ly.asOf ? S.stVsNowSr : S.stVsYearSr, unit));
                 var more = el('dd', 'mphbac-staff-kpi-more');
                 var t = tipParts(key, label || '', tip[0], tip.slice(1));
                 more.appendChild(t.btn);
@@ -2373,9 +2403,9 @@
             // TIPS SAY WHAT A FIGURE MEANS, not how it is kept true (0.47.0,
             // Rob): the counting rules — a night or stay counted once, dock
             // blocks left out — are unchanged, and no longer repeated here.
-            kpi('bookings', S.stBookings, n.bookings, [S.stBookingsTip, vsLine(S.stTipVs)], minus(n.bookings, ly && ly.bookings));
-            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', [S.stBookedTip, vsLine(S.stTipVsPct)], minus(n.pct, ly && ly.pct), 0, 'point');
-            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), [S.stLengthTip, S.stLengthWhole, vsLine(S.stTipVsNights)],
+            kpi('bookings', S.stBookings, n.bookings, [S.stBookingsTip, vsLine('stTipVs')], minus(n.bookings, ly && ly.bookings));
+            kpi('booked', S.stBooked, n.pct === null ? '—' : n.pct + '%', [S.stBookedTip, vsLine('stTipVsPct')], minus(n.pct, ly && ly.pct), 0, 'point');
+            kpi('length', S.stLength, n.length === null ? '—' : (S.stNights || '{n} nights').replace('{n}', n.length.toFixed(1)), [S.stLengthTip, S.stLengthWhole, vsLine('stTipVsNights')],
                 minus(n.length, ly && ly.length), 1, 'night');
             // "nights" in a smaller size, so the figure fits a phone's tile;
             // the text still reads "4.2 nights".
@@ -2385,10 +2415,10 @@
                 dd.textContent = m[1];
                 dd.appendChild(el('span', 'mphbac-staff-kpi-unit', m[2]));
             })(grid.lastChild.querySelector('.mphbac-staff-kpi-num'));
-            kpi('arrivals', S.stArrivals, n.arrivals, [S.stArrivalsTip, vsLine(S.stTipVs)], minus(n.arrivals, ly && ly.arrivals));
-            kpi('departures', S.stDepartures, n.departures, [S.stDeparturesTip, vsLine(S.stTipVs)], minus(n.departures, ly && ly.departures));
-            kpi('turnovers', S.stTurnovers, n.turnovers, [S.stTurnoversTip, vsLine(S.stTipVs)], minus(n.turnovers, ly && ly.turnovers));
-            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, [S.stInHouseTip, S.stInHouseNot, vsLine(S.stTipVs)], minus(n.inHouse, ly && ly.inHouse));
+            kpi('arrivals', S.stArrivals, n.arrivals, [S.stArrivalsTip, vsLine('stTipVs')], minus(n.arrivals, ly && ly.arrivals));
+            kpi('departures', S.stDepartures, n.departures, [S.stDeparturesTip, vsLine('stTipVs')], minus(n.departures, ly && ly.departures));
+            kpi('turnovers', S.stTurnovers, n.turnovers, [S.stTurnoversTip, vsLine('stTipVs')], minus(n.turnovers, ly && ly.turnovers));
+            if (n.inHouse !== null) kpi('inhouse', S.stInHouse, n.inHouse, [S.stInHouseTip, S.stInHouseNot, vsLine('stTipVs')], minus(n.inHouse, ly && ly.inHouse));
             out.appendChild(grid);
 
             // NIGHTS BY COTTAGE (0.46.0, Rob; a real table since 0.47.0, Rob's
@@ -2405,8 +2435,7 @@
             // table semantics: each figure is read with its column's name.
             var per = el('section', 'mphbac-staff-stats-block is-percot');
             blockHead(per, 'percot', S.stPerCottage, (S.stPerCottageTip || '').replace('{n}', String(n.nights)), [
-                plan.ly.why ? noCompareText(plan.ly.why)
-                    : (S.stTipVsOcc || '').replace('{range}', tipRange(plan.ly.w.from, plan.ly.w.to))]);
+                vsLine('stTipVsOcc')]);
             var lyYear = lyLabel(plan.ly.w);
             var pct = function (v, of) { return of ? Math.round(100 * v / of) : 0; };
             var table = el('table', 'mphbac-staff-percot');
@@ -2439,7 +2468,7 @@
             table.appendChild(thead);
             var tbody = el('tbody');
             tbody.setAttribute('role', 'rowgroup');
-            var vsSr = (S.stVsDatesSr || '{year}').replace('{year}', lyYear);
+            var vsSr = plan.ly.asOf ? (S.stVsNowSr || '') : (S.stVsDatesSr || '{year}').replace('{year}', lyYear);
             n.cottages.map(function (c, i) { return { c: c, i: i, v: n.perCottage[c.id] || 0 }; })
                 .sort(function (a, b) { return b.v - a.v || a.i - b.i; })
                 .forEach(function (r) {
@@ -2562,7 +2591,9 @@
                 sec.appendChild(el('h3', 'mphbac-staff-stats-headline',
                     (S.stHeadline || '{period} Is {n}% Booked').replace('{n}', String(n.pct)).replace('{period}', periodName(w))));
                 if (!plan.ly.why && ly && ly.pct !== null) {
-                    var vs = (S.stHeadVs || 'vs {period}').replace('{period}', lyPeriodName(plan.ly.w, w.span));
+                    // "vs this date last year" while under way; "vs Nov 2025"
+                    // (the final figure) once the period is past (0.57.1).
+                    var vs = plan.ly.asOf ? (S.stHeadVsNow || 'vs this date last year') : (S.stHeadVs || 'vs {period}').replace('{period}', lyPeriodName(plan.ly.w, w.span));
                     var pill = deltaEl('p', 'mphbac-staff-stats-pill', n.pct - ly.pct, 0, vs, 'point');
                     var tail = el('span', 'mphbac-staff-stats-pillvs', ' ' + vs);
                     tail.setAttribute('aria-hidden', 'true');
@@ -2804,12 +2835,29 @@
         }
 
         // HOW FAR AHEAD THEY BOOK (0.46.0), by source, then all together.
+        // WHY "ALL SOURCES" CAN BE FEWER THAN THE BOOKINGS TILE (0.57.1): the
+        // tile counts every booking with a night in the period; this block,
+        // the stays ARRIVING in it with a booked-on date. When the two
+        // differ, a line under the block says by how many and why:
+        // "10 of 11 bookings counted: 1 arrived before Nov 1."
+        function leadNote(sec, by, n, w) {
+            var counted = by.all.n, total = n.bookings;
+            if (!total || counted >= total) return;
+            var why = [];
+            var say = function (k, one, many) { if (k) why.push(((k === 1 ? S[one] : S[many]) || '{n}').replace('{n}', String(k)).replace('{date}', shortDate(w.from))); };
+            say(by.left.before, 'stLeadLeftBefore1', 'stLeadLeftBeforeN');
+            say(by.left.noDate, 'stLeadLeftNoDate1', 'stLeadLeftNoDateN');
+            say(by.left.late, 'stLeadLeftLate1', 'stLeadLeftLateN');
+            sec.appendChild(el('p', 'mphbac-staff-lead-note', (S.stLeadLeftNote || '{n} of {total} bookings counted: {why}.')
+                .replace('{n}', String(counted)).replace('{total}', String(total)).replace('{why}', why.join('; '))));
+        }
         function drawLead(n, w) {
             var sec = el('section', 'mphbac-staff-stats-block is-lead');
             blockHead(sec, 'lead', S.stLead, S.stLeadTip, [S.stLeadTipMean, S.stLeadTipMedian, S.stLeadTipMode, S.stLeadTipPull, S.stLeadTipNone]);
             var by = leadTimes(n.mine, w);
             if (!by.all.n) {
                 sec.appendChild(el('p', 'mphbac-staff-stats-empty', S.stNoLead || ''));
+                leadNote(sec, by, n, w);
                 return sec;
             }
             // One row a source, then All Sources (0.53.0, Rob): the name and
@@ -2855,6 +2903,7 @@
                 ul.appendChild(li);
             });
             sec.appendChild(ul);
+            leadNote(sec, by, n, w);
             return sec;
         }
 
