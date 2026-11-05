@@ -6213,18 +6213,27 @@ html.dccgg-map-open, html.dccgg-map-open body {
        same reasoning as the tile tap colour in v0.24.2. */
     transition: transform 0.12s ease;
 }
+/* THE MARK matches the footer's social buttons: a white brand glyph in a
+   round circle, the circle in that company's colour. 34px, as asked. */
 .dccgg-rev-mark {
     flex: 0 0 auto;
     width: 34px;
     height: 34px;
     display: grid;
     place-items: center;
-    border-radius: 9px;
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1;
+    border-radius: 50%;
     color: #fff;
     background: var(--dccgg-rev-ink, #666);
+    /* Only the circle grows on hover, and only where there is a pointer —
+       see the rule further down. Kept off the card so the card itself does
+       not move under the finger. */
+    transition: transform 0.14s ease;
+}
+.dccgg-rev-mark svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    display: block;
 }
 .dccgg-rev-text { flex: 1 1 auto; min-width: 0; }
 .dccgg-rev-name {
@@ -6243,10 +6252,11 @@ html.dccgg-map-open, html.dccgg-map-open body {
 .dccgg-rev-arrow {
     flex: 0 0 auto;
     display: inline-flex;
-    /* The blue the brief names. It is NOT --dccgg-primary (#006BCF, the one
-       v0.24.5 unified on) — flagged to the Director rather than silently
-       swapped either way. */
-    color: #0A57C2;
+    /* One blue. The 0.27.9 brief first named #0A57C2; the Director's final
+       decision is the guide's own --dccgg-primary, which v0.24.5 unified
+       the whole guide on. Arrow, tick, pressed border and focus ring all
+       use it. */
+    color: var(--dccgg-primary, #006BCF);
 }
 .dccgg-rev-arrow svg { width: 17px; height: 17px; fill: currentColor; }
 
@@ -6254,10 +6264,10 @@ html.dccgg-map-open, html.dccgg-map-open body {
 .dccgg-rev-card[data-dccgg-reviewed="1"] .dccgg-rev-sub {
     opacity: 1;
     font-weight: 700;
-    /* Site blue, NOT a green tick. Brief item 5 says no green anywhere in
-       the section, and unlike the Tripadvisor letter — whose colour item 4
-       asks for by name — this one was simply a choice, so it goes. */
-    color: #0A57C2;
+    /* Site blue, never green: the Tripadvisor circle is the only green the
+       section may carry, because it is the colour the footer already
+       shows. */
+    color: var(--dccgg-primary, #006BCF);
 }
 .dccgg-rev-tick { margin-right: 5px; }
 
@@ -6270,14 +6280,14 @@ html.dccgg-map-open, html.dccgg-map-open body {
    these, which re-declare the same two properties in every state. */
 .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:active,
 .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:active {
-    border-color: #0A57C2;
+    border-color: var(--dccgg-primary, #006BCF);
     transform: scale(0.98);
     background: var(--dccgg-tile-bg, #fff);
     color: var(--dccgg-text, #111);
 }
 .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:focus-visible,
 .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:focus-visible {
-    outline: 3px solid #0A57C2;
+    outline: 3px solid var(--dccgg-primary, #006BCF);
     outline-offset: 2px;
     background: var(--dccgg-tile-bg, #fff);
     color: var(--dccgg-text, #111);
@@ -6285,8 +6295,16 @@ html.dccgg-map-open, html.dccgg-map-open body {
 @media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:hover,
     .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:hover {
-        border-color: #0A57C2;
+        border-color: var(--dccgg-primary, #006BCF);
         background: var(--dccgg-tile-bg, #fff);
         color: var(--dccgg-text, #111);
+    }
+    /* The footer's own gesture: the icon grows a little. Computers only —
+       on a phone a :hover rule sticks after the tap and leaves the card
+       looking selected, which is the v0.24.2 tile defect. Phones get the
+       press effect instead. */
+    .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:hover .dccgg-rev-mark,
+    .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:hover .dccgg-rev-mark {
+        transform: scale(1.12);
     }
 }

@@ -142,6 +142,10 @@ const READ = () => {
                 subFont: sub ? cs(sub, 'fontSize') + '/' + cs(sub, 'fontWeight') : null,
                 markSize: mark ? Math.round(rect(mark).width) + 'x' + Math.round(rect(mark).height) : null,
                 markInk: mark ? cs(mark, 'backgroundColor') : null,
+                markRadius: mark ? cs(mark, 'borderTopLeftRadius') : null,
+                markHasSvg: !!(mark && mark.querySelector('svg path')),
+                markText: mark ? mark.textContent.trim() : null,
+                glyphFill: mark && mark.querySelector('svg') ? cs(mark.querySelector('svg'), 'fill') : null,
                 arrowColour: arrow ? cs(arrow, 'color') : null,
                 subColour: sub ? cs(sub, 'color') : null,
                 arrowInlineSvg: !!(arrow && arrow.querySelector('svg')),
@@ -208,10 +212,14 @@ const READ = () => {
             check(`${c.key}: border is hairline (1-1.5px used)`,
                 bw >= 1 && bw <= 1.5, String(c.border));
             check(`${c.key}: 16px radius`, c.radius === '16px', String(c.radius));
-            check(`${c.key}: arrow is site blue #0A57C2`,
-                c.arrowColour === 'rgb(10, 87, 194)', String(c.arrowColour));
+            check(`${c.key}: arrow is the guide's own blue #006BCF`,
+                c.arrowColour === 'rgb(0, 107, 207)', String(c.arrowColour));
             check(`${c.key}: text is left-aligned in the card`, c.textAlign === 'left', String(c.textAlign));
             check(`${c.key}: the mark is ~34px`, c.markSize === '34x34', String(c.markSize));
+            check(`${c.key}: the circle is round`, c.markRadius === '50%', String(c.markRadius));
+            check(`${c.key}: it holds an inline brand glyph, not a letter`,
+                c.markHasSvg && !c.markText, `svg=${c.markHasSvg} text=${JSON.stringify(c.markText)}`);
+            check(`${c.key}: the glyph is white`, c.glyphFill === 'rgb(255, 255, 255)', String(c.glyphFill));
         });
         // ...and the RULE really says 1.5px, which the used value above
         // cannot show: Chromium snaps a fractional border to the device
@@ -226,6 +234,10 @@ const READ = () => {
         // still, not by a test, which is why this one exists.
         check('the only green in the section is the Tripadvisor mark',
             (() => {
+                // The Tripadvisor CIRCLE is the one green allowed — it is
+                // what the footer shows. Everything the guide picks for
+                // itself must not be green, which is why markInk is not in
+                // this list but arrow and sub-line are.
                 const greens = r.cards.flatMap((c) => [c.arrowColour, c.subColour])
                     .filter(Boolean)
                     .filter((v) => {
@@ -271,6 +283,15 @@ const READ = () => {
         check('a touch device does not match the hover query', touch.hoverMatches === false);
         check('and its card border is the resting grey',
             touch.border === 'rgb(219, 227, 238)', touch.border);
+        // ...and the grow must not be reachable at all on a touch device,
+        // or a tapped card keeps a swollen icon for the rest of the visit.
+        const touchGrow = await page.evaluate(() => {
+            const c = document.querySelector('.dccgg-detail:not([hidden]) .dccgg-rev-card');
+            const m = c.querySelector('.dccgg-rev-mark');
+            return getComputedStyle(m).transform;
+        });
+        check('and the icon is not grown on a touch device',
+            touchGrow === 'none' || touchGrow === 'matrix(1, 0, 0, 1, 0, 0)', String(touchGrow));
         await ctx.close();
     }
     {
@@ -285,9 +306,15 @@ const READ = () => {
             bg: getComputedStyle(document.querySelector(s)).backgroundColor,
         }), sel);
         check('a pointer device DOES get the hover border',
-            after.border === 'rgb(10, 87, 194)', `${before} -> ${after.border}`);
+            after.border === 'rgb(0, 107, 207)', `${before} -> ${after.border}`);
         check('and the theme coral never reaches the card',
             after.bg !== 'rgb(240, 128, 128)', after.bg);
+        const grown = await page.evaluate((sel2) => {
+            const m = document.querySelector(sel2 + ' .dccgg-rev-mark');
+            return getComputedStyle(m).transform;
+        }, sel);
+        check('the icon grows on hover, like the footer\'s',
+            grown !== 'none' && /matrix\(1\.1/.test(grown), String(grown));
         // A REAL Tab, not el.focus(): :focus-visible deliberately does not
         // match programmatic focus in Chromium, so the first version of this
         // reported "none 0px" on a rule that works.
@@ -409,9 +436,15 @@ const READ = () => {
         check('no request is made to Google, Tripadvisor or Yelp',
             external.length === 0, JSON.stringify(external.slice(0, 3)));
         check('the arrow is an inline svg', r.cards.every((c) => c.arrowInlineSvg));
-        check('each mark carries its own colour',
-            new Set(r.cards.map((c) => c.markInk)).size === 3,
-            JSON.stringify(r.cards.map((c) => c.markInk)));
+        // The footer's own colours, verified in the live stylesheet:
+        // #165395 and #FF3030 are per-item overrides on the page, #589442
+        // is Elementor's default for .elementor-social-icon-tripadvisor.
+        const wantInk = { google: 'rgb(22, 83, 149)', tripadvisor: 'rgb(88, 148, 66)',
+            yelp: 'rgb(255, 48, 48)' };
+        r.cards.forEach((c) => {
+            check(`${c.key}: the circle is the footer's colour`,
+                c.markInk === wantInk[c.key], `${c.markInk} want ${wantInk[c.key]}`);
+        });
         await ctx.close();
     }
 
