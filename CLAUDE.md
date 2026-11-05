@@ -1501,6 +1501,53 @@ Rob sees it (the overlay rows; sources named on the sheets).
     Thanksgiving exempt, the occluder clip OFF in both builds (the
     occluder change reaches every theme by design and is proven by
     test-calm).
+- **4.16.1 (Rob, via the Director, 2026-11-05): four fixes.** Built on
+  4.16.0 (live). Rollback: 4.16.0.
+  1. **The occluders are GONE** (Rob: behind buttons and fields "looks weird
+     and unnatural with boxy, incomplete falling. That was a mistake on my
+     part to choose it"). `OCC_SEL`, `occBuild`/`occFrame`/`occClip`, the
+     subtle layer's clip and their MutationObserver/2 s rebuild are deleted.
+     Pieces are ONE layer in front, see-through, pointer-events none. Do not
+     bring per-element masking back. `test-calm.js` 1 counts clips (0),
+     checks pieces ink over controls, 200 hit tests, a real click, typing
+     and a wheel scroll; mutations `mask`, `click`.
+  2. **The tom group is fully opaque** on every screen: `drawP` gives
+     `forage` only its own fade-in (no `alphaBase`, no evening dim, no far
+     poult 0.94). Pieces keep the sprite opacity (live: 0.7). Mutation
+     `inherit`.
+  3. **2x on a desktop-wide window**: `tkK()` = 2 when `innerWidth >= 1024`
+     (draw scale, `tomGeom`'s tu, G and R floor); phones unchanged, proven
+     against the 4.16.0 formula at 390 and 1023 (mutations `onex`, `phone`).
+     `TK_DESK` (the screen's longer side or the window >= 1024) draws the
+     cache at 2x (`tkO.H`), so it is never scaled up: 416 px for 207 device
+     px at 1440 DPR 2.
+  4. **The desktop start-up freeze, measured** (`tools/trace-startup.js`,
+     the LIVE site, cold cache; `--gpu=1` is Chromium's GPU canvas on
+     SwiftShader, ~20x slower than a real GPU; `--swap=<dir>` serves a local
+     build into the live page; `--profile=1` a CPU profile): on the CPU
+     canvas nothing stalls at any width; on the GPU canvas a 21.5 s native
+     main-thread task right after the engine's first frame, then a 5.9 s
+     idle callback, at 1440, 1920 AND 390. Bisected (scratch builds): the
+     tom. His 45 poses drawn in the worker on an ACCELERATED OffscreenCanvas
+     share the GPU with the page (the stall), and `tkFinish`'s getImageData
+     per pose is a GPU read-back each (the 5.9 s). Fixed on `TK_DESK` only:
+     the pack draws with `willReadFrequently` (software) when `o.sw`, and
+     `tkFinish` keeps the bitmaps and warms each by one drawImage onto a 256
+     px scratch, a few per idle moment, never reading back. A phone runs
+     4.16.0's code (the Director: leave phones' start-up untouched; Rob's
+     iPhone runs Safari, whose worker canvas is not the GPU's) — but
+     Chromium at phone size stalls the same way, so ANDROID phones likely
+     still have it: reported, one line to extend.
+  5. **The start-up gate** (desktop only, `gateStep`): the canvases stay
+     transparent until 15 frames in a row arrive without a stall (each
+     within max(60 ms, 2.5x the recent average gap)), or 5 s after the first
+     frame, then fade in over 0.4 s; never again after. Motion runs from the
+     start. Knob `gate:false`. A first rule of "15 frames under 40 ms" never
+     opened on a slow (emulated) GPU: a gate must measure stalls, not speed.
+     `test-calm.js` 4 blocks the main thread 1.5 s after the first frame
+     (unseen through it, in < 1 s after, only fades in) and proves 390 never
+     gates; mutation `early`. `tools/startup-clip.js` records the start from
+     Chromium's screencast at its real timing.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1933,7 +1980,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.16.0 for 4.16.1 and 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

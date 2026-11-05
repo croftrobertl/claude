@@ -1,6 +1,7 @@
 'use strict';
 /**
- * DCC Seasons — the Untouched test, for 4.16.0 against 4.15.2 (Thanksgiving
+ * DCC Seasons — the Untouched test, for 4.16.1 against 4.16.0 (Thanksgiving
+ * exempt, 4.16.0's occluder clip off). Before that, for 4.16.0 against 4.15.2 (Thanksgiving
  * exempt; the occluder clip off in both builds, see KNOBS). Before that, for 4.15.2 (the tom feeds less; the
  * busy pause removed) against 4.15.1 (4.15.0 + the Anniversary colors): Thanksgiving exempt, every other
  * theme drawn with calm ON (what guests get, occluders included) and
@@ -34,17 +35,17 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'ea416ea';   /* 4.15.2, live (4.15.2's run: BASE 6fa0a3e, calm on) */
-const NEW = ['thanksgiving'];   /* 4.16.0: the tom holds his strut, the poults peck in place */
+const BASE = 'bc9ca56';   /* 4.16.0, live (4.16.0's run: BASE ea416ea) */
+const NEW = ['thanksgiving'];   /* 4.16.1: the tom 2x on a desktop and fully opaque */
 /* 4.15.0 (Calmer Seasons) changes the ENGINE: the occluders, the pause and
  * the walkers' turn-back, all behind CFG.calm, plus the removal of the
  * heron's unreachable landing step. So proof 2 holds everything else byte
  * for byte, and proof 3 draws every theme with calm:false against 4.14.5:
  * the same pixels mean nothing else moved. (The four behaviours are
  * proven by tools/test-calm.js; the gate by tools/test-scope.php.) */
-/* 4.16.0: text no longer occludes — a change to EVERY theme, by design, and
- * proven by tools/test-calm.js (1, 1c). Here the occluder clip is off in both
- * builds (debug occClip:false), so any other difference still shows. */
+/* 4.16.1: the occluders are gone; 4.16.0 is drawn with its clip off (debug
+ * occClip:false), which is exactly 4.16.1's unmasked drawing, so any other
+ * difference still shows. */
 const KNOBS = JSON.stringify({ occClip: false });
 
 let pass = 0, fail = 0; const problems = [];
@@ -96,7 +97,7 @@ function folder(files, drop) {
   const thNew = fs.readFileSync(`${ROOT}/dcc-seasons/includes/class-themes.php`, 'utf8');
   const thOld = git('dcc-seasons/includes/class-themes.php');
 
-  console.log(`\n  --- 1. every theme is 4.15.2's (${BASE}) ---`);
+  console.log(`\n  --- 1. every theme is 4.16.0's (${BASE}) ---`);
   const th = themesSame(themesOf(thNew, thOld));
   ok(!th.changed.length, `the other ${th.n - NEW.length} themes are byte-identical`, th.changed.join(','));
   ok(!th.sub.length, 'and so are their background layers', th.sub.join(','));
@@ -104,7 +105,7 @@ function folder(files, drop) {
 
   console.log('\n  --- 2. the text: the loader, the egg, every pack ---');
   const same = {}, base = {};
-  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.15.2`, f); }
+  for (const f of SAME_FILES) { same[f] = fs.readFileSync(`${JS}/${f}`, 'utf8'); base[f] = git(`dcc-seasons/assets/js/${f}`); ok(same[f] === base[f], `${f} is byte-identical to 4.16.0`, f); }
 
   console.log('\n  --- 3. the pixels: every theme, calm on (the clip off), both builds ---');
   const now = {}, was = {};
@@ -139,11 +140,11 @@ function folder(files, drop) {
     const dm = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace(/(\n\t\tbat: ')(\d+) /, (a, p, d) => p + (+d + 4) + ' ') }), []);
     const hm = hashes(dm, ['halloween']);
     ok(JSON.stringify(hm.halloween) !== JSON.stringify(ho.halloween), 'a Halloween sprite resized in the engine fails proof 3 (the pixels)', JSON.stringify(hm.halloween));
-    /* 4.16.0: a change to the occluders ONLY must not show here (the clip is off in both):
-     * a change to how pieces fall must */
-    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace("var OCC_SEL = 'button,", "var OCC_SEL = 'p, h1, button,") }), []);
+    /* 4.16.1: masking put back (the occluders are gone, and 4.16.0 is
+     * compared with its clip off): the pixels must see it */
+    const dl = folder(Object.assign({}, now, { 'engine.js': now['engine.js'].replace("			var layerS = p.far ? 0.6 : 1;\n			cx.save();", "			var layerS = p.far ? 0.6 : 1;\n			cx.save(); if (b !== 'forage') { cx.beginPath(); cx.rect(-2, -2, vw + 4, vh + 4); cx.rect(0, vh * 0.3, vw, vh * 0.4); cx.clip('evenodd'); }") }), []);
     const hl = hashes(dl, ['halloween']);
-    ok(JSON.stringify(hl.halloween) === JSON.stringify(ho.halloween), 'an occluder-set change alone does not show here (the clip is off in both builds): test-calm.js holds it', JSON.stringify(hl));
+    ok(JSON.stringify(hl.halloween) !== JSON.stringify(ho.halloween), 'masking the pieces again fails proof 3', JSON.stringify(hl));
     /* (the crane draws on Florida Keys only in its cranes scene, which the
      * 24 s pixel walk does not reach: proof 2 holds the crane byte for byte) */
   }

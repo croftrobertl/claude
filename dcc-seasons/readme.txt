@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.16.0
+Stable tag: 4.16.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,19 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.16.1 =
+Four fixes from Rob.
+* The falling pieces are one layer in front of everything again: they no
+  longer pass behind buttons and entry fields. They stay see-through and
+  never take a tap, click, scroll or keystroke.
+* Thanksgiving: the tom and his poults are fully opaque on every screen,
+  like the scenes and flyers, and twice the size on a desktop-wide window
+  (1024 px and up). Phones and smaller windows keep their size.
+* Desktop start-up: the effects no longer move, freeze and start again.
+  The tom's poses are now drawn in software in the background on a
+  desktop (on the GPU they held up the page's first seconds), and the
+  effects appear only once the page's frames are steady.
 
 = 4.16.0 =
 Three changes from Rob.

@@ -2734,17 +2734,6 @@
 		}
 		function drawSubtle() {
 			if (!subEff) { return; }
-			/* 4.15.0: the background layer passes behind the occluders: one
-			 * clip for all */
-			var oc = occVis.length && !(DEBUG && CFG.occClip === false);
-			if (oc) {
-				cx.save(); cx.beginPath(); cx.rect(-2, -2, vw + 4, vh + 4);
-				for (var j = 0; j < occVis.length; j++) { cx.rect(occVis[j][0], occVis[j][1], occVis[j][2] - occVis[j][0], occVis[j][3] - occVis[j][1]); }
-				cx.clip('evenodd');
-			}
-			try { drawSubtle1(); } finally { if (oc) { cx.restore(); } }
-		}
-		function drawSubtle1() {
 			if (subEff.shimmer) { drawShimmer(); }
 			/* Intensity spans roughly half to full effect strength rather
 			 * than scaling linearly from zero: at the 0.6 default the layer
@@ -2861,138 +2850,13 @@
 		var omFrac = 1, omMs = 0, omBuilds = 0, omAt = -1e9, omStamp = 0, omTimer = 0;
 		function nowMs() { return (W.performance && performance.now) ? performance.now() : +new Date(); }
 
-		/* ---- 4.15.0, Calmer Seasons (Rob's picks, 2026-11-03) ----------------
-		 * 1. OCCLUDERS (pick A): the falling pieces and the walking animals
-		 *    pass BEHIND what a guest fills in or taps (4.16.0: no longer
-		 *    behind text — see OCC_SEL). Buttons, fields, selects and links
-		 *    (anything with [data-dcc-seasons-occlude] too) are measured as
-		 *    rectangles — a link by its text LINES and its box, controls by
-		 *    their box — outside the page header (the header photo is not an
-		 *    occluder: pieces fall over it as before). Measured in idle time,
-		 *    never in a frame: after a debounced DOM change, a resize, a
-		 *    scroll that leaves the measured band, and every 2 s as a net.
-		 *    Rects are kept in DOCUMENT px, so a scroll needs no re-measure
-		 *    (a fixed-position occluder is not followed during a scroll: the
-		 *    site's fixed parts are the header, excluded, and pop-ups that sit
-		 *    above the canvas anyway). Each frame the rects on
-		 *    screen are made DISJOINT (an even-odd clip with overlapping
-		 *    holes would show the overlap) and a sprite that meets one is
-		 *    drawn clipped to the canvas minus those holes. Generic: no
-		 *    plugin is named, and nothing in another plugin changes.
-		 *    Front layering in the content only: behind layering is already
-		 *    under the page, and the footer placement clips its own text.
-		 * 2. (4.15.2, Rob: occlusion alone) the 4.15.0 pause — pieces faded
-		 *    while a field was focused or the selector's quiz was open — is
-		 *    gone, with [data-dcc-seasons-busy] and the tom's busy hold.
-		 * CFG.calm === false (debug and the Untouched proof) turns all of it,
-		 * off (the tom holds his strut either way since 4.16.0). */
+		/* 4.16.1 (Rob): the 4.15.0 occluders are GONE — falling pieces passing
+		 * behind buttons and fields "looks weird and unnatural with boxy,
+		 * incomplete falling". The pieces are ONE layer in front of
+		 * everything, see-through, and the canvas never takes a tap, click,
+		 * scroll or keystroke (pointer-events: none). CFG.calm is a debug knob
+		 * with nothing left to switch. */
 		var CALM = CFG.calm !== false;
-		var occOn = CALM && !CFG.layer && !footMode;
-		/* 4.16.0 (Rob): pieces fall IN FRONT of text — passing behind lines
-		 * of text was "more distracting and weird looking" — and still pass
-		 * under what a guest taps or fills in. Headings, paragraphs, list
-		 * items and labels are no longer occluders; a link is, by its text
-		 * lines and its tap box. */
-		var OCC_SEL = 'button, input:not([type="hidden"]), textarea, select, a, [data-dcc-seasons-occlude]';
-		var OCC_TEXT = { A: 1 };
-		var OCC_PAD = 2;
-		var occDoc = [], occY0 = 0, occY1 = 0, occStamp = 0, occMs = 0, occBuilds = 0, occDue = 0, occAt = 0, occQ = 0;
-		var occVis = [], occVisKey = '';
-		function occPush(out, r, sx, sy) {
-			if (r.width < 1 || r.height < 1) { return; }
-			out.push(r.left - OCC_PAD + sx, r.top - OCC_PAD + sy, r.width + OCC_PAD * 2, r.height + OCC_PAD * 2);
-		}
-		function occBuild() {
-			occQ = 0;
-			if (!occOn || !D.body) { return; }
-			var t0 = nowMs(), sx = W.scrollX || W.pageXOffset || 0, sy = W.scrollY || W.pageYOffset || 0, ih = W.innerHeight || vh;
-			var y0 = sy - ih * 1.5, y1 = sy + ih * 2.5;
-			var els = D.querySelectorAll(OCC_SEL), d2 = [];
-			for (var i = 0; i < els.length; i++) {
-				var el = els[i];
-				if (!el.hasAttribute('data-dcc-seasons-occlude') && el.closest(HDR_SEL)) { continue; }
-				if (el.closest('.dcc-seasons-accent, .dcc-seasons-diag')) { continue; }
-				var b = el.getBoundingClientRect();
-				if (b.width < 1 || b.height < 1) { continue; }
-				if (b.bottom + sy < y0 || b.top + sy > y1) { continue; }
-				if (OCC_TEXT[el.tagName] && !el.hasAttribute('data-dcc-seasons-occlude')) {
-					var rg = D.createRange();
-					rg.selectNodeContents(el);
-					var rs = rg.getClientRects();
-					for (var k = 0; k < rs.length; k++) { occPush(d2, rs[k], sx, sy); }
-					occPush(d2, b, sx, sy);   /* a link: its whole tap target too */
-				} else { occPush(d2, b, sx, sy); }
-			}
-			var cb = cv.getBoundingClientRect();
-			cvRect0 = { left: cb.left, top: cb.top };
-			occDoc = d2; occY0 = y0; occY1 = y1; occStamp++; occBuilds++; occAt = nowMs();
-			occMs = occAt - t0;
-		}
-		function occQueue(ms) {
-			if (!occOn || occQ) { return; }
-			occQ = setTimeout(function () {
-				if (W.requestIdleCallback) { W.requestIdleCallback(occBuild, { timeout: 400 }); } else { occBuild(); }
-			}, ms == null ? 200 : ms);
-		}
-		/* the rects on screen this frame, made disjoint: horizontal bands
-		 * between every rect edge, the covering x-intervals merged in each */
-		function occFrame() {
-			if (!occOn || !occDoc.length) { occVis = []; return occVis; }
-			var sx = W.scrollX || W.pageXOffset || 0, sy = W.scrollY || W.pageYOffset || 0;
-			var cr = cvRect0, key = occStamp + ':' + sx + ':' + sy + ':' + vw + ':' + vh + ':' + cr.left + ':' + cr.top;
-			if (key === occVisKey) { return occVis; }
-			occVisKey = key;
-			if (sy < occY0 + (W.innerHeight || vh) * 0.5 || sy + (W.innerHeight || vh) > occY1 - (W.innerHeight || vh) * 0.5) { occQueue(60); }   /* nearing the band's edge */
-			var R = [], i, a, L = occDoc, ox = -sx - cr.left, oy = -sy - cr.top;
-			for (i = 0; i < L.length; i += 4) {
-				var x = L[i] + ox, y = L[i + 1] + oy, w = L[i + 2], h = L[i + 3];
-				if (x > vw || y > vh || x + w < 0 || y + h < 0) { continue; }
-				R.push([mx2(-1, x), mx2(-1, y), mn(vw + 1, x + w), mn(vh + 1, y + h)]);
-			}
-			var ys = [];
-			for (i = 0; i < R.length; i++) { ys.push(R[i][1], R[i][3]); }
-			ys.sort(function (p1, p2) { return p1 - p2; });
-			var out = [];
-			for (i = 0; i + 1 < ys.length; i++) {
-				var ya = ys[i], yb = ys[i + 1];
-				if (yb - ya < 0.5) { continue; }
-				var iv = [];
-				for (a = 0; a < R.length; a++) { if (R[a][1] <= ya && R[a][3] >= yb) { iv.push([R[a][0], R[a][2]]); } }
-				if (!iv.length) { continue; }
-				iv.sort(function (p1, p2) { return p1[0] - p2[0]; });
-				var m = [iv[0].slice()];
-				for (a = 1; a < iv.length; a++) { var lst = m[m.length - 1]; if (iv[a][0] <= lst[1]) { lst[1] = mx2(lst[1], iv[a][1]); } else { m.push(iv[a].slice()); } }
-				for (a = 0; a < m.length; a++) { out.push([m[a][0], ya, m[a][1], yb]); }
-			}
-			occVis = out;
-			return occVis;
-		}
-		var cvRect0 = { left: 0, top: 0 };
-		/* Draw one sprite behind the occluders it meets. R: how far its
-		 * drawing can reach from p.x, p.y. Returns true when it clipped. */
-		function occClip(p, R) {
-			if (!occVis.length) { return false; }
-			var x0 = p.x - R, x1 = p.x + R, y0 = (p.b === 'dangle' || p.b === 'hang') ? -2 : p.y - R, y1 = p.y + R, hit = null;   /* a thread hangs from the top */
-			for (var i = 0; i < occVis.length; i++) {
-				var o = occVis[i];
-				if (o[0] < x1 && o[2] > x0 && o[1] < y1 && o[3] > y0) { (hit || (hit = [])).push(o); }
-			}
-			if (!hit) { return false; }
-			cx.beginPath();   /* inside drawP's own save(): its restore() lifts the clip */
-			cx.rect(-2, -2, vw + 4, vh + 4);
-			for (i = 0; i < hit.length; i++) { cx.rect(hit[i][0], hit[i][1], hit[i][2] - hit[i][0], hit[i][3] - hit[i][1]); }
-			cx.clip('evenodd');
-			return true;
-		}
-		if (occOn) {
-			if (W.MutationObserver) {
-				try { new W.MutationObserver(function () { occQueue(250); }).observe(D.body || D.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open'] }); } catch (e) { /* no observer: the 2 s net still runs */ }
-			}
-			W.addEventListener('resize', function () { occQueue(150); }, { passive: true });
-			W.addEventListener('scroll', function () { clearTimeout(occDue); occDue = setTimeout(function () { occQueue(0); }, 150); }, { passive: true });
-			setInterval(function () { if (!D.hidden) { occQueue(0); } }, 2000);
-			occQueue(0);
-		}
 
 		/* Usable = built, and enough of the page open that steering into it
 		 * still leaves room to spread. Below that the honest thing is to seed
@@ -3844,10 +3708,13 @@
 		 * the ground it covers, so a planted foot never slides), pauses, pecks,
 		 * and turns about its own feet when it reaches the end of its spot. */
 		var KP_FX = 18 + KP_STRIDE * (0.5 - 0.25 / TK_STANCE);   /* a poult's feet at rest, in its rig's units */
+		/* 4.16.1 (Rob): twice the size on a desktop-wide window (1024 and up),
+		 * same corner, same ground line; phones and tablets below unchanged */
+		function tkK() { return (W.innerWidth || vw) >= 1024 ? 2 : 1; }
 		function tomGeom(p) {
-			var tu = p.size * 1.3 * TK_H * p.sc / TK_REF, ku = KP_K * TK_REF * tu / (KP_BOX[3] - KP_BOX[1]);
+			var K = tkK(), tu = p.size * 1.3 * TK_H * p.sc * K / TK_REF, ku = KP_K * TK_REF * tu / (KP_BOX[3] - KP_BOX[1]);
 			var fxC = KP_BOX[2] - KP_FX, kw = KP_BOX[2] - KP_BOX[0], E = mx2(KP_BOX[2] - KP_FX, KP_FX - KP_BOX[0]) * ku;
-			var tw = (TK_BOX[2] - TK_BOX[0]) * tu, th = (TK_BOX[3] - TK_BOX[1]) * tu, R = mx2(24, kw * ku * 1.3), G = 6;
+			var tw = (TK_BOX[2] - TK_BOX[0]) * tu, th = (TK_BOX[3] - TK_BOX[1]) * tu, R = mx2(24 * K, kw * ku * 1.3), G = 6 * K;
 			return { tu: tu, ku: ku, kc: KP_STRIDE / TK_STANCE * ku, tw: tw, th: th, E: E, R: R, G: G, fxC: fxC,
 				kg: [th * 0.05, -th * 0.045],   /* the poults' ground lines, against his: the near one lower, the far one higher */
 				lo: [p.x - tw / 2 - G - E - R, p.x + tw / 2 + G + E], hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R] };
@@ -3909,7 +3776,7 @@
 		function tomHold(p, s) {
 			var key = p.sv >= 0 ? 'r' + (p.sv < 0.15 || p.sv > 0.75 ? 1 : 2) + (MT.floor(p.sv * 24) % 4) : p.fs === 1 ? tkPose(0, TK_FR, 1, p.ftS - p.ft, false, p.fv) : 'w0';
 			var tf = tkGet(key); if (!tf) { return; }
-			var g = tomGeom(p), ts = (p.size * 1.3 * s * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts, fy = 10 * s;
+			var g = tomGeom(p), ts = (p.size * 1.3 * s * tkK() * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts, fy = 10 * s;
 			var gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts;
 			/* drawn by ground line: higher on screen first */
 			var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });
@@ -3921,7 +3788,6 @@
 				var pw = f.w * ts, ph = f.h * ts, feet = fy + L[i][0], py = feet - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * ts;
 				var sx = (p.kd[c] > 0 ? -1 : 1) * (p.ks[c] === 3 ? 0.3 + 0.7 * abs(cos(MT.PI * p.kz[c])) : 1);
 				cx.save(); cx.translate(p.kx[c] - p.x, 0); cx.scale(sx, 1);
-				if (c) { cx.globalAlpha *= 0.94; }
 				cx.drawImage(f.c, -g.fxC * f.u * ts, py - ph / 2, pw, ph);   /* its feet on x = 0, so a turn pivots on them */
 				cx.restore();
 			}
@@ -4043,8 +3909,10 @@
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
-			if (b !== 'forage' && occVis.length && !(DEBUG && CFG.occClip === false)) { occClip(p, p.size * (p.sc || 1) * layerS * 1.7 + 6); }   /* 4.15.2 (Rob): walkers go IN FRONT of text, never cut */
-			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
+			/* 4.16.1 (Rob): the tom and his poults are as opaque as the scenes and
+			 * flyers (only their own fade-in); the falling pieces keep the
+			 * sprite opacity */
+			cx.globalAlpha = b === 'forage' ? clamp(p.alpha, 0, 1) : alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
 			if (b === 'dangle' && p.st !== 4) {
 				cx.strokeStyle = 'rgba(90,90,90,.6)';
 				cx.lineWidth = 1;
@@ -4387,7 +4255,13 @@
 		 * so the box can grow to his real extent without shrinking him */
 		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1;
 		for (var tkI = 0; tkI < specs.length; tkI++) { if (specs[tkI].def.draw === 'tom' && TKM.length) { tkSz = mx2(tkSz, (specs[tkI].def.sz || [32, 32])[1]); } }
-		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R, k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2) };
+		/* 4.16.1: a screen that can show a desktop-wide window draws his poses
+		 * at the 2x size (so nothing is scaled up), in SOFTWARE in the worker
+		 * (o.sw: an accelerated OffscreenCanvas there shared the GPU with the
+		 * page and froze its first seconds on a desktop), and warms them
+		 * without reading pixels back (tkFinish). A phone is exactly 4.16.0. */
+		var TK_DESK = mx2((W.screen && W.screen.width) || 0, (W.screen && W.screen.height) || 0, W.innerWidth || 0) >= 1024;
+		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R * (TK_DESK ? 2 : 1), k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2), sw: TK_DESK };
 		function tkBuild(key) {
 			var c = D.createElement('canvas'), m = tkDraw(c, key, tkO);
 			m.c = c; tkN++;
@@ -4414,7 +4288,18 @@
 			/* the worker's bitmaps become ordinary canvases here, in idle time,
 			 * and every pose is rasterised: a first use otherwise lands its
 			 * one-off cost in the frame that first draws him (12-16 ms at 4x) */
-			var tkFinish = function () {
+			var tkWarm = TK_DESK ? D.createElement('canvas') : null, tkWq = null;
+			var tkFinish = function (dl) {
+				if (TK_DESK) {
+					/* each bitmap drawn once onto a canvas the size the browser
+					 * accelerates (256 px), a few per idle moment: its texture is
+					 * made now, not in his first frame, and nothing is read back */
+					if (!tkWq) { tkWarm.width = tkWarm.height = 256; tkWq = Object.keys(tkCache); }
+					var wg = tkWarm.getContext('2d'), t0 = nowMs();
+					while (tkWq.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 3 : nowMs() - t0 < 4)) { wg.drawImage(tkCache[tkWq.shift()].c, 0, 0, 2, 2); }
+					if (tkWq.length) { tkLater(tkFinish); return; }
+					tkDone = true; return;
+				}
 				for (var q in tkCache) {
 					var m = tkCache[q], c = m.c;
 					if (c.close) { c = D.createElement('canvas'); c.width = m.c.width; c.height = m.c.height; c.getContext('2d').drawImage(m.c, 0, 0); m.c.close(); m.c = c; }
@@ -7486,6 +7371,29 @@
 		 * display's interval divides the period exactly, and the motion step
 		 * must use the real one (4.12.2). */
 		var lastPage = 0, lastPageT = 0;
+		/* 4.16.1, the start-up gate (the Director: on a desktop "the effects
+		 * move for a split second, FREEZE for a couple of seconds, then start
+		 * again"). On a desktop-capable screen the canvases stay transparent
+		 * until 15 frames in a row have come without a stall (each within
+		 * 2.5x the recent average gap, and never later than that or 60 ms,
+		 * whichever is longer: a slow machine's steady frames count, a hitch
+		 * does not) — the page's own start-up work is over — and then fade
+		 * in over 0.4 s. 5 s after the first frame it opens whatever happens. Everything moves
+		 * from the start; nothing is SEEN to stall. Once open it never closes.
+		 * Phones never gate (TK_DESK). Debug knob gate:false turns it off. */
+		var gtA = TK_DESK && CFG.gate !== false ? 0 : 1, gtN = 0, gtLast = 0, gtOpen = 0, gtE = 0, gt0 = 0;
+		function gateStep(t) {
+			if (!gtOpen) {
+				var gd = gtLast ? t - gtLast : 0;
+				if (!gt0) { gt0 = t; }
+				if (gd) { gtN = gd < mx2(60, 2.5 * (gtE || gd)) ? gtN + 1 : 0; gtE = gtE ? gtE * 0.8 + mn(gd, 250) * 0.2 : mn(gd, 250); }
+				gtLast = t;
+				if (gtN >= 15 || t - gt0 > 5000) { gtOpen = t; }
+			}
+			gtA = gtOpen ? mn(1, (t - gtOpen) / 400) : 0;
+			var o = gtA >= 1 ? '' : String(gtA);
+			cv.style.opacity = o; if (sky && sky.c) { sky.c.style.opacity = o; }
+		}
 		function frame(t, tick) {
 			raf = 0;
 			if (manual && !tick) { return; }
@@ -7508,6 +7416,7 @@
 			 * carry can never become a backlog of owed frames. */
 			lastDraw = (pc && lastDraw && t - lastDraw < 2 * pc) ? lastDraw + pc : t;
 			ensureMounted();
+			if (gtA < 1) { gateStep(t); }
 			var t0 = (W.performance && performance.now) ? performance.now() : 0;
 			/* Motion steps stay capped as before; an idle tick may span 250ms,
 			 * and the clocks must see all of it. */
@@ -7530,8 +7439,6 @@
 				drawBgFills();
 				/* Layer 1 before everything else on the canvas: the subtle layer
 				 * is the calm baseline and every sprite belongs on top of it. */
-				/* 4.15.0: the occluders on screen, before anything is drawn */
-				occFrame();
 				stepSubtle(pdt);
 				drawSubtle();
 				if (burstMode) {
@@ -7716,8 +7623,9 @@
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
-				get calm() { return { on: CALM, occOn: occOn, doc: occDoc.length / 4, vis: occVis.map(function (o) { return o.slice(); }), builds: occBuilds, ms: occMs, tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, kx: p.kx && p.kx.slice(), kd: p.kd && p.kd.slice(), ks: p.ks && p.ks.slice(), kq: p.kq && p.kq.slice(), geo: p.hl ? tomGeom(p) : null }; }) }; },
-				occBuild: function () { occBuild(); occVisKey = ''; },
+				get calm() { return { on: CALM, occOn: false, vis: [], tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, size: p.size, sc: p.sc, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, kx: p.kx && p.kx.slice(), kd: p.kd && p.kd.slice(), ks: p.ks && p.ks.slice(), kq: p.kq && p.kq.slice(), geo: p.hl ? tomGeom(p) : null }; }) }; },
+				occBuild: function () {},
+				get gate() { return { on: TK_DESK && CFG.gate !== false, a: gtA, open: gtOpen, n: gtN, desk: TK_DESK, K: tkK() }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },
 				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },

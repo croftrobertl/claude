@@ -651,7 +651,7 @@
 		var poult = key.charAt(0) === 'k', b = poult ? KP_BOX : TK_BOX, k2 = poult ? key.slice(1) : key;
 		var u = o.H * (poult ? o.k : 1) / (b[3] - b[1]), s2 = u * o.dpr, g;
 		c.width = Math.ceil((b[2] - b[0]) * s2); c.height = Math.ceil((b[3] - b[1]) * s2);
-		g = c.getContext('2d');
+		g = o.sw ? c.getContext('2d', { willReadFrequently: true }) : c.getContext('2d');   /* 4.16.1: o.sw, software (see the engine's TK_DESK) */
 		if (g) {
 			g.setTransform(-s2, 0, 0, s2, b[2] * s2, -b[1] * s2);
 			var ph = k2.charAt(0) === 'w' ? +k2.slice(1) / (poult ? o.kfr : o.fr) : 0, d = k2.charAt(0) === 'p' ? (k2 === 'pj' ? 1 : +k2.slice(1) / 4) : 0;
