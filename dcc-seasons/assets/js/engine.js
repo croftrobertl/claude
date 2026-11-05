@@ -4255,13 +4255,14 @@
 		 * so the box can grow to his real extent without shrinking him */
 		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1;
 		for (var tkI = 0; tkI < specs.length; tkI++) { if (specs[tkI].def.draw === 'tom' && TKM.length) { tkSz = mx2(tkSz, (specs[tkI].def.sz || [32, 32])[1]); } }
-		/* 4.16.1: a screen that can show a desktop-wide window draws his poses
-		 * at the 2x size (so nothing is scaled up), in SOFTWARE in the worker
+		/* 4.16.1: his poses are drawn in SOFTWARE in the worker on every device
 		 * (o.sw: an accelerated OffscreenCanvas there shared the GPU with the
-		 * page and froze its first seconds on a desktop), and warms them
-		 * without reading pixels back (tkFinish). A phone is exactly 4.16.0. */
+		 * page and froze its first seconds, on a desktop and in Android's
+		 * Chrome) and warmed without reading pixels back (tkFinish); a screen
+		 * that can show a desktop-wide window draws them at the 2x size, so
+		 * nothing is scaled up. A phone keeps his 4.16.0 size. */
 		var TK_DESK = mx2((W.screen && W.screen.width) || 0, (W.screen && W.screen.height) || 0, W.innerWidth || 0) >= 1024;
-		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R * (TK_DESK ? 2 : 1), k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2), sw: TK_DESK };
+		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R * (TK_DESK ? 2 : 1), k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2), sw: true };   /* software everywhere (Rob, 2026-11-05: Android's Chrome stalls too); the 2x cache on a desktop only */
 		function tkBuild(key) {
 			var c = D.createElement('canvas'), m = tkDraw(c, key, tkO);
 			m.c = c; tkN++;
@@ -4285,26 +4286,19 @@
 			/* the scroll-quiet idle moment the pre-draw's last step (and the
 			 * fallback's every step) waits for */
 			var tkCalm = function (f) { return function (dl) { if (nowMs() - tkQuiet < 300) { setTimeout(function () { tkLater(tkCalm(f)); }, 300); return; } f(dl); }; };
-			/* the worker's bitmaps become ordinary canvases here, in idle time,
-			 * and every pose is rasterised: a first use otherwise lands its
-			 * one-off cost in the frame that first draws him (12-16 ms at 4x) */
-			var tkWarm = TK_DESK ? D.createElement('canvas') : null, tkWq = null;
+			/* the worker's bitmaps are kept as they come and each is drawn once,
+			 * in idle time, so its one-off first-use cost (12-16 ms at 4x until
+			 * 4.16.0 converted them to canvases) never lands in his first frame */
+			var tkWarm = D.createElement('canvas'), tkWq = null;
 			var tkFinish = function (dl) {
-				if (TK_DESK) {
-					/* each bitmap drawn once onto a canvas the size the browser
-					 * accelerates (256 px), a few per idle moment: its texture is
-					 * made now, not in his first frame, and nothing is read back */
-					if (!tkWq) { tkWarm.width = tkWarm.height = 256; tkWq = Object.keys(tkCache); }
-					var wg = tkWarm.getContext('2d'), t0 = nowMs();
-					while (tkWq.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 3 : nowMs() - t0 < 4)) { wg.drawImage(tkCache[tkWq.shift()].c, 0, 0, 2, 2); }
-					if (tkWq.length) { tkLater(tkFinish); return; }
-					tkDone = true; return;
-				}
-				for (var q in tkCache) {
-					var m = tkCache[q], c = m.c;
-					if (c.close) { c = D.createElement('canvas'); c.width = m.c.width; c.height = m.c.height; c.getContext('2d').drawImage(m.c, 0, 0); m.c.close(); m.c = c; }
-					c.getContext('2d').getImageData(0, 0, 1, 1);   /* rasterised now, not in his first frame */
-				}
+				/* 4.16.1: each bitmap drawn once onto a canvas the size the
+				 * browser accelerates (256 px), a few per idle moment: its texture
+				 * is made now, not in his first frame, and nothing is read back
+				 * (a getImageData per pose was a GPU read-back each) */
+				if (!tkWq) { tkWarm.width = tkWarm.height = 256; tkWq = Object.keys(tkCache); }
+				var wg = tkWarm.getContext('2d'), t0 = nowMs();
+				while (tkWq.length && (dl && dl.timeRemaining ? dl.timeRemaining() > 3 : nowMs() - t0 < 4)) { wg.drawImage(tkCache[tkWq.shift()].c, 0, 0, 2, 2); }
+				if (tkWq.length) { tkLater(tkFinish); return; }
 				tkDone = true;
 			};
 			/* the fallback (no OffscreenCanvas: iOS before 16.4): one pose per
@@ -7374,21 +7368,23 @@
 		/* 4.16.1, the start-up gate (the Director: on a desktop "the effects
 		 * move for a split second, FREEZE for a couple of seconds, then start
 		 * again"). On a desktop-capable screen the canvases stay transparent
-		 * until 15 frames in a row have come without a stall (each within
+		 * until 8 frames in a row have come without a stall (each within
 		 * 2.5x the recent average gap, and never later than that or 60 ms,
 		 * whichever is longer: a slow machine's steady frames count, a hitch
 		 * does not) — the page's own start-up work is over — and then fade
 		 * in over 0.4 s. 5 s after the first frame it opens whatever happens. Everything moves
 		 * from the start; nothing is SEEN to stall. Once open it never closes.
-		 * Phones never gate (TK_DESK). Debug knob gate:false turns it off. */
-		var gtA = TK_DESK && CFG.gate !== false ? 0 : 1, gtN = 0, gtLast = 0, gtOpen = 0, gtE = 0, gt0 = 0;
+		 * Every device gates since Rob's 2026-11-05 answer (Android's Chrome
+		 * stalled as a desktop did); 8 frames is 0.27 s at the pieces' 30 fps.
+		 * Debug knob gate:false turns it off. */
+		var gtA = CFG.gate !== false ? 0 : 1, gtN = 0, gtLast = 0, gtOpen = 0, gtE = 0, gt0 = 0;
 		function gateStep(t) {
 			if (!gtOpen) {
 				var gd = gtLast ? t - gtLast : 0;
 				if (!gt0) { gt0 = t; }
 				if (gd) { gtN = gd < mx2(60, 2.5 * (gtE || gd)) ? gtN + 1 : 0; gtE = gtE ? gtE * 0.8 + mn(gd, 250) * 0.2 : mn(gd, 250); }
 				gtLast = t;
-				if (gtN >= 15 || t - gt0 > 5000) { gtOpen = t; }
+				if (gtN >= 8 || t - gt0 > 5000) { gtOpen = t; }
 			}
 			gtA = gtOpen ? mn(1, (t - gtOpen) / 400) : 0;
 			var o = gtA >= 1 ? '' : String(gtA);
@@ -7625,7 +7621,7 @@
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
 				get calm() { return { on: CALM, occOn: false, vis: [], tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, size: p.size, sc: p.sc, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, kx: p.kx && p.kx.slice(), kd: p.kd && p.kd.slice(), ks: p.ks && p.ks.slice(), kq: p.kq && p.kq.slice(), geo: p.hl ? tomGeom(p) : null }; }) }; },
 				occBuild: function () {},
-				get gate() { return { on: TK_DESK && CFG.gate !== false, a: gtA, open: gtOpen, n: gtN, desk: TK_DESK, K: tkK() }; },
+				get gate() { return { on: CFG.gate !== false, a: gtA, open: gtOpen, t0: gt0, n: gtN, desk: TK_DESK, K: tkK() }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },
 				get wreath() { return { stat: wrStat, box: wrBox, el: !!wrEl, parent: wrEl && wrEl.parentNode ? (wrEl.parentNode.id || wrEl.parentNode.tagName) : null }; },
 				get sleigh() { var t = sledLast; return { stats: sdStats, sprites: Object.keys(sdCache).length, moon: !!smC, L: sledL(), MR: sledR(), scene: t ? { mx: t.mx, my: t.my, MR: t.MR, clear: t.clear, x: t.x, y: t.y, dir: t.dir, fl: t.fl, darkN: t.darkN, t2: t.t2, T: t.T } : null, obstacles: function () { var o; inSky(function () { o = sledClear(); }); return o; } }; },

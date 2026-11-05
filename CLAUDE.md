@@ -1530,24 +1530,35 @@ Rob sees it (the overlay rows; sources named on the sheets).
      idle callback, at 1440, 1920 AND 390. Bisected (scratch builds): the
      tom. His 45 poses drawn in the worker on an ACCELERATED OffscreenCanvas
      share the GPU with the page (the stall), and `tkFinish`'s getImageData
-     per pose is a GPU read-back each (the 5.9 s). Fixed on `TK_DESK` only:
-     the pack draws with `willReadFrequently` (software) when `o.sw`, and
-     `tkFinish` keeps the bitmaps and warms each by one drawImage onto a 256
-     px scratch, a few per idle moment, never reading back. A phone runs
-     4.16.0's code (the Director: leave phones' start-up untouched; Rob's
-     iPhone runs Safari, whose worker canvas is not the GPU's) — but
-     Chromium at phone size stalls the same way, so ANDROID phones likely
-     still have it: reported, one line to extend.
-  5. **The start-up gate** (desktop only, `gateStep`): the canvases stay
-     transparent until 15 frames in a row arrive without a stall (each
+     per pose is a GPU read-back each (the 5.9 s). Fixed ON EVERY DEVICE
+     (the Director's phones addendum, FINAL: "apply the fix wherever it is
+     needed"; Android runs real Chrome and stalls like the desktop): the
+     pack draws with `willReadFrequently` (software) since `tkO.sw` is
+     always true, and `tkFinish` keeps the bitmaps and warms each by one
+     drawImage onto a 256 px scratch, a few per idle moment, never reading
+     back. Phone SIZE is unchanged (only `tkK()` makes desktop 2x).
+     Guardrails, measured: phone main-thread time per frame (390, DPR 3, 4x
+     CPU, shipped build, two alternating runs) is no worse with software
+     drawing (contact p95 1.3-1.5 vs 1.6 ms, 0 frames over 8 ms both;
+     cottages worst 2.2-2.5 ms vs 4.16.0's slow frames to 11.3 ms), so phones
+     take the new path. Pose cache: phone 5.66 MB before and after; desktop
+     (1440 DPR 2) 5.66 MB → 22.59 MB (45 poses, tallest 208 → 416 px: twice
+     the size is four times the pixels).
+  5. **The start-up gate** (every device, `gateStep`): the canvases stay
+     transparent until 8 frames in a row arrive without a stall (each
      within max(60 ms, 2.5x the recent average gap)), or 5 s after the first
      frame, then fade in over 0.4 s; never again after. Motion runs from the
-     start. Knob `gate:false`. A first rule of "15 frames under 40 ms" never
-     opened on a slow (emulated) GPU: a gate must measure stalls, not speed.
-     `test-calm.js` 4 blocks the main thread 1.5 s after the first frame
-     (unseen through it, in < 1 s after, only fades in) and proves 390 never
-     gates; mutation `early`. `tools/startup-clip.js` records the start from
-     Chromium's screencast at its real timing.
+     start. Knob `gate:false`. 8, not 15: at the 30 fps sprite cap 15 frames
+     was 0.5 s, over the Director's 0.3 s bar for a device with no stall;
+     8 measures 267 ms at 390 and 1440. A first rule of "15 frames under
+     40 ms" never opened on a slow (emulated) GPU: a gate must measure
+     stalls, not speed. `test-calm.js` 4 blocks the main thread 1.5 s after
+     the first frame at 1440, 1920 and 390 (unseen through it, in < 1.2 s
+     after, only fades in) and checks the no-stall delay ≤ 300 ms at 390 and
+     1440; mutation `early` fails all three widths. `tools/startup-clip.js`
+     records the start from Chromium's screencast at its real timing;
+     `trace-startup.js` reports `firstMotion` (the first frame that can be
+     seen) and the frames dropped in the 5 s after it.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no

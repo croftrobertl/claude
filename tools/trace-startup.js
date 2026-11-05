@@ -9,6 +9,8 @@
  *   - every main-thread task over 50 ms, with what it was (script URL,
  *     layout, image decode, style, parse, GC) and when;
  *   - the frames the page produced (compositor frames), and the gaps;
+ *   - first motion: the first engine frame that can be SEEN (the 4.16.1 gate),
+ *     and the frames dropped (engine gaps over 50 ms) in the 5 s after it;
  *   - the Seasons engine's own frames (its requestAnimationFrame callbacks,
  *     timed by a wrapper) and every gap in them over 100 ms: a visible freeze.
  *
@@ -29,7 +31,7 @@ const INIT = `(() => {
   window.__dccF = []; window.__allF = [];
   window.requestAnimationFrame = function (cb) {
     const st = (new Error()).stack || '', mine = /engine(\\.min)?\\.js/.test(st);
-    return raf(function (ts) { const a = performance.now(); cb(ts); const d = performance.now() - a; (mine ? window.__dccF : window.__allF).push([a, d]); });
+    return raf(function (ts) { const a = performance.now(); cb(ts); const d = performance.now() - a; if (mine) { const c = document.querySelector('canvas.dcc-seasons-canvas'); window.__dccF.push([a, d, c ? c.style.opacity : '']); } else { window.__allF.push([a, d]); } });
   };
   try { new PerformanceObserver(l => { (window.__lt = window.__lt || []).push(...l.getEntries().map(e => [e.startTime, e.duration, (e.attribution && e.attribution[0] && e.attribution[0].containerSrc) || ''])); }).observe({ type: 'longtask', buffered: true }); } catch (e) {}
 })();`;
@@ -108,13 +110,21 @@ const INIT = `(() => {
   const F = page.dcc.map(f => f[0]);
   const gaps = [];
   for (let i = 1; i < F.length; i++) { if (F[i] - F[i - 1] > 100) { gaps.push({ at: Math.round(F[i - 1]), ms: Math.round(F[i] - F[i - 1]) }); } }
+  /* (a gap that runs past the 5 s is counted up to its end: a freeze longer
+   * than the window is the whole window) */
+  /* first motion: the first engine frame whose canvas can be seen (4.16.1's
+   * start-up gate holds it at opacity 0 until frames are steady); then the
+   * frames dropped in the 5 s after it (engine frame gaps over 50 ms) */
+  const fm = page.dcc.find(f => f[2] !== '0'), fmT = fm ? fm[0] : null;
+  let dropped = 0, worstGap = 0;
+  if (fmT !== null) { for (let i = 1; i < F.length; i++) { if (F[i] > fmT && F[i - 1] < fmT + 5000) { const g = Math.min(F[i], fmT + 5000) - Math.max(F[i - 1], fmT); worstGap = Math.max(worstGap, g); if (g > 50) { dropped += Math.round(g / 16.7) - 1; } } } }
   const worstF = page.dcc.reduce((m, f) => f[1] > m[1] ? f : m, [0, 0]);
   /* screencast frames on the page's clock; gaps over 250 ms after the engine's first frame */
   const S = shots.map(t => t - page.origin).filter(t => t > 0).sort((a, b) => a - b), sg = [];
   const e0 = F.length ? F[0] : 1e9;
   for (let i = 1; i < S.length; i++) { if (S[i - 1] >= e0 && S[i] - S[i - 1] > 250) { sg.push({ at: Math.round(S[i - 1]), ms: Math.round(S[i] - S[i - 1]) }); } }
   const out = { url: URL0, screencast: { frames: S.length, afterEngine: S.filter(t => t >= e0).length, stills: sg }, width: W, dsf: DSF, cpu: THR, ver: (page.ver || '').replace(/^.*ver=/, ''), load: page.load, dcl: page.dcl, res: page.res,
-    engine: { first: F.length ? Math.round(F[0]) : null, frames: F.length, worst: [Math.round(worstF[0]), +worstF[1].toFixed(1)], gaps },
+    engine: { first: F.length ? Math.round(F[0]) : null, firstMotion: fmT === null ? null : Math.round(fmT), after5s: { dropped, worstGapMs: Math.round(worstGap) }, frames: F.length, worst: [Math.round(worstF[0]), +worstF[1].toFixed(1)], gaps },
     longTasks: long, profile: prof };
   console.log(JSON.stringify(out, null, 1));
   if (!OUT) { fs.rmSync(tracePath, { force: true }); }

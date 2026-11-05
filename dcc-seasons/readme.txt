@@ -196,10 +196,12 @@ Four fixes from Rob.
 * Thanksgiving: the tom and his poults are fully opaque on every screen,
   like the scenes and flyers, and twice the size on a desktop-wide window
   (1024 px and up). Phones and smaller windows keep their size.
-* Desktop start-up: the effects no longer move, freeze and start again.
-  The tom's poses are now drawn in software in the background on a
-  desktop (on the GPU they held up the page's first seconds), and the
-  effects appear only once the page's frames are steady.
+* Start-up, on every device: the effects no longer move, freeze and start
+  again. The tom's poses are now drawn in software in the background (on
+  the GPU they held up the page's first seconds, on a desktop and on
+  Android phones alike), and the effects appear only once the page's
+  frames are steady: 8 steady frames (about 0.27 s where nothing stalls),
+  at most 5 s, then a 0.4 s fade in.
 
 = 4.16.0 =
 Three changes from Rob.

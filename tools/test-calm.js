@@ -48,7 +48,7 @@ if (MUT) {
     onex: ["function tkK() { return (W.innerWidth || vw) >= 1024 ? 2 : 1; }", "function tkK() { return 1; }"],
     phone: ["function tkK() { return (W.innerWidth || vw) >= 1024 ? 2 : 1; }", "function tkK() { return (W.innerWidth || vw) >= 320 ? 2 : 1; }"],
     inherit: ["cx.globalAlpha = b === 'forage' ? clamp(p.alpha, 0, 1) :", "cx.globalAlpha = b === 'forage' ? alphaBase * clamp(p.alpha, 0, 1) :"],
-    early: ["if (gtN >= 15 || t - gt0 > 5000) { gtOpen = t; }", "if (gtN >= 0 || t - gt0 > 5000) { gtOpen = t; }"],
+    early: ["if (gtN >= 8 || t - gt0 > 5000) { gtOpen = t; }", "if (gtN >= 0 || t - gt0 > 5000) { gtOpen = t; }"],
     slide: ["p.alpha = mn(1, p.alpha + dt / 1.2);", "p.alpha = mn(1, p.alpha + dt / 1.2); p.x -= 2 * dt;"],
     cross: ["hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R]", "hi: [p.x - tw / 2 - G - E + R + tw * 0.5, p.x + tw / 2 + G + E + R]"],
     order: ["var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });", "var L = [[g.kg[0], 0], [0, -1], [g.kg[1], 1]];"],
@@ -181,11 +181,11 @@ async function inkRun(pg, n) {
   }
 
   if (!ONLY || ONLY === 'gate') {
-    console.log('\n  --- 4. (4.16.1) the start-up gate: on a desktop nothing is seen until frames are steady; a phone never gates ---');
+    console.log('\n  --- 4. (4.16.1) the start-up gate: nothing is seen until frames are steady, on every device; no delay without a stall ---');
     for (const w of [1440, 1920, 390]) {
       /* the real frame loop (not the mocked clock): the main thread is blocked
-       * for 1.5 s just after the engine's first frame, as a desktop's GPU
-       * stall did; the canvas must stay unseen through it */
+       * for 1.5 s just after the engine's first frame, as the GPU stall did;
+       * the canvas must stay unseen through it */
       const ses = await boot(o => rt.page(o), w, 'halloween', {}, 11), pg = ses.page;
       const r = await pg.evaluate(() => new Promise(done => {
         const S = window.DCCSeasonsEngine._state, cv = document.querySelector('canvas.dcc-seasons-canvas'), log = [];
@@ -194,15 +194,20 @@ async function inkRun(pg, n) {
         (function rec() { log.push([performance.now() - t0, cv.style.opacity, S.gate.a]); if (performance.now() - t0 < 4500) { raf(rec); } else { done({ log, blockEnd: blockEnd - t0, gate: S.gate }); } })();
         setTimeout(() => { const a = performance.now(); while (performance.now() - a < 1500) { /* blocked */ } blockEnd = performance.now(); }, 60);
       }));
-      const seenBefore = r.log.filter(e => e[0] <= r.blockEnd + 150 && e[1] !== '0' && e[1] !== '').length;
+      const seenBefore = r.log.filter(e => e[0] <= r.blockEnd + 150 && e[1] !== '0').length;
       const openAt = (r.log.find(e => e[1] === '' && e[0] > r.blockEnd) || [null])[0];
-      if (w >= 1024) {
-        ok(r.gate.on && seenBefore === 0 && r.log.filter(e => e[0] <= r.blockEnd + 150).every(e => e[1] === '0' || e[1] === ''), `${w}: unseen until the 1.5 s stall is over (gate on; no visible frame before ${Math.round(r.blockEnd)} ms)`, JSON.stringify(r.log.slice(0, 8)));
-        ok(openAt !== null && openAt - r.blockEnd < 1500, `${w}: and fully in ${openAt === null ? '-' : Math.round(openAt - r.blockEnd)} ms after it (15 steady frames, then a 0.4 s fade)`, JSON.stringify(r.log.slice(-4)));
-        ok(r.log.filter(e => e[0] > r.blockEnd).every((e, i, a) => i === 0 || parseFloat(e[1] || '1') >= parseFloat(a[i - 1][1] || '1') - 1e-6), `${w}: it only ever fades in, never out again`, '');
-      } else {
-        ok(!r.gate.on && r.log.every(e => e[1] === ''), `${w}: a phone never gates (the canvas is never hidden: 4.16.0's start-up)`, JSON.stringify(r.gate));
-      }
+      ok(r.gate.on && seenBefore === 0, `${w}: unseen until the 1.5 s stall is over (no visible frame before ${Math.round(r.blockEnd)} ms)`, JSON.stringify(r.log.slice(0, 8)));
+      ok(openAt !== null && openAt - r.blockEnd < 1200, `${w}: and fully in ${openAt === null ? '-' : Math.round(openAt - r.blockEnd)} ms after it (8 steady frames, then a 0.4 s fade)`, JSON.stringify(r.log.slice(-4)));
+      ok(r.log.filter(e => e[0] > r.blockEnd).every((e, i, a) => i === 0 || parseFloat(e[1] || '1') >= parseFloat(a[i - 1][1] || '1') - 1e-6), `${w}: it only ever fades in, never out again`, '');
+      await ses.close();
+    }
+    /* no stall: the gate must not hold the effects back (the Director: no more than ~0.3 s) */
+    for (const w of [390, 1440]) {
+      const ses = await open(rt.page({ config: (() => { const c = config(['--theme=halloween', '--placement=content', '--layering=front', '--density=16', '--diag']); c.forceHour = 12; return c; })(), extraHead: QUIET }), { ...rt.opts(w), viewport: { width: w, height: w < 768 ? 844 : 900 }, dsf: 2 });
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.gate.open, null, { timeout: 30000, polling: 50 });
+      const g = await ses.page.evaluate(() => window.DCCSeasonsEngine._state.gate);
+      const held = g.open - g.t0;
+      ok(held <= 300, `${w}, no stall: the effects show ${Math.round(held)} ms after the engine's first frame (bar 300 ms), then fade in over 0.4 s`, JSON.stringify(g));
       await ses.close();
     }
   }
