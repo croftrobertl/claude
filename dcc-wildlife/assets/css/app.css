@@ -1578,3 +1578,137 @@
 	text-align: left;
 	text-wrap: wrap;
 }
+
+/* ======================================================================
+ * 1.48.1 — THE ⓘ: every credit and source line, behind one pattern.
+ *
+ * Rob, 2026-11-04: credits go behind an ⓘ at the end of the line or heading
+ * they belong to (assets/js/info.js, Render::info()). The button is a plain
+ * round ⓘ in the primary blue — the colour every link and control here
+ * already uses, so no new colour — with a 44px tap area drawn by ::after
+ * around a 28px button, so it never crowds the line it ends.
+ *
+ * The panel is the browser's own popover: top layer, light dismiss, Esc.
+ * Everything that makes it a floating card is inside @supports, because a
+ * browser without popovers shows the panel INLINE, where the credit used to
+ * be — styled as the quiet credit line it replaces, with no button to press.
+ *
+ * Its type is reset here, not inherited: it often sits inside a heading,
+ * and a source line must not come out bold, spaced or uppercase because of
+ * where its ⓘ is. Left-aligned and wrapped as ordinary text, like every
+ * multi-line block in this plugin (1.48.0's text rules).
+ * ====================================================================== */
+.dccwl-info {
+	display: inline-flex;
+	vertical-align: middle;
+}
+.dccwl-app .dccwl-info .dccwl-info-btn.dccwl-info-btn,
+.dccwl-sheet .dccwl-info .dccwl-info-btn.dccwl-info-btn {
+	/* 44 x 44, the plugin's tap-target floor, measured on the button itself;
+	 * the negative margins give back what the line would otherwise grow by,
+	 * so a 44px target sits on a text line without moving it. The visible
+	 * ⓘ is the 28px disc drawn by ::before. */
+	align-items: center;
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	box-shadow: none;
+	color: var(--dccwl-primary);
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	font-weight: var(--dccwl-fw-label);
+	height: 44px;
+	justify-content: center;
+	letter-spacing: 0;
+	margin: -8px -8px -8px -6px;
+	min-height: 0;
+	padding: 0;
+	position: relative;
+	text-transform: none;
+	vertical-align: middle;
+	width: 44px;
+}
+.dccwl-app .dccwl-info .dccwl-info-btn.dccwl-info-btn::before,
+.dccwl-sheet .dccwl-info .dccwl-info-btn.dccwl-info-btn::before {
+	border-radius: 50%;
+	content: "";
+	height: 28px;
+	left: 8px;
+	position: absolute;
+	top: 8px;
+	width: 28px;
+}
+.dccwl-app .dccwl-info .dccwl-info-btn.dccwl-info-btn:hover::before,
+.dccwl-sheet .dccwl-info .dccwl-info-btn.dccwl-info-btn:hover::before {
+	background: var(--dccwl-primary-soft);
+}
+.dccwl-app .dccwl-info .dccwl-info-btn.dccwl-info-btn:focus-visible,
+.dccwl-sheet .dccwl-info .dccwl-info-btn.dccwl-info-btn:focus-visible {
+	outline: none;
+}
+.dccwl-app .dccwl-info .dccwl-info-btn.dccwl-info-btn:focus-visible::before,
+.dccwl-sheet .dccwl-info .dccwl-info-btn.dccwl-info-btn:focus-visible::before {
+	box-shadow: var(--dccwl-ring);
+}
+.dccwl-info-btn svg { display: block; height: 18px; position: relative; width: 18px; }
+
+.dccwl-info-pop {
+	color: var(--dccwl-text-muted);
+	display: block;
+	font-size: var(--dccwl-fs-xs);
+	font-style: normal;
+	font-weight: var(--dccwl-fw-body);
+	letter-spacing: 0;
+	line-height: 1.45;
+	text-align: left;
+	text-transform: none;
+	text-wrap: wrap;
+}
+.dccwl-info-line { display: block; font-weight: var(--dccwl-fw-body); }
+.dccwl-info-line + .dccwl-info-line { margin-top: 4px; }
+.dccwl-info-pop a { color: var(--dccwl-primary); font-weight: var(--dccwl-fw-label); }
+
+@supports selector(:popover-open) {
+	.dccwl-info-pop {
+		background: #ffffff;
+		border: 1px solid var(--dccwl-line);
+		border-radius: var(--dccwl-radius);
+		box-shadow: var(--dccwl-shadow-raised);
+		box-sizing: border-box;
+		color: var(--dccwl-text);
+		font-size: var(--dccwl-fs-sm);
+		font-weight: var(--dccwl-fw-body);
+		inset: auto;
+		margin: 0;
+		max-width: min(320px, calc(100vw - 24px));
+		overflow: visible;
+		padding: 10px 12px;
+		position: fixed;
+	}
+	.dccwl-info-pop:not(:popover-open) { display: none; }
+}
+@supports not selector(:popover-open) {
+	.dccwl-info { display: block; }
+	.dccwl-info-btn { display: none !important; }
+}
+
+/* An ⓘ on a photograph (1.48.1): the photo it credits is its "line", so it
+ * sits on the photo's corner, on a white disc that reads over any picture.
+ * Same button, same panel. */
+.dccwl-medallion { position: relative; }
+.dccwl-info.dccwl-info-onphoto {
+	bottom: 0;
+	position: absolute;
+	right: 0;
+	z-index: 1;
+}
+.dccwl-app .dccwl-info.dccwl-info-onphoto .dccwl-info-btn.dccwl-info-btn,
+.dccwl-sheet .dccwl-info.dccwl-info-onphoto .dccwl-info-btn.dccwl-info-btn {
+	margin: 0;
+}
+.dccwl-app .dccwl-info.dccwl-info-onphoto .dccwl-info-btn.dccwl-info-btn::before,
+.dccwl-sheet .dccwl-info.dccwl-info-onphoto .dccwl-info-btn.dccwl-info-btn::before {
+	background: #ffffff;
+	box-shadow: var(--dccwl-shadow-tile);
+}

@@ -519,53 +519,53 @@
 				body.appendChild(el('p', 'dccwl-sci', sp.sci));
 			}
 
-			// Quiet photo credit, only where a licensed photo is shown.
-			// Per-photo since 1.24.0: sp.credit is set when this photo is not
-			// the default Adobe one, and three of the Commons photos are CC BY,
-			// which REQUIRES the photographer and the licence wherever the
-			// image is shown. This sheet is where it is shown at size, so the
-			// line is not decorative. Where a source page exists the credit
-			// links to it — that is where the licence is actually stated.
-			if (sp.src && sp.src.full) {
-				var credit = el('p', 'dccwl-photo-credit');
+			/*
+			 * THE PHOTO CREDIT IS AN ⓘ ON THE PHOTOGRAPH (1.48.1, Rob: "all
+			 * credit and source lines go behind an ⓘ"). The credit line under
+			 * the photo and the "Photo Credits" link under that are both in
+			 * its panel — the photographer and licence (linked to the source
+			 * page, where the licence is actually stated) and the whole list.
+			 *
+			 * THE LICENCE CHECK, because this is a licence surface (1.24.0).
+			 * Every photo here is CC0, public domain, Adobe Stock, or CC BY /
+			 * BY-SA 2.0, 3.0 or 4.0 (and one Commons "Attribution"). None of
+			 * those requires the credit to be visible without a tap: 4.0 says
+			 * outright that credit may be given by a link to it, and 2.0/3.0
+			 * ask for credit "reasonable to the medium", which an ⓘ on the
+			 * photograph it credits — plus the full Credits panel — is. The ⓘ
+			 * sits on the photo's corner because the photo is the thing it
+			 * credits; it is the same component as every other ⓘ, on a white
+			 * disc so it reads over any picture.
+			 */
+			if (sp.src && sp.src.full && window.DCCWL_Info) {
+				var cr = document.createDocumentFragment();
+				var line = el('span', 'dccwl-info-line');
 				var text = sp.credit || CFG.i18n.photoCredit || 'Photo: Adobe Stock';
-				// http(s) only: the credit map is filterable, so a site could
-				// put anything in this field. A javascript: URL would be a
-				// scripting hole, so an unrecognised scheme renders as plain
-				// text rather than as a link.
+				// http(s) only: the credit map is filterable, so an
+				// unrecognised scheme renders as plain text, not a link.
 				if (sp.creditUrl && /^https?:\/\//i.test(sp.creditUrl)) {
 					var a = el('a', 'dccwl-photo-credit-link', text);
 					a.href = sp.creditUrl;
 					a.rel = 'noopener';
-					credit.appendChild(a);
+					line.appendChild(a);
 				} else {
-					credit.textContent = text;
+					line.textContent = text;
 				}
-				body.appendChild(credit);
-
-				/*
-				 * AND THE FULL LIST, ONE TAP AWAY (1.43.0).
-				 *
-				 * The credits panel left /explore/ this release — 108,284
-				 * bytes of it — and lives on /wildlife-guide/. The
-				 * Director's condition for allowing that was that the
-				 * Credits entry stays visible and one tap away on /explore/
-				 * AND on every species sheet, so here it is.
-				 *
-				 * This is IN ADDITION to the line above, never instead of
-				 * it: the sheet is where a photograph is shown at size, so
-				 * its own attribution belongs beside it (1.24.0), and a
-				 * sheet printing the wrong credit is a licence breach rather
-				 * than a typo. The link is the rest of the list.
-				 */
+				cr.appendChild(line);
 				if (CFG.creditsUrl) {
-					var all = el('p', 'dccwl-photo-credit dccwl-photo-credit-all');
-					var allLink = el('a', 'dccwl-photo-credit-link',
-						CFG.i18n.allCredits || 'Photo Credits');
+					var allLine = el('span', 'dccwl-info-line');
+					var allLink = el('a', 'dccwl-photo-credit-link', CFG.i18n.allCredits || 'Photo Credits');
 					allLink.href = CFG.creditsUrl;
-					all.appendChild(allLink);
-					body.appendChild(all);
+					allLine.appendChild(allLink);
+					cr.appendChild(allLine);
 				}
+				var info = window.DCCWL_Info.make(CFG.i18n.photoCreditLabel || 'Photo Credit', cr);
+				info.className += ' dccwl-info-onphoto';
+				medallion.appendChild(info);
+			} else if (sp.src && sp.src.full) {
+				/* No ⓘ script: the credit prints under the photo, as before. */
+				var credit = el('p', 'dccwl-photo-credit', sp.credit || CFG.i18n.photoCredit || 'Photo: Adobe Stock');
+				body.appendChild(credit);
 			}
 
 			// What this photograph's identification rests on, where that is

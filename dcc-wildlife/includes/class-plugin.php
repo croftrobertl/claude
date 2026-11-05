@@ -183,10 +183,20 @@ final class Plugin {
 			[],
 			DCC_WL_VERSION
 		);
+		/* 1.48.1: the one ⓘ pattern for credits and sources. Every script
+		 * that draws a credit depends on the sheet, so the sheet depends on
+		 * this and it is everywhere a credit can be. */
+		wp_register_script(
+			'dcc-wildlife-info',
+			DCC_WL_URL . 'assets/js/info.js',
+			[],
+			DCC_WL_VERSION,
+			true
+		);
 		wp_register_script(
 			'dcc-wildlife-sheet',
 			DCC_WL_URL . 'assets/js/sheet.js',
-			[],
+			[ 'dcc-wildlife-info' ],
 			DCC_WL_VERSION,
 			true
 		);

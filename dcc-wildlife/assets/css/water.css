@@ -187,8 +187,10 @@
 	align-items: center;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-	justify-content: space-between;
+	gap: 0;
+	/* The label and its ⓘ, side by side (1.48.1): the ⓘ ends the line it
+	 * belongs to. Nothing else shares the row since the chip went. */
+	justify-content: center;
 }
 
 .dccwl-water-scope .dccwl-card-label {
@@ -198,29 +200,8 @@
 	letter-spacing: 0.05em;
 }
 
-/* The source + age chip. The source name can be long ("USGS rain gauge
- * (site 02237700)"), so it truncates visually — the untruncated name is
- * still printed in the attribution line below, so nothing is lost. */
-.dccwl-water-scope .dccwl-card-src {
-	max-width: 100%;
-	min-width: 0;
-}
-
-.dccwl-water-scope .dccwl-card-srcname {
-	display: inline-block;
-	max-width: 13ch;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	vertical-align: bottom;
-	white-space: nowrap;
-}
-
-.dccwl-water-scope .dccwl-card-dot { color: var(--dccwl-text-faint); }
-
-.dccwl-water-scope .dccwl-card-age {
-	color: var(--dccwl-text);
-	font-weight: 700;
-}
+/* The source + age chip went behind the ⓘ in 1.48.1 (app.css, info.js);
+ * its rules went with it. */
 
 .dccwl-water-scope .dccwl-card-value {
 	color: var(--dccwl-text);
@@ -328,11 +309,11 @@
  * label and chip do not: the head is `flex-wrap: wrap`, so a skeleton wider
  * than the card turns one row into two and the shape stops matching. */
 .dccwl-water-scope .dccwl-skel-label { height: 1em; width: 7em; }
-.dccwl-water-scope .dccwl-skel-chip { height: 1em; width: 4.5em; }
+/* 1.48.1: the chip is the ⓘ's 28px disc, which sets the real head's height. */
+.dccwl-water-scope .dccwl-skel-chip { border-radius: 50%; height: 28px; width: 28px; }
 /* The value slot's own height, so a skeleton card and a real card measure
  * the same: the line-height of --dccwl-fs-value at 1.25. */
 .dccwl-water-scope .dccwl-skel-value { height: 1.25em; margin: 4px 0; width: 70%; }
-.dccwl-water-scope .dccwl-skel-attr { height: 1em; width: 60%; }
 
 @keyframes dccwl-skel-sweep {
 	0%   { background-position: 100% 0; }
@@ -959,8 +940,7 @@
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-fishing-note a,
-.dccwl-fishing-src a { color: var(--dccwl-primary); }
+.dccwl-fishing-note a { color: var(--dccwl-primary); }
 
 .dccwl-fishing-moon {
 	color: var(--dccwl-text-muted);
@@ -1001,19 +981,10 @@
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-fishing-src {
-	/* Attribution is content, not decoration — see the note on .dccwl-moon-light. */
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-xs);
-	margin: var(--dccwl-gap-lg) 0 0;
-	font-weight: var(--dccwl-fw-body);
-}
-
-.dccwl-fishing-src-links { display: inline-block; margin-top: 4px; }
+/* The fishing source line is an ⓘ on the block's heading since 1.48.1. */
 
 @media (max-width: 600px) {
 	.dccwl-water-scope .dccwl-cards { grid-template-columns: 1fr; }
-	.dccwl-water-scope .dccwl-card-srcname { max-width: 20ch; }
 	.dccwl-fishing-seasons { grid-template-columns: 1fr; }
 }
 
@@ -1104,59 +1075,11 @@
  * followed something; the pane is the top of the panel now. */
 .dccwl-water-tab > :first-child { margin-top: 0; }
 
-/* ---- the folded source chip ------------------------------------------
- *
- * The chip was a <span> and is a <button> now, which means the host kit's
- * (0,3,1) button reset gets a vote. Measured: at (0,3,0) it won, and every
- * source chip rendered as a solid blue pill — louder than the reading it was
- * annotating, and on half the cards wide enough to take a line of its own.
- * This selector is (0,4,0) and restates every property the kit sets, so the
- * chip stays the quiet metachip it looks like.
- *
- * It is a thumb target now, so it takes the 44px floor — which it earns back
- * many times over by folding two to three lines of attribution away.
- * -------------------------------------------------------------------- */
-.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle {
-	align-items: center;
-	background: transparent;
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text-muted);
-	cursor: pointer;
-	display: inline-flex;
-	font-family: inherit;
-	font-size: var(--dccwl-fs-xs);
-	font-weight: var(--dccwl-fw-label);
-	gap: 4px;
-	letter-spacing: 0;
-	min-height: 44px;
-	padding: 3px 10px;
-	text-transform: none;
-	white-space: nowrap;
-}
-.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle:hover {
-	background: var(--dccwl-btn-bg-hover);
-	border-color: transparent;
-	color: var(--dccwl-btn-txt-hover);
-}
-.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle:focus-visible {
-	box-shadow: var(--dccwl-ring);
-	outline: none;
-}
-/* The label and the chip share a row; the label yields first so the chip is
- * never pushed onto a line of its own. */
+/* ---- the folded source chip: RETIRED (1.48.1) -----------------------
+ * The source is behind an ⓘ at the end of the card's label now; the chip,
+ * its caret and its hidden attribution panel are gone. */
 .dccwl-card .dccwl-card-head { align-items: center; }
 .dccwl-card .dccwl-card-label { min-width: 0; }
-.dccwl-card-src-caret {
-	display: inline-block;
-	font-size: 0.8em;
-	transition: transform var(--dccwl-t-fast) var(--dccwl-ease);
-}
-.dccwl-card-src-toggle[aria-expanded="true"] .dccwl-card-src-caret { transform: rotate(180deg); }
-@media (prefers-reduced-motion: reduce) {
-	.dccwl-card-src-caret { transition: none; }
-}
-.dccwl-water-attr[hidden] { display: none; }
 
 /* ===================================================================
  * 1.34.0 — Rob's /explore/ review.

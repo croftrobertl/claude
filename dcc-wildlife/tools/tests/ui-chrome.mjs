@@ -141,7 +141,7 @@ const photo = await h.page.evaluate(() => {
     fit: getComputedStyle(img).objectFit,
     natural: img.naturalWidth / img.naturalHeight,
     shown: r.width / r.height,
-    credit: !!document.querySelector('.dccwl-sheet .dccwl-photo-credit'),
+    credit: !!document.querySelector('.dccwl-sheet .dccwl-medallion .dccwl-info-onphoto .dccwl-info-pop'),
   };
 });
 check(!!photo, 'the sheet shows a photograph');
@@ -150,7 +150,7 @@ if (photo) {
   check('cover' !== photo.fit, 'it is not cropped to fill a fixed box', photo.fit);
   check(Math.abs(photo.natural - photo.shown) < 0.02,
     'and it keeps its own aspect ratio', `${photo.natural.toFixed(3)} vs ${photo.shown.toFixed(3)}`);
-  check(photo.credit, 'the credit line is still under it');
+  check(photo.credit, 'the credit is still on it, behind its ⓘ (1.48.1)');
 }
 await h.page.close();
 

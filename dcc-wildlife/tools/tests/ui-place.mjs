@@ -54,7 +54,7 @@ async function nowTab(width, touch) {
       `json:function(){return Promise.resolve(window.__f);}});};</script>` +
       fx.html + `<script>${fx.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(700);

@@ -135,7 +135,9 @@ class Guide_Page {
 		if ( ! $rules ) {
 			return;
 		}
-		echo '<style id="dccwl-gp-filter">' . implode( ',', $rules ) . '{display:none}</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from sanitised slugs above.
+		/* The same preserved-state hide as guide.css (1.48.1): see the note
+		 * there on why a hidden row keeps its rendering at zero size. */
+		echo '<style id="dccwl-gp-filter">' . implode( ',', $rules ) . '{border-width:0;contain-intrinsic-size:0 0;content-visibility:hidden;visibility:hidden}</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from sanitised slugs above.
 	}
 
 	public static function pill_of( array $sp ): string {
@@ -387,16 +389,25 @@ class Guide_Page {
 	private static function spotlight( array $spot ): void {
 		?>
 		<section class="dccwl-gp-spot" data-dccwl-gp-spot>
-			<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h"><?php esc_html_e( 'Most Recorded Here', 'dcc-wildlife' ); ?></h2>
-			<p class="dccwl-gp-spot-sub" data-dccwl-gp-spot-asof>
-				<?php
-				printf(
-					/* translators: %s: a month and year, e.g. "October 2026". */
-					esc_html__( 'The four species recorded most on this canal on iNaturalist, as of %s', 'dcc-wildlife' ),
-					esc_html( self::as_of( Local::PULLED ) )
-				);
-				?>
-			</p>
+			<?php
+			/*
+			 * THE "WHERE THIS COMES FROM" LINE IS AN ⓘ ON THE HEADING (1.48.1,
+			 * Rob: "all credit and source lines go behind an ⓘ"). Same words,
+			 * same date — the source (iNaturalist) and the month of the pull.
+			 */
+			$asof = Render::info_line(
+				esc_html(
+					sprintf(
+						/* translators: %s: a month and year, e.g. "October 2026". */
+						__( 'The four species recorded most on this canal on iNaturalist, as of %s', 'dcc-wildlife' ),
+						self::as_of( Local::PULLED )
+					)
+				)
+			);
+			?>
+			<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h"><span id="dccwl-gp-spot-t"><?php esc_html_e( 'Most Recorded Here', 'dcc-wildlife' ); ?></span><?php
+				echo Render::info( __( 'Where these counts come from', 'dcc-wildlife' ), '<span data-dccwl-gp-spot-asof>' . $asof . '</span>' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above.
+			?></h2>
 			<ul class="dccwl-gp-spot-grid">
 				<?php foreach ( $spot as $sp ) : ?>
 					<?php
@@ -597,7 +608,7 @@ class Guide_Page {
 				?>
 				<aside class="dccwl-gp-pane" data-dccwl-gp-pane<?php echo $spot ? '' : ' hidden'; ?>
 					data-dccwl-gp-pane-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"
-					<?php if ( $spot ) : ?>aria-labelledby="dccwl-gp-spot-h"<?php else : ?>aria-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"<?php endif; ?>><?php
+					<?php if ( $spot ) : /* the title's own span, not the h2: the h2 also holds the ⓘ, whose name would join the pane's (1.48.1) */ ?>aria-labelledby="dccwl-gp-spot-t"<?php else : ?>aria-label="<?php esc_attr_e( 'The species you chose', 'dcc-wildlife' ); ?>"<?php endif; ?>><?php
 					if ( $spot ) {
 						self::spotlight( $spot );
 					}
@@ -818,11 +829,19 @@ class Guide_Page {
 		?>
 		<p class="dccwl-fg-line dccwl-gp-protected" data-k="protected">
 			<span class="dccwl-fg-k"><?php esc_html_e( 'Protected', 'dcc-wildlife' ); ?></span>
-			<?php echo esc_html( $line ); ?>
-			<?php if ( self::cites_rule( $id ) ) : ?>
-			<a class="dccwl-gp-locallink" href="<?php echo esc_url( (string) self::PROTECTED_SOURCE['url'] ); ?>"
-				rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) self::PROTECTED_SOURCE['rule'] ); ?></a>
-			<?php endif; ?>
+			<?php echo esc_html( $line ); ?><?php
+			/* The rule it is listed under: a source, so an ⓘ at the end of
+			 * the line (1.48.1). */
+			if ( self::cites_rule( $id ) ) {
+				echo Render::info( // phpcs:ignore WordPress.Security.EscapeOutput -- escaped here.
+					__( 'Source of the listing', 'dcc-wildlife' ),
+					Render::info_line(
+						'<a class="dccwl-gp-locallink" href="' . esc_url( (string) self::PROTECTED_SOURCE['url'] ) . '" rel="noopener nofollow" target="_blank">'
+						. esc_html( (string) self::PROTECTED_SOURCE['rule'] ) . '</a>'
+					)
+				);
+			}
+			?>
 		</p>
 		<?php
 	}
@@ -869,12 +888,21 @@ class Guide_Page {
 			: __( 'Recorded Near Here', 'dcc-wildlife' );
 		?>
 		<p class="dccwl-gp-local" data-k="local">
-			<span class="dccwl-fg-k"><?php echo esc_html( $label ); ?></span>
-			<a class="dccwl-gp-locallink" href="<?php echo esc_url( $local['url'] ); ?>"
-				rel="noopener nofollow" target="_blank">
-				<?php esc_html_e( 'iNaturalist', 'dcc-wildlife' ); ?>
-				<span class="dccwl-gp-localarrow" aria-hidden="true">&#8594;</span>
-			</a>
+			<span class="dccwl-fg-k"><?php echo esc_html( $label ); ?></span><?php
+			/*
+			 * THE RECORD ITSELF IS BEHIND AN ⓘ (1.48.1). The claim — "Recorded
+			 * In Lake County" — stays on the line; the citation that backs it,
+			 * a link to the iNaturalist observation, is in the panel.
+			 */
+			echo Render::info( // phpcs:ignore WordPress.Security.EscapeOutput -- escaped here.
+				__( 'Source of this record', 'dcc-wildlife' ),
+				Render::info_line(
+					'<a class="dccwl-gp-locallink" href="' . esc_url( $local['url'] ) . '" rel="noopener nofollow" target="_blank">'
+					. esc_html__( 'iNaturalist', 'dcc-wildlife' )
+					. ' <span class="dccwl-gp-localarrow" aria-hidden="true">&#8594;</span></a>'
+				)
+			);
+			?>
 		</p>
 		<?php
 	}
@@ -948,6 +976,8 @@ class Guide_Page {
 						'searchHere'  => __( 'Search %d Species', 'dcc-wildlife' ),
 						/* translators: %d: number of species. */
 						'searchWider' => __( 'Search %d Species', 'dcc-wildlife' ),
+						/* The ⓘ on a photograph (1.48.1): its accessible name. */
+						'photoCredit' => __( 'Photo Credit', 'dcc-wildlife' ),
 						/* translators: %s: what the visitor typed. */
 						'none'        => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
 						/* translators: %d: number of matching species. */

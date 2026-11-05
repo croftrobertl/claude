@@ -63,7 +63,7 @@ async function mapPage(width) {
       ? held.then(() => ({ ok: true, status: 200, json: () => Promise.resolve(data) }))
       : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ enabled: true, facts: [] }) }));
   }, MAP);
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   return page;
@@ -188,14 +188,14 @@ section('3. the guide page: one write per view change, reads before writes');
       return gcs.call(this, e, p);
     };
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/guide.js']) { await page.addScriptTag({ content: asset(f) }); }
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/guide.js']) { await page.addScriptTag({ content: asset(f) }); }
   await page.waitForTimeout(300);
   const io = await page.evaluate(() => window.__io.join(','));
   note(`writes already made at each read: ${io}`);
   checkSame('0,0,0', io, 'the unclip reads all three hidden ancestors before it writes any');
   checkSame(3, await page.evaluate(() => document.querySelectorAll('[data-dccwl-unclipped]').length), 'and all three end up unclipped');
 
-  const shown = () => page.evaluate(() => [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length).length);
+  const shown = () => page.evaluate(() => [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0).length);
   const n0 = await shown();
   await page.evaluate(() => {
     window.__rowWrites = 0; window.__listWrites = 0;
@@ -223,7 +223,7 @@ section('3. the guide page: one write per view change, reads before writes');
     const i = document.querySelector('[data-dccwl-gp-search]');
     i.value = 'heron';
     i.dispatchEvent(new Event('input', { bubbles: true }));
-    return [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length).length;
+    return [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0).length;
   });
   checkSame(before, inTask, 'a keystroke in the guide search does not filter 402 rows inside the keystroke');
   await page.waitForTimeout(700);
@@ -364,7 +364,7 @@ const FACTS = {
     body: `<script>window.__f=${JSON.stringify(FACTS)};window.fetch=function(u){return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(/conditions/.test(String(u))?window.__f:{enabled:false});}});};</script>` +
       fixture.html + `<script>${fixture.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(800);

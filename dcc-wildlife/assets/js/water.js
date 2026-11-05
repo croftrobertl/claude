@@ -213,16 +213,6 @@
 		return String(tpl).replace(/%d|%s/, String(v));
 	}
 
-	function ageWords(iso, precision, i18n) {
-		if (!iso) { return ''; }
-		var days = ageDaysOf(iso, precision);
-		if (null === days) { return ''; }
-		if (days === 0) { return i18n.ageToday || 'Today'; }
-		if (days < 45) { return days + (i18n.ageDays || 'd'); }
-		if (days < 730) { return Math.round(days / 30) + (i18n.ageMonths || 'mo'); }
-		return Math.round(days / 365) + (i18n.ageYears || 'y');
-	}
-
 	/* Rob's text rule (1.48.0): two or more sentences read left-aligned.
 	 * The same test as Render::is_prose() and widget.js's proseMark(). */
 	var PROSE_RE = /[.!?][\u201D\u2019"')\]]?\s+\S/;
@@ -248,20 +238,6 @@
 
 		var head = el('div', 'dccwl-card-head');
 		head.appendChild(el('span', 'dccwl-card-label', f.label));
-
-		// Source + age chip.
-		var age = ageWords(f.date, f.datePrecision, i18n);
-		var chip = el('span', 'dccwl-metachip dccwl-card-src');
-		var srcName = el('span', 'dccwl-card-srcname', f.sourceName);
-		/* The chip truncates; the title carries the whole name, as the
-		 * server-rendered card does. */
-		if (f.sourceName) { srcName.title = f.sourceName; }
-		chip.appendChild(srcName);
-		if (age) {
-			chip.appendChild(el('span', 'dccwl-card-dot', '·'));
-			chip.appendChild(el('span', 'dccwl-card-age', age));
-		}
-		head.appendChild(chip);
 		li.appendChild(head);
 
 		/*
@@ -313,99 +289,61 @@
 				fresh.text));
 		}
 
-		// Full attribution: the source (linked where there is a URL) and the
-		// measurement time, worded by the fact itself.
-		var attr = el('p', 'dccwl-water-attr');
+		/*
+		 * THE SOURCE, BEHIND AN ⓘ AT THE END OF THE LABEL (1.48.1, Rob:
+		 * "all credit and source lines go behind an ⓘ"). The chip ("USGS ·
+		 * 3d") and the attribution line under the value are gone from the
+		 * face of the card; the panel holds what both said — the source,
+		 * linked where it has a page, the measurement date worded by the
+		 * fact itself, and the note. The freshness line above stays on the
+		 * card: it is how old the reading is, not who made it.
+		 */
+		var attr = document.createDocumentFragment();
+		var srcLine = el('span', 'dccwl-info-line dccwl-water-src');
 		if (f.sourceUrl) {
 			var a = el('a', null, f.sourceName);
 			a.href = f.sourceUrl;
 			a.rel = 'noopener nofollow';
 			a.target = '_blank';
-			attr.appendChild(a);
+			srcLine.appendChild(a);
 		} else {
-			attr.appendChild(document.createTextNode(f.sourceName));
+			srcLine.textContent = f.sourceName;
 		}
+		attr.appendChild(srcLine);
 
 		/*
-		 * THE SERVER'S OWN TEXT (1.40.0). readingTime() used to format this
-		 * in the VISITOR's locale and timezone, and fell back to the raw ISO
-		 * string — or to toISOString() — when anything went wrong. One
-		 * format for the whole module now, computed once in PHP in canal
-		 * time, so there is no locale to differ and nothing to fall back to.
-		 * A fact whose date could not be read carries an empty dateText and
-		 * this line is simply not drawn.
+		 * THE SERVER'S OWN TEXT (1.40.0): one date format for the whole
+		 * module, computed once in PHP in canal time. A fact whose date could
+		 * not be read carries an empty dateText and no date line is drawn.
 		 */
 		var when = f.dateText || '';
 		if (when) {
 			// The wording comes from the fact: a gauge is "read", a lab
-			// sample is "sampled", a survey is "surveyed". Falls back to the
-			// generic word rather than asserting the wrong one.
+			// sample is "sampled", a survey is "surveyed".
 			var prefix = f.dateLabel || i18n.asOf || 'reading';
-			attr.appendChild(el('span', 'dccwl-water-date', prefix + ' ' + when));
+			attr.appendChild(el('span', 'dccwl-info-line dccwl-water-date', prefix + ' ' + when));
 		}
 		if (f.note) {
-			attr.appendChild(el('span', 'dccwl-water-note', f.note));
+			attr.appendChild(el('span', 'dccwl-info-line dccwl-water-note', f.note));
 		}
-		li.appendChild(attr);
+		if (window.DCCWL_Info) {
+			head.appendChild(window.DCCWL_Info.make(
+				String(i18n.srcOf || 'Source of %s').replace('%s', f.label), attr));
+		} else {
+			/* No ⓘ script: the source prints under the value, as before. */
+			var plain = el('p', 'dccwl-water-attr');
+			plain.appendChild(attr);
+			li.appendChild(plain);
+		}
 		proseMark(li);
 		return li;
 	}
 
-	/* ------------------------------------------------------------------
-	 * FOLD THE SOURCE LINE INTO THE CHIP (1.33.0, owner's request)
-	 *
-	 * Every fact card carried its source twice: a chip summarising it, and a
-	 * two-to-three-line attribution under the value. On a phone that is most
-	 * of the panel's height, repeated for every reading.
-	 *
-	 * The chip becomes the control and the attribution becomes its panel. Done
-	 * HERE rather than in the markup, and to server-rendered and client-built
-	 * cards alike, so there is one implementation and the two cannot drift —
-	 * and so that with no JavaScript the card still prints its full
-	 * attribution in plain sight, which is what the fact gate requires. A
-	 * folded source must never be a missing one.
-	 * ------------------------------------------------------------------ */
-	var srcSeq = 0;
-
-	function foldSources(scope) {
-		(scope || document).querySelectorAll('.dccwl-card').forEach(function (card) {
-			if (card.getAttribute('data-dccwl-src-folded')) { return; }
-			var chip = card.querySelector('.dccwl-card-src');
-			var attr = card.querySelector('.dccwl-water-attr');
-			if (!chip || !attr || 'BUTTON' === chip.tagName) { return; }
-			card.setAttribute('data-dccwl-src-folded', '1');
-
-			var i18n = CFG.i18n || {};
-			srcSeq += 1;
-			var id = 'dccwl-src-' + srcSeq;
-			attr.id = id;
-			attr.hidden = true;
-
-			var btn = document.createElement('button');
-			btn.type = 'button';
-			btn.className = chip.className + ' dccwl-card-src-toggle';
-			btn.setAttribute('aria-controls', id);
-			btn.setAttribute('aria-expanded', 'false');
-			// The chip already reads as "USGS · 3d"; the accessible name says
-			// what pressing it does, which the visible text does not.
-			var chipWords = chip.textContent.replace(/\s+/g, ' ').trim();
-			btn.setAttribute('aria-label',
-				String(i18n.srcToggle || 'Source: %s — show where this reading came from')
-					.replace('%s', chipWords));
-			while (chip.firstChild) { btn.appendChild(chip.firstChild); }
-			var caret = el('span', 'dccwl-card-src-caret');
-			caret.setAttribute('aria-hidden', 'true');
-			caret.textContent = '\u25be';
-			btn.appendChild(caret);
-			chip.parentNode.replaceChild(btn, chip);
-
-			btn.addEventListener('click', function () {
-				var open = 'true' === btn.getAttribute('aria-expanded');
-				btn.setAttribute('aria-expanded', open ? 'false' : 'true');
-				attr.hidden = open;
-			});
-		});
-	}
+	/*
+	 * FOLDING THE SOURCE INTO THE CHIP (1.33.0) IS RETIRED (1.48.1): the
+	 * source is behind an ⓘ on every card now, built in buildCard() and in
+	 * Water_Render::render_fact(), so there is nothing left to fold.
+	 */
 
 	/*
 	 * `fillStats()` AND `STAT_KEYS` ARE DELETED (1.44.1), with the three stat
@@ -500,8 +438,8 @@
 		li.appendChild(head);
 		li.appendChild(el('p', 'dccwl-card-value', ''))
 			.appendChild(el('span', 'dccwl-skel dccwl-skel-value'));
-		li.appendChild(el('p', 'dccwl-water-attr', ''))
-			.appendChild(el('span', 'dccwl-skel dccwl-skel-attr'));
+		/* No attribution line since 1.48.1: the source is behind the ⓘ,
+		 * which the round chip above stands in for. */
 		return li;
 	}
 
@@ -898,10 +836,8 @@
 					 */
 					initPlacePicker(root, function () {
 						fill(root, facts);
-						foldSources(root);
 					});
 					fill(root, facts);
-					foldSources(root);
 				});
 			})
 			.catch(function () {
@@ -1454,9 +1390,6 @@
 		initMoon();
 		init();
 		initMap();
-		// Server-rendered cards (the almanac, "About the water") are here from
-		// the first paint; the live ones fold as they are built, in fill().
-		foldSources(document);
 		initWaterTabs(document);
 		initFishSeasons(document);
 	}

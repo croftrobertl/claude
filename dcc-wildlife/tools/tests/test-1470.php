@@ -77,8 +77,10 @@ check_same( 4, substr_count( $aside, 'alt=""' ), 'and decorative: the name besid
 
 dcc_section( 'the title, the subtitle and its date' );
 
-check_contains( $aside, '<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h">Most Recorded Here</h2>', 'the title' );
-check_contains( $aside, 'aria-labelledby="dccwl-gp-spot-h"', 'and the pane is named by it while it holds the spotlight' );
+/* 1.48.1: the "as of" line moved into an ⓘ at the END of the heading, so
+ * the title is the heading's first text and the ⓘ follows it inside. */
+check_contains( $aside, '<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h"><span id="dccwl-gp-spot-t">Most Recorded Here</span><span class="dccwl-info">', 'the title, with its ⓘ at the end' );
+check_contains( $aside, 'aria-labelledby="dccwl-gp-spot-t"', 'and the pane is named by the title alone while it holds the spotlight — not by the ⓘ beside it' );
 
 $when = date_i18n( 'F Y', strtotime( Local::PULLED . ' 12:00:00' ) );
 check_same( 'October 2026', $when, 'the pull is dated October 2026 (Local::PULLED = ' . Local::PULLED . ')' );

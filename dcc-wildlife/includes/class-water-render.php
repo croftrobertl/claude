@@ -700,8 +700,32 @@ final class Water_Render {
 			'bream'   => __( 'Bream', 'dcc-wildlife' ),
 		];
 		?>
+		<?php
+		/*
+		 * THE SOURCE LINE IS AN ⓘ AT THE END OF THE HEADING (1.48.1, Rob:
+		 * "all credit and source lines go behind an ⓘ"). It used to be a
+		 * paragraph at the foot of the block — the source note and the FWC
+		 * forecast link. Both are in the panel, unchanged, Title Case and all.
+		 * "Current Limits on FWC ↗" is NOT here: it is an action, not a
+		 * credit, and stays on the page (Rob).
+		 */
+		$panel = '';
+		if ( ! empty( $f['source'] ) ) {
+			$panel .= Render::info_line( esc_html( (string) $f['source'] ) );
+		}
+		if ( ! empty( $f['forecast_url'] ) ) {
+			$panel .= Render::info_line(
+				'<a href="' . esc_url( (string) $f['forecast_url'] ) . '" rel="noopener nofollow" target="_blank">'
+				. esc_html( (string) ( $f['forecast_label'] ?? $f['forecast_url'] ) ) . '</a>'
+			);
+		}
+		?>
 		<div class="dccwl-fishing" data-dccwl-fishing>
-			<h3 class="dccwl-water-sub"><?php esc_html_e( 'Fishing the Harris Chain', 'dcc-wildlife' ); ?></h3>
+			<h3 class="dccwl-water-sub"><?php esc_html_e( 'Fishing the Harris Chain', 'dcc-wildlife' ); ?><?php
+			if ( '' !== $panel ) {
+				echo Render::info( __( 'Sources for the fishing guide', 'dcc-wildlife' ), $panel ); // phpcs:ignore WordPress.Security.EscapeOutput -- every part escaped above.
+			}
+			?></h3>
 			<?php if ( ! empty( $f['intro'] ) ) : ?>
 				<p class="dccwl-fishing-intro<?php echo esc_attr( Render::prose_class( (string) $f['intro'] ) ); ?>"><?php echo esc_html( (string) $f['intro'] ); ?></p>
 			<?php endif; ?>
@@ -800,30 +824,6 @@ final class Water_Render {
 				<p class="dccwl-fishing-note dccwl-fishing-moon<?php echo esc_attr( Render::prose_class( (string) $f['moon'] ) ); ?>"><?php echo esc_html( (string) $f['moon'] ); ?></p>
 			<?php endif; ?>
 
-			<?php
-			$fish_links = [];
-			/* The limits link is not repeated here (1.48.0): ONE link to them. */
-			foreach ( [ 'forecast' ] as $key ) {
-				if ( ! empty( $f[ $key . '_url' ] ) ) {
-					$fish_links[] = [
-						'url'   => (string) $f[ $key . '_url' ],
-						'label' => (string) ( $f[ $key . '_label' ] ?? $f[ $key . '_url' ] ),
-					];
-				}
-			}
-			?>
-			<p class="dccwl-fishing-src<?php echo esc_attr( Render::prose_class( (string) ( $f['source'] ?? '' ) ) ); ?>">
-				<?php if ( ! empty( $f['source'] ) ) : ?>
-					<span class="dccwl-fishing-src-note"><?php echo esc_html( (string) $f['source'] ); ?></span>
-				<?php endif; ?>
-				<?php if ( $fish_links ) : ?>
-					<span class="dccwl-fishing-src-links">
-						<?php foreach ( $fish_links as $i => $l ) : ?>
-							<?php echo $i ? esc_html( ' · ' ) : ''; ?><a href="<?php echo esc_url( $l['url'] ); ?>" rel="noopener nofollow" target="_blank"><?php echo esc_html( $l['label'] ); ?></a>
-						<?php endforeach; ?>
-					</span>
-				<?php endif; ?>
-			</p>
 		</div>
 		<?php
 	}
@@ -833,110 +833,44 @@ final class Water_Render {
 	 * from the same object that guarantees the value was attributable.
 	 */
 	private static function render_fact( Water_Fact $fact ): void {
-		$f   = $fact->to_array();
-		$age = self::age_words( $f['date'] );
+		$f = $fact->to_array();
+		/*
+		 * THE SOURCE IS BEHIND AN ⓘ AT THE END OF THE CARD'S LABEL (1.48.1,
+		 * Rob: "all credit and source lines go behind an ⓘ"). The chip that
+		 * summarised it ("National Weather Service forecast · today") and the
+		 * attribution line under the value are both gone from the face of
+		 * the card; the panel holds everything they said — the source,
+		 * linked where it has a page, the date it was measured, and the note.
+		 * Nothing is dropped, and with popovers unsupported the panel prints
+		 * inline exactly where the line used to be.
+		 */
+		$lines = '' !== $f['sourceUrl']
+			? '<a href="' . esc_url( $f['sourceUrl'] ) . '" rel="noopener nofollow" target="_blank">' . esc_html( $f['sourceName'] ) . '</a>'
+			: esc_html( $f['sourceName'] );
+		$panel = Render::info_line( $lines, 'dccwl-water-src' );
+		/*
+		 * THE FORMATTED DATE, NEVER THE RAW ONE (1.40.0). An empty or
+		 * unparseable date yields an empty `dateText`, and then no date line
+		 * is printed rather than a bare label with nothing after it.
+		 */
+		$date_text = (string) ( $f['dateText'] ?? '' );
+		if ( '' !== $date_text ) {
+			$panel .= Render::info_line( esc_html( '' !== ( $f['dateLabel'] ?? '' ) ? $f['dateLabel'] . ' ' . $date_text : $date_text ), 'dccwl-water-date' );
+		}
+		if ( '' !== $f['note'] ) {
+			$panel .= Render::info_line( esc_html( $f['note'] ), 'dccwl-water-note' );
+		}
 		?>
 		<li class="dccwl-card dccwl-water-fact dccwl-water-tier-<?php echo esc_attr( $f['tier'] ); ?>">
 			<div class="dccwl-card-head">
-				<span class="dccwl-card-label"><?php echo esc_html( $f['label'] ); ?></span>
-				<?php /* Source + age chip (1.9.0): provenance at a glance. It
-				         summarises the attribution line below, never replaces
-				         it — the full source and measurement date still print. */ ?>
-				<span class="dccwl-metachip dccwl-card-src">
-					<?php /* The chip truncates a long source name with an ellipsis; the
-					 * `title` carries the whole of it (the Director's own ask,
-					 * 2026-10-21). Nothing is lost without it either — the full
-					 * attribution is printed in the stack below this card — but a
-					 * truncated name a pointer cannot resolve is needless. */ ?>
-					<span class="dccwl-card-srcname" title="<?php echo esc_attr( $f['sourceName'] ); ?>"><?php echo esc_html( $f['sourceName'] ); ?></span>
-					<?php if ( '' !== $age ) : ?>
-						<span class="dccwl-card-dot">·</span>
-						<span class="dccwl-card-age"><?php echo esc_html( $age ); ?></span>
-					<?php endif; ?>
-				</span>
+				<span class="dccwl-card-label"><?php echo esc_html( $f['label'] ); ?></span><?php
+				/* translators: %s: the reading's name, e.g. "Water Clarity". */
+				echo Render::info( sprintf( __( 'Source of %s', 'dcc-wildlife' ), $f['label'] ), $panel ); // phpcs:ignore WordPress.Security.EscapeOutput -- every part escaped above.
+				?>
 			</div>
 			<p class="dccwl-card-value"><?php echo esc_html( $f['value'] ); ?></p>
-			<p class="dccwl-water-attr">
-				<?php if ( '' !== $f['sourceUrl'] ) : ?>
-					<a href="<?php echo esc_url( $f['sourceUrl'] ); ?>" rel="noopener nofollow" target="_blank">
-						<?php echo esc_html( $f['sourceName'] ); ?>
-					</a>
-				<?php else : ?>
-					<?php echo esc_html( $f['sourceName'] ); ?>
-				<?php endif; ?>
-				<?php
-				/*
-				 * THE FORMATTED DATE, NEVER THE RAW ONE (1.40.0).
-				 *
-				 * This line echoed `$f['date']` exactly as the Fact carried
-				 * it, and `Water_Fact::valid_date()` accepts a full ISO
-				 * timestamp — so an owner pasting one into the admin form
-				 * would have printed "2026-07-27T04:00:00.0000000Z" to a
-				 * guest. Reported in 1.39.1; closed here. An empty or
-				 * unparseable date yields an empty `dateText`, and then the
-				 * span is not printed at all rather than showing a bare
-				 * label with nothing after it.
-				 */
-				$date_text = (string) ( $f['dateText'] ?? '' );
-				?>
-				<?php if ( '' !== $date_text ) : ?>
-				<span class="dccwl-water-date">
-					<?php
-					echo esc_html(
-						'' !== ( $f['dateLabel'] ?? '' )
-							? $f['dateLabel'] . ' ' . $date_text
-							: $date_text
-					);
-					?>
-				</span>
-				<?php endif; ?>
-				<?php if ( '' !== $f['note'] ) : ?>
-					<span class="dccwl-water-note"><?php echo esc_html( $f['note'] ); ?></span>
-				<?php endif; ?>
-			</p>
 		</li>
 		<?php
-	}
-
-	/**
-	 * A reading's age in chip-sized words. Mirrors the thresholds in
-	 * water.js so a server-rendered card and a client-rendered one never
-	 * describe the same age differently.
-	 *
-	 * Returns '' when the date will not parse or lies in the future: the card
-	 * then shows its attribution without an age claim rather than guessing.
-	 */
-	private static function age_words( string $date ): string {
-		$date = trim( $date );
-		if ( '' === $date ) {
-			return '';
-		}
-		// A year or year-month alone is not a day, so it gets no day-precision
-		// age; the printed date already says what is known.
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}/', $date ) ) {
-			return '';
-		}
-		$ts = strtotime( substr( $date, 0, 10 ) . ' 12:00:00' );
-		if ( false === $ts ) {
-			return '';
-		}
-		$days = (int) floor( ( time() - $ts ) / DAY_IN_SECONDS );
-		if ( $days < 0 ) {
-			return '';
-		}
-		if ( 0 === $days ) {
-			return __( 'Today', 'dcc-wildlife' );
-		}
-		if ( $days < 45 ) {
-			/* translators: %d: whole days. */
-			return sprintf( _x( '%dd', 'compact age: days', 'dcc-wildlife' ), $days );
-		}
-		if ( $days < 730 ) {
-			/* translators: %d: whole months. */
-			return sprintf( _x( '%dmo', 'compact age: months', 'dcc-wildlife' ), (int) round( $days / 30 ) );
-		}
-		/* translators: %d: whole years. */
-		return sprintf( _x( '%dy', 'compact age: years', 'dcc-wildlife' ), (int) round( $days / 365 ) );
 	}
 
 	/**
@@ -1094,7 +1028,8 @@ final class Water_Render {
 						/* The chip already reads "USGS · 3d" on screen; this is
 						   what a screen reader hears instead, because the
 						   visible words do not say what pressing it does. */
-						'srcToggle'   => __( 'Source: %s — show where this reading came from', 'dcc-wildlife' ),
+						/* translators: %s: the reading's name. The ⓘ's accessible name (1.48.1). */
+						'srcOf'       => __( 'Source of %s', 'dcc-wildlife' ),
 						/* translators: the three tabs at the top of the water panel. */
 						'tabNow'      => __( 'Now', 'dcc-wildlife' ),
 						'tabFishing'  => __( 'Fishing', 'dcc-wildlife' ),

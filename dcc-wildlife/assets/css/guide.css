@@ -190,7 +190,33 @@
 	padding: 0;
 }
 
-.dccwl-gp .dccwl-gp-list[data-gp-scope="here"] > .dccwl-gp-item[data-scope="wider"] { display: none; }
+/*
+ * HOW A ROW IS HIDDEN (1.48.1): IT KEEPS ITS RENDERING, AT ZERO SIZE.
+ *
+ * 1.48.0 made a view change one attribute on the list, but the rows it hid
+ * were still `display: none` — so every pill tap threw away the layout boxes
+ * of the rows leaving and rebuilt those of the rows arriving, details shadow
+ * trees and all. Traced on live at 390 / 4x: one 321ms style-and-layout-tree
+ * pass for a tap on Birds, with the site's scripts already out of the way.
+ *
+ * `content-visibility: hidden` hides a row's contents while KEEPING their
+ * rendering state, so showing it again reuses what was there; size
+ * containment with a 0 intrinsic size (and no borders) makes the row take no
+ * room; `visibility: hidden` takes it out of the accessibility tree, the Tab
+ * order and find-in-page, as `display: none` did. Measured offline at 4x:
+ * Birds 344–392ms -> 56–72ms.
+ *
+ * One declaration block, used by every way a row can be hidden: the scope
+ * here, the pills (Guide_Page::filter_style()), and a search miss
+ * (`data-gp-miss`, guide.js).
+ */
+.dccwl-gp .dccwl-gp-list[data-gp-scope="here"] > .dccwl-gp-item[data-scope="wider"],
+.dccwl-gp .dccwl-gp-list > .dccwl-gp-item[data-gp-miss] {
+	border-width: 0;
+	contain-intrinsic-size: 0 0;
+	content-visibility: hidden;
+	visibility: hidden;
+}
 
 .dccwl-gp .dccwl-gp-item {
 	border-bottom: 1px solid var(--dccwl-line);
@@ -456,7 +482,20 @@
 	 * expects them: the list on the left, the pane on the right.
 	 */
 	.dccwl-gp .dccwl-gp-split > .dccwl-gp-list { grid-column: 1; grid-row: 1; }
-	.dccwl-gp .dccwl-gp-split > .dccwl-gp-pane { grid-column: 2; grid-row: 1; }
+	.dccwl-gp .dccwl-gp-split > .dccwl-gp-pane {
+		/*
+		 * THE PANE FILLS ITS ROW (1.48.1). With `align-items: start` a pane
+		 * shorter than the list box beside it sat at the bottom of the row
+		 * once the page was scrolled to its end (that is what sticky does),
+		 * and jumped up by the difference when a taller entry replaced it:
+		 * 5px at 1440x900 once the spotlight's "as of" line became an ⓘ, and
+		 * ~190px at 1440x1200 already in 1.48.0. Stretched, the pane is never
+		 * shorter than its row, so there is nothing to jump.
+		 */
+		align-self: stretch;
+		grid-column: 2;
+		grid-row: 1;
+	}
 
 	/* With the pane in use the list scrolls on its own, so the page does not
 	 * grow to 402 rows of height beside a short entry. Since 1.47.0 that is
@@ -497,6 +536,14 @@
 	.dccwl-gp .dccwl-gp-pane .dccwl-gp-photo,
 	.dccwl-sheet .dccwl-gp-photo { max-height: 60dvh; }
 }
+/* The photograph and its ⓘ (1.48.1): the wrapper carries the gap, so the
+ * ⓘ sits on the picture's corner rather than in the margin below it. */
+.dccwl-gp-photowrap {
+	display: block;
+	margin: 0 auto var(--dccwl-gap);
+	position: relative;
+}
+.dccwl-gp-photowrap > .dccwl-gp-photo.dccwl-gp-photo { margin-bottom: 0; }
 
 /*
  * THE TWO TILES ("Where To Look" and "Best Time"), which guide.js lifts out
@@ -615,20 +662,13 @@
 	font-weight: 700;
 	letter-spacing: 0;
 	line-height: 1.25;
-	margin: 0 0 2px;
+	margin: 0 0 var(--dccwl-gap-lg);   /* 1.48.1: the line that followed is an ⓘ on this heading now */
 	padding: 0;
 	text-align: center;
 	text-wrap: balance;
 	text-transform: none;
 }
-.dccwl-gp .dccwl-gp-spot-sub {
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	font-weight: var(--dccwl-fw-body);
-	margin: 0 0 var(--dccwl-gap-lg);
-	text-align: center;
-	text-wrap: balance;
-}
+/* The spotlight's "as of" line is an ⓘ on its heading since 1.48.1. */
 .dccwl-gp .dccwl-gp-spot-grid {
 	display: grid;
 	gap: var(--dccwl-gap-lg);

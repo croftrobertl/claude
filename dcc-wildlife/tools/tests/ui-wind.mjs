@@ -71,7 +71,7 @@ async function openMap(width, wind) {
       json: () => Promise.resolve(String(u).indexOf('map') >= 0 ? m : c),
     });
   }, [MAP_DATA, { enabled: true, facts: [], wind }]);
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(350);

@@ -252,6 +252,27 @@ foreach ( $all_blocks as [ $file, $sel, $body ] ) {
 		static fn( string $p ): bool => false === strpos( $p, ':focus' )
 	);
 	$ring = (bool) preg_match( '/box-shadow\s*:\s*[^;}]*(--dccwl-ring|inset var\( *--dccwl-ring)/', $body );
+	/*
+	 * The ⓘ (1.48.1) draws its ring on its own ::before -- the 28px disc
+	 * inside a 44px tap target -- so the ring hugs the glyph a guest sees
+	 * rather than the invisible tap box. That counts only if EVERY selector
+	 * in the rule has a `::before` twin, in the same file, that draws the
+	 * ring: checked here, not allowlisted.
+	 */
+	if ( $focus && ! $ring ) {
+		$ring = ! array_filter(
+			$parts,
+			static function ( string $p ) use ( $all_blocks, $file ): bool {
+				foreach ( $all_blocks as [ $f2, $sel2, $body2 ] ) {
+					if ( $f2 === $file && in_array( $p . '::before', array_map( 'trim', explode( ',', $sel2 ) ), true )
+						&& preg_match( '/box-shadow\s*:\s*[^;}]*--dccwl-ring/', $body2 ) ) {
+						return false;
+					}
+				}
+				return true;
+			}
+		);
+	}
 	if ( ! $focus || ! $ring ) {
 		$no_ring[] = "$file: $sel";
 	}

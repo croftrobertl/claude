@@ -108,8 +108,10 @@
 /* Water cards: label and value centre, and their head stacks so the
  * source chip sits under the label rather than pushed to one edge. */
 .dccwl-canal .dccwl-card-head {
-	flex-direction: column;
-	gap: 4px;
+	/* A row since 1.48.1: the label and its ⓘ. It was a column so the label
+	 * and the source chip stacked; the chip is behind the ⓘ now. */
+	flex-direction: row;
+	gap: 0;
 	justify-content: center;
 }
 

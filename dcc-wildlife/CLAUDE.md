@@ -5790,3 +5790,96 @@ it comments; SpeedyCache serves them minified, where the change is about
 thumbnails cost about 3–6 KB more each at 168px (Photon, measured: cane toad
 1.6 → 7.5 KB, alligator 1.2 → 3.9 KB), lazily loaded — roughly +50 KB for the
 rows on a phone's first screen.
+
+### 50. 1.48.1 — every credit behind one ⓘ, and the guide pills under 200 ms
+
+Rob, 2026-11-04: *"ALL credit and source lines go behind an ⓘ tooltip (Rob
+prefers tooltips for credits) … One ⓘ pattern everywhere."* And: the guide
+page's Birds and Wider Florida pills, *"target under 200 ms at 390 / 4×"*.
+
+#### The ⓘ — one pattern, built on the browser's popover
+
+- **Markup, identical from PHP and JS:** `span.dccwl-info` holding a real
+  `<button type="button" class="dccwl-info-btn" popovertarget=ID
+  aria-label=…>` (an inline SVG ring-and-i, aria-hidden) and its panel
+  `span.dccwl-info-pop#ID[popover=auto]`. PHP: `Render::info( $label,
+  $escaped_inner )` (ids `dccwl-info-p<n>`); JS: `DCCWL_Info.make(label,
+  node)` in `assets/js/info.js` (ids `dccwl-info-j<n>`). Lines inside are
+  `Render::info_line( $html, $role )` / `span.dccwl-info-line`; the water
+  cards tag theirs `dccwl-water-src`, `dccwl-water-date`, `dccwl-water-note`.
+- **The browser does the behaviour.** `popovertarget` makes the button a
+  disclosure that Enter and Space toggle, with NO JavaScript; `popover="auto"`
+  gives light dismiss (outside tap, Esc) and returns focus to the ⓘ; the top
+  layer means no deck overflow or sheet transform can clip it. ui-water-tabs
+  proves a server-rendered ⓘ opens with scripting OFF.
+- **info.js adds only three things:** placement beside the ⓘ (below, right
+  edges aligned, clamped 12px inside the screen, flipped above when there is
+  no room, following scroll/resize while open); the `dccwl:escape` claim
+  inside a sheet (§8, 1.33.0 — first Esc closes the ⓘ, the second the sheet);
+  and the builder. It is a dependency of `dcc-wildlife-sheet`, so every page
+  with a sheet has it.
+- **No popover support** (iOS < 17, old browsers): `@supports not
+  selector(:popover-open)` hides the button and the panel prints INLINE where
+  the credit used to be. The fold is the only thing lost — never the credit.
+  The panel is folded ONLY inside `@supports selector(:popover-open)`.
+- **Target:** the button is 44×44 (negative margins keep the row's rhythm);
+  the visible disc is its 28px `::before`, which also carries the focus ring.
+  test-css's outline lint accepts a ring drawn on a `::before` twin — checked
+  per selector, not allowlisted. On a photograph the ⓘ sits on the corner on
+  a white disc (`.dccwl-info-onphoto`).
+- **A cloned entry gets fresh ids** (guide.js, `-c<n>`), with its button
+  re-paired — or the pane's ⓘ would open the hidden row's panel.
+- **A heading that names a region names it by the TITLE span**, not the h2:
+  the spotlight's pane is `aria-labelledby="dccwl-gp-spot-t"`, or the ⓘ's
+  name would join the pane's.
+
+#### What moved, what stayed, and why
+
+MOVED behind an ⓘ: every water reading's source chip and attribution line
+(live cards and the server-rendered About cards); the Fishing guide's source
+line (ⓘ at the end of "Fishing the Harris Chain"); the species sheet's photo
+credit and its "Photo Credits" link (ⓘ on the photo); the guide page's photo
+credit (pane and sheet); each entry's "Recorded In Lake County / Recorded
+Near Here → iNaturalist"; each Protected line's rule citation; the
+spotlight's "as of" line.
+
+STAYED visible: **the map's tile attribution** — in Leaflet's own control,
+as each provider requires (OSM shows first, then folds; Esri allows the
+fold), unchanged since 1.37.0 and pinned by ui-live; **the full Photo
+Credits panel** — the licence surface, with the modification notice;
+**"Current Limits on FWC ↗"** and **the Official Information links** —
+places to go, not credits; the wind badge's "NWS forecast" (it says what the
+number IS); the "(FWC)" season markers; the FWC disclaimer; the photo
+identification notes (provenance, §1.25.0); the "Seen Here — By your hosts"
+line (the record itself, with no source to fold — Rob's to rule on).
+
+**No photo here needs a VISIBLE credit.** 210 CC BY 4.0, 84 CC0, 37 CC BY
+2.0, 22 CC BY-SA 4.0, 22 Adobe Stock, 5 BY-SA 2.0, 3 BY 3.0, 2 BY-SA 3.0 and
+public domain: CC BY 4.0 allows attribution by link/reference "in any
+reasonable manner based on the medium", 2.0/3.0 require it "reasonable to
+the medium" — a one-tap ⓘ on the photo plus the full panel on the page meets
+both. If a photo with a licence that demands an always-visible credit ever
+arrives, it does not go behind the ⓘ.
+
+**"Live data shows its station and its time" — read now as:** the TIME stays
+on the card (the freshness line), the STATION is one tap away in the ⓘ. Rob
+asked for this; it is recorded here so nobody "fixes" it back, and flagged to
+the Director as a change to how that rule is met.
+
+#### The pills
+
+`display: none` on 300+ rows meant every pill rebuilt their boxes in one
+style-and-layout pass (321 ms traced at 4×). The hide rule is now
+preserved-state hiding — `border-width: 0; contain-intrinsic-size: 0 0;
+content-visibility: hidden; visibility: hidden` — in guide.css (scope, search
+miss via `data-gp-miss`) and in `Guide_Page::filter_style()` (groups). A
+hidden row keeps its box state, takes no space, is skipped by rendering, the
+accessibility tree and Tab. Search misses moved from `hidden` to
+`data-gp-miss` for the same reason. **Suites count rendered rows with
+`getBoundingClientRect().height > 0`** — `getClientRects().length` no longer
+works, because a preserved-state row still has a (zero-height) box.
+
+The pane now stretches to its grid row (`align-self: stretch`): a pane
+shorter than the list box sat at the row's bottom once scrolled and jumped
+when a taller entry replaced it — 5px at 1440×900 once the "as of" line left
+the spotlight, ~190px at 1440×1200 already in 1.48.0.

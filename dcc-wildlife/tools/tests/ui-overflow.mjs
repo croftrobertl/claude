@@ -195,7 +195,7 @@ async function explore(w) {
     status: 200, contentType: 'image/png',
     body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
   }));
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js',
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js',
     'assets/js/water.js', 'assets/js/canal.js']) {
     await page.addScriptTag({ content: asset(f) });
   }

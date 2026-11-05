@@ -993,7 +993,7 @@ async function waterPanel(width, touch) {
       `json:function(){return Promise.resolve(window.__f);}});};</script>` +
       fx.html + `<script>${fx.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(700);
@@ -1015,7 +1015,7 @@ const SPLIT_PROBE = () => {
   const out = [];
   document.querySelectorAll('.dccwl-water .dccwl-card:not([hidden])')
     .forEach((li) => {
-      li.querySelectorAll('.dccwl-card-label, .dccwl-card-value, .dccwl-card-srcname')
+      li.querySelectorAll('.dccwl-card-label, .dccwl-card-value')
         .forEach((el) => {
           const node = el.firstChild;
           if (!node || 3 !== node.nodeType) { return; }
@@ -1268,7 +1268,7 @@ async function openChainMap(width, height, touch, payload) {
   await page.evaluate((data) => {
     window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
   }, payload || MAP_DATA);
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(200);
@@ -2007,7 +2007,7 @@ section('the Now tab reads every date as 07/27/2026');
       `json:function(){return Promise.resolve(window.__f);}});};</script>` +
       fx.html + `<script>${fx.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(700);
@@ -2027,7 +2027,7 @@ section('the Now tab reads every date as 07/27/2026');
         label: label.trim(),
         date: date ? date.textContent.replace(/\s+/g, ' ').trim() : null,
         value: (li.querySelector('.dccwl-card-value') || {}).textContent.trim(),
-        src: !!li.querySelector('.dccwl-card-srcname'),
+        src: !!li.querySelector('.dccwl-card-head .dccwl-info-pop .dccwl-water-src'),
       });
     });
     /* VISIBLE text only. document.body.textContent includes the contents of
@@ -2092,10 +2092,10 @@ section('the Now tab reads every date as 07/27/2026');
    * The old version of this check read the deleted tile and asserted
    * nothing — a note is not an assertion. */
   const srcNames = await page.evaluate(() => Array.from(
-    document.querySelectorAll('.dccwl-water .dccwl-card-srcname')
+    document.querySelectorAll('.dccwl-water .dccwl-card-head .dccwl-info-pop .dccwl-water-src')
   ).map((el) => el.textContent.replace(/\s+/g, ' ').trim()));
   note(`card source lines: ${JSON.stringify(srcNames)}`);
-  checkAtLeast(1, srcNames.length, 'every reading still names its source on its card');
+  checkAtLeast(1, srcNames.length, 'every reading still names its source, behind its card\'s ⓘ');
   check(srcNames.every((x) => !/\d{4}-\d{2}-\d{2}/.test(x)),
     'and no source line carries a machine date', srcNames.join(' | '));
 
@@ -2420,7 +2420,7 @@ async function heldWaterPanel(width, payload) {
       `json:function(){return Promise.resolve(window.__p);}});});});};</script>` +
       fx.html + `<script>${fx.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(300);
@@ -2511,7 +2511,7 @@ async function heldWaterPanel(width, payload) {
           freshColor: fresh ? getComputedStyle(fresh).color : '',
           /* The attribution survives on a stale card: it is this module's
            * integrity claim and must never be what gets greyed away. */
-          attr: !!c.querySelector('.dccwl-water-attr'),
+          attr: !!c.querySelector('.dccwl-card-head .dccwl-info-pop .dccwl-water-src'),
         };
       }),
     };
@@ -2541,7 +2541,7 @@ async function heldWaterPanel(width, payload) {
       'and it KEEPS its reading, verbatim — nothing is rewritten or dropped');
     checkSame(`Last Measured In ${monthNameOf(STALE_LEVEL_DATE)}`, lvl.fresh,
       'with the past-tense line underneath, naming the month');
-    check(lvl.attr, 'while the source and the measurement date stay on the card');
+    check(lvl.attr, 'while the source stays with the card, behind its ⓘ (1.48.1)');
     check(lvl.bg !== 'rgb(255, 255, 255)' && lvl.bg !== 'rgba(0, 0, 0, 0)',
       'and it is greyed by a ground of its own', lvl.bg);
     check(lvl.valueColor === lvl.freshColor,

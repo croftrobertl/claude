@@ -327,15 +327,15 @@ export function rendered(which = 'month', ...flags) {
 const ASSETS = {
   month: {
     css: ['assets/css/app.css', 'assets/css/widget.css'],
-    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js'],
+    js: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js'],
   },
   canal: {
     css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/water.css', 'assets/css/canal.css'],
-    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js'],
+    js: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js'],
   },
   water: {
     css: ['assets/css/app.css', 'assets/css/water.css'],
-    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'],
+    js: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'],
   },
   /*
    * /wildlife-guide/ — rebuilt as an app-style list in 1.46.0, so it now
@@ -348,7 +348,7 @@ const ASSETS = {
    */
   guide: {
     css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/guide.css'],
-    js: ['assets/js/sheet.js', 'assets/js/guide.js'],
+    js: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/guide.js'],
   },
 };
 

@@ -159,7 +159,12 @@
 		for (var i = 0; i < items.length; i++) {
 			var it = items[i];
 			var hit = matches(it, words);
-			if (it.hidden === hit) { it.hidden = !hit; }
+			/* A miss is an attribute, hidden the same preserved way a pill
+			 * hides a row (guide.css, 1.48.1) — not `hidden`, which is
+			 * display:none and rebuilds the row every time it returns. */
+			if (it.hasAttribute('data-gp-miss') === hit) {
+				if (hit) { it.removeAttribute('data-gp-miss'); } else { it.setAttribute('data-gp-miss', ''); }
+			}
 			if (hit
 				&& ('wider' === state.scope || 'here' === it.getAttribute('data-scope'))
 				&& ('all' === state.group || state.group === it.getAttribute('data-group'))) {
@@ -239,6 +244,27 @@
 	 * photograph, and its credit, which is a licence obligation wherever a
 	 * photograph is shown at size (1.24.0).
 	 * ------------------------------------------------------------------ */
+	/* The photograph's credit as an ⓘ panel: the photographer and licence,
+	 * linked to the source page where the licence is stated (http(s) only,
+	 * since the credit map is filterable). */
+	var cloneSeq = 0;
+
+	function creditInfo(item, credit) {
+		var line = el('span', 'dccwl-info-line');
+		var url = item.getAttribute('data-credit-url');
+		if (url && /^https?:\/\//i.test(url)) {
+			var a = el('a', null, credit);
+			a.href = url;
+			a.rel = 'noopener';
+			line.appendChild(a);
+		} else {
+			line.textContent = credit;
+		}
+		var info = window.DCCWL_Info.make(I18N.photoCredit || 'Photo Credit', line);
+		info.className += ' dccwl-info-onphoto';
+		return info;
+	}
+
 	function contentFor(item) {
 		var frag = document.createDocumentFragment();
 		var photo = item.getAttribute('data-photo');
@@ -250,13 +276,30 @@
 			img.alt = '';
 			img.loading = 'lazy';
 			img.decoding = 'async';
-			frag.appendChild(img);
+			/* The photograph and its ⓘ credit, together (1.48.1). */
+			var wrap = el('span', 'dccwl-gp-photowrap');
+			wrap.appendChild(img);
+			var credited = item.getAttribute('data-credit');
+			if (credited && window.DCCWL_Info) {
+				wrap.appendChild(creditInfo(item, credited));
+			}
+			frag.appendChild(wrap);
 		}
 
 		var entry = item.querySelector('[data-dccwl-gp-entry]');
 		var clone = entry ? entry.cloneNode(true) : null;
 		if (clone) {
 			clone.removeAttribute('data-dccwl-gp-entry');
+			/* A clone's ⓘ must open ITS OWN panel (1.48.1): the copied
+			 * `popovertarget` still names the original, which sits inside the
+			 * row's closed <details> and cannot be shown. Fresh ids, paired. */
+			clone.querySelectorAll('.dccwl-info-pop[id]').forEach(function (pop) {
+				var was = pop.id;
+				cloneSeq += 1;
+				pop.id = was + '-c' + cloneSeq;
+				var btn = clone.querySelector('[popovertarget="' + was + '"]');
+				if (btn) { btn.setAttribute('popovertarget', pop.id); }
+			});
 			/* The two tiles the mockup asks for, lifted out of the prose and
 			 * put at the top. Found by their machine names, never by their
 			 * translated labels. */
@@ -277,8 +320,14 @@
 			frag.appendChild(clone);
 		}
 
+		/*
+		 * THE CREDIT IS AN ⓘ ON THE PHOTOGRAPH (1.48.1, Rob: "all credit and
+		 * source lines go behind an ⓘ"), built above. Without the ⓘ script
+		 * — or with no photograph to put it on — the credit prints as the
+		 * line it always was.
+		 */
 		var credit = item.getAttribute('data-credit');
-		if (credit) {
+		if (credit && (!photo || !window.DCCWL_Info)) {
 			var p = el('p', 'dccwl-gp-credit');
 			var url = item.getAttribute('data-credit-url');
 			if (url && /^https?:\/\//i.test(url)) {
@@ -341,7 +390,7 @@
 			pane.appendChild(spot);
 		}
 		pane.removeAttribute('aria-label');
-		pane.setAttribute('aria-labelledby', 'dccwl-gp-spot-h');
+		pane.setAttribute('aria-labelledby', 'dccwl-gp-spot-t');
 		pane.hidden = false;
 		list.classList.add('dccwl-gp-list-split');
 		atEnd();
@@ -689,7 +738,7 @@
 			var all = root.querySelector('[data-dccwl-gp-group="all"]');
 			if (all) { all.click(); }
 		}
-		item.hidden = false;
+		item.removeAttribute('data-gp-miss');
 		if (scroll) {
 			item.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
 		}

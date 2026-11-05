@@ -69,7 +69,7 @@ async function openMap(width, height, data) {
   await page.evaluate((data) => {
     window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
   }, data || MAP_DATA);
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(150);

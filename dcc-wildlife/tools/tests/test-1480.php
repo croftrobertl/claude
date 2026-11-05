@@ -94,7 +94,9 @@ dcc_section( '3, 9. the guide page markup' );
 check_contains( $guide, 'data-dccwl-gp-list data-gp-scope="here" data-gp-group="all"', 'the list says which view is on' );
 check_matches( $guide, '/<style id="dccwl-gp-filter">[^<]*\[data-gp-group="birds"\]>\.dccwl-gp-item:not\(\[data-group="birds"\]\)/',
 	'and a rule per pill hides the rest, so a pill is one write' );
-check_contains( $css['guide'], '.dccwl-gp .dccwl-gp-list[data-gp-scope="here"] > .dccwl-gp-item[data-scope="wider"] { display: none; }',
+/* 1.48.1: hidden by preserved-state hiding, not display:none, so a pill
+ * no longer rebuilds 402 rows' boxes (ui-1481 times it). */
+check_contains( $css['guide'], ".dccwl-gp .dccwl-gp-list[data-gp-scope=\"here\"] > .dccwl-gp-item[data-scope=\"wider\"],\n.dccwl-gp .dccwl-gp-list > .dccwl-gp-item[data-gp-miss] {\n\tborder-width: 0;\n\tcontain-intrinsic-size: 0 0;\n\tcontent-visibility: hidden;\n\tvisibility: hidden;\n}",
 	'Seen Here hides Wider Florida by the list\'s own attribute' );
 check_same( 0, preg_match_all( '/<li class="dccwl-gp-item[^>]*\shidden[\s>]/', $guide ), 'no row ships `hidden` any more' );
 

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.48.0
+Stable tag: 1.48.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,19 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.48.1 =
+* **Credits and sources sit behind an ⓘ.** Every photo credit and every
+  "where this came from" line — the water readings, the Fishing guide's
+  sources, the guide page's "as of" line, records and listings — now opens
+  from a small ⓘ at the end of the line or heading it belongs to. Tap it, or
+  press Enter or Space on it; tap anywhere else or press Esc to close it.
+  Nothing was removed: the text inside is the same, dates included.
+* **Kept in plain sight, on purpose:** the map's own tile credit (its
+  providers require it), the full Photo Credits panel, "Current Limits on
+  FWC ↗" and the Official Information links (places to go, not credits).
+* **The guide page's Birds and Wider Florida buttons respond at once** —
+  under 100 ms on a slowed-down phone, from up to half a second.
 
 = 1.48.0 =
 * **The map no longer jumps the page while it loads.** Its box keeps the

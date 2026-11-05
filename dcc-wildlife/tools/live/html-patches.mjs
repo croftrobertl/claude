@@ -1,6 +1,6 @@
 /**
- * HTML PATCHES (1.48.0) — the served-HTML equivalent of each PHP change in
- * this release, applied by swap.mjs in `after` mode only. Each is a
+ * HTML PATCHES (1.48.0, extended for 1.48.1) — the served-HTML equivalent
+ * of each PHP change since live's 1.47.3, applied by swap.mjs in `after` mode only. Each is a
  * function of the page text; swap.mjs reports any that changed nothing, so
  * a patch that silently stopped matching live cannot pass as applied.
  *
@@ -88,7 +88,7 @@ export const HTML_PATCHES = [
     pages: ['/wildlife-guide/'],
     apply: (b) => {
       const pills = [...new Set([...b.matchAll(/data-dccwl-gp-group="([a-z0-9_-]+)"/g)].map((m) => m[1]).filter((p) => 'all' !== p))];
-      const style = `<style id="dccwl-gp-filter">${pills.map((p) => `.dccwl-gp .dccwl-gp-list[data-gp-group="${p}"]>.dccwl-gp-item:not([data-group="${p}"])`).join(',')}{display:none}</style>`;
+      const style = `<style id="dccwl-gp-filter">${pills.map((p) => `.dccwl-gp .dccwl-gp-list[data-gp-group="${p}"]>.dccwl-gp-item:not([data-group="${p}"])`).join(',')}{border-width:0;contain-intrinsic-size:0 0;content-visibility:hidden;visibility:hidden}</style>`;
       return b
         .replace('<ol class="dccwl-gp-list dccwl-gp-list-split" data-dccwl-gp-list>', `${style}<ol class="dccwl-gp-list dccwl-gp-list-split" data-dccwl-gp-list data-gp-scope="here" data-gp-group="all">`)
         .replace(/(<li class="dccwl-gp-item[^>]*?id="[^"]+")\s+hidden(?=\s)/g, '$1');
@@ -114,6 +114,80 @@ export const HTML_PATCHES = [
       .replace(/(<img[^>]*class="dccwl-gp-spot-img"[^>]*?)(\s*\/?>)/g, '$1 data-no-lazy="1"$2'),
   },
 ];
+
+/* ---------------------------------------------------------------------
+ * 1.48.1 — CREDITS BEHIND ⓘ. One builder, the exact markup Render::info()
+ * prints (tools/tests/test-1481.php pins that markup in PHP), so the live
+ * run exercises the same button, panel and ids the release ships.
+ * ------------------------------------------------------------------- */
+const INFO_SVG = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5M10 6.2v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+let infoSeq = 0;
+const info = (label, inner) => {
+  infoSeq += 1;
+  const id = `dccwl-info-p${infoSeq}`;
+  return `<span class="dccwl-info"><button type="button" class="dccwl-info-btn" popovertarget="${id}" aria-label="${label}">${INFO_SVG}</button><span class="dccwl-info-pop" id="${id}" popover="auto">${inner}</span></span>`;
+};
+const line = (html, role = '') => `<span class="dccwl-info-line${role ? ' ' + role : ''}">${html}</span>`;
+const infoPatch = (p) => ({ ...p, apply: (b) => { infoSeq = 0; return p.apply(b); } });
+
+HTML_PATCHES.push(
+  /* Plugin::register_assets() — info.js, a dependency of sheet.js. */
+  {
+    name: '1.48.1: info.js before sheet.js',
+    apply: (b) => b.replace(/(<script id="dcc-wildlife-sheet-js" src="([^"]*?)sheet\.js\?ver=[^"]*"><\/script>)/,
+      (m, tag, base) => `<script id="dcc-wildlife-info-js" src="${base}info.js?ver=1.48.1"></script>${tag}`),
+  },
+  /* Water_Render::render_fishing() — the source line moves into an ⓘ at
+   * the end of "Fishing the Harris Chain"; the limits action stays put. */
+  infoPatch({
+    name: '1.48.1: fishing sources -> ⓘ on the heading',
+    pages: ['/explore/', '/test/'],
+    apply: (b) => {
+      const src = b.match(/<p class="dccwl-fishing-src[^"]*">\s*<span class="dccwl-fishing-src-note">([\s\S]*?)<\/span>\s*<span class="dccwl-fishing-src-links">\s*(<a [^>]*>FWC — Harris Chain fishing forecast<\/a>)[\s\S]*?<\/p>/);
+      if (!src) { return b; }
+      const panel = line(src[1].trim()) + line(src[2]);
+      return b.replace(src[0], '')
+        .replace('<h3 class="dccwl-water-sub">Fishing the Harris Chain</h3>',
+          `<h3 class="dccwl-water-sub">Fishing the Harris Chain${info('Sources for the fishing guide', panel)}</h3>`);
+    },
+  }),
+  /* Water_Render::render_fact() — the almanac cards: chip and attribution
+   * line out, one ⓘ at the end of the card head holding source and date. */
+  {
+    name: '1.48.1: almanac cards -> ⓘ',
+    pages: ['/explore/', '/test/'],
+    apply: (b) => b.replace(
+      /<div class="dccwl-card-head">\s*<span class="dccwl-card-label">([^<]*)<\/span>\s*<span class="dccwl-metachip dccwl-card-src">[\s\S]*?<\/span><\/span><\/div>(<p class="dccwl-card-value">[\s\S]*?<\/p>)\s*<p class="dccwl-water-attr">\s*([\s\S]*?)\s*(?:<span class="dccwl-water-date">\s*([^<]*)<\/span>)?\s*<\/p>/g,
+      (m, label, value, srcHtml, date) => {
+        infoSeq += 100;
+        const panel = line(srcHtml.trim().replace(/>\s+/, '>'), 'dccwl-water-src') + (date ? line(date.trim(), 'dccwl-water-date') : '');
+        return `<div class="dccwl-card-head"> <span class="dccwl-card-label">${label}</span>${info(`Source of ${label}`, panel)} </div> ${value}`;
+      }),
+  },
+  /* Guide_Page — the spotlight's "as of" line into an ⓘ on its heading,
+   * and the pane named by the title's own span. */
+  infoPatch({
+    name: '1.48.1: guide spotlight "as of" -> ⓘ',
+    pages: ['/wildlife-guide/'],
+    apply: (b) => b
+      .replace('aria-labelledby="dccwl-gp-spot-h"', 'aria-labelledby="dccwl-gp-spot-t"')
+      .replace(/<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h">Most Recorded Here<\/h2>\s*<p class="dccwl-gp-spot-sub" data-dccwl-gp-spot-asof>\s*([^<]*)<\/p>/,
+        (m, asof) => `<h2 class="dccwl-gp-spot-h" id="dccwl-gp-spot-h"><span id="dccwl-gp-spot-t">Most Recorded Here</span>${info('Where these counts come from', `<span data-dccwl-gp-spot-asof>${line(asof.trim())}</span>`)}</h2>`),
+  }),
+  /* Guide_Page — each record's iNaturalist link, and each listing's rule. */
+  {
+    name: '1.48.1: guide records and listings -> ⓘ',
+    pages: ['/wildlife-guide/'],
+    apply: (b) => {
+      infoSeq = 1000;
+      return b
+        .replace(/(<span class="dccwl-fg-k">Recorded (?:In Lake County|Near Here)<\/span>)\s*(<a class="dccwl-gp-locallink"[^>]*>)\s*([\s\S]*?<\/a>)/g,
+          (m, k, open, rest) => `${k}${info('Source of this record', line(open + rest))} `)
+        .replace(/(<p class="dccwl-fg-line dccwl-gp-protected" data-k="protected">[\s\S]*?\.)\s*(<a class="dccwl-gp-locallink"[^>]*>[^<]*<\/a>)<\/p>/g,
+          (m, head, a) => `${head}${info('Source of the listing', line(a))} </p>`);
+    },
+  },
+);
 
 /*
  * THE /conditions PAYLOAD — the server-side half of fix 8, as Water_Live

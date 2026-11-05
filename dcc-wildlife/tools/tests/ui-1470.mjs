@@ -78,7 +78,9 @@ for (const [w, h] of DESKTOP) {
     const b = pane.getBoundingClientRect();
     return {
       shown: !pane.hidden && b.width > 0 && b.height > 0,
-      title: h2 ? h2.textContent.trim() : '',
+      /* The heading's own words: since 1.48.1 it ends in an ⓘ whose panel
+       * holds the "as of" line, so textContent would include that too. */
+      title: h2 ? (h2.firstChild ? h2.firstChild.textContent.trim() : '') : '',
       align: cs ? cs.textAlign : '',
       sub: (pane.querySelector('[data-dccwl-gp-spot-asof]') || {}).textContent?.replace(/\s+/g, ' ').trim(),
       keys: [...pane.querySelectorAll('[data-dccwl-gp-spot-key]')].map((a) => a.getAttribute('data-dccwl-gp-spot-key')),
@@ -160,7 +162,7 @@ for (const [w, h] of DESKTOP) {
   /* ---- the keyboard inside the box ---- */
   section(`${w}: the keyboard inside the box, and out of it`);
   await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('[data-dccwl-gp-list]').scrollTop = 0; });
-  await page.evaluate(() => [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].find((r) => r.getClientRects().length).focus());
+  await page.evaluate(() => [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].find((r) => r.getBoundingClientRect().height > 0).focus());
   const k0 = await state(page);
   await page.keyboard.press('PageDown');
   await page.waitForTimeout(400);
@@ -173,7 +175,7 @@ for (const [w, h] of DESKTOP) {
   check(k2.top > k1.top, 'and so does the down arrow', `${k1.top} -> ${k2.top}`);
 
   await page.evaluate(() => {
-    const rows = [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].filter((r) => r.getClientRects().length);
+    const rows = [...document.querySelectorAll('[data-dccwl-gp-item] .dccwl-gp-row')].filter((r) => r.getBoundingClientRect().height > 0);
     rows[rows.length - 1].focus();
   });
   await page.keyboard.press('Tab');
@@ -334,7 +336,7 @@ section('#credits opens the folded credits');
   for (const w of [390, 1440]) {
     const { page } = await widgetPage(browser, 'guide', { width: w, height: 844, sitekit: true, touch: w < 900, js: [] });
     await page.evaluate(() => { window.location.hash = '#credits'; document.getElementById('credits').scrollIntoView(); });
-    for (const f of ['assets/js/sheet.js', 'assets/js/guide.js']) { await page.addScriptTag({ content: asset(f) }); }
+    for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/guide.js']) { await page.addScriptTag({ content: asset(f) }); }
     await page.waitForTimeout(700);
     const got = await page.evaluate(() => {
       const d = document.getElementById('credits');

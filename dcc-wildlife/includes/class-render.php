@@ -41,6 +41,39 @@ final class Render {
 		return (bool) preg_match( '/[.!?][\x{201D}\x{2019}"\')\]]?\s+\S/u', trim( $text ) );
 	}
 
+	/**
+	 * THE ⓘ (1.48.1) — the PHP half of assets/js/info.js's make(), so a
+	 * credit printed by the server and one drawn in the browser are the same
+	 * markup. Returns a string to append at the END of the line or heading
+	 * the source belongs to.
+	 *
+	 * `$inner` is HTML THE CALLER HAS ALREADY ESCAPED — lines built with
+	 * esc_html()/esc_url() and wrapped in `.dccwl-info-line` spans. Spans,
+	 * because the ⓘ often sits inside a heading or a paragraph, where a <p>
+	 * or <div> would be invalid.
+	 *
+	 * `popovertarget` makes it work with no JavaScript in any browser that
+	 * has popovers; a browser without them shows the lines inline (app.css).
+	 */
+	private static int $info_seq = 0;
+
+	public static function info( string $label, string $inner ): string {
+		++self::$info_seq;
+		$id = 'dccwl-info-p' . self::$info_seq;
+		return '<span class="dccwl-info">'
+			. '<button type="button" class="dccwl-info-btn" popovertarget="' . esc_attr( $id ) . '" aria-label="' . esc_attr( $label ) . '">'
+			. '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5M10 6.2v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+			. '</button>'
+			. '<span class="dccwl-info-pop" id="' . esc_attr( $id ) . '" popover="auto">' . $inner . '</span>'
+			. '</span>';
+	}
+
+	/** One escaped line for an ⓘ panel. */
+	public static function info_line( string $html_escaped, string $role = '' ): string {
+		$cls = 'dccwl-info-line' . ( '' !== $role ? ' ' . sanitize_html_class( $role ) : '' );
+		return '<span class="' . $cls . '">' . $html_escaped . '</span>';
+	}
+
 	/** ' dccwl-prose' for a multi-sentence paragraph, '' otherwise. */
 	public static function prose_class( string $text ): string {
 		return self::is_prose( $text ) ? ' dccwl-prose' : '';
@@ -1568,6 +1601,8 @@ final class Render {
 				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
 				/* Title Case, like every other label (Rob, 2026-10-19). */
 				'allCredits'  => __( 'Photo Credits', 'dcc-wildlife' ),
+				/* The ⓘ on a sheet's photograph (1.48.1): its accessible name. */
+				'photoCreditLabel' => __( 'Photo Credit', 'dcc-wildlife' ),
 				/* ITEM 11 (1.45.0): the sheet's link into the prose guide. */
 				'fullEntry'   => __( 'See The Full Entry', 'dcc-wildlife' ),
 			],

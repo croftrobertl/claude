@@ -41,7 +41,7 @@ async function explore(suffix) {
     css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/canal.css', 'assets/css/water.css'],
     body: fx.html + `<script>${fx.config}</script>`,
   });
-  for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/canal.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/canal.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(900);

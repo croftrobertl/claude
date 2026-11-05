@@ -41,7 +41,7 @@ async function guide(w, h = 844) {
 }
 
 const shownCount = (page) => page.evaluate(() =>
-  [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length).length);
+  [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0).length);
 
 /* ====================================================================== */
 section('the switch: Seen Here 395, Wider Florida 402');
@@ -86,7 +86,11 @@ section('the switch: Seen Here 395, Wider Florida 402');
       if (r.classList.contains('dccwl-gp-item-hazard')) {
         out.stripes += 1;
         out.stripeKeys.push(r.getAttribute('data-key'));
-        out.stripeWidths.add(cs.borderLeftWidth + ' ' + cs.borderLeftStyle + ' ' + cs.borderLeftColor);
+        /* Rendered rows only: a row the view hides keeps its rendering at
+         * zero size and no borders (1.48.1), so its stripe is not drawn. */
+        if (r.getBoundingClientRect().height > 0) {
+          out.stripeWidths.add(cs.borderLeftWidth + ' ' + cs.borderLeftStyle + ' ' + cs.borderLeftColor);
+        }
         if (/, Keep Away/.test(r.querySelector('.dccwl-gp-row').textContent)) { out.srKeepAway += 1; }
       }
       const key = r.getAttribute('data-key');
@@ -134,19 +138,19 @@ section('the switch: Seen Here 395, Wider Florida 402');
   checkSame(WIDER, wider.length, 'seven species are classified Wider Florida');
   note(`wider: ${wider.join(', ')}`);
   const widerShownNow = await page.evaluate(() => [...document.querySelectorAll('[data-scope="wider"]')]
-    .filter((r) => r.getClientRects().length).length);
+    .filter((r) => r.getBoundingClientRect().height > 0).length);
   checkSame(WIDER, widerShownNow, 'and all seven are visible under Wider Florida');
 
   await page.click('[data-dccwl-gp-scope="here"]');
   await page.waitForTimeout(200);
   const widerShownHere = await page.evaluate(() => [...document.querySelectorAll('[data-scope="wider"]')]
-    .filter((r) => r.getClientRects().length).length);
+    .filter((r) => r.getBoundingClientRect().height > 0).length);
   checkSame(0, widerShownHere, 'and none of them under Seen Here');
   checkSame(HERE, await shownCount(page), 'back to 395');
 
   /* The "Lake County" chip is the NEAR species, and they are under Seen Here. */
   const nearVisible = await page.evaluate(() => [...document.querySelectorAll('.dccwl-gp-chip-near')]
-    .filter((c) => c.closest('[data-dccwl-gp-item]').getClientRects().length).length);
+    .filter((c) => c.closest('[data-dccwl-gp-item]').getBoundingClientRect().height > 0).length);
   checkAtLeast(40, nearVisible, 'the Lake County species show under Seen Here, chipped');
 
   await page.close();
@@ -175,7 +179,7 @@ section('the pills and the search');
   await page.waitForTimeout(200);
   checkSame(birds.n, await shownCount(page), 'tapping Birds shows exactly the number on the pill');
   const onlyBirds = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0)
       .every((r) => 'birds' === r.getAttribute('data-group')));
   check(onlyBirds, 'and nothing else');
 
@@ -183,7 +187,7 @@ section('the pills and the search');
   await page.fill('[data-dccwl-gp-search]', 'heron');
   await page.waitForTimeout(600);
   const herons = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0)
       .map((r) => r.getAttribute('data-name')));
   note(`search "heron" in Birds: ${herons.join(', ')}`);
   checkAtLeast(3, herons.length, 'searching "heron" finds herons');
@@ -194,7 +198,7 @@ section('the pills and the search');
   await page.fill('[data-dccwl-gp-search]', 'Ardea herodias');
   await page.waitForTimeout(600);
   const sci = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getClientRects().length)
+    [...document.querySelectorAll('[data-dccwl-gp-item]')].filter((r) => r.getBoundingClientRect().height > 0)
       .map((r) => r.getAttribute('data-name')));
   checkSame('Great Blue Heron', sci.join(', '), 'a scientific name finds its species');
 
@@ -273,7 +277,9 @@ section('tapping a row, and the deep link');
       title: title ? title.textContent.trim() : '',
       hasPhoto: !!(body && body.querySelector('img.dccwl-gp-photo')),
       tiles: body ? body.querySelectorAll('.dccwl-gp-tiles .dccwl-fg-line').length : 0,
-      credit: !!(body && body.querySelector('.dccwl-gp-credit')),
+      /* 1.48.1: the credit is an ⓘ on the photograph, its panel holding it. */
+      credit: !!(body && body.querySelector('.dccwl-gp-photowrap .dccwl-info-onphoto .dccwl-info-pop')
+        && body.querySelector('.dccwl-gp-photowrap .dccwl-info-onphoto .dccwl-info-pop').textContent.trim().length > 3),
       text: body ? body.textContent.replace(/\s+/g, ' ') : '',
       foldOpen: fold ? fold.open : null,
       hostShown: host ? !host.hidden : null,
@@ -360,7 +366,7 @@ section('tapping a row, and the deep link');
     width: 390, height: 844, sitekit: true, touch: true, js: [],
   });
   await page.evaluate(() => { window.location.hash = '#dccwl-fl-alligator'; });
-  for (const f of ['assets/js/sheet.js', 'assets/js/guide.js']) {
+  for (const f of ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/guide.js']) {
     await page.addScriptTag({ content: asset(f) });
   }
   await page.waitForTimeout(700);
@@ -448,7 +454,7 @@ section("Rob's alignment rule, measured on the rendered page");
       sheetTitle: read('.dccwl-sheet-title'),
       speciesName: read('.dccwl-sheet-body .dccwl-fg-name'),
       tile: read('.dccwl-sheet-body .dccwl-gp-tiles .dccwl-fg-line'),
-      credit: read('.dccwl-sheet-body .dccwl-gp-credit'),
+      credit: document.querySelector('.dccwl-sheet-body .dccwl-gp-photowrap .dccwl-info-btn') ? 'info' : null,
       /* The one that must NOT be centred: the multi-sentence paragraph. */
       fact: read('.dccwl-sheet-body .dccwl-fg-fact'),
       /* A list row is a row — the exception Rob named himself. */
@@ -461,7 +467,7 @@ section("Rob's alignment rule, measured on the rendered page");
   checkSame('center', align.sheetTitle, 'the sheet title is centred');
   checkSame('center', align.speciesName, 'so is the species name inside it');
   checkSame('center', align.tile, 'and the two tiles');
-  checkSame('center', align.credit, 'and the photo credit');
+  checkSame('info', align.credit, 'and the photo credit is an ⓘ on the photograph (1.48.1)');
   check('center' !== align.fact,
     'while the multi-sentence fact stays left-aligned, as the rule says', String(align.fact));
   check('center' !== align.rowText,

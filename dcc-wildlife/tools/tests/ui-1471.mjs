@@ -37,8 +37,8 @@ const CSS = {
   guide: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/guide.css'],
 };
 const JS = {
-  canal: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js'],
-  guide: ['assets/js/sheet.js', 'assets/js/guide.js'],
+  canal: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js'],
+  guide: ['assets/js/info.js', 'assets/js/sheet.js', 'assets/js/guide.js'],
 };
 const kit = (await import('node:fs')).readFileSync(new URL('./sitekit.css', import.meta.url), 'utf8');
 const TOPBAR = `(function (){
