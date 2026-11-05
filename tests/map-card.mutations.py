@@ -64,9 +64,6 @@ MUTANTS = [
     ('the label is left at the kit font size, so it no longer fits', C,
      '    font-size: 15px;\n    font-weight: 700;\n    line-height: 1.25;\n    letter-spacing: normal;\n    text-transform: none;',
      '    font-weight: 700;\n    line-height: 1.25;'),
-    ('the kit capitalisation is let through', C,
-     '    letter-spacing: normal;\n    text-transform: none;\n    text-decoration: none;',
-     '    letter-spacing: normal;\n    text-decoration: none;'),
 
     # ---- the named case: Where to Launch changed ------------------------
     ('the duplicate-link gate keys off the title, catching Where to Launch', W,
@@ -107,6 +104,16 @@ MUTANTS = [
 ]
 
 EQUIVALENT = [
+    ('the card buttons lose their own text-transform: none',
+     'measured, and the declaration really is redundant: BOTH card buttons carry the '
+     '.dccgg-btn class from the plugin\'s own markup, and two pre-existing rules already '
+     'set text-transform: none on .dccgg-btn at (0,3,0) — `.dccgg-root.dccgg-root '
+     ':is(.dccgg-btn, …)` and `.dccgg-root.dccgg-root .dccgg-btn` — both of which outrank '
+     'the kit\'s (0,1,1). So the kit\'s capitalize is already retired before this block is '
+     'reached. It is kept because the block it sits in is where the kit fight is explained '
+     'and the other declarations there are NOT redundant; recorded here rather than counted '
+     'as a kill, because the suite\'s "capitalize is neutralised" assertion passes either '
+     'way and would be claiming this line earns something it does not.'),
     ('the buttons lose box-sizing (border-box -> content-box)',
      'measured: all 60 map-card assertions stay green, and the honest reason is that '
      'box-sizing is NOT what equalises the two heights. BOTH buttons carry a 2px border — '
