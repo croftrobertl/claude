@@ -178,6 +178,14 @@ function dccgg_all_on(): array {
         // The control, and the reason the swap is gated on the SWAP rather
         // than on a title: "Where to Launch" is a maps SEARCH link on a
         // wysiwyg item. It must keep its own View in Maps button.
+        // An item with "Map" IN ITS TITLE that is NOT a card, and the only
+        // thing that can tell a gate keyed on the swap from one keyed on the
+        // word "map". Without it, a mutant that strips the link from any
+        // item whose title contains "map" behaves identically on this
+        // fixture and survives.
+        ['_id' => 'm4', 'item_section' => 'clubhouse', 'item_title' => 'Parking Map',
+         'item_content' => '<p>Spaces are numbered to match the cottages.</p>',
+         'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/search/parking']],
         ['_id' => 'm3', 'item_section' => 'canal', 'item_title' => 'Where to Launch',
          'item_content' => '<p>Public ramp at Wooton Park.</p>',
          'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/search/boat+launch']],

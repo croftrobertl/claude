@@ -26,9 +26,6 @@ MUTANTS = [
     ('the picture loses loading="lazy", so it costs something at page load', W,
      "                'loading'  => 'lazy',",
      "                'loading'  => 'eager',"),
-    ('the picture loses its intrinsic size, so the card reflows on load', W,
-     "            return '<img width=\"900\" height=\"591\" '",
-     "            return '<img '"),
 
     # ---- the named case: the layer is moved by the portal ----------------
     ('the layer is appended to the guide root, so the portal moves it', J,
@@ -119,7 +116,16 @@ EQUIVALENT = [
      'something it does not. Remove the transparent border instead and the heights really do '
      'diverge; that is a different rule and a different mutant.'),
 ]
-UNREACHABLE = []
+UNREACHABLE = [
+    ('the picture loses its intrinsic size, so the card reflows on load',
+     'NOT a plugin mutant at all, and listing it as one was my error: the width and height '
+     'come from WordPress\'s wp_get_attachment_image(), not from any line this plugin owns. '
+     'The only place that string exists here is the test harness\'s stub, which the runner '
+     'does not copy or mutate — so it reported "target text found 0 times" and scored as a '
+     'survivor. The guarantee is still asserted (map-card.ui.js checks the rendered img '
+     'carries width 900, height 591 and loading=lazy); there is simply nothing of ours to '
+     'break for it.'),
+]
 
 
 def run(cmd, plugin_dir):

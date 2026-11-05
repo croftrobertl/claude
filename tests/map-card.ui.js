@@ -249,12 +249,24 @@ async function openSection(page, re) {
             `${lockedBefore} -> ${s.htmlOverflow}/${s.bodyOverflow} class=${s.lockClass}`);
         check('the close button is at least 44x44',
             s.closeBox[0] >= 44 && s.closeBox[1] >= 44, JSON.stringify(s.closeBox));
-        // Tab must not escape the layer
-        await page.keyboard.press('Tab');
-        await page.keyboard.press('Tab');
-        const stillIn = await page.evaluate(() =>
-            document.querySelector('.dccgg-maplayer').contains(document.activeElement));
-        check('Tab does not escape the layer', stillIn);
+        // Tab must not escape the layer. TWO presses was not enough to tell
+        // a trap from no trap: without one, the first Tab lands on the close
+        // button anyway and the second is still inside. Press it enough
+        // times to walk out of a two-stop layer, and require that every
+        // landing is still the close button — that is what cycling means.
+        const walk = [];
+        for (let i = 0; i < 6; i++) {
+            await page.keyboard.press('Tab');
+            walk.push(await page.evaluate(() => {
+                const l = document.querySelector('.dccgg-maplayer');
+                return l.contains(document.activeElement)
+                    ? (document.activeElement.className || document.activeElement.tagName) : 'ESCAPED';
+            }));
+        }
+        check('Tab never escapes the layer, however often it is pressed',
+            walk.every((x) => x !== 'ESCAPED'), JSON.stringify(walk));
+        check('and it keeps landing on the close button',
+            walk.every((x) => /dccgg-maplayer-close/.test(x)), JSON.stringify(walk));
         await page.evaluate(() => document.querySelector('.dccgg-maplayer-close').click());
         await page.waitForTimeout(500);
         const after = await page.evaluate(() => ({
@@ -268,6 +280,27 @@ async function openSection(page, re) {
             String(after.lockClass));
         check('focus returns to the button that opened it',
             /dccgg-mapcard-open/.test(after.focus), String(after.focus));
+        await ctx.close();
+    }
+
+    console.log('\nE2. Tapping the PICTURE opens the layer too');
+    {
+        // Rob asked for this explicitly, and nothing else in the suite
+        // exercised it — every other case clicks the Open button, so a
+        // handler that had dropped .dccgg-mapcard-shot passed unnoticed.
+        const { ctx, page } = await openGuide(browser, 390);
+        await openSection(page, /^Map/);
+        await page.evaluate(() => {
+            const s = Array.from(document.querySelectorAll('.dccgg-mapcard-shot'))
+                .find((x) => x.getClientRects().length);
+            if (s) s.click();
+        });
+        await page.waitForTimeout(800);
+        const open = await page.evaluate(() => {
+            const l = document.querySelector('.dccgg-maplayer');
+            return !!l && !l.hidden;
+        });
+        check('tapping the picture opens the full-screen layer', open, String(open));
         await ctx.close();
     }
 
@@ -321,6 +354,10 @@ async function openSection(page, re) {
             const wtl = byTitle('Where to Launch');
             const mapItems = ['Amenities Map', 'Property Map'].map(byTitle);
             return {
+                parkingKeepsLink: (() => { const p = byTitle('Parking Map');
+                    return !!(p && p.querySelector('.dccgg-map')); })(),
+                parkingHasCard: (() => { const p = byTitle('Parking Map');
+                    return !!(p && p.querySelector('.dccgg-mapcard')); })(),
                 wtlHasMapLink: !!(wtl && wtl.querySelector('.dccgg-map')),
                 wtlHref: wtl && wtl.querySelector('.dccgg-map') ? wtl.querySelector('.dccgg-map').getAttribute('href') : null,
                 wtlHasCard: !!(wtl && wtl.querySelector('.dccgg-mapcard')),
@@ -332,10 +369,13 @@ async function openSection(page, re) {
         check('...pointing at its maps SEARCH, unchanged',
             /maps\/search/.test(s.wtlHref || ''), String(s.wtlHref));
         check('...and it has no map card', !s.wtlHasCard);
+        check('"Parking Map" has "Map" in its title but no card, and KEEPS its link',
+            s.parkingKeepsLink && !s.parkingHasCard,
+            `link=${s.parkingKeepsLink} card=${s.parkingHasCard}`);
         check('the two card items drop their duplicate link',
             s.mapItemsKeepDuplicateLink === 0, String(s.mapItemsKeepDuplicateLink));
-        check('so exactly one View in Maps button is left in the guide',
-            s.totalMapLinks === 1, String(s.totalMapLinks));
+        check('so exactly two View in Maps buttons are left in the guide',
+            s.totalMapLinks === 2, String(s.totalMapLinks));
         await ctx.close();
     }
 
