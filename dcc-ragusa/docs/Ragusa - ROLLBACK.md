@@ -56,6 +56,16 @@ something removed it; the site director decides. A file an update removed,
 that the new version no longer ships, never sends this email: it is a line
 in Recent Events and on the update's journal row.
 
+## If you are about to edit plugins, themes or must-use plugins
+
+Start a maintenance window first, so Rob gets one summary instead of an
+email per file: `wp ragusa maintenance start --minutes=45 --note="what the
+work is"`, or the Maintenance Window box on the Ragusa page. Seal each file
+you mean to keep (`wp ragusa seal <path>`), then `wp ragusa maintenance
+stop`. Anything you changed and did not seal is listed in the summary as
+needing a look. Logins, new administrators, restores, quarantines,
+vulnerabilities and changes anywhere else still email at once.
+
 ## If you removed a file on purpose
 
 Seal the path before the next pass, or after it raised "File Missing":
@@ -152,6 +162,16 @@ Deactivate it: Plugins → DCC Ragusa → Deactivate (or `wp plugin deactivate d
   and pings the heartbeat's /fail endpoint, on live only. Remove
   `mu-plugins/dcc-ragusa-zelenci.php` to silence it.
 - The front end never carried anything of Ragusa's, so nothing changes for guests.
+
+## Rolling back 0.3.0 to 0.2.9
+
+Stop any running window first, so its summary goes out:
+`wp ragusa maintenance stop` (or `wp ragusa maintenance status` to see
+whether one is on). Then `wp plugin install "Ragusa 0.2.9.zip" --force`.
+Nothing migrates and nothing needs undoing. If a window was still open, its
+journal row is marked abandoned by 0.2.9's next tick ("unknown action"),
+and the window's record in Ragusa's state is ignored. 0.2.9 never holds an
+email.
 
 ## If a Ragusa update breaks Ragusa
 

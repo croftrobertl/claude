@@ -121,6 +121,7 @@ function sanitize_html_class(string $c): string { return preg_replace('/[^A-Za-z
 function is_email(string $e): bool { return (bool) filter_var($e, FILTER_VALIDATE_EMAIL); }
 function wp_unslash($v) { return $v; }
 function checked($a, $b = true, bool $echo = true): string { $s = ($a == $b) ? ' checked="checked"' : ''; if ($echo) { echo $s; } return $s; }
+function selected($a, $b = true, bool $echo = true): string { $r = (string) $a === (string) $b ? ' selected="selected"' : ''; if ($echo) { echo $r; } return $r; }
 function wp_json_encode($v, int $flags = 0, int $depth = 512) { return json_encode($v, $flags, $depth); }
 function wp_parse_url(string $u, int $c = -1) { return $c === -1 ? parse_url($u) : parse_url($u, $c); }
 function number_format_i18n($n, int $d = 0): string { return number_format((float) $n, $d); }

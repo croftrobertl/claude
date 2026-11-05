@@ -3566,6 +3566,276 @@ suite('0.2.9 failure drill: Ragusa\'s files are gone; the guest listeners get ou
     ok(substr_count((string) @file_get_contents($log), 'DCC Ragusa: could not record an update in this request') === 3, 'PHP\'s error log says so, once per listener');
 });
 
+// ---------------------------------------------------------------- 0.3.0
+
+use DCCR\Maintenance;
+
+function dccr_mails_since(int $n): array
+{
+    return array_slice($GLOBALS['dccr_mail'], $n);
+}
+function dccr_expire_window(): void
+{
+    $w = State::get(Maintenance::STATE);
+    $w['ends'] = time() - 1;
+    State::set(Maintenance::STATE, $w);
+}
+
+suite('0.3.0 drill 1: changes in a window send no email, then one summary: sealed approved, unsealed needs a look', function () {
+    Alerts::force(true);
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/early.php', "<?php\n// early\n");
+    dccr_full_pass();
+    dccr_full_pass(); // what earlier suites left settles before the window
+    // Last week's edit of class-demo.php was emailed, and its finding settled.
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$last_week = 1; }\n");
+    dccr_full_pass();
+    dccr_full_pass();
+    $n = count($GLOBALS['dccr_mail']);
+    [$ok, $msg] = Maintenance::start(45, 'menu hover tweak', 'Website Director (shell)');
+    ok($ok && str_contains($msg, 'Maintenance window on until'), 'started: ' . $msg);
+    $w  = Maintenance::window();
+    $jr = Journal::get((int) $w['id']);
+    ok($jr !== null && $jr['action'] === 'maintenance' && $jr['state'] === Journal::VERIFYING && ($jr['before']['by'] ?? '') === 'Website Director (shell)' && ($jr['before']['note'] ?? '') === 'menu hover tweak', 'the journal shows the window: who, when, note');
+    // The Director edits a must-use plugin and a plugin file, deletes another, and seals one of them.
+    Test_Site::write('wp-content/mu-plugins/dcc-other-helper.php', "<?php\n// dcc helper, hover tweak\n");
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$hover = true; }\n");
+    unlink(WP_PLUGIN_DIR . '/dcc-demo/includes/early.php');
+    dccr_full_pass();
+    foreach (['wp-content/mu-plugins/dcc-other-helper.php', 'wp-content/plugins/dcc-demo/includes/class-demo.php'] as $rel) {
+        $a = Alerts::get(Events::fingerprint(Fortress::MINCETA, 'file-changed', $rel));
+        ok($a !== null && $a['severity'] === Events::NEEDS_LOOK && (int) ($a['data']['held'] ?? 0) === (int) $w['id'], "$rel: still recorded as a finding, held by the window");
+    }
+    ok(count(array_filter(events_of('file-changed'), static fn($e) => $e['target'] === 'wp-content/plugins/dcc-demo/includes/class-demo.php')) >= 1, 'and in Recent Events: Minčeta records every change');
+    eq([], dccr_mails_since($n), 'no email while the window runs');
+    [$sok] = Revelin::seal('wp-content/mu-plugins/dcc-other-helper.php');
+    ok($sok, 'the Director seals the must-use plugin');
+    $status = Maintenance::status_line();
+    ok(str_contains($status, 'on until') && str_contains($status, '3 file changes held so far') && str_contains($status, 'menu hover tweak'), 'status: ' . $status);
+    [$ok, $msg, $sum] = Maintenance::stop('Website Director (shell)');
+    $mails = dccr_mails_since($n);
+    eq(1, count($mails), 'one email when the window ends: ' . implode(' | ', array_map(static fn($x) => $x['subject'], $mails)));
+    $m = $mails[0] ?? ['subject' => '', 'body' => ''];
+    ok(str_contains($m['subject'], 'Maintenance Window Ended: 3 Changed, 2 Need A Look'), 'subject: ' . $m['subject']);
+    ok(str_contains($m['body'], "NOT sealed by the site director:\n• wp-content/plugins/dcc-demo/includes/class-demo.php (changed"), 'the unsealed change needs a look');
+    ok(str_contains($m['body'], 'wp-content/plugins/dcc-demo/includes/early.php (changed'), 'the deleted file too');
+    ok(str_contains($m['body'], "Approved: sealed by the site director after the change:\n• wp-content/mu-plugins/dcc-other-helper.php (sealed by"), 'the sealed one is approved');
+    ok(str_contains($m['body'], 'Their note: "menu hover tweak"') && str_contains($m['body'], 'was stopped by Website Director (shell)'), 'who, how it ended, the note');
+    ok(str_contains($m['body'], 'wp ragusa seal <path>'), 'and the one thing to do');
+    $jr = Journal::get((int) $w['id']);
+    eq(Journal::COMMITTED, $jr['state'], 'the journal row is finished');
+    eq(['wp-content/mu-plugins/dcc-other-helper.php' => 'approved', 'wp-content/plugins/dcc-demo/includes/class-demo.php' => 'needs a look', 'wp-content/plugins/dcc-demo/includes/early.php' => 'needs a look'], (array) ($jr['after']['files'] ?? []), 'with every file and its verdict');
+    eq(null, Maintenance::window(), 'the window is over');
+    // The next pass settles the held findings: the summary was their email, so no All Clear.
+    $n2 = count($GLOBALS['dccr_mail']);
+    dccr_full_pass();
+    eq([], array_map(static fn($x) => $x['subject'], dccr_mails_since($n2)), 'no separate email for a file the summary already named');
+    // After the window, a change emails at once again.
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$hover = false; }\n");
+    dccr_full_pass();
+    ok(count(array_filter(dccr_mails_since($n2), static fn($x) => str_contains($x['subject'], 'File Changed') && str_contains($x['body'], 'class-demo.php'))) === 1, 'after the window a change emails at once');
+    // The deleted file comes back: the summary already reported it, so no All Clear of its own.
+    $n3 = count($GLOBALS['dccr_mail']);
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/early.php', "<?php\n// early\n");
+    dccr_full_pass();
+    eq(null, Alerts::open(Fortress::MINCETA)[Events::fingerprint(Fortress::MINCETA, 'file-missing', 'wp-content/plugins/dcc-demo/includes/early.php')] ?? null, 'the missing-file finding is settled');
+    eq([], array_map(static fn($x) => $x['subject'], array_filter(dccr_mails_since($n3), static fn($x) => str_contains($x['subject'], 'All Clear'))), 'and sends no All Clear');
+    Revelin::seal('wp-content/plugins/dcc-demo/includes/class-demo.php');
+    Alerts::force(false);
+});
+
+suite('0.3.0 drill 2: a seal counts only for the change before it; a later change needs a look', function () {
+    Alerts::force(true);
+    dccr_full_pass();
+    $n = count($GLOBALS['dccr_mail']);
+    Maintenance::start(30, '', 'Website Director (shell)');
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$v = 1; }\n");
+    dccr_full_pass();
+    Revelin::seal('wp-content/plugins/dcc-demo/includes/class-demo.php');
+    $w = State::get(Maintenance::STATE);
+    $w['sealed']['wp-content/plugins/dcc-demo/includes/class-demo.php']['ts'] -= 120; // sealed two minutes ago
+    State::set(Maintenance::STATE, $w);
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$v = 2; }\n");
+    dccr_full_pass();
+    [, , $sum] = Maintenance::stop('Website Director (shell)');
+    ok(isset($sum['unsealed']['wp-content/plugins/dcc-demo/includes/class-demo.php']), 'changed again after its seal: needs a look');
+    eq(1, count(dccr_mails_since($n)), 'still one email');
+    // A plugin folder removed on purpose and sealed: everything beneath it is approved.
+    Test_Site::write('wp-content/plugins/old-thing/old-thing.php', "<?php\n/**\n * Plugin Name: Old Thing\n * Version: 1.0\n */\n");
+    Test_Site::write('wp-content/plugins/old-thing/inc/a.php', "<?php\n// a\n");
+    dccr_full_pass();
+    Revelin::seal('wp-content/plugins/old-thing/old-thing.php'); // installed long ago: part of the baseline
+    Revelin::seal('wp-content/plugins/old-thing/inc/a.php');
+    dccr_full_pass();
+    $n = count($GLOBALS['dccr_mail']);
+    Maintenance::start(30, 'remove old-thing', 'Website Director (shell)');
+    DCCR\Vault::rm_rf(WP_PLUGIN_DIR . '/old-thing');
+    dccr_full_pass();
+    [$sok, $smsg] = Revelin::seal('wp-content/plugins/old-thing');
+    ok($sok, 'the removed folder is sealed out of the baseline: ' . $smsg);
+    [, , $sum] = Maintenance::stop('Website Director (shell)');
+    ok(isset($sum['approved']['wp-content/plugins/old-thing/inc/a.php'], $sum['approved']['wp-content/plugins/old-thing/old-thing.php']) && $sum['unsealed'] === [], 'a sealed folder approves the files beneath it');
+    eq(1, count(dccr_mails_since($n)), 'one email for the whole removal: ' . implode(' | ', array_map(static fn($x) => $x['subject'], dccr_mails_since($n))));
+    Alerts::force(false);
+});
+
+suite('0.3.0 drill 3: never held: a login, a planted file, a breached must-use plugin, a change outside the window\'s places', function () {
+    Alerts::force(true);
+    dccr_full_pass();
+    $user = (object) ['ID' => 2, 'roles' => ['administrator']];
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.42';
+    Bokar::on_login('erica', $user); // the baseline address
+    $n = count($GLOBALS['dccr_mail']);
+    Maintenance::start(60, 'drill', 'Website Director (shell)');
+    $_SERVER['REMOTE_ADDR'] = '198.51.100.7';
+    Bokar::on_login('erica', $user);
+    ok(count(array_filter(dccr_mails_since($n), static fn($m) => str_contains($m['subject'], 'Bokar') && str_contains($m['subject'], 'New Address'))) === 1, 'a login from a new address emails at once');
+    $n = count($GLOBALS['dccr_mail']);
+    Test_Site::write('wp-content/uploads/2026/11/logo.png.php', "<?php eval(\$_POST['x']);\n");
+    Test_Site::write('wp-content/mu-plugins/cache-helper.php', "<?php\n// not ours\n");
+    Test_Site::write('wp-content/stray.php', "<?php\n// outside\n");
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$held = 1; }\n");
+    dccr_full_pass();
+    $subjects = array_map(static fn($m) => $m['subject'], dccr_mails_since($n));
+    ok(count(array_filter($subjects, static fn($x) => str_contains($x, 'Quarantin'))) >= 1, 'a planted PHP file in uploads is quarantined and emailed at once: ' . implode(' | ', $subjects));
+    ok(count(array_filter(dccr_mails_since($n), static fn($m) => str_contains($m['body'], 'cache-helper.php'))) === 1, 'a new must-use plugin that is not ours (breached) emails at once');
+    ok(count(array_filter(dccr_mails_since($n), static fn($m) => str_contains($m['body'], 'wp-content/stray.php'))) === 1, 'a change outside plugins, themes, must-use plugins and .htaccess emails at once');
+    eq(0, count(array_filter(dccr_mails_since($n), static fn($m) => str_contains($m['body'], 'class-demo.php'))), 'while the plugin file change is held');
+    // Revelin, Lovrijenac and Sveti Ivan are never held, whatever the kind.
+    $w = Maintenance::current();
+    foreach ([Fortress::REVELIN => 'guard-restored', Fortress::LOVRIJENAC => 'vulnerable-plugin', Fortress::SVETI_IVAN => 'update-failed', Fortress::BOKAR => 'role-changed'] as $fort => $kind) {
+        ok(!Maintenance::holds(['fortress' => $fort, 'severity' => Events::NEEDS_LOOK, 'kind' => $kind, 'target' => 'wp-content/plugins/x/x.php'], null, false, $w), "$fort is never held");
+    }
+    ok(!Maintenance::holds(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'quarantined', 'target' => 'wp-content/plugins/x/x.php'], null, false, $w), 'a quarantine is never held');
+    ok(!Maintenance::holds(['fortress' => Fortress::MINCETA, 'severity' => Events::BREACHED, 'kind' => 'file-changed', 'target' => 'wp-content/plugins/x/x.php'], null, false, $w), 'a breach is never held');
+    ok(Maintenance::holds(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-changed', 'target' => '.htaccess'], null, false, $w), '.htaccess is held');
+    ok(!Maintenance::holds(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-changed', 'target' => '.htaccess.nfd-backup'], null, false, $w), 'but not other root files');
+    ok(!Maintenance::holds(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-missing', 'target' => 'wp-content/plugins/x/gone.php'], ['first_seen' => (int) $w['started'] - 600, 'resolved_at' => 0, 'seen_at' => 0], false, $w), 'a finding open from before the window keeps its own rules');
+    [, , $sum] = Maintenance::stop('Website Director (shell)');
+    $m = array_values(array_filter(dccr_mails_since($n), static fn($x) => str_contains($x['subject'], 'Maintenance Window Ended')));
+    ok(count($m) === 1 && str_contains($m[0]['body'], "Sent at once during the window, because these are never held:") && str_contains($m[0]['body'], 'Bokar · Administrator Login From A New Address'), 'the summary names what was sent at once');
+    foreach (['wp-content/uploads/2026/11/logo.png.php', 'wp-content/mu-plugins/cache-helper.php', 'wp-content/stray.php'] as $rel) {
+        @unlink(ABSPATH . $rel);
+    }
+    dccr_full_pass();
+    Revelin::seal('wp-content/plugins/dcc-demo/includes/class-demo.php');
+    foreach (['wp-content/mu-plugins/cache-helper.php', 'wp-content/stray.php'] as $rel) {
+        Revelin::seal($rel);
+    }
+    Alerts::force(false);
+});
+
+suite('0.3.0 drill 4: a window expires on time: holding stops at the deadline, the summary goes out, the tick closes it', function () {
+    Alerts::force(true);
+    $was = Site::$cron_off_override;
+    Site::$cron_off_override = false;
+    $GLOBALS['dccr_cron'] = [];
+    dccr_full_pass();
+    $n = count($GLOBALS['dccr_mail']);
+    Maintenance::start(20, 'expiry drill', 'Website Director (shell)');
+    $w = Maintenance::window();
+    eq((int) $w['ends'], (int) wp_next_scheduled(Maintenance::HOOK), 'where WP-Cron runs, an event is set for the deadline');
+    eq(time() + 20 * 60, (int) $w['ends'], '20 minutes from now');
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$e = 1; }\n");
+    dccr_full_pass();
+    eq([], dccr_mails_since($n), 'held while it runs');
+    dccr_expire_window();
+    // No tick has run yet: the next finding after the deadline is not held, and the window closes first.
+    Test_Site::write('wp-content/plugins/dcc-demo/includes/class-demo.php', "<?php\nclass Demo { public \$e = 2; public \$after = true; }\n");
+    dccr_full_pass();
+    $subjects = array_map(static fn($m) => $m['subject'], dccr_mails_since($n));
+    ok(count(array_filter($subjects, static fn($x) => str_contains($x, 'Maintenance Window Ended'))) === 1, 'the summary went out: ' . implode(' | ', $subjects));
+    ok(count(array_filter($subjects, static fn($x) => str_contains($x, 'File Changed'))) === 1, 'and the change after the deadline emailed at once: ' . implode(' | ', $subjects));
+    eq(null, Maintenance::window(), 'over');
+    // Outside any tick (wp ragusa scan, or a walk in another request), a finding after the deadline is not held either.
+    Maintenance::start(20, '', 'Website Director (shell)');
+    dccr_expire_window();
+    $n5  = count($GLOBALS['dccr_mail']);
+    $hit = Alerts::raise(['fortress' => Fortress::MINCETA, 'severity' => Events::NEEDS_LOOK, 'kind' => 'file-changed', 'target' => 'wp-content/plugins/dcc-demo/after-deadline.php', 'title' => 'File Changed: after-deadline.php', 'what' => 'x']);
+    ok($hit, 'a finding after the deadline is emailed at once, with no tick in between');
+    ok(count(array_filter(dccr_mails_since($n5), static fn($x) => str_contains($x['subject'], 'Maintenance Window Ended'))) === 0 && Maintenance::window() === null, 'and the expired window closed first (nothing changed in it, so no summary)');
+    Alerts::resolve(Events::fingerprint(Fortress::MINCETA, 'file-changed', 'wp-content/plugins/dcc-demo/after-deadline.php'), true);
+    $row = Journal::latest('maintenance', 'window');
+    ok(($row['after']['how'] ?? '') === 'expired', 'the journal says it ended at its deadline');
+    $first = array_values(array_filter(Journal::recent(30), static fn($j) => $j['action'] === 'maintenance' && str_contains((string) ($j['after']['summary'] ?? ''), 'expiry drill')));
+    ok($first !== [] && str_contains((string) $first[0]['after']['summary'], 'ended at its deadline'), 'and its summary says so');
+    eq(false, wp_next_scheduled(Maintenance::HOOK), 'the deadline event is cleared');
+    // The tick closes a window nothing else touched.
+    Maintenance::start(20, '', 'Website Director (shell)');
+    dccr_expire_window();
+    $lines = tick();
+    ok(count(array_filter($lines, static fn($l) => str_contains($l, 'Maintenance window ended'))) === 1, 'the tick ends an expired window');
+    eq(null, Maintenance::window(), 'and it is gone');
+    Revelin::seal('wp-content/plugins/dcc-demo/includes/class-demo.php');
+    Site::$cron_off_override = $was;
+    Alerts::force(false);
+});
+
+suite('0.3.0 drill 5: one window at a time: starting again extends it; limits; a lost record is closed, never left open', function () {
+    $r0 = count(array_filter(Journal::recent(200), static fn($j) => $j['action'] === 'maintenance'));
+    Maintenance::start(30, 'first', 'Website Director (shell)');
+    $w1 = Maintenance::window();
+    [$ok, $msg] = Maintenance::start(60, 'more', 'Rob');
+    $w2 = Maintenance::window();
+    ok($ok && str_contains($msg, 'already running'), 'starting again extends: ' . $msg);
+    eq((int) $w1['id'], (int) $w2['id'], 'the same window');
+    eq(time() + 3600, (int) $w2['ends'], 'now ending an hour from now');
+    eq($r0 + 1, count(array_filter(Journal::recent(200), static fn($j) => $j['action'] === 'maintenance')), 'one journal row');
+    ok(str_contains((string) Journal::get((int) $w1['id'])['note'], 'extended by Rob'), 'the extension is on the row');
+    Maintenance::start(5, '', 'Rob');
+    eq(time() + 3600, (int) Maintenance::window()['ends'], 'a shorter start never shortens it');
+    [$ok, $msg] = Maintenance::start(121, '', 'Rob');
+    ok(!$ok && str_contains($msg, '1 to 120 minutes'), 'more than 120 minutes is refused');
+    [$ok] = Maintenance::start(0, '', 'Rob');
+    ok(!$ok, 'zero is refused');
+    [$ok, $msg] = Maintenance::stop('Rob');
+    ok($ok, 'stopped');
+    [$ok, $msg] = Maintenance::stop('Rob');
+    ok(!$ok && $msg === 'No maintenance window is running.', 'stopping twice says so');
+    // A lost record: the state is gone, the row still open.
+    Maintenance::start(30, 'lost', 'Rob');
+    $id = (int) Maintenance::window()['id'];
+    State::delete(Maintenance::STATE);
+    age_row($id, 300);
+    tick();
+    $row = Journal::get($id);
+    ok($row['state'] === Journal::COMMITTED && str_contains((string) $row['note'], 'record was lost'), 'recovery closes it and says so');
+    // A running window's row is left alone by recovery.
+    Maintenance::start(30, 'running', 'Rob');
+    $id = (int) Maintenance::window()['id'];
+    age_row($id, 300);
+    tick();
+    eq(Journal::VERIFYING, Journal::get($id)['state'], 'recovery leaves a running window alone');
+    Maintenance::stop('Rob');
+    // A note is kept plain and short.
+    Maintenance::start(10, "line one\nline two" . str_repeat('x', 400), 'Rob');
+    $note = (string) Maintenance::window()['notes'][0]['note'];
+    ok(!str_contains($note, "\n") && mb_strlen($note) <= 200, 'the note is one line of at most 200 characters');
+    Maintenance::stop('Rob');
+});
+
+suite('0.3.0: wp ragusa maintenance start, status and stop', function () {
+    dccr_cli_reset();
+    $cli = new DCCR\Cli();
+    $cli->maintenance(['start'], ['minutes' => '15', 'note' => 'cli drill']);
+    ok(str_contains(dccr_cli_text(), 'Maintenance window on until'), 'start: ' . dccr_cli_text());
+    dccr_cli_reset();
+    $cli->status();
+    ok(str_contains(dccr_cli_text(), 'Maintenance window: on until'), 'status shows it');
+    dccr_cli_reset();
+    $cli->maintenance(['status'], []);
+    ok(str_contains(dccr_cli_text(), 'is still running, until') && !str_contains(dccr_cli_text(), 'was stopped'), 'and its summary so far reads as a running window: ' . dccr_cli_text());
+    dccr_cli_reset();
+    try {
+        $cli->maintenance(['start'], ['minutes' => 'lots']);
+        ok(false, 'a bad --minutes is refused');
+    } catch (WP_CLI_Error $e) {
+        ok(str_contains($e->getMessage(), 'whole number'), 'a bad --minutes is refused');
+    }
+    dccr_cli_reset();
+    $cli->maintenance(['stop'], []);
+    ok(str_contains(dccr_cli_text(), 'Maintenance window ended') && str_contains(dccr_cli_text(), 'No file changed, so no summary email.'), 'stop: ' . dccr_cli_text());
+});
+
 echo sprintf("\n%d passed, %d failed\n", $GLOBALS['t_pass'], $GLOBALS['t_fail']);
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);
 exit($GLOBALS['t_fail'] === 0 ? 0 : 1);

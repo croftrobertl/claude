@@ -120,6 +120,17 @@ final class Revelin
      */
     public static function seal(string $path): array
     {
+        $r = self::seal_path($path);
+        if ($r[0]) {
+            $abs = str_starts_with($path, '/') ? $path : Site::abspath() . '/' . ltrim($path, '/');
+            \DCCR\Maintenance::note_sealed(Site::rel((string) preg_replace('#/+#', '/', $abs)), \DCCR\Maintenance::actor());
+        }
+        return $r;
+    }
+
+    /** @return array{0:bool,1:string} */
+    private static function seal_path(string $path): array
+    {
         $abs = str_starts_with($path, '/') ? $path : Site::abspath() . '/' . ltrim($path, '/');
         $abs = (string) preg_replace('#/+#', '/', $abs);
         if (basename($abs) === '.htaccess' && dirname($abs) === Site::abspath()) {

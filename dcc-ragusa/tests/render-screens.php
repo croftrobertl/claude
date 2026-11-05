@@ -84,6 +84,7 @@ $wrap = static function (string $body) use ($css): string {
         . '#wpcontent{padding:0 20px 20px}.wrap{margin:10px 0 0}h1{font-size:23px;font-weight:400;margin:0;padding:9px 0 4px;line-height:1.3}'
         . '.button{display:inline-block;text-decoration:none;font-size:13px;border:1px solid #2271b1;border-radius:3px;background:#f6f7f7;color:#2271b1;padding:0 10px;cursor:pointer}'
         . '.button-primary{background:#2271b1;color:#fff}.button-link{background:none;border:0;color:#2271b1;cursor:pointer}'
+        . 'input[type=text],select{border:1px solid #8c8f94;border-radius:4px;padding:0 8px;font-size:14px;line-height:2;min-height:30px;box-sizing:border-box}'
         . 'input[type=email],input[type=url],input[type=password]{border:1px solid #8c8f94;border-radius:4px;padding:0 8px;font-size:14px;line-height:2;min-height:30px;box-sizing:border-box}'
         . 'code{font-family:Consolas,Monaco,monospace;font-size:13px;background:rgba(0,0,0,.07);padding:3px 5px}'
         . '@media (max-width:782px){#wpcontent{padding:0 10px 10px}}</style><style>' . $css . '</style></head><body><div id="wpcontent">' . $body . '</div></body></html>';
@@ -99,5 +100,10 @@ ob_start();
 Admin::render();
 file_put_contents(__DIR__ . '/screens/confirm.html', $wrap((string) ob_get_clean()));
 $_GET = [];
-echo "Rendered tests/screens/ragusa.html and confirm.html\n";
+// The page while the Website Director is at work: the window's line, Extend and Stop.
+DCCR\Maintenance::start(45, 'menu hover tweak on dcc-menu-hover.php', 'Website Director (shell)');
+ob_start();
+Admin::render();
+file_put_contents(__DIR__ . '/screens/maintenance.html', $wrap((string) ob_get_clean()));
+echo "Rendered tests/screens/ragusa.html, confirm.html and maintenance.html\n";
 DCCR\Vault::rm_rf(DCCR_TEST_ROOT);

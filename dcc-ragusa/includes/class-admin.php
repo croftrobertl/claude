@@ -21,7 +21,7 @@ final class Admin
     {
         add_action('admin_menu', [self::class, 'register_menu']);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue']);
-        foreach (['save_settings', 'seal', 'restore', 'update_now', 'check_now', 'seen'] as $action) {
+        foreach (['save_settings', 'seal', 'restore', 'update_now', 'check_now', 'seen', 'maintenance_start', 'maintenance_stop'] as $action) {
             add_action('admin_post_dccr_' . $action, [self::class, 'handle_' . $action]);
         }
     }
@@ -133,6 +133,21 @@ final class Admin
         }
         [$ok, $msg] = Fortress\Revelin::seal($target);
         self::back($msg, $ok ? 'good' : 'warn');
+    }
+
+    public static function handle_maintenance_start(): void
+    {
+        self::guard();
+        $minutes = self::post('minutes');
+        [$ok, $msg] = Maintenance::start(ctype_digit($minutes) ? (int) $minutes : 0, self::post('note'), Maintenance::actor());
+        self::back($msg, $ok ? 'good' : 'warn');
+    }
+
+    public static function handle_maintenance_stop(): void
+    {
+        self::guard();
+        [$ok, $msg, $s] = Maintenance::stop(Maintenance::actor());
+        self::back($ok && !$s['emailed'] && ($s['approved'] !== [] || $s['unsealed'] !== []) ? $msg . ' ' . __('The summary is on the journal row (this site sends no email, or the mail failed).', 'dcc-ragusa') : $msg, $ok ? 'good' : 'warn');
     }
 
     public static function handle_restore(): void

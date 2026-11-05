@@ -1383,3 +1383,19 @@ microsecond, and load Ragusa only when an upgrader runs. The write-ahead
 row, shutdown note and tick completion of 0.2.8 now cover these requests
 too.
 
+**0.3.0 (the maintenance window, Rob's request of 2026-11-04).** The
+Website Director's deliberate edits raised Needs A Look emails (finding
+b6d18331 for dcc-menu-hover.php that day), and a stream of expected
+emails teaches Rob to ignore Ragusa's mail, which is how a real one would
+be missed. A window, started by the Director before the work, keeps every
+record and holds only the emails for Minčeta's file changes in the places
+the Director works: must-use plugins, plugins, themes and the root
+.htaccess. When it ends, one summary: files sealed after their change are
+approved, the rest need a look. The security bargain is narrow on
+purpose. An attacker who reads this source gains nothing from a window
+they cannot start (it needs WP-CLI on the server or an administrator with
+a nonce on the page), and even inside one, a login, a new administrator, a
+planted file in uploads, a breached must-use plugin, a guard restore, a
+quarantine and a change anywhere else still email at once. An unsealed
+change still reaches Rob, at most 120 minutes late, in the summary.
+

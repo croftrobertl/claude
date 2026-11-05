@@ -403,6 +403,65 @@
     text-wrap: pretty;
 }
 
+/* Maintenance window ----------------------------------------------------- */
+
+.dccr-maint {
+    background: var(--dccr-surface);
+    border: 1px solid #dcdcde;
+    border-left: 4px solid var(--dccr-muted);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem;
+}
+
+.dccr-maint--on {
+    border-left-color: var(--dccr-warn);
+    background: #fdf4e3;
+}
+
+.dccr-maint__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+}
+
+.dccr-maint__line {
+    font-weight: 600;
+    margin: 0 0 0.35rem;
+}
+
+.dccr-maint__forms,
+.dccr-maint__form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: flex-end;
+}
+
+.dccr-maint__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.dccr-maint__field > span {
+    font-weight: 600;
+}
+
+.dccr-maint__field select,
+.dccr-maint__field input {
+    min-height: 44px;
+    max-width: 100%;
+}
+
+.dccr-maint__note {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.dccr-maint__note input {
+    width: 100%;
+}
+
 /* Small screens ---------------------------------------------------------- */
 
 @media (max-width: 782px) {

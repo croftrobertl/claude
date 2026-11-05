@@ -1,4 +1,10 @@
-# Ragusa 0.2.9 — Staging Checklist
+# Ragusa 0.3.0 — Staging Checklist
+
+> **Upgrading from 0.2.9 (staging first, then live):** check the zip's md5
+> against the one given with it (`md5sum "Ragusa 0.3.0.zip"`), then
+> `wp plugin install "Ragusa 0.3.0.zip" --force` and `wp ragusa tick`.
+> Nothing migrates. Then step 16. Rollback: `wp ragusa maintenance stop`
+> if a window is on, then `wp plugin install "Ragusa 0.2.9.zip" --force`.
 
 > **Upgrading from 0.2.8 (staging first, then live):** step 15 part A on
 > 0.2.8, `wp plugin install "Ragusa 0.2.9.zip" --force`, `wp ragusa tick`,
@@ -724,6 +730,89 @@ The request, shaped like WordPress.com's (any body; Jetpack rejects it):
 - [ ] **Live, on the next WordPress.com update:** its journal row reads
       `update from jetpack` (or `rest`, `xmlrpc`), with a sealed copy and
       `"stage":"complete"`, and no "Updated Without Ragusa Seeing It".
+
+## 16. The 0.3.0 drills: the maintenance window
+
+Staging sends no email, so these read the evidence Ragusa keeps: the
+window records every held change, every seal, and every alert that tried
+to send (staging blocks the mail itself, not the record). Two throwaway
+must-use plugins, made and sealed before any window:
+
+    cd ~/public_html/staging
+    printf '<?php\n// window drill A\n' > wp-content/mu-plugins/dcc-window-drill-a.php
+    printf '<?php\n// window drill B\n' > wp-content/mu-plugins/dcc-window-drill-b.php
+    wp ragusa seal wp-content/mu-plugins/dcc-window-drill-a.php
+    wp ragusa seal wp-content/mu-plugins/dcc-window-drill-b.php
+    wp ragusa scan
+
+- [ ] **A change in a window sends no email, then one summary; an unsealed
+      change is flagged.**
+
+      wp ragusa maintenance start --minutes=30 --note="staging window drill"
+      echo '// edit 1' >> wp-content/mu-plugins/dcc-window-drill-a.php
+      echo '// edit 1' >> wp-content/mu-plugins/dcc-window-drill-b.php
+      wp ragusa scan
+      wp ragusa findings
+      wp ragusa maintenance status
+
+  `findings` lists "File Changed" for both (Minčeta still records them).
+  `status` says "2 file changes held so far", and "The summary so far" lists
+  both under "Needs a look" and has no "Sent at once" line for them: they
+  were never sent. Then seal one and stop:
+
+      wp ragusa seal wp-content/mu-plugins/dcc-window-drill-a.php
+      wp ragusa maintenance stop
+
+  The printed summary: subject "… Maintenance Window Ended: 2 Changed, 1
+  Need A Look", drill-b under "Needs a look", drill-a under "Approved:
+  sealed by …", the note, who started and who stopped it, and "Summary not
+  emailed (this site sends no email …); it is on the journal row."
+- [ ] **The journal shows the window.**
+      `wp db query "SELECT id, state, note, after_json FROM wpstg0_dcc_ragusa_journal WHERE action = 'maintenance' ORDER BY id DESC LIMIT 1"`:
+      committed, the note names who and "staging window drill", and
+      `after_json` has both files with "approved" and "needs a look".
+- [ ] **A Bokar alert during a window is never held.**
+
+      wp ragusa maintenance start --minutes=30 --note="bokar drill"
+      wp user create ragusa-window-drill window-drill@example.invalid --role=administrator --user_pass="$(openssl rand -hex 16)"
+      wp ragusa tick
+      wp ragusa maintenance status
+
+  "Sent at once during the window, because these are never held:" names
+  Bokar's new-administrator finding (on live it would have emailed that
+  minute). Then `wp user delete ragusa-window-drill --yes`, `wp ragusa
+  tick`, `wp ragusa maintenance stop`.
+- [ ] **Starting again extends, never overlaps.** `wp ragusa maintenance
+      start --minutes=5`, then `wp ragusa maintenance start --minutes=20`:
+      the second says "A maintenance window was already running; it now ends
+      at …" (20 minutes from now). `--minutes=121` is refused. Then stop.
+- [ ] **A window expires on time.**
+
+      wp ragusa maintenance start --minutes=2 --note="expiry drill"
+      echo '// edit 2' >> wp-content/mu-plugins/dcc-window-drill-b.php
+      wp ragusa scan
+      sleep 150
+      wp ragusa tick
+
+  The tick prints "Maintenance window ended. Files changed: 1; sealed: 0;
+  not sealed: 1. …" (staging has WP-Cron off, so the tick is what ends it; on
+  live a WP-Cron event at the deadline sends the summary on time). The
+  journal row's `after_json` has `"how":"expired"`. A change Minčeta
+  notices after the deadline is an ordinary email again.
+- [ ] **The page.** DCC → Ragusa on the iPhone: the Maintenance Window box
+      under Check Now, with Minutes, Note and Start Maintenance Window; once
+      started, the line "on until …", Extend and Stop And Send The Summary.
+      No sideways scroll.
+- [ ] **Clean up:** `rm wp-content/mu-plugins/dcc-window-drill-a.php wp-content/mu-plugins/dcc-window-drill-b.php`,
+      then `wp ragusa seal` both paths (drops them from the baseline) and
+      `wp ragusa maintenance status` reads "off".
+- [ ] **On live, the one real email.** With Rob told first: `wp ragusa
+      maintenance start --minutes=15 --note="window check"`, append a
+      comment line to dcc-menu-hover.php (its path is in `wp ragusa findings
+      --all`, finding b6d18331), `wp ragusa scan`, `wp ragusa seal <its
+      path>`, `wp ragusa maintenance stop`. Rob gets exactly one email,
+      "Ragusa · Minčeta · Maintenance Window Ended: 1 File Changed, Sealed",
+      and no "File Changed" email.
 
 ## 11. Before live
 

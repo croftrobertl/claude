@@ -23,6 +23,7 @@ final class Plugin
         add_action(self::TICK_HOOK, [Cron::class, 'tick']);
         add_action(self::CHECK_HOOK, [Fortress\Sveti_Ivan::class, 'scheduled_check']);
         add_action(self::DIGEST_HOOK, [Alerts::class, 'send_digest']);
+        add_action(Maintenance::HOOK, [Maintenance::class, 'on_deadline']);
         add_action(Php_Patch::PROBE_HOOK, static function (): void {
             Php_Patch::record_here('probe');
         });

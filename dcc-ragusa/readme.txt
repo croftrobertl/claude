@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.9
+Stable tag: 0.3.0
 License: GPLv2 or later
 
 The walls of doracanalcourt.com. Minčeta watches the files, Bokar guards the login, Revelin keeps the sealed copies, Lovrijenac reads the warnings, Sveti Ivan checks every update.
@@ -30,6 +30,12 @@ Everything else is an alert to the site owner.
 3. From the command line: `wp ragusa zelenci install` for the sentinel.
 
 == Changelog ==
+
+= 0.3.0 =
+* The maintenance window ("the Website Director is at work"). `wp ragusa maintenance start --minutes=N --note="…"` (1 to 120 minutes), or the Maintenance Window box on the Ragusa page; `wp ragusa maintenance stop`, or the page's Stop button; it ends by itself at its deadline. While it runs, Minčeta records every file change as always and holds its Needs A Look emails for changes in must-use plugins, plugins, themes and the root .htaccess. When it ends, one summary email lists every file that changed: sealed after the change means approved, anything else needs a look. Starting while a window runs extends it; windows never overlap. Each window is a journal row: who, when, the note, every file and its verdict, and the summary itself.
+* Never held: Bokar (logins, users, roles), a guard restored, a quarantine, a vulnerability, the heartbeat, Sveti Ivan, anything breached, and any change outside those four places. The summary names every alert sent at once during the window.
+* A file a window held sends no All Clear of its own when it settles: the summary was its email.
+* `wp ragusa status` shows the window.
 
 = 0.2.9 =
 * Updates made from WordPress.com are recorded. They run inside front-end requests (Jetpack's /?for=jetpack&jetpack=comms endpoint, the REST API, XML-RPC), which the guest gate never loaded Ragusa for: on live, Ultimate Addons for Elementor 2.9.6 was updated that way on Oct 29 with no event, no sealed copy and no journal row. A guest request now adds the three upgrader listeners and returns; they load Ragusa only when an upgrader fires them. Measured with WordPress's own add_filter: about 1 microsecond and 4.9 KB per request; still one file, no Ragusa class, no autoloader.

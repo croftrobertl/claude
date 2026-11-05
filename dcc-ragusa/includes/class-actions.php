@@ -24,6 +24,11 @@ final class Actions
             try {
                 if (isset(self::MAP[$action])) {
                     $lines[] = (self::MAP[$action])::recover($row);
+                } elseif ($action === 'maintenance') {
+                    $line = Maintenance::recover($row);
+                    if ($line !== '') {
+                        $lines[] = $line;
+                    }
                 } elseif (in_array($action, ['update-check', 'core-check', 'self-update'], true)) {
                     $line = Fortress\Sveti_Ivan::recover($row);
                     if ($line !== '') {

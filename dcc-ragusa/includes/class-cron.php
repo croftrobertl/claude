@@ -74,6 +74,11 @@ final class Cron
                 Fortress::set_status(Fortress::SVETI_IVAN, Fortress::HOLDING, __('No Update Since Ragusa Was Installed', 'dcc-ragusa'));
             }
 
+            // 0. A maintenance window past its deadline ends: its summary goes out.
+            foreach (Maintenance::tick() as $line) {
+                $report[] = $line;
+            }
+
             // 1. Finish or reverse what a dead run left behind.
             foreach (Actions::recover() as $line) {
                 $report[] = $line;

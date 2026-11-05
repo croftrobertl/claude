@@ -272,6 +272,20 @@ Titles centered, Title Case, American spelling.
   (`Htaccess::newfold_marks()`, `Minceta::newfold_sentence()`): credited only
   when .htaccess.nfd-backup is 0–5 s older than .htaccess; "made this
   change" only when the backup holds exactly the hash Ragusa had on record.
+- **The maintenance window holds one thing only** (`Maintenance::holds()`,
+  called from `Alerts::raise()`): Minčeta, Needs A Look, a file-change kind
+  (`Maintenance::KINDS`), under `Maintenance::SCOPE` or the root .htaccess,
+  and a change made during the window (a finding open from before keeps its
+  own rules). Everything else sends at once and is named in the summary
+  (`note_sent()`). Recording never stops: events and findings are written
+  as always, the finding carries `data.held`. A file is approved only when a
+  seal of it, or of a removed folder above it, came after its last change
+  (`Revelin::seal()` → `note_sealed()`); Minčeta re-baselines a changed file
+  at once, so the finding's state says nothing about approval. A window past
+  its deadline closes before anything else (`current()`), so holding stops
+  at the deadline even without a tick; the tick and a WP-Cron event at the
+  deadline send the summary. One window at a time; a start extends. Never
+  more than 120 minutes per start.
 - **One owner per file, one finding per change.** `Minceta::OWNED_ELSEWHERE`
   are skipped by the walk; .user.ini and php.ini are `Php_Patch`'s alone,
   Breached only when `Htaccess::ini_enables_execution()` turns true.
@@ -326,7 +340,7 @@ Titles centered, Title Case, American spelling.
 ## Running the tests
 
     php tests/run-tests.php            # ~500 assertions, synthetic site in /tmp
-    php tests/mutations.php            # 121 deliberate breakages, each must be caught
+    php tests/mutations.php            # 138 deliberate breakages, each must be caught
     php tests/render-screens.php       # renders the page to tests/screens/
     node tests/layout-check.js         # no sideways scroll at 1440, 768, 390 and 360, 44px buttons, screenshots
 
@@ -344,6 +358,6 @@ PHP warning fails the suite.
 
     cd $(git rev-parse --show-toplevel)
     rm -f "Ragusa "*.zip
-    zip -rq "Ragusa 0.2.9.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
+    zip -rq "Ragusa 0.3.0.zip" dcc-ragusa -x 'dcc-ragusa/tests/*' 'dcc-ragusa/CLAUDE.md' 'dcc-ragusa/.gitignore'
 
 The version in the file name must match `DCCR_VERSION` in `dcc-ragusa.php`.

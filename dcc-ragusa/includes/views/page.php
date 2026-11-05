@@ -14,6 +14,7 @@ use DCCR\Events;
 use DCCR\Fortress;
 use DCCR\Heartbeat;
 use DCCR\Journal;
+use DCCR\Maintenance;
 use DCCR\Settings;
 use DCCR\Site;
 use DCCR\State;
@@ -74,6 +75,39 @@ $alerts  = Alerts::active();
             ?>
         </span>
     </div>
+
+    <?php $maint = Maintenance::current(); ?>
+    <section class="dccr-maint<?php echo $maint !== null ? ' dccr-maint--on' : ''; ?>" aria-labelledby="dccr-maint-title">
+        <h2 class="dccr-maint__title" id="dccr-maint-title"><?php esc_html_e('Maintenance Window', 'dcc-ragusa'); ?></h2>
+        <?php if ($maint !== null) : ?>
+            <p class="dccr-maint__line"><?php echo esc_html(Maintenance::status_line()); ?></p>
+            <p class="dccr-muted"><?php esc_html_e('Minčeta records every file change and holds its emails until the window ends, then sends one summary. Logins, users, restores, quarantines, vulnerabilities, the heartbeat and changes anywhere else still email at once.', 'dcc-ragusa'); ?></p>
+        <?php else : ?>
+            <p class="dccr-muted"><?php esc_html_e('Start one before working on plugins, themes, must-use plugins or .htaccess: Ragusa holds its file-change emails and sends one summary when the window ends. Seal each file you mean to keep.', 'dcc-ragusa'); ?></p>
+        <?php endif; ?>
+        <div class="dccr-maint__forms">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="dccr-maint__form">
+                <input type="hidden" name="action" value="dccr_maintenance_start">
+                <?php wp_nonce_field(Admin::NONCE, '_dccr_nonce'); ?>
+                <label class="dccr-maint__field" for="dccr-maint-minutes">
+                    <span><?php esc_html_e('Minutes', 'dcc-ragusa'); ?></span>
+                    <select id="dccr-maint-minutes" name="minutes">
+                        <?php foreach ([15, 30, 60, 90, 120] as $m) : ?>
+                            <option value="<?php echo esc_attr((string) $m); ?>" <?php selected($m, 60); ?>><?php echo esc_html((string) $m); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="dccr-maint__field dccr-maint__note" for="dccr-maint-note">
+                    <span><?php esc_html_e('Note', 'dcc-ragusa'); ?></span>
+                    <input type="text" id="dccr-maint-note" name="note" maxlength="200" placeholder="<?php esc_attr_e('What the work is', 'dcc-ragusa'); ?>">
+                </label>
+                <button type="submit" class="button button-primary dccr-button"><?php echo $maint !== null ? esc_html__('Extend', 'dcc-ragusa') : esc_html__('Start Maintenance Window', 'dcc-ragusa'); ?></button>
+            </form>
+            <?php if ($maint !== null) : ?>
+                <?php echo Admin::form('maintenance_stop', [], __('Stop And Send The Summary', 'dcc-ragusa'), 'button dccr-button'); ?>
+            <?php endif; ?>
+        </div>
+    </section>
 
     <div class="dccr-cards">
         <?php foreach (Fortress::all() as $slug) : ?>

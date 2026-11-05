@@ -135,6 +135,7 @@ final class Alerts
         $fp       = Events::fingerprint($fortress, $kind, $target);
         $title    = Text::title_case((string) $f['title']);
         $tag      = Drill::tag();
+        $window   = Maintenance::current(); // first: a window past its deadline closes before anything is held
         $data     = self::load();
         $now      = time();
         $entry    = $data['active'][$fp] ?? $data['resolved'][$fp] ?? null;
@@ -144,12 +145,16 @@ final class Alerts
         $was_settled = $entry !== null && self::state($entry) !== 'open';
 
         $sent = false;
+        $held = $tag !== Events::TAG_DRILL && Maintenance::holds(['fortress' => $fortress, 'severity' => $severity, 'kind' => $kind, 'target' => $target], $entry, $was_settled, $window);
         if ($tag === Events::TAG_DRILL) {
             $sent = false;
         } elseif ($severity === Events::INFO) {
             if ($entry === null) {
                 self::$data['digest'][] = ['fortress' => $fortress, 'title' => $title, 'what' => (string) ($f['what'] ?? ''), 'ts' => $now];
             }
+        } elseif ($held) {
+            // The Website Director is at work: recorded, on the page, and in the window's summary.
+            Maintenance::note_held(['target' => $target, 'kind' => $kind, 'title' => $title], $fp);
         } elseif ($entry === null || $was_settled || ($now - (int) ($entry['last_sent'] ?? 0)) >= self::REPEAT) {
             $sent = self::send($fortress, $title, self::body($f));
         }
@@ -170,7 +175,7 @@ final class Alerts
             'data'        => array_merge(
                 (array) ($entry['data'] ?? []),
                 is_array($f['data'] ?? null) ? $f['data'] : [],
-                array_filter(['journal_id' => (int) ($f['journal_id'] ?? 0), 'acted' => !empty($f['acted'])])
+                array_filter(['journal_id' => (int) ($f['journal_id'] ?? 0), 'acted' => !empty($f['acted']), 'held' => $held ? (int) $window['id'] : 0])
             ),
         ];
         self::save();
@@ -261,7 +266,8 @@ final class Alerts
         self::$data['resolved'][$fp] = $a;
         unset(self::$data['active'][$fp]);
         self::save();
-        if (!$quiet && ($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0) {
+        // A change a maintenance window held was reported in its summary: no All Clear of its own.
+        if (!$quiet && ($a['severity'] ?? '') !== Events::INFO && (int) ($a['last_sent'] ?? 0) > 0 && (int) ($a['data']['held'] ?? 0) === 0) {
             self::send(
                 (string) $a['fortress'],
                 /* translators: %s: the finding's title */
@@ -460,6 +466,7 @@ final class Alerts
         if (Drill::tag() === Events::TAG_DRILL && !self::$force) {
             return false;
         }
+        Maintenance::note_sent($fortress, $title); // a window's summary names what was never held
         if (!Site::is_live() && !self::$force) {
             // The page's amber notice already says staging sends nothing; one event a day is enough.
             if ((int) State::get('mail_suppressed_noted', 0) < time() - 86400) {

@@ -43,6 +43,7 @@ final class Cli
         }
         \WP_CLI::log(sprintf('  %-11s %s', 'Zelenci', Admin::zelenci_installed() ? 'installed' : 'not installed (wp ragusa zelenci install)'));
         \WP_CLI::log('  tick: ' . self::tick_line());
+        \WP_CLI::log('  ' . Maintenance::status_line());
         $snap = Fortress\Bokar::snapshot();
         \WP_CLI::log(sprintf('  bokar: %d privileged of %d users, roles read from %s', count($snap['users']), $snap['total'], Fortress\Bokar::$roles_source ?: 'nothing'));
         $hb = Heartbeat::last();
@@ -57,6 +58,71 @@ final class Cli
         $seen = count(array_filter($un, static fn($a) => Alerts::state($a) === 'seen'));
         \WP_CLI::log('  active findings: ' . count($un) . ($seen > 0 ? sprintf(' (%d seen)', $seen) : '') . ', resolved in the last 30 days: ' . count(Alerts::history()));
         State::flush();
+    }
+
+    /**
+     * The Website Director's maintenance window: Minčeta keeps recording every
+     * file change but holds the Needs A Look emails for must-use plugins,
+     * plugins, themes and .htaccess, then sends one summary when it ends.
+     * Nothing else is ever held. Starting while a window runs extends it.
+     *
+     * ## OPTIONS
+     *
+     * <action>
+     * : start, stop or status.
+     *
+     * [--minutes=<n>]
+     * : For start: 1 to 120. Default 60.
+     *
+     * [--note=<text>]
+     * : For start: what the work is, in a few words. It goes in the journal and the summary.
+     *
+     * ## EXAMPLES
+     *
+     *     wp ragusa maintenance start --minutes=45 --note="menu hover tweak"
+     *     wp ragusa maintenance status
+     *     wp ragusa maintenance stop
+     */
+    public function maintenance(array $args = [], array $assoc = []): void
+    {
+        Schema::ensure();
+        $action = (string) ($args[0] ?? 'status');
+        if ($action === 'start') {
+            $minutes = isset($assoc['minutes']) ? (string) $assoc['minutes'] : '60';
+            if (!ctype_digit($minutes)) {
+                \WP_CLI::error(sprintf('--minutes must be a whole number from 1 to %d.', Maintenance::MAX_MINUTES));
+            }
+            [$ok, $msg] = Maintenance::start((int) $minutes, (string) ($assoc['note'] ?? ''), self::operator());
+            State::flush();
+            $ok ? \WP_CLI::success($msg) : \WP_CLI::error($msg);
+            return;
+        }
+        if ($action === 'stop') {
+            [$ok, $msg, $s] = Maintenance::stop(self::operator());
+            State::flush();
+            if (!$ok) {
+                \WP_CLI::error($msg);
+            }
+            \WP_CLI::log('');
+            \WP_CLI::log('Subject: ' . Alerts::subject(Fortress::MINCETA, (string) $s['subject']));
+            \WP_CLI::log((string) $s['body']);
+            \WP_CLI::log('');
+            \WP_CLI::success($msg . ($s['emailed'] ? ' Summary emailed.' : (($s['approved'] !== [] || $s['unsealed'] !== []) ? ' Summary not emailed (this site sends no email, or the mail failed); it is on the journal row.' : ' No file changed, so no summary email.')));
+            return;
+        }
+        if ($action === 'status') {
+            \WP_CLI::log(Maintenance::status_line());
+            $w = Maintenance::current();
+            if ($w !== null) {
+                $s = Maintenance::summary($w, time(), 'running');
+                \WP_CLI::log('');
+                \WP_CLI::log('The summary so far:');
+                \WP_CLI::log((string) $s['body']);
+            }
+            State::flush();
+            return;
+        }
+        \WP_CLI::error('Use start, stop or status.');
     }
 
     /** "scheduled, next in 4 minutes", "Overdue By 5 Hours", "WP-Cron Is Off Here". */
