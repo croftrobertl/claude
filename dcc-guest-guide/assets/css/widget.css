@@ -1027,6 +1027,39 @@ body.dccgg-detail-open {
 
 /* -------- Tile -------- */
 .dccgg-tile-wrap { position: relative; }
+/* v0.27.7, Rob: cards in the same row end at the same height, so a section
+   whose title runs to two lines does not leave a short card beside a tall
+   one.
+
+   WHERE THE RAGGED EDGE ACTUALLY CAME FROM, measured at 390 with one title
+   forced to two lines, because the live content no longer has one — the
+   Website Director renamed "Boating / Fishing" to "Boating", so every row
+   on both pages is even today and a rule for FUTURE two-line titles cannot
+   be demonstrated on the content as it stands:
+
+       .dccgg-menu align-items   normal (= stretch for a grid)
+       .dccgg-tile-wrap          145px   <- the grid item, already stretched
+       .dccgg-tile               118px   <- the card the guest sees
+       spread across the row      27px
+
+   So the grid was never the problem: align-items already stretches the
+   WRAP. What it does not do is make the button inside the wrap fill it,
+   because a block-level child takes its content height. Declaring
+   `align-items: stretch` on .dccgg-menu would therefore be a no-op — it is
+   the computed value already — and a rule no test could ever fail on is
+   worse than no rule. One `height: 100%` is the equivalent that works.
+
+   BOTH LAYOUTS, deliberately, and this differs from the S1 border above.
+   S1 skipped the app shell because the shell already had its own border;
+   this defect it shares, and worse — measured on /test/, the same forced
+   two-line title gives a 61px spread. Scoping the fix to the grid would
+   have left a known ragged row in the layout /test/ runs. Nothing visible
+   changes on any page today: with "Boating" in place no row anywhere has a
+   two-line title. */
+.dccgg-root.dccgg-root .dccgg-tile-wrap .dccgg-tile.dccgg-tile,
+.dccgg-stage.dccgg-stage .dccgg-tile-wrap .dccgg-tile.dccgg-tile {
+    height: 100%;
+}
 .dccgg-tile {
     width: 100%;
     display: flex;

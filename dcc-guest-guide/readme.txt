@@ -78,8 +78,12 @@ After upload + activation:
 * Section tiles have their card back: a thin border and the guide's own
   rounded corners. The site theme had been removing the border and
   over-rounding the corners, which left the tiles looking like loose icons
-  on a white page. Guides using the app-shell layout are unchanged, and a
-  tile style set on the page itself still takes precedence.
+  on a white page. Guides using the app-shell layout keep their own card
+  style, and a tile style set on the page itself still takes precedence.
+* Tiles side by side are the same height, so a section whose name runs to
+  two lines no longer leaves a short card next to a tall one. This applies
+  to both layouts. Nothing changes on a guide whose section names all fit
+  on one line.
 * The search endpoint now applies public mode before answering, so a guide
   set to public can only ever return its public sections. No change for the
   full guest guide.

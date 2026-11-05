@@ -324,15 +324,23 @@ check('#6 split off: it is not', !$has($off, 'widget-guest.min.css'));
 foreach ([$on, $off] as $i => $list) {
     $label = $i === 0 ? 'split on' : 'split off';
     check("#6 $label: the guest script is precached", $has($list, 'widget-guest.min.js'), implode(' ', $list));
-    foreach (['conditions', 'gallery', 'wizard', 'video'] as $chunk) {
+    // v0.26.0 added a FIFTH chunk, widget-app.js, for the app shell. The
+    // counts below were not updated with it and this suite had been failing
+    // 2 of 38 ever since — found while auditing /explore/ on 0.27.6 and
+    // confirmed pre-existing by running it against a pristine archive of
+    // HEAD. The code was right throughout: an offline app-shell guide needs
+    // widget-app.js as much as an offline gallery needs widget-gallery.js.
+    foreach (['conditions', 'gallery', 'wizard', 'video', 'app'] as $chunk) {
         check("#6 $label: the $chunk chunk is precached", $has($list, 'widget-' . $chunk . '.min.js'));
     }
 }
-// Exact counts, so a file added to the list without thought shows up here.
-check('#6 split on: nine entries (page, css, js, guest css, guest js, 4 chunks)',
-    count($on) === 9, (string) count($on));
-check('#6 split off: eight, the guest stylesheet being the only one dropped',
-    count($off) === 8, (string) count($off));
+// Exact counts, so a file added to the list without thought shows up here —
+// which is exactly what happened in v0.26.0, and why these two now say ten
+// and nine rather than nine and eight.
+check('#6 split on: ten entries (page, css, js, guest css, guest js, 5 chunks)',
+    count($on) === 10, (string) count($on));
+check('#6 split off: nine, the guest stylesheet being the only one dropped',
+    count($off) === 9, (string) count($off));
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

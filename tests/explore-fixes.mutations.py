@@ -127,6 +127,24 @@ MUTANTS = [
      "            if ($audience !== 'public' && $audience !== 'both') { continue; }",
      "            if ($audience === 'nope') { continue; }"),
 
+    # ---- equal-height cards ----------------------------------------------
+    # The named case: a row holding a two-line title beside a one-line title
+    # must fail. Without height:100% the grid stretches the WRAP and leaves
+    # the card short inside it — 27px of step at 390, 61px on the app shell.
+    ('cards no longer fill their cell, so a two-line title leaves a short card', C,
+     '.dccgg-root.dccgg-root .dccgg-tile-wrap .dccgg-tile.dccgg-tile,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-tile-wrap .dccgg-tile.dccgg-tile {\n'
+     '    height: 100%;\n}',
+     '.dccgg-root.dccgg-root .dccgg-tile-wrap .dccgg-tile.dccgg-tile,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-tile-wrap .dccgg-tile.dccgg-tile {\n'
+     '    height: auto;\n}'),
+    ('the fill is scoped to the grid, leaving the app shell ragged', C,
+     '.dccgg-root.dccgg-root .dccgg-tile-wrap .dccgg-tile.dccgg-tile,\n'
+     '.dccgg-stage.dccgg-stage .dccgg-tile-wrap .dccgg-tile.dccgg-tile {\n'
+     '    height: 100%;\n}',
+     '.dccgg-root.dccgg-root:not(.dccgg-app-shell) .dccgg-tile-wrap .dccgg-tile.dccgg-tile {\n'
+     '    height: 100%;\n}'),
+
     # ---- the add-on: the even column -------------------------------------
     ('the even column reaches NON-checkable items too', C,
      '.dccgg-stage.dccgg-stage .dccgg-item--checkable .dccgg-item-body,\n'

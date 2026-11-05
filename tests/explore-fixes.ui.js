@@ -81,7 +81,8 @@ async function openGuide(browser, which, width, { hostControl = false } = {}) {
     await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width">
         <style>${KIT}</style><style>${CSS}</style>${hostControl ? `<style>${HOST_CONTROL}</style>` : ''}
         </head><body class="elementor-kit-331">
-        <div class="elementor-element elementor-element-2afb24b">${MARKUP[which]}</div>
+        <div class="elementor-element elementor-element-2afb24b ${
+            /^(app|public)$/.test(which) ? 'dccgg-layout-app' : 'dccgg-layout-grid'}">${MARKUP[which]}</div>
         </body></html>`, { waitUntil: 'domcontentloaded' });
     await page.addScriptTag({ content: 'window.dccggChunks={base:"https://dccgg.test/a/",ver:"dev",min:false};' });
     await page.addScriptTag({ content: JS });
@@ -350,6 +351,66 @@ const TILE = () => {
         check('and their words are still there, in order',
             kept && /Before the gap\.\s*After the gap\./.test(kept.text), JSON.stringify(kept && kept.text));
         await ctx.close();
+    }
+
+    console.log('\nK. Cards in a row end at the same height');
+    {
+        // THE FIXTURE IS THE ONLY PLACE THIS CAN BE SHOWN. Live has no
+        // two-line tile title any more — the Website Director renamed
+        // "Boating / Fishing" to "Boating" on both pages — so every row out
+        // there is even whether the rule exists or not. The fixture still
+        // carries the old long title, which is what makes the ragged row
+        // reproducible at all.
+        //
+        // Measured before the fix, at 390 with that title on two lines: the
+        // grid item (.dccgg-tile-wrap) was already stretched to 145px while
+        // the card inside it stayed 118px — a 27px step between neighbours.
+        //
+        // TWO THINGS THE FIRST VERSION OF THIS GOT WRONG, both found by
+        // running it. The harness lays the hub out in ONE column at 390 —
+        // the live pages are two-up only because the host sets
+        // --dccgg-tile-min through a control — so at phone width there is
+        // no row to be ragged and the test measured nothing. And no fixture
+        // title wraps at the widths where there ARE columns. So the long
+        // title is injected here instead of added to the shared fixture,
+        // which app-shell.ui.js asserts tile counts and summaries against.
+        const WIDTHS = [['grid', 768], ['grid', 1440], ['app', 768]];
+        for (const [which, width] of WIDTHS) {
+            const { ctx, page } = await openGuide(browser, which, width);
+            const rows = await page.evaluate(() => {
+                const r = document.querySelector('.dccgg-root');
+                const first = r.querySelector('.dccgg-tile-title');
+                if (first) { first.textContent = 'A Much Longer Section Name Here'; }
+                const byRow = {};
+                let twoLine = 0;
+                Array.from(r.querySelectorAll('.dccgg-tile-wrap')).forEach((w) => {
+                    const tile = w.querySelector('.dccgg-tile');
+                    if (!tile || !tile.getClientRects().length) return;
+                    const y = Math.round(w.getBoundingClientRect().top);
+                    (byRow[y] = byRow[y] || []).push({
+                        h: Math.round(tile.getBoundingClientRect().height),
+                        wrapH: Math.round(w.getBoundingClientRect().height),
+                    });
+                    const lab = w.querySelector('.dccgg-tile-title');
+                    if (lab && lab.getBoundingClientRect().height
+                        > parseFloat(getComputedStyle(lab).lineHeight) * 1.5) { twoLine++; }
+                });
+                return { twoLine, rows: Object.values(byRow).map((list) => ({
+                    n: list.length,
+                    spread: Math.max(...list.map((x) => x.h)) - Math.min(...list.map((x) => x.h)),
+                    fills: list.every((x) => Math.abs(x.h - x.wrapH) < 1),
+                })) };
+            });
+            const multi = rows.rows.filter((r) => r.n > 1);
+            check(`${which}@${width}: the fixture really has a two-line tile title`,
+                rows.twoLine > 0, `two-line titles: ${rows.twoLine}`);
+            check(`${which}@${width}: rows with more than one card exist`, multi.length > 0);
+            check(`${which}@${width}: every card fills its grid cell`,
+                rows.rows.every((r) => r.fills), JSON.stringify(rows.rows));
+            check(`${which}@${width}: no row has cards of differing height`,
+                multi.every((r) => r.spread === 0), JSON.stringify(multi.map((r) => r.spread)));
+            await ctx.close();
+        }
     }
 
     await browser.close();
