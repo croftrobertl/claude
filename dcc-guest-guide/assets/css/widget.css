@@ -6160,3 +6160,130 @@ html.dccgg-map-open, html.dccgg-map-open body {
     overflow: hidden;
     overscroll-behavior: none;
 }
+
+/* ==========================================================================
+   v0.27.9 — THE REVIEW US CARDS
+   ==========================================================================
+
+   Replaces one green #078732, 900-weight "Click To Review" button that went
+   only to Google. Rob: pointless with one button, clunky bold text,
+   off-brand green. Nothing in this block is 900 weight, and the only green
+   is the Tripadvisor letter — see the note on that below.
+   ========================================================================== */
+
+.dccgg-rev {
+    /* DESKTOP CAP. The sheet is 732px wide at 1440 and three cards stretched
+       across it read as a toolbar rather than a short list. 420px, centred;
+       the cards fill it on a phone because the column is narrower than the
+       cap long before this matters. */
+    max-width: 420px;
+    margin-inline: auto;
+}
+.dccgg-rev-intro {
+    margin: 0 0 14px;
+    text-align: center;
+    text-wrap: balance;
+}
+.dccgg-rev-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* THE CARD. Text is left-aligned INSIDE the centred column — the column is
+   centred, the words are not, which is what makes a list of three scan. */
+.dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card,
+.dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 9px 14px;
+    box-sizing: border-box;
+    border: 1.5px solid #dbe3ee;
+    border-radius: 16px;
+    background: var(--dccgg-tile-bg, #fff);
+    text-align: left;
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--dccgg-text, #111);
+    cursor: pointer;
+    /* transform only: the border colour must land and leave instantly, the
+       same reasoning as the tile tap colour in v0.24.2. */
+    transition: transform 0.12s ease;
+}
+.dccgg-rev-mark {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    background: var(--dccgg-rev-ink, #666);
+}
+.dccgg-rev-text { flex: 1 1 auto; min-width: 0; }
+.dccgg-rev-name {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.dccgg-rev-sub {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    opacity: 0.68;
+}
+.dccgg-rev-arrow {
+    flex: 0 0 auto;
+    display: inline-flex;
+    /* The blue the brief names. It is NOT --dccgg-primary (#006BCF, the one
+       v0.24.5 unified on) — flagged to the Director rather than silently
+       swapped either way. */
+    color: #0A57C2;
+}
+.dccgg-rev-arrow svg { width: 17px; height: 17px; fill: currentColor; }
+
+/* THE TICK. Replaces the sub-line on the device that tapped, nothing more. */
+.dccgg-rev-card[data-dccgg-reviewed="1"] .dccgg-rev-sub {
+    opacity: 1;
+    font-weight: 700;
+    color: #1a7f4b;
+}
+.dccgg-rev-tick { margin-right: 5px; }
+
+/* STATES.
+   Press is the only one a phone gets, and that is deliberate: a :hover rule
+   outside the query sticks after a tap on iOS and leaves a card looking
+   selected for the rest of the visit — the defect v0.24.2 fixed on the
+   tiles. The kit's coral (`.elementor-kit-331 a:hover` and its button
+   siblings at (0,2,1)) is retired by the stateless (0,4,0) rule above plus
+   these, which re-declare the same two properties in every state. */
+.dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:active,
+.dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:active {
+    border-color: #0A57C2;
+    transform: scale(0.98);
+    background: var(--dccgg-tile-bg, #fff);
+    color: var(--dccgg-text, #111);
+}
+.dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:focus-visible {
+    outline: 3px solid #0A57C2;
+    outline-offset: 2px;
+    background: var(--dccgg-tile-bg, #fff);
+    color: var(--dccgg-text, #111);
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:hover,
+    .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:hover {
+        border-color: #0A57C2;
+        background: var(--dccgg-tile-bg, #fff);
+        color: var(--dccgg-text, #111);
+    }
+}

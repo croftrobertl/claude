@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.8
+Stable tag: 0.27.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,29 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.9 =
+* Review Us now offers three places to leave a review — Google,
+  Tripadvisor and Yelp — as a short list of cards, instead of one green
+  button that went only to Google. Each card opens in a new tab.
+* The section heading is the only heading, with one line beneath it:
+  "Pick wherever you usually leave reviews."
+* After tapping a card it shows a tick and "Thank You!" where its
+  sub-line was. That is remembered on the guest's own device only; nothing
+  is sent anywhere, nothing is counted, and the card still works. If the
+  guest has site data turned off, the tick simply does not persist.
+* Coming back from a review site returns the guest to the Review Us
+  section rather than the top of the guide.
+* The cards use a plain coloured initial rather than each company's logo.
+  Their official marks could not be obtained or licensed for this use —
+  Tripadvisor and Yelp sanction logo use through their own badge widgets,
+  which this guide deliberately does not load, and Google's mark is
+  reserved. All three use the same treatment so the cards match.
+* The review links are built into the plugin, with an optional override
+  field per site, so an older page cannot pin an out-of-date link.
+* No 900-weight text and no green chrome anywhere in the section. Hover
+  effects apply only where there is a pointer, so a tapped card on a phone
+  does not stay looking selected.
 
 = 0.27.8 =
 * The property map opens full screen, on the same page. In the Amenities

@@ -186,6 +186,12 @@ function dccgg_all_on(): array {
         ['_id' => 'm4', 'item_section' => 'clubhouse', 'item_title' => 'Parking Map',
          'item_content' => '<p>Spaces are numbered to match the cottages.</p>',
          'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/search/parking']],
+        // v0.27.9: the Review Us cards. The stored item on live is titled
+        // "Google" and carries a trophy emoji — both kept here, because the
+        // renderer is supposed to suppress the title row rather than rely on
+        // the Website Director clearing them.
+        ['_id' => 'rv1', 'item_section' => 'review', 'item_title' => 'Google',
+         'item_emoji' => '🏆', 'content_source' => 'review_links'],
         ['_id' => 'm3', 'item_section' => 'canal', 'item_title' => 'Where to Launch',
          'item_content' => '<p>Public ramp at Wooton Park.</p>',
          'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/search/boat+launch']],

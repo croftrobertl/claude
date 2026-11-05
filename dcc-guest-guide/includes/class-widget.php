@@ -694,6 +694,26 @@ final class Widget extends Widget_Base
             'description' => __('Public preview shows only sections marked Public or Both, and force-disables Request Support and the checkout review prompt regardless of their own settings. To publish a public page from an existing guide without copying it, use the shortcode instead: [dcc_guest_guide audience="public" source="POST_ID"].', 'dcc-guest-guide'),
         ]);
 
+        // v0.27.9: the Review Us cards. The links themselves live in
+        // Widget::REVIEW_LINKS, in code — these overrides are EMPTY by
+        // default on purpose, so a page that was saved years ago cannot
+        // silently pin an old URL. Fill one in only to send a guest
+        // somewhere other than the packaged destination.
+        $this->add_control('review_intro', [
+            'label'       => __('Review section intro line', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Pick wherever you usually leave reviews.', 'dcc-guest-guide'),
+            'description' => __('One line above the review cards. The section heading is the only heading, so this is not a second title.', 'dcc-guest-guide'),
+        ]);
+        foreach (self::REVIEW_LINKS as $rl) {
+            $this->add_control('review_url_' . $rl['key'], [
+                'label'       => sprintf(/* translators: %s: review site name */ __('%s review link (override)', 'dcc-guest-guide'), $rl['name']),
+                'type'        => Controls_Manager::URL,
+                'placeholder' => $rl['url'],
+                'description' => __('Leave empty to use the link built into the plugin.', 'dcc-guest-guide'),
+            ]);
+        }
+
         // v0.27.8: the Property Map preview. The attachment id rather than a
         // MEDIA control, because the image is a fixed asset the owner already
         // uploaded (19860 — a screenshot of his own My Maps, Google's
@@ -1391,6 +1411,10 @@ final class Widget extends Widget_Base
             'options' => [
                 'wysiwyg'  => __('WYSIWYG editor', 'dcc-guest-guide'),
                 'template' => __('Elementor template', 'dcc-guest-guide'),
+                // v0.27.9: the Review Us cards. The item renders nothing of
+                // its own — no title, no body — so the section heading stays
+                // the only heading on the panel, which is what Rob asked for.
+                'review_links' => __('Review links (cards)', 'dcc-guest-guide'),
             ],
         ]);
         $repeater->add_control('item_content', [
@@ -4964,6 +4988,19 @@ final class Widget extends Widget_Base
         $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
+        <?php if ($source === 'review_links') : ?>
+            <?php
+            // v0.27.9: NO TITLE ROW. Rob asked for the section heading
+            // "Review Us" to be the only heading on the panel, and the
+            // stored item still carries the old title "Google" and a trophy
+            // emoji. Suppressing the row here means the Website Director
+            // does not have to clear either of them for the panel to read
+            // correctly — one less stored edit that could be missed.
+            ?>
+            <article class="dccgg-item dccgg-item--review" data-item-title="<?php echo esc_attr($title); ?>">
+                <?php echo self::review_cards_html($strings); // phpcs:ignore WordPress.Security.EscapeOutput — escaped at source ?>
+            </article>
+        <?php return; endif; ?>
         <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?><?php echo $checkable ? ' dccgg-item--checkable' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>"<?php if ($checkable) : ?> data-checkable="1" data-check-key="<?php echo esc_attr($section_key . ':' . (string) ($item['_id'] ?? $item_idx)); ?>"<?php endif; ?>>
             <?php
             // v0.9.7.28: three-slot title — leading icon(s), centered text,
@@ -5851,6 +5888,125 @@ final class Widget extends Widget_Base
      * open a My Maps map, so there is no app scheme to try — it opens in the
      * guest's browser, in a new tab.
      */
+    /**
+     * v0.27.9 — the Review Us cards.
+     *
+     * Replaces a single green "Click To Review" button that went only to
+     * Google. Rob: pointless with one button, clunky bold text, off-brand
+     * green.
+     *
+     * THE LINKS LIVE HERE, IN CODE, and a page cannot silently freeze an
+     * old one: the per-widget override fields are empty by default, so an
+     * existing page keeps using whatever this constant says until somebody
+     * deliberately types a replacement. That is the opposite of the
+     * reveal_memory_hours trap, and it is deliberate.
+     */
+    public const REVIEW_LINKS = [
+        [
+            'key'   => 'google',
+            'name'  => 'Google',
+            'url'   => 'https://g.page/r/CXzCQFqIBRlPEBk/review',
+            'ink'   => '#4285F4',
+            'letter' => 'G',
+        ],
+        [
+            'key'   => 'tripadvisor',
+            'name'  => 'Tripadvisor',
+            'url'   => 'https://www.tripadvisor.com/UserReviewEdit-g34681-d33118630-Dora_Canal_Court-Tavares_Lake_County_Florida.html',
+            'ink'   => '#00AA6C',
+            'letter' => 'T',
+        ],
+        [
+            'key'   => 'yelp',
+            'name'  => 'Yelp',
+            'url'   => 'https://www.yelp.com/writeareview/biz/QB_o9zAgu-JcKiTvXCx4VA',
+            'ink'   => '#D32323',
+            'letter' => 'Y',
+        ],
+    ];
+
+    /**
+     * The three cards, plus the one line above them.
+     *
+     * WHY A LETTER AND NOT EACH COMPANY'S LOGO. The brief asked for the
+     * official marks as inline SVG, and said that if ANY one company's
+     * rules do not allow it, all three switch to a letter so the cards
+     * match. All three switch, and the reason is stronger than a licence
+     * question:
+     *
+     *   · the brand resources are unreachable from the build container —
+     *     about.google/brand-resource-center, tripadvisor.mediaroom.com,
+     *     yelp.com/brand and Google's identity branding guidelines all
+     *     answer 000 through the egress proxy — so no official file can be
+     *     obtained, and drawing one from memory would ship an INACCURATE
+     *     mark, which is worse for the brand than using none;
+     *   · the sanctioned route for Tripadvisor and Yelp is each company's
+     *     own badge programme, and brief item 12 rules out third-party
+     *     badge widgets and scripts;
+     *   · Google's G is reserved — the one broadly sanctioned third-party
+     *     use is the supplied "Sign in with Google" asset, which this is
+     *     not.
+     *
+     * So: one letter per card, in that company's colour, same treatment on
+     * all three. No network request either way, which brief item 4 also
+     * wanted.
+     *
+     * The colours are from recollection, not fetched (the sources above are
+     * blocked), and are one edit each if the Director has the exact values.
+     */
+    private static function review_cards_html(array $settings): string
+    {
+        $intro = trim((string) ($settings['review_intro'] ?? ''));
+        if ($intro === '') { $intro = __('Pick wherever you usually leave reviews.', 'dcc-guest-guide'); }
+
+        ob_start(); ?>
+        <div class="dccgg-rev">
+            <p class="dccgg-rev-intro"><?php echo esc_html($intro); ?></p>
+            <div class="dccgg-rev-cards">
+                <?php foreach (self::REVIEW_LINKS as $link) :
+                    $key = $link['key'];
+                    // Controls_Manager::URL hands back ['url' => …], not a
+                    // string. Read both shapes: a value typed into the
+                    // control arrives as the array, and anything set
+                    // programmatically or by an older save may be a plain
+                    // string.
+                    $raw = $settings['review_url_' . $key] ?? '';
+                    $url = trim((string) (is_array($raw) ? ($raw['url'] ?? '') : $raw));
+                    if ($url === '') { $url = $link['url']; }
+                    $name = $link['name'];
+                    /* translators: %s: the review site's name */
+                    $sub  = sprintf(__('Opens %s', 'dcc-guest-guide'), $name);
+                    /* translators: %s: the review site's name */
+                    $label = sprintf(__('%s, opens in a new tab', 'dcc-guest-guide'), $name);
+                    /* translators: %s: the review site's name */
+                    $thanks = sprintf(__('%s, thank you, opens in a new tab', 'dcc-guest-guide'), $name);
+                    ?>
+                    <a class="dccgg-rev-card" href="<?php echo esc_url($url); ?>"
+                       target="_blank" rel="noopener"
+                       data-dccgg-review="<?php echo esc_attr($key); ?>"
+                       data-dccgg-review-label="<?php echo esc_attr($label); ?>"
+                       data-dccgg-review-thanks="<?php echo esc_attr($thanks); ?>"
+                       data-dccgg-review-sub="<?php echo esc_attr($sub); ?>"
+                       data-dccgg-review-thanks-text="<?php echo esc_attr__('Thank You!', 'dcc-guest-guide'); ?>"
+                       aria-label="<?php echo esc_attr($label); ?>">
+                        <span class="dccgg-rev-mark" aria-hidden="true"
+                              style="--dccgg-rev-ink:<?php echo esc_attr($link['ink']); ?>"><?php
+                            echo esc_html($link['letter']); ?></span>
+                        <span class="dccgg-rev-text">
+                            <span class="dccgg-rev-name"><?php echo esc_html($name); ?></span>
+                            <span class="dccgg-rev-sub" aria-hidden="true"><?php echo esc_html($sub); ?></span>
+                        </span>
+                        <span class="dccgg-rev-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false"><path d="M8.5 5h10.5v10.5h-2.2V8.8L6.6 18.9 5 17.3 15.2 7.2H8.5z"/></svg>
+                        </span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
     private static function map_card_html(string $embed_url, array $settings): string
     {
         $mid = '';

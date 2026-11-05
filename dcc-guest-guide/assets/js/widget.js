@@ -305,6 +305,7 @@
         wireSavePdf(root, config);
         wireEmergency(root, config);
         wireMapCards(root);
+        wireReviewCards(root, config);
         // v0.25.0: the Front Desk form, the voice concierge and the review
         // prompt live in widget-guest.js, which only the FULL guide loads.
         // On the public page window.DCCGG_GUEST is undefined and these three
@@ -3348,6 +3349,106 @@
     }
 
     // -- Mobile bottom-sheet drag-to-dismiss ------------------------------
+    /**
+     * v0.27.9 — the Review Us cards.
+     *
+     * Two jobs, both small, and both on the guest's own device only.
+     *
+     * THE TICK. After a guest taps a card it shows a ✓ and "Thank You!"
+     * where the sub-line was, on that device. Nothing is sent anywhere and
+     * no count is kept — Rob declined a counter. It is remembered in
+     * localStorage, which a guest may have blocked, so every read and write
+     * is wrapped: with storage unavailable the tick simply does not persist
+     * and the card behaves exactly as it did before. The card stays a live
+     * link either way.
+     *
+     * COMING BACK. A card opens in a new tab, so on a desktop browser the
+     * guide is never unloaded and there is nothing to restore. In a
+     * home-screen web app the navigation can happen in the same view, and
+     * the guest would come back to the top of the guide. The open section
+     * is therefore noted in sessionStorage on the way out and reopened on
+     * the way back in — sessionStorage rather than localStorage, so it dies
+     * with the tab instead of ambushing the next visit.
+     */
+    const REVIEW_KEY = 'dccgg:reviewed';
+    const REVIEW_BACK = 'dccgg:review-return';
+
+    function reviewStore(read, value) {
+        try {
+            if (read) { return JSON.parse(localStorage.getItem(REVIEW_KEY) || '{}'); }
+            localStorage.setItem(REVIEW_KEY, JSON.stringify(value));
+        } catch (_) { return read ? {} : undefined; }
+        return undefined;
+    }
+
+    function markReviewed(card) {
+        if (!card || card.getAttribute('data-dccgg-reviewed') === '1') return;
+        card.setAttribute('data-dccgg-reviewed', '1');
+        const sub = card.querySelector('.dccgg-rev-sub');
+        if (sub) {
+            const text = card.getAttribute('data-dccgg-review-thanks-text') || 'Thank You!';
+            sub.textContent = '';
+            const tick = document.createElement('span');
+            tick.className = 'dccgg-rev-tick';
+            tick.setAttribute('aria-hidden', 'true');
+            tick.textContent = '\u2713';
+            sub.appendChild(tick);
+            sub.appendChild(document.createTextNode(text));
+        }
+        const thanks = card.getAttribute('data-dccgg-review-thanks');
+        if (thanks) { card.setAttribute('aria-label', thanks); }
+    }
+
+    function wireReviewCards(root, config) {
+        const cards = root.querySelectorAll('.dccgg-rev-card');
+        if (!cards.length) return;
+
+        const seen = reviewStore(true) || {};
+        cards.forEach((c) => {
+            if (seen[c.getAttribute('data-dccgg-review')]) markReviewed(c);
+        });
+
+        // Delegated on document, not on root: the cards sit inside
+        // .dccgg-stage, which is portaled to <body> when the section opens,
+        // and a listener bound to root stops seeing them at that moment.
+        // The map card learned this the hard way in v0.27.8.
+        bindGlobal(root, document, 'click', (e) => {
+            const card = e.target.closest('.dccgg-rev-card');
+            if (!card || !card.hasAttribute('data-dccgg-review')) return;
+            // No root-scoping here, and the first draft's attempt at it was
+            // dead code: once the stage is portaled, root.contains() is
+            // false for every card, and document.body.contains() is true for
+            // all of them, so the test could never exclude anything. With
+            // two guides on one page both handlers would run for the same
+            // tap; the work is idempotent (the same key set to 1, the same
+            // card marked once), so that is harmless rather than papered
+            // over with a check that does not check.
+            const key = card.getAttribute('data-dccgg-review');
+            const next = reviewStore(true) || {};
+            next[key] = 1;
+            reviewStore(false, next);
+            markReviewed(card);
+            // Note where we were, in case this navigation replaces the page
+            // rather than opening a tab (a home-screen web app does).
+            try {
+                const open = document.querySelector('.dccgg-detail:not([hidden])');
+                const k = open && open.getAttribute('data-key');
+                if (k) sessionStorage.setItem(REVIEW_BACK, k);
+            } catch (_) {}
+        });
+
+        // ...and reopen it if that is what happened.
+        try {
+            const back = sessionStorage.getItem(REVIEW_BACK);
+            if (back) {
+                sessionStorage.removeItem(REVIEW_BACK);
+                if (root.__dccgg && root.__dccgg.ownedKeys && root.__dccgg.ownedKeys.has(back)) {
+                    openDetail(root, back);
+                }
+            }
+        } catch (_) {}
+    }
+
     /**
      * v0.27.8 — the Property Map card and its full-screen layer.
      *
