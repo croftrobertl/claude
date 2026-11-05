@@ -88,6 +88,14 @@ After upload + activation:
   same place. Other items with their own map links are unchanged.
 * The preview picture is set by attachment ID in the widget's settings, and
   the caption beside it can be edited.
+* Corrected the cottage's default latitude and longitude. They pointed about
+  5.6 miles east of the property, near Mount Dora, which is the point the
+  guide used to ask for weather and sunrise times. They now point at the
+  property itself in Tavares.
+  NOTE FOR THE SITE OWNER: a page that already has its own latitude and
+  longitude saved keeps them. Check the Cottage latitude and Cottage
+  longitude fields on each guide page after updating; if they still read
+  28.8028 and -81.6448, retype them as 28.8005 and -81.7374.
 
 = 0.27.7 =
 * The intro line on the public guide now uses balanced line wrapping, like

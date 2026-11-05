@@ -913,18 +913,32 @@ final class Widget extends Widget_Base
             'description'  => __('For YouTube / Vimeo items, show the poster image instead of an empty iframe; click the poster to load the player. Saves the network cost of every video iframe on first paint.', 'dcc-guest-guide'),
         ]);
 
+        // v0.27.8: the packaged default was 28.8028 / -81.6448, which is
+        // near MOUNT DORA — about 5.5 miles EAST of the property. The real
+        // point is 224 S Lake Ave, Tavares, and it agrees with OpenStreetMap
+        // and with DCC Events. It drives the Conditions card's sunrise and
+        // sunset (date_sun_info, server-side) and the Open-Meteo lookup the
+        // browser makes, so the old value put both in the wrong town.
+        //
+        // CHANGING THIS DEFAULT DOES NOT CHANGE A PAGE THAT ALREADY EXISTS.
+        // Elementor writes a control's default into _elementor_data the
+        // moment a page is saved, so pages 4645 and 17685 almost certainly
+        // carry their own stored copies of the old numbers and will keep
+        // using them. The same trap as reveal_memory_hours. The stored
+        // values have to be updated in the editor as well — flagged to the
+        // Website Director with this release.
         $this->add_control('cottage_latitude', [
             'label'       => __('Cottage latitude', 'dcc-guest-guide'),
             'type'        => Controls_Manager::NUMBER,
             'step'        => 0.0001,
-            'default'     => 28.8028,
-            'description' => __('Used for sunrise / sunset / moon phase / weather in the Conditions side-card. Default is Mt Dora, FL.', 'dcc-guest-guide'),
+            'default'     => 28.8005,
+            'description' => __('Used for sunrise / sunset / moon phase / weather in the Conditions side-card. Default is Dora Canal Court, Tavares, FL.', 'dcc-guest-guide'),
         ]);
         $this->add_control('cottage_longitude', [
             'label'   => __('Cottage longitude', 'dcc-guest-guide'),
             'type'    => Controls_Manager::NUMBER,
             'step'    => 0.0001,
-            'default' => -81.6448,
+            'default' => -81.7374,
         ]);
 
         $this->add_control('enable_conditions_extras', [
@@ -3518,8 +3532,8 @@ final class Widget extends Widget_Base
             'enableDetailMoreMenu' => ($s['enable_detail_more_menu'] ?? '') === 'yes',
             'ajaxUrl'              => admin_url('admin-ajax.php'),
             'nonce'                => wp_create_nonce('dccgg_nonce'),
-            'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
-            'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
+            'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8005),
+            'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.7374),
             'conditionsExtras'     => ($s['enable_conditions_extras'] ?? 'yes') === 'yes',
             // v0.9.7.14: every English string baked into widget.js for the
             // conditions card is sent through __() so Loco Translate / WPML
@@ -4581,8 +4595,8 @@ final class Widget extends Widget_Base
         $show_more      = ($s['enable_detail_more_menu'] ?? '') === 'yes';
         $valid_sections = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
         $section_count  = count($valid_sections);
-        $lat = (float) ($s['cottage_latitude']  ?? 28.8028);
-        $lng = (float) ($s['cottage_longitude'] ?? -81.6448);
+        $lat = (float) ($s['cottage_latitude']  ?? 28.8005);
+        $lng = (float) ($s['cottage_longitude'] ?? -81.7374);
         $emergency_contacts_render = (array) ($s['emergency_contacts'] ?? []);
         $label_911 = (string) ($s['str_emergency_911'] ?? __('Call 911', 'dcc-guest-guide'));
         // v0.26.0: the stage is portaled to <body> when a section opens, so a

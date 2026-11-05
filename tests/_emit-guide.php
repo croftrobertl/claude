@@ -243,7 +243,7 @@ function dccgg_all_on(): array {
          'item_content' => '<p>Call us.</p>'],
     ];
     return ['guide_mode' => 'full',
-        'cottage_latitude' => 28.8028, 'cottage_longitude' => -81.6448,
+        'cottage_latitude' => 28.8005, 'cottage_longitude' => -81.7374,
         'guide_sections' => $sections, 'guide_items' => $items,
         'enable_search' => 'yes', 'enable_ai_search' => 'yes',
         'enable_print' => 'yes', 'enable_emergency_fab' => 'yes',
@@ -352,7 +352,7 @@ function dccgg_app_bare(): array {
         }
     }
     return ['guide_mode' => 'full', 'menu_layout' => 'app',
-        'cottage_latitude' => 28.8028, 'cottage_longitude' => -81.6448,
+        'cottage_latitude' => 28.8005, 'cottage_longitude' => -81.7374,
         'guide_sections' => $sections, 'guide_items' => $items,
         'enable_search' => 'yes', 'enable_problem_report' => 'yes',
         'problem_report_recipients' => 'host@example.test',
