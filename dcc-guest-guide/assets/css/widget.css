@@ -6254,7 +6254,10 @@ html.dccgg-map-open, html.dccgg-map-open body {
 .dccgg-rev-card[data-dccgg-reviewed="1"] .dccgg-rev-sub {
     opacity: 1;
     font-weight: 700;
-    color: #1a7f4b;
+    /* Site blue, NOT a green tick. Brief item 5 says no green anywhere in
+       the section, and unlike the Tripadvisor letter — whose colour item 4
+       asks for by name — this one was simply a choice, so it goes. */
+    color: #0A57C2;
 }
 .dccgg-rev-tick { margin-right: 5px; }
 

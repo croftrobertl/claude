@@ -143,6 +143,7 @@ const READ = () => {
                 markSize: mark ? Math.round(rect(mark).width) + 'x' + Math.round(rect(mark).height) : null,
                 markInk: mark ? cs(mark, 'backgroundColor') : null,
                 arrowColour: arrow ? cs(arrow, 'color') : null,
+                subColour: sub ? cs(sub, 'color') : null,
                 arrowInlineSvg: !!(arrow && arrow.querySelector('svg')),
                 reviewed: c.getAttribute('data-dccgg-reviewed'),
             };
@@ -218,6 +219,24 @@ const READ = () => {
         check('the stylesheet declares a 1.5px border',
             /\.dccgg-rev-card[^{]*\{[^}]*border:\s*1\.5px solid #dbe3ee/.test(CSS)
             || /border:1\.5px solid #dbe3ee/.test(CSS), 'not found in the stylesheet');
+        // NO GREEN CHROME. The only green that may appear is the
+        // Tripadvisor letter, whose colour brief item 4 asks for by name;
+        // everything the guide chooses for itself must be blue, grey or
+        // ink. The first build had a green tick (#1a7f4b) — caught in a
+        // still, not by a test, which is why this one exists.
+        check('the only green in the section is the Tripadvisor mark',
+            (() => {
+                const greens = r.cards.flatMap((c) => [c.arrowColour, c.subColour])
+                    .filter(Boolean)
+                    .filter((v) => {
+                        const m = v.match(/rgba?\((\d+), (\d+), (\d+)/);
+                        if (!m) return false;
+                        const [, rr, gg, bb] = m.map(Number);
+                        return gg > rr + 25 && gg > bb + 25;
+                    });
+                return greens.length === 0;
+            })(),
+            JSON.stringify(r.cards.map((c) => [c.arrowColour, c.subColour])));
         check('nothing in the section is 800 weight or heavier',
             r.weights.length === 0, JSON.stringify(r.weights));
         await ctx.close();
