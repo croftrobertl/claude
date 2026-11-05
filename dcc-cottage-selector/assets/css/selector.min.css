@@ -679,6 +679,7 @@
 .dccs-root.dccs-root .dccs-q-note-s:last-child { margin-bottom: 0; }
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col > .dccs-next { flex: 0 0 auto; }
+.dccs-root.dccs-root .dccs-wizard-nav > .dccs-back { align-self: flex-start; }
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }
 }

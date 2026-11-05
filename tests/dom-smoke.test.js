@@ -4108,6 +4108,70 @@ function DCCS_isGround(c) { return /ground/i.test(String(c.floorLevel)); }
   ok('108: the text rule changes no font, size, weight or line height', !!textRule && !/font|line-height/.test(textRule.body));
 })();
 
+// ==== 0.58.0 =======================================================================
+// ---- 109. No layout shift: the server's landing IS the script's first render; photos sized ----
+(function () {
+  const php = (cfg) => execSync('php ' + path.join(__dirname, 'render-landing.php'), { input: JSON.stringify(cfg) }).toString();
+  const svg = (w) => '<svg class="dccs-svg-icon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' 512"><path fill="currentColor" d="M0 0h10v10z"/></svg>';
+  const base = JSON.parse(CONFIG);
+  // Variants: the live shape (2 modes, icons), all three modes, heading off, and
+  // strings carrying every character the two escapers treat differently.
+  const variants = {
+    'live shape': Object.assign({}, base, { enabledModes: ['quick', 'compare'], icons: { mode_quick: svg(384), mode_compare: svg(640) } }),
+    'all three modes, no icons': Object.assign({}, base, { enabledModes: ['quick', 'weights', 'compare'] }),
+    'heading off': Object.assign({}, base, { showHeading: false, enabledModes: ['compare'] }),
+    'awkward characters': Object.assign({}, base, { strings: Object.assign({}, base.strings, { heading: 'Rob\'s "Best" <Cottage> & Co', intro: 'A & B < C > D "E" \'F\'' }) }),
+  };
+  const norm = (w, html) => { const t = w.document.createElement('template'); t.innerHTML = html; return t.innerHTML; };
+  Object.keys(variants).forEach(name => {
+    const cfg = variants[name];
+    const w = freshDom();
+    const root = mountSelector(w, JSON.stringify(cfg));
+    const js = root.querySelector('.dccs-landing');
+    const server = norm(w, php(cfg));
+    ok('109: [' + name + '] the script renders a landing (detector positive)', !!js);
+    ok('109: [' + name + '] the server landing is the script\'s first render, element for element', !!js && server === js.outerHTML);
+  });
+  // Positive control: the comparison CAN see a difference (one changed word).
+  { const w = freshDom(); const root = mountSelector(w, JSON.stringify(variants['live shape']));
+    const other = norm(w, php(Object.assign({}, variants['live shape'], { strings: Object.assign({}, base.strings, { intro: base.strings.intro + ' x' }) })));
+    ok('109: positive control: a one-word difference is reported', other !== root.querySelector('.dccs-landing').outerHTML); }
+  // The page as the server sends it: booting it leaves the landing exactly as it was.
+  { const w = freshDom(); const div = w.document.createElement('div'); div.className = 'dccs-root';
+    div.dataset.config = JSON.stringify(variants['live shape']);
+    div.innerHTML = '<noscript><ul class="dccs-noscript"><li><a href="/accommodation/cottage-22/">Cottage 22</a></li></ul><style>.dccs-root .dccs-landing-choices{display:none}</style></noscript>' + php(variants['live shape']);
+    w.document.body.appendChild(div);
+    const before = div.querySelector('.dccs-landing').outerHTML;
+    w.DCCS.bootAll(w.document);
+    ok('109: booting over the server landing leaves the same landing in place', div.dataset.dccsReady === '1' && div.querySelector('.dccs-landing') && div.querySelector('.dccs-landing').outerHTML === before);
+    ok('109: ...and the buttons work once the script is up', (div.querySelector('.dccs-landing-choice[data-mode="compare"]').click(), !!div.querySelector('.dccs-compare'))); }
+  // A broken config over the server landing still falls back to the cottage links.
+  { const w = freshDom(); const div = w.document.createElement('div'); div.className = 'dccs-root'; div.dataset.config = '{not valid json';
+    div.innerHTML = '<noscript><ul class="dccs-noscript"><li><a href="/accommodation/cottage-22/">Cottage 22</a></li></ul></noscript>' + php(variants['live shape']);
+    w.document.body.appendChild(div); w.DCCS.bootAll(w.document);
+    ok('109: a failed boot replaces the server landing with the cottage links', !div.querySelector('.dccs-landing') && !!div.querySelector('.dccs-noscript a[href="/accommodation/cottage-22/"]')); }
+
+  // Images: every photo the widget inserts has its space reserved before it loads.
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = []; css.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => { rules.push({ sel: sel.split(',').map(x => x.trim()), body }); return ''; });
+  const has = (sel, re) => rules.some(r => r.sel.indexOf(sel) !== -1 && re.test(r.body));
+  ok('109: the photo box reserves its height before the image loads (aspect-ratio 4 / 3)', has('.dccs-root.dccs-root .dccs-mcard-photo', /aspect-ratio:\s*4\s*\/\s*3/));
+  ok('109: the image fills that box absolutely, so its own size can never move anything', has('.dccs-root.dccs-root .dccs-mcard-img', /position:\s*absolute/) && has('.dccs-root.dccs-root .dccs-mcard-img', /inset:\s*0/));
+  const pc = JSON.parse(CONFIG); pc.cottages.forEach(c => { c.photo = { src: '/p/' + c.id + '.jpg', w: 768, h: 576, srcset: '/p/' + c.id + '.jpg 768w' }; });
+  const wi = freshDom(); const ri = mountSelector(wi, JSON.stringify(pc)); enter(ri, 'quick'); toResults(ri, 'either');
+  const imgs = Array.prototype.slice.call(ri.querySelectorAll('img')).concat((() => { const r2 = mountSelector(freshDom(), JSON.stringify(pc)); enter(r2, 'compare'); return Array.prototype.slice.call(r2.querySelectorAll('img')); })());
+  ok('109: the results row and Compare Mode insert photos (detector positive: ' + imgs.length + ')', imgs.length >= 16);
+  ok('109: every inserted <img> carries width and height', imgs.every(i => +i.getAttribute('width') > 0 && +i.getAttribute('height') > 0));
+  ok('109: every inserted <img> sits in a reserved photo box', imgs.every(i => i.parentNode && i.parentNode.classList.contains('dccs-mcard-photo')));
+  // Back stays 50px, level with Next, when Next's column also holds "Pick One to
+  // Continue" (0.57.0 let the stretching row make Back 87px tall).
+  ok('109: Back does not stretch to the Next column\'s height (align-self flex-start)', has('.dccs-root.dccs-root .dccs-wizard-nav > .dccs-back', /align-self:\s*flex-start/));
+  ok('109: ...the row still stretches by default, so the rule above is what holds Back (premise)', has('.dccs-root.dccs-root .dccs-wizard-nav', /align-items:\s*stretch/));
+  { const wn = freshDom(); const rn = mountSelector(wn); enter(rn, 'quick'); answerNext(rn, 'either');
+    const nav = rn.querySelector('.dccs-wizard-nav');
+    ok('109: on a step with Back and the "Pick One" line, Back is a direct child of the row (so the rule reaches it)', !!nav.querySelector(':scope > .dccs-back') && !!nav.querySelector('.dccs-next-col .dccs-next-pick')); }
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

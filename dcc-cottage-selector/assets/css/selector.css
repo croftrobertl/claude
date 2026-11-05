@@ -1196,6 +1196,11 @@
 /* Next and its "Pick One to Continue" line share one column of the nav row. */
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next-col > .dccs-next { flex: 0 0 auto; }
+/* 0.58.0: the row stretches its items (align-items: stretch), so once Next and its
+   line shared a column (0.57.0) Back stretched to the column's height: 87px against
+   Next's 50 at every width, live from 0.57.0 until this release. Back keeps its own
+   50px and sits level with Next at the top of the row. */
+.dccs-root.dccs-root .dccs-wizard-nav > .dccs-back { align-self: flex-start; }
 
 @media (prefers-reduced-motion: reduce) {
   .dccs-root.dccs-root * { transition: none !important; animation: none !important; }

@@ -96,6 +96,7 @@ namespace {
     require DCCS_DIR . 'includes/class-menu.php';
     require DCCS_DIR . 'includes/class-config.php';
     require DCCS_DIR . 'includes/class-icons.php';
+    require DCCS_DIR . 'includes/class-landing.php';
     require DCCS_DIR . 'includes/class-selector-widget.php';
 
     use DCCS\Selector_Widget;
@@ -1459,6 +1460,48 @@ namespace {
     $s54 = \DCCS\Config::strings();
     ok('0.54.0: the count strings are Title Case', $s54['match_count'] === '%d Cottages Match' && $s54['match_count_one'] === '%d Cottage Matches');
     ok('0.54.0: the two new card strings exist', $s54['chip_sleeps'] === 'Sleeps %d' && $s54['see_all'] === 'See All');
+
+    // ---- 0.58.0: no layout shift when the script arrives ------------------------------
+    // (1) The server sends the landing itself, not a "Loading…" line.
+    $homeW->s = $live1005; $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    $o58 = $homeW->out();
+    $nsEnd = strpos($o58, '</noscript>'); $land = strpos($o58, '<div class="dccs-landing">');
+    ok('0.58.0: the live "Primary" Selector renders its landing on the server', $land !== false && $nsEnd !== false && $land > $nsEnd);
+    ok('0.58.0: ...with the heading, the intro and one button per enabled mode (live: Matching Quiz + Compare Mode)',
+        substr_count($o58, 'class="dccs-landing-choice"') === 2 && strpos($o58, 'data-mode="quick"') !== false && strpos($o58, 'data-mode="compare"') !== false
+        && strpos($o58, '<h2 class="dccs-heading">') !== false && strpos($o58, '<p class="dccs-intro">') !== false);
+    ok('0.58.0: the collapsing "Loading…" placeholder is gone', strpos($o58, 'dccs-loading') === false);
+    ok('0.58.0: without JavaScript the dead mode buttons are hidden and the cottage links show',
+        (bool) preg_match('#<noscript>.*<ul class="dccs-noscript">.*<style>\.dccs-root \.dccs-landing-choices\{display:none\}</style>\s*</noscript>#s', $o58));
+    $noHead = \DCCS\Landing::html(['strings' => ['heading' => 'H', 'intro' => 'I', 'mode_quick' => 'Q'], 'enabledModes' => ['quick'], 'showHeading' => false]);
+    ok('0.58.0: heading off -> no heading block, buttons still there (control for the case above)',
+        strpos($noHead, 'dccs-head') === false && strpos($noHead, 'data-mode="quick"') !== false);
+    // (2) Every icon the preset ships renders as inline SVG, so no widget icon depends
+    // on Font Awesome arriving (Lighthouse: "Web font loaded" moved the widget).
+    $iconKeys = array_filter(array_keys($preset), fn($k) => strpos($k, 'icon_') === 0 && is_array($preset[$k]) && isset($preset[$k]['value']));
+    ok('0.58.0: the preset ships icons (detector positive: ' . count($iconKeys) . ')', count($iconKeys) >= 7);
+    foreach ($iconKeys as $k) {
+        $v = (string) $preset[$k]['value'];
+        ok("0.58.0: preset $k ($v) renders as inline SVG", $v === '' || strpos(\DCCS\Icons::svg($v), '<svg') === 0);
+    }
+    $snapAll = Selector_Widget::design_snapshot(array_intersect_key($preset, array_flip($iconKeys)));
+    $cfgIcons = (array) ($snapAll['icons'] ?? []);
+    ok('0.58.0: the config the page gets holds ' . count($cfgIcons) . ' icons, all SVG, none an icon-font <i>',
+        count($cfgIcons) >= 7 && count(array_filter($cfgIcons, fn($h) => strpos((string) $h, '<svg') !== false && strpos((string) $h, '<i ') === false)) === count($cfgIcons));
+    // The fixture holds STORED settings; Elementor's display settings add the control
+    // defaults, so the render below adds the preset icons the way Elementor would.
+    $homeW->s = $live1005 + array_intersect_key($preset, array_flip($iconKeys));
+    $o58i = $homeW->out(); $land2 = (int) strpos($o58i, '<div class="dccs-landing">');
+    ok('0.58.0: the landing icons are inline SVG in the server markup too (no icon font to wait for)',
+        $land2 > 0 && substr_count(substr($o58i, $land2), '<svg class="dccs-svg-icon"') === 2 && strpos(substr($o58i, $land2), '<i ') === false);
+    // The icon's box is fixed in em ON the element, so it holds its space before any CSS.
+    foreach (\DCCS\Icons::values() as $v) {
+        preg_match('#<svg[^>]*\swidth="([0-9.]+)em" height="1em" viewBox="0 0 (\d+) (\d+)"#', \DCCS\Icons::svg($v), $mm);
+        ok("0.58.0: $v carries a fixed em box matching its glyph (" . ($mm[1] ?? '-') . 'em x 1em)', $mm !== [] && abs((float) $mm[1] - (int) $mm[2] / (int) $mm[3]) < 0.0001);
+    }
+    foreach (['fas fa-arrow-right' => '0 0 448 512', 'fas fa-arrow-left' => '0 0 448 512', 'fas fa-check' => '0 0 512 512', 'fas fa-undo' => '0 0 512 512', 'fas fa-edit' => '0 0 576 512'] as $v => $vb) {
+        ok("0.58.0: $v keeps the glyph's own proportions (viewBox $vb)", strpos(\DCCS\Icons::svg($v), 'viewBox="' . $vb . '"') !== false);
+    }
 
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);

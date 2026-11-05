@@ -1250,7 +1250,9 @@
   function showFallback(root) {
     root.dataset.dccsReady = '1';
     var ns = root.querySelector('noscript');
-    var loading = root.querySelector('.dccs-loading');
+    // Since 0.58.0 the server renders the landing in place of the old "Loading…"
+    // line; whichever is there is what the fallback list replaces.
+    var loading = root.querySelector('.dccs-loading') || root.querySelector('.dccs-landing');
     if (!ns || !loading || !loading.parentNode) { return; }
     var list = document.createElement('div');
     list.className = 'dccs-noscript';

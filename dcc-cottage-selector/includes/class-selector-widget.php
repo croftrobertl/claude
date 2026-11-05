@@ -1804,8 +1804,19 @@ class Selector_Widget extends Widget_Base
                         </li>
                     <?php endforeach; ?>
                 </ul>
+                <style>.dccs-root .dccs-landing-choices{display:none}</style>
             </noscript>
-            <div class="dccs-loading"><?php echo esc_html($strings['loading']); ?></div>
+            <?php
+            // The landing is rendered HERE, not left to the script (0.58.0). Until
+            // 0.57.1 the shell held a 104px "Loading…" line and the script swapped in
+            // the 308px landing 6.5s into a throttled load, shoving the rest of the
+            // page down: CLS 0.10 on /cottages/, all of it this widget. The markup is
+            // the script's own first render (renderLanding() in selector.js, from the
+            // same config), so the swap moves nothing. dom-smoke 109 renders both from
+            // one config and fails if they differ. Without JavaScript the dead
+            // buttons are hidden by the <noscript> style above and the list shows.
+            echo Landing::html($config); // phpcs:ignore -- escaped inside
+            ?>
         </div>
         <?php
     }
