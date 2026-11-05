@@ -5913,3 +5913,250 @@ html.dccgg-detail-open .dccgg-app-tabs.dccgg-app-tabs {
         filter: brightness(1.08);
     }
 }
+
+/* ==========================================================================
+   v0.27.8 — THE PROPERTY MAP CARD AND ITS FULL-SCREEN LAYER
+   ==========================================================================
+
+   Rob: the map is "really hard to use inside the Guest Guide's popup
+   window". So the sheet gets a picture and two buttons, and the map itself
+   gets the whole screen without leaving the page.
+
+   WHY THE LAYER LIVES ON <body> AND IS NEVER MOVED, which is the one
+   structural rule here. .dccgg-stage is portaled to <body> when a section
+   opens and back again when it closes, and relocating an iframe in the DOM
+   RELOADS it. Measured on live before this release: the two My Maps iframes
+   were fetched on page load and again on every open and every close — twelve
+   map document requests across four taps, including sections with no map in
+   them. A layer built inside the sheet would inherit exactly that. It is
+   appended to <body> once, on first open, and stays there.
+   ========================================================================== */
+
+/* -------- the card in the sheet -------- */
+.dccgg-mapcard {
+    margin: 0 auto;
+    max-width: var(--dccgg-measure, 520px);
+    text-align: center;
+}
+/* STATELESS AT (0,4,0), like the eight buttons v0.24.4 had to rescue. The
+   picture is a <button>, so `.elementor-kit-331 button:hover,:focus,:active
+   { background-color:#F08080 }` at (0,2,1) paints it coral the moment a
+   finger lands on it — and a coral wash behind a map screenshot is not a
+   subtle failure. Declared once, with no state, so all three kit states
+   retire together. Caught by tests/focus-colour.ui.js, which enumerates
+   every button the guide really renders rather than a list somebody keeps
+   up to date; it failed on exactly this and nothing else. */
+.dccgg-root.dccgg-root .dccgg-mapcard-shot.dccgg-mapcard-shot,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-shot.dccgg-mapcard-shot {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--dccgg-tile-border, rgba(0, 107, 207, 0.15));
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--dccgg-tile-bg, #fff);
+    color: inherit;
+    cursor: pointer;
+    line-height: 0;          /* no descender gap under the picture */
+}
+.dccgg-mapcard-img {
+    display: block;
+    width: 100%;
+    height: auto;            /* the intrinsic 900x591 keeps the box reserved */
+}
+.dccgg-mapcard-caption {
+    margin: 10px 0 12px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* -------- the two buttons -------- */
+/* ONE ROW, EQUAL HEIGHT, side by side from 320 up — Rob's "Option 2".
+   align-items: stretch is the flex default and is what makes them equal, so
+   it is not declared: a rule no test could fail on is worse than no rule.
+   What IS needed is box-sizing, because the outline button carries a 2px
+   border and the filled one does not, and without border-box that alone
+   makes it 4px taller. */
+.dccgg-mapcard-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+.dccgg-mapcard-actions > * {
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* THE KIT FIGHT, the same one S1 had. `.elementor-kit-331 button` is (0,1,1)
+   and sets text-transform: capitalize, font-weight 900, letter-spacing 1.5px
+   and border-width 0 — measured in the live combined stylesheet. The labels
+   are Title Case as written ("Open Full Screen", not "Open Full Screen" with
+   every word re-cased by the theme), so the transform has to go, and the
+   outline button needs its border back. (0,4,0) by doubling both classes. */
+.dccgg-root.dccgg-root .dccgg-mapcard-open.dccgg-mapcard-open,
+.dccgg-root.dccgg-root .dccgg-mapcard-ext.dccgg-mapcard-ext,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-open.dccgg-mapcard-open,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-ext.dccgg-mapcard-ext {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    /* 15px so both labels fit on one line at 320 without wrapping — measured;
+       at 16px "Open Full Screen" wraps in a 320 column. */
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+    padding: 11px 12px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.dccgg-root.dccgg-root .dccgg-mapcard-open.dccgg-mapcard-open,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-open.dccgg-mapcard-open {
+    background: var(--dccgg-primary, #006BCF);
+    border-color: var(--dccgg-primary, #006BCF);
+    color: #fff;
+}
+.dccgg-root.dccgg-root .dccgg-mapcard-ext.dccgg-mapcard-ext,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-ext.dccgg-mapcard-ext {
+    background: transparent;
+    border-color: var(--dccgg-primary, #006BCF);
+    color: var(--dccgg-primary, #006BCF);
+}
+.dccgg-mapcard-ico { display: inline-flex; }
+.dccgg-mapcard-ico svg { width: 16px; height: 16px; fill: currentColor; }
+/* THE 320 CASE, measured rather than guessed. At 320 the item column is
+   272px, so each button gets (272 - 8 gap) / 2 = 132px. "Open Full Screen"
+   is 124px of text at 15px, and 124 + 12 + 12 of padding + 2 + 2 of border
+   is 152 — it overflowed its button by 5px, which the first measurement
+   caught. The label stays 15px, as asked; the space around it gives way
+   instead. 380px rather than 360, because 360 had only 4px to spare and a
+   slightly wider font on another device would spend it. */
+@media (max-width: 380px) {
+    /* EQUAL WIDTH is what gives way here, not equal height — Rob asked for
+       "equal height, side by side", and the two labels are not the same
+       length, so splitting the row down the middle starves the longer one.
+       flex: 0 1 auto lets each take what it needs:
+
+           equal width (1 1 0)   133 each; "Open Full Screen" wants 152  -> 3px over
+           content width + 8px padding   144 + 116 + 6 gap = 266 of 272  -> fits
+
+       Measured on the LIVE page with the real Raleway, not in the harness:
+       the harness falls back to system-ui and the overflow there was the
+       same 3px, so this one is the property's and not the model's. */
+    .dccgg-mapcard-actions { gap: 6px; }
+    .dccgg-mapcard-actions > * { flex: 0 1 auto; }
+    .dccgg-root.dccgg-root .dccgg-mapcard-open.dccgg-mapcard-open,
+    .dccgg-root.dccgg-root .dccgg-mapcard-ext.dccgg-mapcard-ext,
+    .dccgg-stage.dccgg-stage .dccgg-mapcard-open.dccgg-mapcard-open,
+    .dccgg-stage.dccgg-stage .dccgg-mapcard-ext.dccgg-mapcard-ext {
+        padding-left: 8px;
+        padding-right: 8px;
+        gap: 5px;
+    }
+    .dccgg-mapcard-ico svg { width: 14px; height: 14px; }
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-mapcard-open.dccgg-mapcard-open:hover,
+    .dccgg-stage.dccgg-stage .dccgg-mapcard-open.dccgg-mapcard-open:hover {
+        filter: brightness(1.08);
+    }
+    .dccgg-root.dccgg-root .dccgg-mapcard-ext.dccgg-mapcard-ext:hover,
+    .dccgg-stage.dccgg-stage .dccgg-mapcard-ext.dccgg-mapcard-ext:hover {
+        background: color-mix(in srgb, var(--dccgg-primary, #006BCF) 8%, transparent);
+    }
+}
+.dccgg-root.dccgg-root .dccgg-mapcard-shot.dccgg-mapcard-shot:focus-visible,
+.dccgg-root.dccgg-root .dccgg-mapcard-open.dccgg-mapcard-open:focus-visible,
+.dccgg-root.dccgg-root .dccgg-mapcard-ext.dccgg-mapcard-ext:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-shot.dccgg-mapcard-shot:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-open.dccgg-mapcard-open:focus-visible,
+.dccgg-stage.dccgg-stage .dccgg-mapcard-ext.dccgg-mapcard-ext:focus-visible {
+    outline: 3px solid var(--dccgg-primary, #006BCF);
+    outline-offset: 2px;
+}
+
+/* -------- the full-screen layer -------- */
+/* z-index 100001: one above the highest thing in this stylesheet (100000),
+   so it clears the open detail modal (10010), its overlay (10009) and the
+   app shell's tab bar. */
+.dccgg-maplayer {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    z-index: 100001;
+    display: flex;
+    flex-direction: column;
+    background: #0b0b0c;
+    /* The notch and the home indicator. padding, not inset offsets, so the
+       backdrop still reaches the physical edges. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.dccgg-maplayer[hidden] { display: none; }
+.dccgg-maplayer-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    color: #fff;
+    flex: 0 0 auto;
+}
+.dccgg-maplayer-title {
+    flex: 1;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* 44px is the floor the whole guide uses, and the close button is the only
+   way out for a guest who does not know about Esc or the back gesture. */
+.dccgg-maplayer-close.dccgg-maplayer-close {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    padding: 0;
+}
+.dccgg-maplayer-close.dccgg-maplayer-close:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-maplayer-close.dccgg-maplayer-close:hover { background: rgba(255, 255, 255, 0.28); }
+}
+.dccgg-maplayer-frame {
+    flex: 1 1 auto;
+    min-height: 0;          /* so the iframe may shrink inside the flex column */
+    position: relative;
+}
+.dccgg-maplayer-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+/* The page behind must not scroll while the layer is up. overflow alone is
+   enough on desktop; iOS Safari needs the height pin as well. */
+html.dccgg-map-open, html.dccgg-map-open body {
+    overflow: hidden;
+    overscroll-behavior: none;
+}

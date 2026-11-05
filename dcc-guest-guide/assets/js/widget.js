@@ -304,6 +304,7 @@
         wireAiSearch(root, config);
         wireSavePdf(root, config);
         wireEmergency(root, config);
+        wireMapCards(root);
         // v0.25.0: the Front Desk form, the voice concierge and the review
         // prompt live in widget-guest.js, which only the FULL guide loads.
         // On the public page window.DCCGG_GUEST is undefined and these three
@@ -3347,6 +3348,152 @@
     }
 
     // -- Mobile bottom-sheet drag-to-dismiss ------------------------------
+    /**
+     * v0.27.8 — the Property Map card and its full-screen layer.
+     *
+     * THE LAYER IS CREATED ONCE, APPENDED TO <body>, AND NEVER MOVED. That
+     * is not tidiness, it is the whole performance argument. .dccgg-stage is
+     * portaled to <body> when a section opens and back when it closes, and
+     * relocating an iframe in the DOM reloads it — measured on live before
+     * this release at twelve map document requests across four taps, two of
+     * them before the guest had touched anything. Build the layer inside the
+     * sheet and it inherits every one of those reloads.
+     *
+     * The iframe is created on FIRST open and kept alive afterwards, so a
+     * reopen costs nothing. There is deliberately no "destroy on close".
+     */
+    const mapLayer = { el: null, frame: null, title: null, opener: null, pushed: false, src: null };
+
+    function buildMapLayer() {
+        if (mapLayer.el) return mapLayer.el;
+        const el = document.createElement('div');
+        el.className = 'dccgg-maplayer';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.hidden = true;
+        const bar = document.createElement('div');
+        bar.className = 'dccgg-maplayer-bar';
+        const h = document.createElement('h2');
+        h.className = 'dccgg-maplayer-title';
+        h.tabIndex = -1;
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'dccgg-maplayer-close';
+        close.innerHTML = '<span aria-hidden="true">&times;</span>';
+        bar.appendChild(h);
+        bar.appendChild(close);
+        const frameWrap = document.createElement('div');
+        frameWrap.className = 'dccgg-maplayer-frame';
+        el.appendChild(bar);
+        el.appendChild(frameWrap);
+        document.body.appendChild(el);
+        mapLayer.el = el;
+        mapLayer.frame = frameWrap;
+        mapLayer.title = h;
+        mapLayer.closeBtn = close;
+        close.addEventListener('click', () => closeMapLayer());
+        // Esc, and the phone's back gesture. The back gesture arrives as
+        // popstate because opening pushes one history entry.
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || el.hidden) return;
+            e.preventDefault();
+            closeMapLayer();
+        });
+        window.addEventListener('popstate', () => {
+            if (el.hidden) return;
+            // The entry we pushed has already gone, so do not pop it again.
+            mapLayer.pushed = false;
+            closeMapLayer();
+        });
+        // The focus trap. The layer has exactly two stops of its own — the
+        // heading (a -1 target, so a screen reader reads the map's name) and
+        // the close button — plus whatever is inside the iframe, which is
+        // another document and cannot be enumerated. Tab therefore cycles
+        // between the two the layer owns.
+        el.addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab') return;
+            const stops = [close];
+            if (!stops.length) return;
+            e.preventDefault();
+            stops[0].focus();
+        });
+        return el;
+    }
+
+    function openMapLayer(card) {
+        const el = buildMapLayer();
+        const src = card.getAttribute('data-dccgg-map-src') || '';
+        const label = card.getAttribute('data-dccgg-map-label') || 'Map';
+        // Return focus to the card's own Open button rather than to whatever
+        // happened to have focus. Tapping the PICTURE opens the layer too,
+        // and the picture button is not where a keyboard user wants to land
+        // on the way back — nor is the section heading, which is what had
+        // focus when the sheet was opened by touch (v0.24.4).
+        mapLayer.opener = card.querySelector('.dccgg-mapcard-open') || document.activeElement;
+        mapLayer.title.textContent = label;
+        mapLayer.closeBtn.setAttribute('aria-label', 'Close ' + label);
+        el.setAttribute('aria-label', label);
+        // The iframe is built on first open ONLY, and kept. A different card
+        // pointing at a different map replaces the src; both cards on this
+        // site point at the same one, so in practice this happens once ever.
+        if (!mapLayer.iframe) {
+            const f = document.createElement('iframe');
+            f.setAttribute('title', label);
+            f.setAttribute('loading', 'eager');
+            f.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+            f.src = src;
+            mapLayer.src = src;
+            mapLayer.frame.appendChild(f);
+            mapLayer.iframe = f;
+        } else if (src && src !== mapLayer.src) {
+            mapLayer.iframe.src = src;
+            mapLayer.src = src;
+        }
+        el.hidden = false;
+        document.documentElement.classList.add('dccgg-map-open');
+        try {
+            history.pushState({ dccggMap: 1 }, '');
+            mapLayer.pushed = true;
+        } catch (_) { mapLayer.pushed = false; }
+        // Focus the heading rather than the close button: same reasoning as
+        // v0.24.4 for section pop-ups — a screen reader reads the map's name
+        // and nothing is painted with a focus ring a finger never asked for.
+        setTimeout(() => { try { mapLayer.title.focus(); } catch (_) {} }, 0);
+    }
+
+    function closeMapLayer() {
+        const el = mapLayer.el;
+        if (!el || el.hidden) return;
+        el.hidden = true;
+        document.documentElement.classList.remove('dccgg-map-open');
+        if (mapLayer.pushed) {
+            mapLayer.pushed = false;
+            try { history.back(); } catch (_) {}
+        }
+        const back = mapLayer.opener;
+        mapLayer.opener = null;
+        if (back && back.isConnected) { try { back.focus(); } catch (_) {} }
+    }
+
+    function wireMapCards(root) {
+        const cards = root.querySelectorAll('.dccgg-mapcard');
+        if (!cards.length) return;
+        // DELEGATED ON document, NOT ON root, and that distinction is the
+        // portal again. The cards live inside .dccgg-stage, which is moved to
+        // <body> when a section opens — so a listener bound to root stops
+        // seeing them the moment the guest opens the very section the card is
+        // in. Written that way first; the layer simply never opened.
+        // bindGlobal keeps it disposable when the root goes away.
+        bindGlobal(root, document, 'click', (e) => {
+            const t = e.target.closest('.dccgg-mapcard-shot, .dccgg-mapcard-open');
+            if (!t) return;
+            const card = t.closest('.dccgg-mapcard');
+            if (!card) return;
+            e.preventDefault();
+            openMapLayer(card);
+        });
+    }
+
     function wireSheetDrag(root) {
         const stage = root.querySelector('.dccgg-stage');
         if (!stage) return;

@@ -165,6 +165,22 @@ function dccgg_all_on(): array {
          'content_source' => 'template', 'item_template' => '77'],
         ['_id' => 't2', 'item_section' => 'amenities', 'item_title' => 'Template sets its own',
          'content_source' => 'template', 'item_template' => '99'],
+        // v0.27.8: the two items that really do share one template on live —
+        // "Amenities Map" and "Property Map" both render 9473. Both carry
+        // enable_map too, because the DUPLICATE "View in Maps" link is what
+        // the swap has to suppress, and an item without one cannot show it.
+        ['_id' => 'm1', 'item_section' => 'amenities', 'item_title' => 'Amenities Map',
+         'content_source' => 'template', 'item_template' => '55',
+         'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/d/viewer?mid=1mnhrewsiRpXeD9f_AvolglnCbpvLylo']],
+        ['_id' => 'm2', 'item_section' => 'map', 'item_title' => 'Property Map',
+         'content_source' => 'template', 'item_template' => '55',
+         'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/d/viewer?mid=1mnhrewsiRpXeD9f_AvolglnCbpvLylo']],
+        // The control, and the reason the swap is gated on the SWAP rather
+        // than on a title: "Where to Launch" is a maps SEARCH link on a
+        // wysiwyg item. It must keep its own View in Maps button.
+        ['_id' => 'm3', 'item_section' => 'canal', 'item_title' => 'Where to Launch',
+         'item_content' => '<p>Public ramp at Wooton Park.</p>',
+         'enable_map' => 'yes', 'map_url' => ['url' => 'https://www.google.com/maps/search/boat+launch']],
         ['_id' => 'a6', 'item_section' => 'amenities', 'item_title' => 'Line break inside',
          'item_content' => '<p>First line,<br>second line of the same sentence.</p>'],
         // v0.27.7: the three shapes the add-on is about, and none of them

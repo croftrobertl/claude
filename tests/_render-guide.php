@@ -40,6 +40,7 @@ namespace Elementor {
      */
     class DCCGG_Test_Frontend {
         public function get_builder_content_for_display($id, $with_css = false) {
+            if ((int) $id === 55) { return $this->mapTemplate(); }
             if ((int) $id === 99) {
                 return '<div class="elementor elementor-99">'
                     . '<div class="elementor-element elementor-widget elementor-widget-text-editor">'
@@ -68,6 +69,22 @@ namespace Elementor {
                 . '<div class="elementor-element elementor-widget elementor-widget-google_maps">'
                 . '<iframe title="map" src="about:blank"></iframe></div>'
                 . '</div>';
+        }
+        // v0.27.8: template 55 is the shape of the host's template 9473 — an
+        // Elementor HTML widget holding a raw Google My Maps EMBED iframe,
+        // which is the only thing the map swap is allowed to match.
+        //
+        // Template 77 above keeps its `about:blank` iframe on purpose: it is
+        // the control. A plain iframe, and the Elementor Google Maps widget
+        // it sits in, must come through untouched, or the swap is matching
+        // "an iframe" rather than "a My Maps embed".
+        public function mapTemplate(): string {
+            return '<div class="elementor elementor-9473">'
+                . '<div class="elementor-element elementor-widget elementor-widget-html" '
+                . 'data-widget_type="html.default"><div class="elementor-widget-container">'
+                . '<iframe src="https://www.google.com/maps/d/embed?mid=1mnhrewsiRpXeD9f_AvolglnCbpvLylo&amp;ehbc=2E312F&amp;noprof=1" '
+                . 'width="640" height="480"></iframe>'
+                . '</div></div></div>';
         }
     }
     class DCCGG_Test_Elementor {
@@ -161,6 +178,25 @@ namespace {
         'wp_kses' => fn($s, ...$a) => (string) $s,
         'esc_html_e' => function ($s, $d = null) { echo htmlspecialchars((string) $s, ENT_QUOTES); },
         'get_locale' => fn() => 'en_US', 'is_rtl' => fn() => false, 'wp_get_attachment_image_url' => fn(...$a) => '',
+        // v0.27.8: the card derives the viewer URL from the embed URL's own
+        // `mid`, so it needs WP's parse_url wrapper. Identity behaviour.
+        'wp_parse_url' => fn($url, $component = -1) => parse_url((string) $url, (int) $component),
+        // v0.27.8: the map card's picture. Returns what WordPress returns —
+        // an <img> carrying width, height and loading="lazy" — because the
+        // whole point of the card is that the picture costs nothing at page
+        // load, and a stub that dropped those attributes would let a test
+        // pass on markup the real site never produces. The dimensions are
+        // attachment 19860's own, 900x591.
+        'wp_get_attachment_image' => function ($id, $size = 'large', $icon = false, $attr = []) {
+            if ((int) $id <= 0) { return ''; }
+            $a = array_merge(['class' => '', 'loading' => 'lazy', 'decoding' => 'async', 'alt' => ''], (array) $attr);
+            return '<img width="900" height="591" '
+                . 'src="https://doracanalcourt.com/wp-content/uploads/2026/11/property-map-preview.webp" '
+                . 'class="' . htmlspecialchars((string) $a['class'], ENT_QUOTES) . '" '
+                . 'alt="' . htmlspecialchars((string) $a['alt'], ENT_QUOTES) . '" '
+                . 'loading="' . htmlspecialchars((string) $a['loading'], ENT_QUOTES) . '" '
+                . 'decoding="' . htmlspecialchars((string) $a['decoding'], ENT_QUOTES) . '">';
+        },
         // v0.25.0: the conditions card asks WordPress for the site timezone.
         'wp_timezone_string' => fn() => 'America/New_York',
         // v0.24.4: reached once a section carries an accent colour.

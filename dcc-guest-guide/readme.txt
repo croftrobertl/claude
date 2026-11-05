@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.7
+Stable tag: 0.27.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,25 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.8 =
+* The property map opens full screen, on the same page. In the Amenities
+  and Map sections the map is now a picture with its name underneath and
+  two buttons: "Open Full Screen", which fills the screen without leaving
+  the guide, and "Google Maps", which opens the full map in a new tab.
+  Tapping the picture opens it full screen too.
+* The full-screen view closes with the X, the Escape key or the phone's
+  back gesture, keeps the keyboard inside it while open, and stops the page
+  behind it scrolling.
+* The guide no longer loads Google's map until a guest asks for it. The map
+  used to load as soon as the page opened — and again every time any
+  section was opened or closed, even sections with no map in them. Opening
+  the full-screen view loads it once; opening it again costs nothing.
+* The picture is lazy-loaded and the map's own "View in Maps" button is
+  gone from those two items, since the "Google Maps" button goes to the
+  same place. Other items with their own map links are unchanged.
+* The preview picture is set by attachment ID in the widget's settings, and
+  the caption beside it can be edited.
 
 = 0.27.7 =
 * The intro line on the public guide now uses balanced line wrapping, like

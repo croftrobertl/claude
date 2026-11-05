@@ -694,6 +694,26 @@ final class Widget extends Widget_Base
             'description' => __('Public preview shows only sections marked Public or Both, and force-disables Request Support and the checkout review prompt regardless of their own settings. To publish a public page from an existing guide without copying it, use the shortcode instead: [dcc_guest_guide audience="public" source="POST_ID"].', 'dcc-guest-guide'),
         ]);
 
+        // v0.27.8: the Property Map preview. The attachment id rather than a
+        // MEDIA control, because the image is a fixed asset the owner already
+        // uploaded (19860 — a screenshot of his own My Maps, Google's
+        // attribution intact) and an id survives a re-save that a URL does
+        // not. Clear it and the card still renders: caption and both buttons,
+        // just no picture.
+        $this->add_control('map_preview_id', [
+            'label'       => __('Property map preview image ID', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::NUMBER,
+            'default'     => 19860,
+            'min'         => 0,
+            'description' => __('Media library attachment ID for the picture shown on the Property Map card. The picture is lazy-loaded, so it costs nothing until a guest scrolls to it. Leave empty for a card with no picture.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('map_card_caption', [
+            'label'       => __('Property map caption', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Property Map', 'dcc-guest-guide'),
+            'description' => __('Shown under the picture, and used in the full-screen view\'s title.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('public_intro', [
             'label'       => __('Public intro line', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXTAREA,
@@ -4918,6 +4938,15 @@ final class Widget extends Widget_Base
             $body_html = self::drop_empty_paragraphs(
                 wpautop(self::auto_link_html(wp_kses_post($content))));
         }
+        // v0.27.8: a template item's HTML is rendered HERE rather than inline
+        // in the markup below, because the map swap has to report back —
+        // $has_map_card gates the duplicate "View in Maps" link further down.
+        $tpl_html     = '';
+        $has_map_card = false;
+        if ($source === 'template' && $template_id > 0) {
+            $tpl_html = self::swap_map_embeds(
+                self::render_template($template_id), $strings, $has_map_card);
+        }
         $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
@@ -4993,7 +5022,7 @@ final class Widget extends Widget_Base
 
             <div class="dccgg-item-content-wrap<?php echo $read_more ? ' dccgg-collapsible' : ''; ?>">
                 <?php if ($source === 'template' && $template_id > 0) :
-                    echo self::render_template($template_id); // phpcs:ignore WordPress.Security.EscapeOutput
+                    echo $tpl_html; // phpcs:ignore WordPress.Security.EscapeOutput — Elementor output, map embeds swapped for the card
                 else : ?>
                     <div class="dccgg-item-body"><?php echo $body_html; // phpcs:ignore WordPress.Security.EscapeOutput — auto_link_html operates on already-kses'd content ?></div>
                 <?php endif; ?>
@@ -5131,7 +5160,13 @@ final class Widget extends Widget_Base
             // where $wifi_creds is true and both copy children are suppressed —
             // emitted an empty <div> that still carried margin-top: 12px. The QR
             // button used to be the one child that condition was right about.
-            $show_map    = $map_on  && $map_url !== '';
+            // v0.27.8: an item showing the map card already carries a
+            // "Google Maps ↗" button, so its own View in Maps link would be
+            // the same destination twice. Gated on the SWAP having happened,
+            // not on the item's title or id — "Where to Launch" keeps its
+            // button because its link is a maps search, not an embed, so
+            // nothing was swapped there.
+            $show_map    = $map_on  && $map_url !== '' && !$has_map_card;
             $show_secret = $copy_on && $copy_val !== '' && $mask_on && !$wifi_creds;
             $show_copy   = $copy_on && $copy_val !== '' && !$wifi_creds;
             ?>
@@ -5731,6 +5766,129 @@ final class Widget extends Widget_Base
         return $by_image;
     }
 
+
+    /** Google My Maps embeds this plugin recognises inside a saved template. */
+    private const MAP_EMBED_RE = '~<iframe\b[^>]*\bsrc="(https?://(?:www\.)?google\.com/maps/d/embed\?[^"]*)"[^>]*>\s*</iframe>~i';
+
+    /**
+     * Replace a Google My Maps iframe inside rendered template HTML with the
+     * preview card, and report whether anything was replaced.
+     *
+     * WHY THIS REACHES INSIDE A TEMPLATE AT ALL. Until now the plugin owned
+     * only the CHROME of a `template` item — the title, the checkbox, the
+     * read-aloud button — and nothing inside the template, by design. This is
+     * the deliberate exception, and the Director asked for it in those terms:
+     * the map lives in an Elementor HTML widget inside template 9473, used by
+     * BOTH "Amenities Map" and "Property Map", and the alternative was editing
+     * Rob's stored template. Filtering the rendered string touches nothing
+     * stored: deactivate the plugin and template 9473 renders exactly as it
+     * does today.
+     *
+     * WHAT IT COSTS TODAY, measured on live at 390 before this was written:
+     * the two iframes are fetched on PAGE LOAD (no loading="lazy", and being
+     * inside a hidden panel does not stop a fetch), and again on every sheet
+     * open AND close — including sections holding no map — because
+     * .dccgg-stage is portaled to <body> and relocating an iframe reloads it.
+     * Twelve map document requests across four taps. After this: none until
+     * the guest asks for one.
+     *
+     * The match is deliberately narrow — an <iframe> whose src is a My Maps
+     * EMBED url. A Google Maps search link, a plain maps.google.com iframe, a
+     * YouTube embed or any other frame in a template is left alone because it
+     * was never matched. "Where to Launch" keeps its ordinary View in Maps
+     * button for exactly this reason: its link is a maps search, not an
+     * embed, and it is not an iframe at all.
+     *
+     * @param string $html     Rendered template HTML.
+     * @param array  $settings Widget settings, for the preview image id.
+     * @param bool   $swapped  Set true when at least one embed was replaced.
+     */
+    public static function swap_map_embeds(string $html, array $settings, bool &$swapped = false): string
+    {
+        $swapped = false;
+        if ($html === '' || stripos($html, 'maps/d/embed') === false) { return $html; }
+        $out = preg_replace_callback(
+            self::MAP_EMBED_RE,
+            static function (array $m) use ($settings, &$swapped) {
+                $swapped = true;
+                return self::map_card_html(html_entity_decode($m[1], ENT_QUOTES), $settings);
+            },
+            $html
+        );
+        // preg_replace_callback returns null on failure. Keeping the original
+        // is the safe direction: a heavy iframe is a performance problem, a
+        // blank panel is a missing answer.
+        if ($out === null) { $swapped = false; return $html; }
+        return $out;
+    }
+
+    /**
+     * The preview card: a picture, a caption, and one row of two buttons.
+     *
+     * Rob's pick, "Option C" from the mockups. The picture is an attachment
+     * (default 19860 — a screenshot of his own My Maps, Google's attribution
+     * intact), served with width, height and loading="lazy" so it costs
+     * nothing until it is near the viewport, and nothing at all on page load.
+     * A generated static map was the alternative and would have lost every
+     * pin and label Rob drew; a screenshot of his own map keeps them.
+     *
+     * The viewer URL is derived from the embed URL's own `mid`, so the button
+     * always points at the same map the card previews. No phone map app can
+     * open a My Maps map, so there is no app scheme to try — it opens in the
+     * guest's browser, in a new tab.
+     */
+    private static function map_card_html(string $embed_url, array $settings): string
+    {
+        $mid = '';
+        $q = (string) wp_parse_url($embed_url, PHP_URL_QUERY);
+        if ($q !== '') { parse_str($q, $args); $mid = (string) ($args['mid'] ?? ''); }
+        $viewer = $mid !== ''
+            ? 'https://www.google.com/maps/d/viewer?mid=' . rawurlencode($mid)
+            : $embed_url;
+
+        $caption = trim((string) ($settings['map_card_caption'] ?? '')) ?: __('Property Map', 'dcc-guest-guide');
+        $img = self::map_preview_img($settings, $caption);
+
+        ob_start(); ?>
+        <div class="dccgg-mapcard" data-dccgg-map-src="<?php echo esc_attr($embed_url); ?>" data-dccgg-map-label="<?php echo esc_attr($caption); ?>">
+            <button type="button" class="dccgg-mapcard-shot" aria-label="<?php
+                /* translators: %s: the map's name */
+                echo esc_attr(sprintf(__('Open %s full screen', 'dcc-guest-guide'), $caption)); ?>">
+                <?php echo $img; // phpcs:ignore WordPress.Security.EscapeOutput — built by wp_get_attachment_image() or escaped below ?>
+            </button>
+            <p class="dccgg-mapcard-caption"><?php echo esc_html($caption); ?></p>
+            <div class="dccgg-mapcard-actions">
+                <button type="button" class="dccgg-btn dccgg-mapcard-open">
+                    <span class="dccgg-mapcard-ico" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M4 9V4h5v2H6v3H4zm11-5h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 3v-3h2v5h-5v-2h3z"/></svg>
+                    </span><?php echo esc_html__('Open Full Screen', 'dcc-guest-guide'); ?>
+                </button>
+                <a class="dccgg-btn dccgg-mapcard-ext" href="<?php echo esc_url($viewer); ?>" target="_blank" rel="noopener">
+                    <?php echo esc_html__('Google Maps', 'dcc-guest-guide'); ?> <span aria-hidden="true">&#8599;</span>
+                </a>
+            </div>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /** The preview picture, or nothing if the attachment cannot be resolved. */
+    private static function map_preview_img(array $settings, string $caption): string
+    {
+        $id = (int) ($settings['map_preview_id'] ?? 0);
+        if ($id > 0 && function_exists('wp_get_attachment_image')) {
+            $html = (string) wp_get_attachment_image($id, 'large', false, [
+                'class'    => 'dccgg-mapcard-img',
+                'loading'  => 'lazy',
+                'decoding' => 'async',
+                'alt'      => '',
+            ]);
+            if ($html !== '') { return $html; }
+        }
+        // No attachment: the card still works, it just has no picture. Better
+        // a caption and two buttons than a broken image or a blank box.
+        return '';
+    }
 
     private static function render_template(int $template_id): string
     {
