@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.57.1
+Stable tag: 0.58.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -228,6 +228,12 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.58.0 =
+* No more page jump when the widget loads. The server now sends the landing (heading, intro and mode buttons) instead of a "Loading..." line that the script later replaced with something three times taller; the script's first render is identical, so nothing moves. Lighthouse mobile on /cottages/: Cumulative Layout Shift 0.115 -> 0.014 (3 runs each).
+* The quiz buttons' icons (Back and Next arrows, Submit, Start Over, Edit Answers) are inline SVG like the mode icons, so no widget icon waits for the Font Awesome font. Every packaged icon also carries a fixed em-sized box of its own.
+* Fix: since 0.57.0 the quiz's Back button stretched to 87px tall beside a disabled Next and its "Pick One to Continue" line. It is 50px again, level with Next.
+* Card photos already reserved their space (a 4:3 box, plus width and height on every image); tests now pin it.
 
 = 0.57.1 =
 * Bulleted lists (Rob's pick, option 1): in the See All cards' highlights, the bullets form one straight column at the left of the card, each item's text is left-aligned beside its bullet, and a wrapped line sits under the text, not under the bullet. In the two-column layout (480px and wider) each column's bullets line up the same way. The no-JavaScript fallback list follows the same rule.

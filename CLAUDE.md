@@ -160,6 +160,7 @@ includes/class-plugin.php            # Singleton; registers category, widgets, a
 includes/class-selector-widget.php   # The main Elementor widget; ~all controls live here
 includes/class-mini-entry-widget.php # Subclasses Selector_Widget; also the shortcode
 includes/class-config.php            # ALL user-facing strings + the data-config builder
+includes/class-landing.php           # The landing rendered server-side (0.58.0); must equal renderLanding()
 includes/class-data.php              # Read layer over data/cottages.json
 includes/class-preset-defaults.php   # Site preset: control defaults a NEW widget starts from
 includes/class-control-design-io.php # Custom Elementor control for the text export/import
@@ -796,6 +797,42 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   line's x equal to its item's text x on all 8 cards at 390/768/1440.
   Measured on live's theme (2026-11-03): 1,569 visible text elements across every
   screen at 390/768/1440, all `center` + `balance`.
+- **The landing is rendered on the SERVER, and must equal the script's first render
+  (0.58.0, Website Director's CLS brief).** Until 0.57.1 `render()` sent a 104px
+  "Loading…" line and the script swapped in the 308px landing ~6.5s into a throttled
+  load: Lighthouse mobile CLS 0.115 on /cottages/, all of it this widget (Lighthouse
+  named MPHB's room-list image and "Web font loaded" as causes — its root-cause guess
+  was wrong; the layout-shift SOURCES showed the widget growing 104 → 308).
+  `DCCS\Landing::html($config)` (`class-landing.php`, no Elementor dependency) builds
+  the landing from the widget's own data-config, after the `<noscript>`; the script's
+  `renderLanding()` replaces it with identical markup, so nothing moves. **Two copies
+  of one markup, guarded:** dom-smoke 109 renders both from the same config (live
+  shape, all modes, heading off, awkward characters) and compares the parsed DOM, with
+  a one-word positive control; `tests/render-landing.php` is the PHP entry point. Any
+  edit to `renderLanding()` must be made in `Landing::html()` too. The `<noscript>`
+  carries `<style>.dccs-root .dccs-landing-choices{display:none}</style>` so a no-JS
+  visitor sees the heading and the cottage links, not dead buttons; `showFallback()`
+  replaces `.dccs-loading` OR `.dccs-landing`. Deep links that open a mode inline
+  (`?mode=`, criteria) still swap landing → mode on boot; not measured, not asked.
+  The `loading` string is no longer rendered (left in Config). After the fix the only
+  shift on /cottages/ is 0.014: the THEME's Raleway arriving and re-wrapping text
+  site-wide (our buttons move 26px). A metric-matched fallback `@font-face` or a
+  preload is site-side, not ours — reported. Home's 0.037 is the theme's page-title
+  header, unchanged by this plugin.
+  **Live-page harness for PHP changes:** live's PHP builds the page, so the harness
+  (`scratchpad/cls/swap.mjs`) rewrites the served HTML: each Selector's Loading line
+  becomes `Landing::html(<its data-config>)` via the real PHP, and font-icon `<i>` in
+  data-config become `Icons::svg()`. Lighthouse runs through puppeteer-core request
+  interception (`scratchpad/lh/run.mjs`, curl through the proxy for bodies).
+- **No widget icon depends on an icon font (0.58.0).** `Icons` carries EIGHT FA 5.15.4
+  solid paths: the three mode/Mini icons plus arrow-left/right, check, undo, edit (the
+  quiz buttons, which live rendered as `<i class="fas …">` — 0px wide until FA loaded).
+  Every SVG states its box ON the element (`width="<w/h>em" height="1em"`) so it holds
+  its space before CSS; the CSS (`height 1em; width auto`) computes the same box. A PHP
+  test walks every preset `icon_*` value and fails if one is not SVG.
+- **Back keeps its 50px beside Next's column (0.58.0).** `.dccs-wizard-nav` stretches
+  its items; once Next and "Pick One to Continue" shared `.dccs-next-col` (0.57.0) Back
+  stretched to 87px (live 0.57.0–0.57.1). `> .dccs-back { align-self: flex-start }`.
 - **Tap areas grow invisibly; the look never changes (DCC standard, 0.53.3).**
   0.54.0: the compare table's ‹ › are now VISIBLY 44px (Rob) — no extension — and
   the Compare scroll thumb is at least 44px tall. An
