@@ -235,6 +235,11 @@ for (const w of [390, 1440]) {
     }), '390: with an entry in the sheet, no two panels share an id');
     const b = page.locator('.dccwl-sheet:not([hidden]) .dccwl-gp-photowrap .dccwl-info-btn').first();
     check(await b.count() > 0, '390: the sheet\'s photo carries an ⓘ');
+    const colon = await page.evaluate(() => {
+      const k = document.querySelector('.dccwl-sheet:not([hidden]) [data-k="local"] .dccwl-fg-k');
+      return k ? getComputedStyle(k, '::after').content : null;
+    });
+    check(null !== colon && !/:/.test(colon), '390: a record line that ends in its ⓘ drops the colon', String(colon));
     await b.click();
     await page.waitForTimeout(100);
     const which = await page.evaluate(() => {

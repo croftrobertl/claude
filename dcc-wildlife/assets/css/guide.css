@@ -583,6 +583,10 @@
 	text-transform: uppercase;
 }
 .dccwl-gp-tiles .dccwl-fg-k::after { content: ''; }
+/* A record line whose value moved behind its ⓘ (1.48.1) is the label alone,
+ * so it loses the colon that introduced the value: "Recorded In Lake
+ * County ⓘ", not "Recorded In Lake County: ⓘ". */
+.dccwl-gp-local .dccwl-fg-k:has(+ .dccwl-info)::after { content: ''; }
 
 /* ======================================================================
  * THE ENTRY'S OWN ALIGNMENT, WHEREVER IT IS SHOWN (1.46.0).

@@ -5883,3 +5883,65 @@ The pane now stretches to its grid row (`align-self: stretch`): a pane
 shorter than the list box sat at the row's bottom once scrolled and jumped
 when a taller entry replaced it — 5px at 1440×900 once the "as of" line left
 the spotlight, ~190px at 1440×1200 already in 1.48.0.
+
+#### Measured on live (2026-11-05, GET only, 4× CPU)
+
+SpeedyCache lazy-load is now OFF on the three pages (the Director's
+mu-plugin `dcc-lazyload-skip.php`), so live as served now matches 1.48.0's
+old "[script off]" column, and both sides below were measured that way.
+Before = live 1.47.3 as served; after = 1.48.1 swapped in by
+tools/live/swap.mjs (this build's JS and CSS, and html-patches.mjs for every
+PHP change since 1.47.3 — none missed).
+
+/wildlife-guide/, three runs each, ms, input to next paint:
+
+| | 390 | 768 | 1440 |
+|---|---|---|---|
+| Tap Birds | 232/224/208 → 192/128/136 | 224/200/200 → 136/120/136 | 208/192/224 → 104/104/168 |
+| Tap Wider Florida | 80/64/64 → 104/144/104 | 80/64/88 → 152/104/104 | 56/48/56 → 96/88/88 |
+| Longest task on load | 1000/853/865 → 362/349/360 | 880/863/843 → 380/371/401 | 662/636/602 → 425/381/387 |
+| Open a Species | 136/152/168 → 160/120/144 | 168/120/136 → 144/120/136 | 104/112/80 → 104/104/88 |
+| Clear the Search | 168/152/152 → 136/136/144 | 224/152/160 → 136/152/160 | 152/176/144 → 144/144/136 |
+
+**Every pill tap is under 200 ms after**, the worst being Birds at 390 in
+one run (192). Birds was the slow pill and is 30–45% faster. **Wider Florida
+got slower** (48–88 → 88–152): showing ~120 rows that were skipped by
+`content-visibility` costs their first style-and-layout on the tap, where
+`display: none` rows had already been styled. It stays well under 200; it is
+reported, not hidden. The load's longest task fell by more than half because
+hidden rows are no longer laid out at all.
+
+/explore/ and /test/, one run each (unchanged code paths; 1.48.0 against
+1.47.3): CLS 0.57 → 0.004 (/explore/ 390) and 0.84 → 0.021 (/test/ 390);
+worst keystroke 232–352 → 32–40; Open a Species 136–152 → 88–128; tiles on
+screen after Choose Wildlife 912–1146 → 386–475. **LCP is not compared**:
+the after run buffers the whole document to patch it, which delays first
+paint by ~400 ms on every page in the swap itself.
+
+Offline, ui-1481 (390, 4×, 402 rows): pills 48–72 ms; with the group rule
+back on `display: none` (M32) Birds and Wider both exceed 200.
+
+#### Mutations (applied from a copy, restored with `cp`, checked with `cmp`)
+
+Red: M23 a water reading's source left on the card; M24 a guide photo credit
+left inline; M25 the Fishing sources on a visible line; M26 the JS ⓘ out of
+the tab order; M27 the PHP ⓘ out of the tab order; M28 the ⓘ a span, not a
+button; M29 Esc in the sheet not claimed by the ⓘ; M30 the map's attribution
+control off (red, but by the map failing to load — so M35 was added); M35
+the map attribution hidden by CSS (red on "nothing is painted over it");
+M31 the Photo Credits list hidden; M32 the group pills back on
+`display: none` (Birds and Wider over 200 ms); M33 a cloned entry keeping its
+popover id (first GREEN — the test clicked the photo ⓘ, which is not a
+clone; the record-line ⓘ and an id census after cloning were added, then
+red); M36 the record line's dangling colon.
+
+GREEN, and why: **M34** — only guide.css's scope rule back on
+`display: none`. The Wider/Seen Here switch stays under 200 ms either way in
+the fixture, so no timing test can tell; the group rule (M32) is where the
+cost lives. Kept preserved-state for consistency, documented here.
+
+#### Not testable here
+
+The Popover API needs iOS 17+ / Safari 17+. Older iPhones get the inline
+fallback (credit printed under its line, no ⓘ) — verified by CSS, not on a
+device. The real-iPhone check is Rob's.
