@@ -174,8 +174,19 @@ const READ = () => {
         check('three cards, in the order Google / Tripadvisor / Yelp',
             JSON.stringify(r.cards.map((c) => c.key)) === '["google","tripadvisor","yelp"]',
             JSON.stringify(r.cards.map((c) => c.key)));
+        // The guide's rendered TEXT, not page.content(): the latter includes
+        // the stylesheet, and widget.css's own comment explains what this
+        // release replaced — so the phrase is in the source and the check
+        // passed only because the minified build strips comments. It failed
+        // the moment the mutation runner ran the suite with
+        // DCCGG_UI_SOURCE=1. A test that depends on which build it is given
+        // is not testing the guide.
+        const visibleText = await page.evaluate(() => {
+            const p2 = document.querySelector('.dccgg-detail:not([hidden])');
+            return p2 ? p2.innerText : '';
+        });
         check('the old green Click To Review button is gone',
-            !/Click To Review/i.test(await page.content()));
+            !/Click To Review/i.test(visibleText), JSON.stringify(visibleText.slice(0, 80)));
         await ctx.close();
     }
 
