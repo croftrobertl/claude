@@ -2439,7 +2439,7 @@
 		}
 		/* Every coordinate an actor carries, moved into the new box. */
 		function scaleXY(o, sx, sy) {
-			if (!o) { return; }
+			if (!o || o.b === 'forage') { return; }   /* 4.17.0: the tom group is in the picture's px, placed by tomHoldStep */
 			if (typeof o.x === 'number') { o.x *= sx; }
 			if (typeof o.y === 'number') { o.y *= sy; }
 			if (typeof o.lx === 'number') { o.lx *= sx; }
@@ -3543,8 +3543,8 @@
 					if (p.x < -60 || p.x > vw + 60) { seed(p); }
 					break;
 				case 'forage':
-					/* his poses are drawn after load (tkCache); until then he is not drawn */
-					if (tkDone) { tomHoldStep(p, dt); }
+					/* stepped by gndFrame on the header picture's canvas (4.17.0);
+					 * his poses are drawn after load (tkCache), until then nothing */
 					break;
 				case 'waddle': case 'chatter':
 					p.x += p.vx * dt;
@@ -3716,7 +3716,7 @@
 			var fxC = KP_BOX[2] - KP_FX, kw = KP_BOX[2] - KP_BOX[0], E = mx2(KP_BOX[2] - KP_FX, KP_FX - KP_BOX[0]) * ku;
 			var tw = (TK_BOX[2] - TK_BOX[0]) * tu, th = (TK_BOX[3] - TK_BOX[1]) * tu, R = mx2(24 * K, kw * ku * 1.3), G = 6 * K;
 			return { tu: tu, ku: ku, kc: KP_STRIDE / TK_STANCE * ku, tw: tw, th: th, E: E, R: R, G: G, fxC: fxC,
-				kg: [th * 0.05, -th * 0.045],   /* the poults' ground lines, against his: the near one lower, the far one higher */
+				kg: [0, 0],   /* 4.17.0: all three stand on the header picture's foot (4.16.0's lower/higher ground lines would put a foot under the edge or a gap above it) */
 				lo: [p.x - tw / 2 - G - E - R, p.x + tw / 2 + G + E], hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R] };
 		}
 		function tomHoldStep(p, dt) {
@@ -3776,16 +3776,16 @@
 		function tomHold(p, s) {
 			var key = p.sv >= 0 ? 'r' + (p.sv < 0.15 || p.sv > 0.75 ? 1 : 2) + (MT.floor(p.sv * 24) % 4) : p.fs === 1 ? tkPose(0, TK_FR, 1, p.ftS - p.ft, false, p.fv) : 'w0';
 			var tf = tkGet(key); if (!tf) { return; }
-			var g = tomGeom(p), ts = (p.size * 1.3 * s * tkK() * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts, fy = 10 * s;
-			var gy = (TK_GROUND - (TK_BOX[1] + TK_BOX[3]) / 2) * tf.u * ts;
-			/* drawn by ground line: higher on screen first */
-			var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });
+			var g = tomGeom(p), ts = (p.size * 1.3 * s * tkK() * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts;
+			/* 4.17.0: every drawing's lowest painted row (its toes) on p.y, the
+			 * header picture's foot; drawn far poult, tom, near poult */
+			var L = [[g.kg[1], 1], [0, -1], [g.kg[0], 0]];
 			for (var i = 0; i < 3; i++) {
 				var c = L[i][1];
-				if (c < 0) { cx.drawImage(tf.c, -tw / 2, fy - gy - th / 2, tw, th); continue; }
+				if (c < 0) { cx.drawImage(tf.c, -tw / 2, -th * TK_SOLEF, tw, th); continue; }
 				var f = tkGet(p.ks[c] === 2 ? tkPose(p.kq[c], KP_FR, 1, p.kf[c] + 0.3, true) : tkPose(p.kq[c], KP_FR, 0, 0, true));
 				if (!f) { continue; }
-				var pw = f.w * ts, ph = f.h * ts, feet = fy + L[i][0], py = feet - (KP_GROUND - (KP_BOX[1] + KP_BOX[3]) / 2) * f.u * ts;
+				var pw = f.w * ts, ph = f.h * ts, py = L[i][0] - ph * KP_SOLEF + ph / 2;
 				var sx = (p.kd[c] > 0 ? -1 : 1) * (p.ks[c] === 3 ? 0.3 + 0.7 * abs(cos(MT.PI * p.kz[c])) : 1);
 				cx.save(); cx.translate(p.kx[c] - p.x, 0); cx.scale(sx, 1);
 				cx.drawImage(f.c, -g.fxC * f.u * ts, py - ph / 2, pw, ph);   /* its feet on x = 0, so a turn pivots on them */
@@ -4183,6 +4183,69 @@
 				skyMode = false;
 				cv = o[0]; cx = o[1]; vw = o[2]; vh = o[3]; waterY = o[4]; ground = o[5]; lastDpr = o[6]; cvOX = o[7]; cvOY = o[8]; cvUX = o[9]; cvUY = o[10];
 			}
+		}
+		/* 4.17.0 (Rob, every screen size): the tom and his poults stand on the
+		 * BOTTOM EDGE OF THE HEADER PICTURE, like the hero's own heron and
+		 * seaplane, and scroll away with the page. They have their own small
+		 * canvas inside the picture, at its bottom right, sized to the group
+		 * (never the whole picture: it is redrawn at the sprites' 30 fps for
+		 * the whole visit), above the sky canvas, pointer-events none. It is
+		 * placed by CSS (right 0, bottom 0), so its foot IS the picture's
+		 * foot whatever the toolbar does: nothing follows the viewport, and
+		 * nothing is read or written on scroll. Each drawing's lowest painted
+		 * row (TK_SOLEF / KP_SOLEF: the toes, measured from the pre-drawn
+		 * poses at 416 and 145 px, the same at 208 and 73) lands on that foot.
+		 * No picture (or one too short for him and the title), no tom. */
+		var TK_SOLEF = 0.9664, KP_SOLEF = 0.9655, gnd = null;
+		function gndEnsure() {
+			if (!skyPic) { return null; }
+			if (!gnd) {
+				var c = D.createElement('canvas');
+				c.className = 'dcc-seasons-ground';
+				c.setAttribute('aria-hidden', 'true');
+				c.style.cssText = 'position:absolute;right:0;bottom:0;width:1px;height:1px;pointer-events:none;display:block;z-index:' + (FRONT_Z + 1) + ';opacity:' + (gtA >= 1 ? '' : String(gtA)) + ';';
+				var g = c.getContext('2d');
+				if (!g) { return null; }
+				if (W.getComputedStyle(skyPic).position === 'static') { skyPic.style.position = 'relative'; }
+				gnd = { c: c, g: g, pw: 0, ph: 0, cw: 0, ch: 0, dpr: 0, resized: true, at: 0, ok: true };
+				if (W.ResizeObserver) { new W.ResizeObserver(function () { gnd.resized = true; }).observe(skyPic); }
+			}
+			if (!gnd.c.isConnected) { skyPic.appendChild(gnd.c); gnd.resized = true; }
+			if (gnd.resized) { gnd.resized = false; gnd.pw = mx2(1, skyPic.clientWidth); gnd.ph = mx2(1, skyPic.clientHeight); }
+			return gnd;
+		}
+		/* the group's box in the picture's px, from its geometry: the far end
+		 * of the left poult's range to the picture's right edge, his height */
+		function gndBox(p) {
+			var g = tomGeom(p);
+			return [mn(g.lo[0], g.lo[1]) - g.E - 2, gnd.ph - g.th - 2, gnd.pw, gnd.ph];
+		}
+		/* step and draw the group on its canvas: the picture's px, so every
+		 * placement rule (8 px in from the right edge, the poults' spots) is
+		 * the one it was, measured against the picture instead of the screen */
+		function gndFrame(dt, t) {
+			var G = null, k, p, o;
+			for (k = 0; k < parts.length; k++) { if (parts[k].b === 'forage' && !parts[k].dormant) { G = G || gndEnsure(); p = parts[k]; } }
+			if (!p || !G) { return; }
+			o = [cv, cx, vw, vh, ground];
+			cv = G.c; cx = G.g; vw = G.pw; vh = G.ph; ground = G.ph;
+			try {
+				if (tkDone) { tomHoldStep(p, dt); }
+				var dpr = mn(W.devicePixelRatio || 1, 2), b = p.hl ? gndBox(p) : [vw - 1, vh - 1, vw, vh];
+				/* too short a picture for him (he would reach the title): not drawn */
+				G.ok = !p.hl || tomGeom(p).th <= G.ph * 0.5;
+				var cw = MT.ceil(b[2] - b[0]), ch = MT.ceil(b[3] - b[1]);
+				if (cw !== G.cw || ch !== G.ch || dpr !== G.dpr) {
+					G.cw = cw; G.ch = ch; G.dpr = dpr;
+					G.c.width = MT.round(cw * dpr); G.c.height = MT.round(ch * dpr);
+					G.c.style.width = cw + 'px'; G.c.style.height = ch + 'px';
+				}
+				G.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+				G.g.clearRect(0, 0, cw, ch);
+				/* the picture's px: its foot is the canvas's last row */
+				G.g.setTransform(dpr, 0, 0, dpr, -(G.pw - cw) * dpr, -(G.ph - ch) * dpr);
+				if (G.ok && p.hl) { drawP(p, t); }
+			} finally { cv = o[0]; cx = o[1]; vw = o[2]; vh = o[3]; ground = o[4]; }
 		}
 		/* once a frame, before anything is drawn on it: a sky canvas that
 		 * was drawn on last frame starts clean */
@@ -7388,7 +7451,7 @@
 			}
 			gtA = gtOpen ? mn(1, (t - gtOpen) / 400) : 0;
 			var o = gtA >= 1 ? '' : String(gtA);
-			cv.style.opacity = o; if (sky && sky.c) { sky.c.style.opacity = o; }
+			cv.style.opacity = o; if (sky && sky.c) { sky.c.style.opacity = o; } if (gnd) { gnd.c.style.opacity = o; }
 		}
 		function frame(t, tick) {
 			raf = 0;
@@ -7464,7 +7527,7 @@
 				actorX = sceneActors();
 				for (k = 0; k < parts.length; k++) {
 					p = parts[k];
-					if (p.dormant) { continue; }
+					if (p.dormant || p.b === 'forage') { continue; }   /* 4.17.0: the tom group is stepped on its own canvas (gndFrame) */
 					repel(p, pdt);
 					step(p, pdt, t);
 					riderYield(p, pdt);
@@ -7475,9 +7538,11 @@
 				drawRipples();
 				for (k = 0; k < parts.length; k++) {
 					p = parts[k];
-					if (p.dormant || p.far) { continue; }
+					if (p.dormant || p.far || p.b === 'forage') { continue; }
 					drawP(p, t);
 				}
+				/* 4.17.0: the tom and his poults, on the header picture's foot */
+				gndFrame(pdt, t);
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
 			stepTurns(dt);
