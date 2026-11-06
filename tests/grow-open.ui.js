@@ -331,6 +331,20 @@ async function run() {
             check(`${width}: and the dim takes as long as the grow`, dim.dur.indexOf('0.25s') === 0, dim.dur);
 
             // --- nothing behind moved ---
+            // Nothing covered this, and the mutation that put it back survived
+            // a real run. The brief's rule is that will-change goes on for an
+            // animation and comes off after; a hint declared in the stylesheet
+            // holds a compositor layer for as long as the popup is open.
+            const standing = await page.evaluate(() => {
+                const out = [];
+                document.querySelectorAll('.dccgg-stage *, .dccgg-root *').forEach((el) => {
+                    const wc = getComputedStyle(el).willChange;
+                    if (wc && wc !== 'auto') out.push(el.className + ':' + wc);
+                });
+                return out;
+            });
+            check(`${width}: no element carries a standing will-change while a popup is open`,
+                standing.length === 0, standing.slice(0, 4).join(' | '));
             check(`${width}: no layout shift behind the popup`, w.shift === 0, String(w.shift));
             check(`${width}: no page errors`, errors.length === 0, errors.join(' | '));
             await ctx.close();
@@ -428,14 +442,25 @@ async function run() {
                 const t = Array.from(document.querySelectorAll('.dccgg-root .dccgg-tile'))
                     .filter((x) => x.getClientRects().length)[0];
                 t.click();
+                // Sampled IMMEDIATELY, before the end state. Checking only the
+                // end state is why removing the `!closeTimer` guard survived a
+                // real mutation run: without it the re-open is treated as an
+                // arrow switch, so the popup simply appears with no animation —
+                // correct-looking, and not what was asked for.
+                const stage0 = document.querySelector('.dccgg-stage');
+                const regrew = document.getAnimations()
+                    .filter((x) => x.effect && x.effect.target === stage0)
+                    .some((x) => x.effect.getKeyframes().some((k) => 'clipPath' in k));
                 await new Promise((r) => setTimeout(r, 450));
                 const s = document.querySelector('.dccgg-stage');
                 const cs = getComputedStyle(s);
-                return { clip: cs.clipPath, inlineClip: s.style.clipPath,
+                return { regrew: regrew, clip: cs.clipPath, inlineClip: s.style.clipPath,
                     opacity: cs.opacity, visibility: cs.visibility,
                     open: s.classList.contains('is-modal-open'),
                     panel: !!s.querySelector('.dccgg-detail:not([hidden])') };
             });
+            check('re-opening mid-close GROWS again rather than snapping open',
+                midClose.regrew === true, JSON.stringify({ regrew: midClose.regrew }));
             check('re-opening mid-close leaves a fully visible popup, not a clipped one',
                 midClose.open === true && midClose.panel === true
                 && midClose.visibility === 'visible' && Number(midClose.opacity) > 0.95

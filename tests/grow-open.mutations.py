@@ -76,13 +76,11 @@ MUTANTS = [
      """        requestAnimationFrame(() => state.stage.classList.add('is-modal-open'));
         {
             const panel = activePanel(state.stage, root.__dccggActiveKey || '');"""),
-    ('the hub is still hidden when the close measures the tile', J,
-     """        if (wasModal) { root.classList.remove('is-detail'); }
-        else { withViewTransition(() => root.classList.remove('is-detail')); }
-        if (wasModal) hideDetailModal(root);""",
-     """        if (wasModal) hideDetailModal(root);
-        if (wasModal) { root.classList.remove('is-detail'); }
-        else { withViewTransition(() => root.classList.remove('is-detail')); }"""),
+    ('the close is handed no tile to shrink into', J,
+     """                const key = root.__dccggActiveKey || '';
+                const back = tileRectFor(root, key);""",
+     """                const key = root.__dccggActiveKey || '';
+                const back = null;"""),
     ('the custom-property walk goes back on the tap', J,
      """        cacheCustomProps(root);""", """"""),
     ('the teardown no longer waits for the shrink', J,
@@ -107,7 +105,7 @@ MUTANTS = [
 
     # ---- the rest of the contract ------------------------------------
     ('the content stops fading in late and pops in as before', J,
-     """                  delay: reverse ? 0 : Math.round(ms * 0.45),""",
+     """                  delay: reverse ? 0 : Math.round(ms * 0.30),""",
      """                  delay: 0,"""),
     ('the open is no longer ~250ms', J,
      """    const GROW_OPEN_MS  = 250;""", """    const GROW_OPEN_MS  = 600;"""),
@@ -139,13 +137,9 @@ MUTANTS = [
     ('the dim never appears at all', J,
      """        state.overlay.hidden = false;""", """        state.overlay.hidden = true;"""),
     ('the arrow switch re-grows the whole frame as well as sliding', J,
-     """                growStop(state.stage);
-                state.stage.classList.remove('dccgg-growing');
-                growSlide(panel, anim.navDir);""",
-     """                growStop(state.stage);
-                state.stage.classList.remove('dccgg-growing');
-                growSlide(panel, anim.navDir);
-                growClip(state.stage, anim.from || tileRectFor(root, root.__dccggActiveKey), {});"""),
+     """                growSlideSwap(state.stage, anim.outgoing, panel, anim.navDir);""",
+     """                growSlideSwap(state.stage, anim.outgoing, panel, anim.navDir);
+                growClip(state.stage, tileRectFor(root, root.__dccggActiveKey), {});"""),
     ('a permanent will-change comes back on the scrollbar thumb', C,
      """.dccgg-scrollrail-thumb {
     min-height: 28px;
@@ -159,7 +153,22 @@ MUTANTS = [
      "            if ($audience === 'nope') { continue; }"),
 ]
 
-EQUIVALENT = []
+EQUIVALENT = [
+    ('the hub is still hidden when the close measures the tile '
+     '(hideDetailModal before the .is-detail removal)',
+     'equivalent since the hub stopped being hidden, and it was NOT when this mutant was '
+     'written — it survived a real run and was checked rather than waved through. '
+     'closeDetail() used to remove .is-detail before hideDetailModal() so the tile had a box '
+     'to shrink into: `.dccgg-root.is-detail .dccgg-menu` was display:none, and a tile inside '
+     'it measures 0x0. Keeping the hub on screen behind the dim added '
+     '`.dccgg-root.is-detail.is-modal .dccgg-menu {display:grid}`, and .is-modal is not removed '
+     'until the teardown — so at close time the menu is displayed whichever order the two run '
+     'in. Measured: with both classes on the root, getComputedStyle(.dccgg-menu).display is '
+     '"grid" and the first tile reports 174.5x120.5 at 390. The ordering is kept because the '
+     'synchronous removal still matters (a deferred View Transition is what made the content '
+     'pop), but the TILE no longer depends on it. Replaced by "the close is handed no tile to '
+     'shrink into", which covers the same assertion and does fail.'),
+]
 UNREACHABLE = [
     ('the grow does not hold 60fps on a real iPhone',
      'not reachable in this container and not pretended otherwise: WebKit cannot be installed here '

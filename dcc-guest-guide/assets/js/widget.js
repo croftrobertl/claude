@@ -1841,10 +1841,17 @@
         if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
         if (typeof root.__dccggHideSecrets === 'function') root.__dccggHideSecrets();
         const wasModal = !!root.__dccggModal;
-        // v0.27.10: synchronous on the popup path, and the order is the point —
-        // the hub has to be back on screen and laid out before the popup can
-        // shrink into the tile it came from, because `.is-detail` is what hides
-        // .dccgg-menu and a tile inside a display:none menu measures 0x0.
+        // v0.27.10: synchronous on the popup path, for the same reason the open
+        // is — a deferred View Transition callback is what made the content pop.
+        //
+        // The ORDER relative to hideDetailModal() is no longer load-bearing, and
+        // that is worth recording because it was while this was being written.
+        // The reason given here was that `.is-detail` hides .dccgg-menu, so the
+        // tile had to be back before the close could measure it. Keeping the hub
+        // on screen behind the dim (`.is-modal`) removed that dependency: the
+        // menu is displayed either way now, so the tile measures the same
+        // whichever order these two run in. The mutation runner lists the
+        // reordering as equivalent rather than pretending to kill it.
         if (wasModal) { root.classList.remove('is-detail'); }
         else { withViewTransition(() => root.classList.remove('is-detail')); }
         if (wasModal) hideDetailModal(root);
