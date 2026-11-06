@@ -2758,7 +2758,7 @@
     setTimeout(() => mmMap.invalidateSize(), 80);
     // every layer starts on, Old Borders included (a #v=map&then=<era> link picks its era instead)
     if (thenWant) thenApplyWant();
-    else if (m.querySelector('#mm-then').checked) thenToggle(true, null, false);
+    else if (m.querySelector('#mm-then').checked) thenToggle(true, null, false, true);   // on by default: leave the page at the top
   }
   // a #v=map&then=<era> link, or the History tab's "On today's map"
   function thenApplyWant() {
@@ -3413,12 +3413,13 @@
   function thenBarIntoView() {
     requestAnimationFrame(() => {
       const r = root._mapmode.querySelector('.dcc-tour-mm-wrap').getBoundingClientRect(), tb = document.querySelector('.dcc-tour-tabbar');
-      const limit = innerHeight - (tb && getComputedStyle(tb).display !== 'none' ? tb.offsetHeight : 0);   // it's position: fixed, so no offsetParent
+      const limit = tb && getComputedStyle(tb).display !== 'none' ? tb.getBoundingClientRect().top - 4 : innerHeight;   // the dock floats above the bottom edge
       if (r.bottom > limit && r.top - (r.bottom - limit) > -r.height / 2) window.scrollBy({ top: r.bottom - limit + 6, behavior: scrollBehavior() });
     });
   }
   // turn the overlay on/off; `slug` picks the era (default: the History tab's, else 1453)
-  function thenToggle(on, slug, fly) {
+  // `quiet`: the overlay coming on by itself as the tab opens, so the page stays where it is
+  function thenToggle(on, slug, fly, quiet) {
     const m = root._mapmode, ui = m.querySelector('.dcc-then'), btn = m.querySelector('.dcc-then-btn'), cb = m.querySelector('#mm-then');
     thenOn = on;
     btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.classList.toggle('active', on);
@@ -3434,7 +3435,7 @@
     }
     ui.hidden = false;
     ui.querySelector('.dcc-then-s').textContent = 'Loading the eras…';
-    thenBarIntoView();
+    if (!quiet) thenBarIntoView();
     thenLoad().then(() => {
       if (!thenOn) return;
       thenInit();
