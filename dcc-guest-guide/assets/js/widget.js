@@ -116,6 +116,412 @@
         fn();
     }
 
+
+    // ---- v0.27.10: a popup GROWS OUT OF the thing that opened it ---------
+    //
+    // Rob: tapping a tile and getting the popup was "visually jerky". The
+    // trace said why, and it was not one stall. Measured on the real /guest/
+    // page at 390px under 4x CPU throttling, from the tap's own timeStamp:
+    //
+    //     22.4 ->  69.6 ms   our synchronous work on the tap, 26.2 ms of it
+    //                        copying custom properties one at a time
+    //            115.8 ms    the box STARTS opening
+    //            155.7 ms    the CONTENT appears
+    //            216.6 ms    first fully-open painted frame
+    //   longest frozen frame 150 ms, 3 dropped
+    //
+    // So the content arrived 40 ms INTO a 250 ms animation: the guest watched
+    // an empty white box scale up and the text pop in on top of it. The flip
+    // that unhides the panel was deferred into a whole-page View Transition
+    // whose callback ran ~150 ms after it was requested. And the box got
+    // there by scale(0.96 -> 1), which stretches every glyph and the 16px
+    // corner for the whole animation.
+    //
+    // What replaces it grows a rounded RECTANGLE: clip-path inset() from the
+    // opener's own box out to the full popup. Nothing is scaled, so corners,
+    // borders and text are the right size in every frame.
+    //
+    // Driven through the Web Animations API, not a CSS class flip, for three
+    // reasons that are all measured rather than stylistic:
+    //   · WAAPI establishes its own start value, so the open needs no
+    //     `void offsetWidth` forced reflow (7.5 ms on the tap) and no
+    //     wait-a-frame-then-add-the-class (46.2 ms at 390/4x);
+    //   · the finish promise is where will-change comes back off, which a
+    //     transitionend listener cannot promise when the animation is
+    //     cancelled by a re-open;
+    //   · the reverse is the same keyframes read backwards, so the close
+    //     cannot drift away from the open.
+    const GROW_OPEN_MS  = 250;
+    const GROW_CLOSE_MS = 200;
+    const GROW_NAV_MS   = 220;
+    const GROW_FADE_MS  = 120;   // reduced motion, and the off-screen fallback
+    // A real ease-out: moves at once, settles. The close accelerates away
+    // instead, so it reads as going back into the tile rather than drifting.
+    const GROW_EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const GROW_EASE_IN  = 'cubic-bezier(0.55, 0, 0.55, 0.2)';
+
+    /**
+     * Every --dccgg-* custom property the root resolves to, as a plain object.
+     *
+     * CSS custom properties cascade through DOM ANCESTORS, so once the stage is
+     * portaled to <body> the values an Elementor Style control set on
+     * .dccgg-root stop reaching it (v0.9.7.7). The snapshot is what keeps a
+     * host's overrides working inside the popup — but walking all 567 computed
+     * properties to find the 23 that match cost 26.2 ms of the tap at 390 under
+     * 4x CPU, which is why it is taken once at init instead.
+     */
+    function readCustomProps(root) {
+        const out = {};
+        try {
+            const cs = getComputedStyle(root);
+            for (let i = 0; i < cs.length; i++) {
+                const name = cs[i];
+                if (name.indexOf('--dccgg-') === 0) {
+                    const val = cs.getPropertyValue(name);
+                    if (val) out[name] = val;
+                }
+            }
+        } catch (_) { /* defensive only */ }
+        return out;
+    }
+
+    /**
+     * Take that snapshot off the critical path. Deferred rather than taken
+     * inline at init, because init() itself runs during page load and the
+     * properties are not needed until somebody opens a section.
+     */
+    function cacheCustomProps(root) {
+        const take = () => {
+            if (!root.isConnected) return;
+            root.__dccggVarSnapshot = readCustomProps(root);
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(take, { timeout: 2000 });
+        } else {
+            setTimeout(take, 400);
+        }
+    }
+
+    /** Is any part of this rectangle on screen? */
+    function rectOnScreen(r) {
+        if (!r || !(r.width > 0) || !(r.height > 0)) return false;
+        const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+        const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+        return r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw;
+    }
+
+    /**
+     * The hub tile for a section key, measured.
+     *
+     * Measured through the live element every time rather than remembered at
+     * tap time, because the close needs it too and by then the guest may have
+     * rotated the phone. The ORDER matters at both ends and is the reason this
+     * is a function and not an inline call: `.dccgg-root.is-detail .dccgg-menu`
+     * is `display: none`, so a tile measures 0x0 while a section is open. Read
+     * it before `.is-detail` goes on, and after it comes off.
+     */
+    function tileRectFor(root, key) {
+        if (!root || !key) return null;
+        let tile = null;
+        try { tile = root.querySelector('.dccgg-tile[data-key="' + cssEsc(key) + '"]'); }
+        catch (_) { return null; }
+        if (!tile) return null;
+        const r = tile.getBoundingClientRect();
+        return (r.width > 0 && r.height > 0) ? r : null;
+    }
+
+    /** The visible panel inside a stage, by key — the thing whose text fades. */
+    function activePanel(stage, key) {
+        if (!stage || !stage.querySelector) return null;
+        if (key) {
+            try {
+                const byKey = stage.querySelector('.dccgg-detail[data-key="' + cssEsc(key) + '"]:not([hidden])');
+                if (byKey) return byKey;
+            } catch (_) { /* fall through to the generic lookup */ }
+        }
+        return stage.querySelector('.dccgg-detail:not([hidden])');
+    }
+
+    /**
+     * The element's OWN corner radii, so the clip's corners are the element's
+     * corners and never change size mid-flight. One getComputedStyle call.
+     * The mobile sheet is `16px 16px 0 0` and the full-screen map layer is 0 —
+     * a hard-coded radius would round the bottom of the sheet for the length
+     * of the animation and then snap it square when the clip is removed.
+     */
+    function cornerRadii(el) {
+        let out = '16px';
+        try {
+            const cs = getComputedStyle(el);
+            const four = [cs.borderTopLeftRadius, cs.borderTopRightRadius,
+                cs.borderBottomRightRadius, cs.borderBottomLeftRadius];
+            // A percentage radius resolves against the box, which the clip is
+            // shrinking — it would animate on its own. Fall back rather than
+            // produce a corner nobody asked for.
+            if (four.every((v) => v && v.indexOf('%') === -1 && v.indexOf(' ') === -1)) {
+                out = four.join(' ');
+            }
+        } catch (_) { /* defensive only */ }
+        return out;
+    }
+
+    /**
+     * `inset()` that frames `from` inside `box`, both viewport rectangles.
+     * Clamped per side, and opposite sides are scaled down together if they
+     * would cross: an opener entirely outside the popup's box would otherwise
+     * ask for a negative-area clip, which engines resolve differently.
+     */
+    function insetFor(box, from, radii) {
+        const cl = (v, max) => Math.max(0, Math.min(v, max));
+        let top    = cl(from.top - box.top, box.height);
+        let left   = cl(from.left - box.left, box.width);
+        let right  = cl(box.right - from.right, box.width);
+        let bottom = cl(box.bottom - from.bottom, box.height);
+        if (top + bottom > box.height) {
+            const k = box.height / (top + bottom);
+            top *= k; bottom *= k;
+        }
+        if (left + right > box.width) {
+            const k = box.width / (left + right);
+            left *= k; right *= k;
+        }
+        return 'inset(' + top.toFixed(1) + 'px ' + right.toFixed(1) + 'px '
+            + bottom.toFixed(1) + 'px ' + left.toFixed(1) + 'px round ' + radii + ')';
+    }
+
+    /**
+     * Cancel whatever this element is in the middle of and put every property
+     * this module touches back to the stylesheet's value. Called before a new
+     * animation and at the end of a teardown; never leaves will-change behind.
+     */
+    function growStop(el) {
+        if (!el) return;
+        const anims = el.__dccggGrowAnims;
+        if (anims) { anims.forEach((a) => { try { a.cancel(); } catch (_) {} }); }
+        el.__dccggGrowAnims = null;
+        el.style.willChange = '';
+        el.style.clipPath = '';
+        el.style.opacity = '';
+        el.style.translate = '';
+        // The out-of-flow properties growSlideSwap() sets, put back here too,
+        // because this is the ONE place that undoes everything this module
+        // does. Clearing the token with them is what stops a superseded swap
+        // hiding a panel that is now the visible one — see growSlideSwap.
+        el.style.position = '';
+        el.style.top = '';
+        el.style.left = '';
+        el.style.right = '';
+        el.style.pointerEvents = '';
+        el.__dccggSwapOut = null;
+        const c = el.__dccggGrowContent;
+        if (c) {
+            c.style.willChange = '';
+            c.style.opacity = '';
+            c.style.translate = '';
+        }
+        el.__dccggGrowContent = null;
+    }
+
+    /** Register an animation so growStop() can find it, and keep will-change
+     *  for exactly as long as it runs. */
+    function growTrack(el, anim, opts) {
+        const o = opts || {};
+        if (!el.__dccggGrowAnims) el.__dccggGrowAnims = [];
+        el.__dccggGrowAnims.push(anim);
+        const off = () => {
+            // will-change comes off the moment the animation stops, whichever
+            // way it stopped. On a REVERSE the composited value is deliberately
+            // left in place — clearing the clip here would paint one frame of
+            // the full-size popup before the teardown hides it.
+            el.style.willChange = '';
+            const c = el.__dccggGrowContent;
+            if (c) c.style.willChange = '';
+            if (!o.reverse) {
+                el.style.clipPath = '';
+                el.style.opacity = '';
+                el.style.translate = '';
+                if (c) { c.style.opacity = ''; c.style.translate = ''; }
+                try { anim.cancel(); } catch (_) {}
+                if (typeof o.onDone === 'function') { try { o.onDone(); } catch (_) {} }
+            }
+        };
+        if (anim.finished && typeof anim.finished.then === 'function') {
+            anim.finished.then(off, off);
+        } else {
+            setTimeout(off, (o.duration || GROW_OPEN_MS) + 40);
+        }
+    }
+
+    /**
+     * A short opacity fade and nothing else. Reduced motion asks for exactly
+     * this, and it is also what an engine without WAAPI falls back to through
+     * the stylesheet.
+     */
+    function growFade(el, reverse, content, ms) {
+        const dur = ms || GROW_FADE_MS;
+        if (!el || typeof el.animate !== 'function') return dur;
+        growStop(el);
+        el.__dccggGrowContent = content || null;
+        el.style.willChange = 'opacity';
+        const a = el.animate(reverse ? [{ opacity: 1 }, { opacity: 0 }]
+                                     : [{ opacity: 0 }, { opacity: 1 }],
+            { duration: dur, easing: 'linear', fill: 'both' });
+        growTrack(el, a, { reverse: reverse, duration: dur });
+        return dur;
+    }
+
+    /**
+     * Rob's own instruction for the case where the tile is scrolled off
+     * screen: "a quick fade-and-drop", rather than growing out of a rectangle
+     * the guest cannot see. `translate` is a separate property from
+     * `transform`, so the drop composes with the centring translate the
+     * stylesheet already puts on the stage instead of fighting it.
+     */
+    function growFadeDrop(el, reverse, content) {
+        if (typeof el.animate !== 'function') return GROW_FADE_MS;
+        const ms = reverse ? 160 : 180;
+        el.__dccggGrowContent = content || null;
+        el.style.willChange = 'opacity, translate';
+        const a = el.animate(
+            reverse ? [{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 10px' }]
+                    : [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }],
+            { duration: ms, easing: reverse ? GROW_EASE_IN : GROW_EASE_OUT, fill: 'both' });
+        growTrack(el, a, { reverse: reverse, duration: ms });
+        return ms;
+    }
+
+    /**
+     * Grow `el` out of the viewport rectangle `from`, or shrink it back into
+     * it. Returns how long the caller should wait before tearing `el` down,
+     * so a caller never has to know which branch ran.
+     */
+    function growClip(el, from, opts) {
+        const o = opts || {};
+        const reverse = o.reverse === true;
+        const ms = o.duration || (reverse ? GROW_CLOSE_MS : GROW_OPEN_MS);
+        if (!el) return 0;
+        growStop(el);
+        if (REDUCED_MOTION) { return growFade(el, reverse, o.content); }
+        if (typeof el.animate !== 'function') { return 0; }
+        const box = el.getBoundingClientRect();
+        if (!(box.width > 0) || !(box.height > 0) || !rectOnScreen(from)) {
+            return growFadeDrop(el, reverse, o.content);
+        }
+        const radii = o.radii || cornerRadii(el);
+        const small = insetFor(box, from, radii);
+        const full  = 'inset(0px 0px 0px 0px round ' + radii + ')';
+        el.__dccggGrowContent = o.content || null;
+        el.style.willChange = 'clip-path';
+        // The start value inline as well as in the keyframes: belt and braces
+        // against one un-clipped frame painting before the animation commits.
+        if (!reverse) { el.style.clipPath = small; }
+        const a = el.animate(reverse ? [{ clipPath: full }, { clipPath: small }]
+                                     : [{ clipPath: small }, { clipPath: full }],
+            { duration: ms, easing: reverse ? GROW_EASE_IN : GROW_EASE_OUT, fill: 'both' });
+        growTrack(el, a, { reverse: reverse, duration: ms, onDone: o.onDone });
+        // The content fades in over the LAST part of the open, so the text is
+        // already in place behind the growing edge rather than arriving after
+        // it. On the close it goes first, so the box shrinks empty.
+        if (o.content && typeof o.content.animate === 'function') {
+            o.content.style.willChange = 'opacity';
+            const ca = o.content.animate(
+                reverse ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 0 }, { opacity: 1 }],
+                // 30%, not 45%. At 45% the box was empty for well over half of
+                // what the guest perceives as the open — the frame strip at 390
+                // showed a blank white card at 180ms and 250ms and the words
+                // only at 400ms, which is the very thing this release exists to
+                // remove. 30% still puts the fade in the last part, and the
+                // text is readable while the edge is still moving.
+                { duration: Math.round(ms * (reverse ? 0.45 : 0.70)),
+                  delay: reverse ? 0 : Math.round(ms * 0.30),
+                  easing: 'linear', fill: 'both' });
+            growTrack(el, ca, { reverse: reverse, duration: ms });
+        }
+        return ms;
+    }
+
+    /**
+     * The arrows inside an open popup. Rob's pick: the NEXT section slides in
+     * from the right, the PREVIOUS from the left.
+     */
+    function growSlide(panel, dir) {
+        if (!panel || !dir || REDUCED_MOTION) return 0;
+        if (typeof panel.animate !== 'function') return 0;
+        growStop(panel);
+        panel.style.willChange = 'translate, opacity';
+        const from = dir > 0 ? '100% 0' : '-100% 0';
+        const a = panel.animate(
+            [{ translate: from, opacity: 0 }, { translate: '0 0', opacity: 1 }],
+            { duration: GROW_NAV_MS, easing: GROW_EASE_OUT, fill: 'both' });
+        growTrack(panel, a, { duration: GROW_NAV_MS });
+        return GROW_NAV_MS;
+    }
+
+    /**
+     * ...and the panel being left behind slides out the other way, so the two
+     * move as one strip.
+     *
+     * Built second, because the first version animated only the incoming panel
+     * and the frame strip at 390 under 4x CPU showed why that is not enough:
+     * ONE BLANK WHITE FRAME at ~60ms. The outgoing panel is hidden by the flip
+     * immediately, and the incoming one cannot be seen until it has been laid
+     * out and painted — a section with a video takes about that long — so for
+     * one frame the stage showed nothing but its own background. A white flash
+     * between two sections is exactly the kind of thing this release exists to
+     * remove, so the outgoing panel stays on screen for the length of the
+     * slide.
+     *
+     * It is taken OUT OF FLOW to do that, which is why `top` is the stage's
+     * current scrollTop and not 0: .dccgg-stage is the scroll container, so an
+     * absolutely-positioned child at top:0 sits at the top of the CONTENT, not
+     * at the top of what the guest can see. A guest who has scrolled down and
+     * then presses an arrow would otherwise watch a panel slide out of a place
+     * that is off screen.
+     */
+    function growSlideSwap(stage, outgoing, incoming, dir) {
+        const ms = growSlide(incoming, dir);
+        if (!ms || !stage || !outgoing || outgoing === incoming) return ms;
+        if (typeof outgoing.animate !== 'function') return ms;
+        const top = stage.scrollTop || 0;
+        outgoing.hidden = false;
+        outgoing.style.position = 'absolute';
+        outgoing.style.top = top + 'px';
+        outgoing.style.left = '0';
+        outgoing.style.right = '0';
+        // Out of flow AND out of the way: it must not catch a tap meant for
+        // the section arriving over it.
+        outgoing.style.pointerEvents = 'none';
+        outgoing.style.willChange = 'translate, opacity';
+        const a = outgoing.animate(
+            [{ translate: '0 0', opacity: 1 },
+                { translate: (dir > 0 ? '-100% 0' : '100% 0'), opacity: 0 }],
+            { duration: ms, easing: GROW_EASE_OUT, fill: 'both' });
+        // PRESS NEXT, THEN PREVIOUS BEFORE THE FIRST SLIDE ENDS. The panel
+        // leaving on the first press is the panel ARRIVING on the second, and
+        // this callback's job is to hide it — so without the token it hid the
+        // section the guest had just asked for, and left it out of flow and
+        // inert as well. growSlide() -> growStop() clears the token on the way
+        // in, which makes this one a no-op.
+        outgoing.__dccggSwapOut = a;
+        const done = () => {
+            if (outgoing.__dccggSwapOut !== a) return;   // superseded
+            outgoing.__dccggSwapOut = null;
+            try { a.cancel(); } catch (_) {}
+            outgoing.hidden = true;
+            outgoing.style.position = '';
+            outgoing.style.top = '';
+            outgoing.style.left = '';
+            outgoing.style.right = '';
+            outgoing.style.pointerEvents = '';
+            outgoing.style.willChange = '';
+            outgoing.style.translate = '';
+            outgoing.style.opacity = '';
+        };
+        if (a.finished && typeof a.finished.then === 'function') { a.finished.then(done, done); }
+        else { setTimeout(done, ms + 40); }
+        return ms;
+    }
+
     // v0.9.7.25: append `viewport-fit=cover` to the page's viewport meta so
     // env(safe-area-inset-bottom) returns a real value on iOS. The mobile
     // popups anchor their bottom edge at `bottom: env(safe-area-inset-bottom)`
@@ -187,6 +593,13 @@
         // reimplement the portal, the focus trap or the scroll lock.
         openDetail,
         closeDetail,
+        // v0.27.10, for the Front Desk dialog in the guest bundle: growing a
+        // popup out of the control that opened it is core's job, so the guest
+        // bundle asks rather than reimplementing the clip maths.
+        growClip,
+        growStop,
+        GROW_OPEN_MS,
+        GROW_CLOSE_MS,
         applyGuestToAll() {
             liveRoots.forEach((root) => {
                 const cfg = root.__dccgg && root.__dccgg.config;
@@ -297,6 +710,7 @@
         wireSectionNav(root, config);
         wireShrinkHeader(root);
         wireTileTap(root);
+        cacheCustomProps(root);
         wireOpenIntent(root);
         wireMoreMenu(root, config);
         wireChecklists(root);
@@ -1341,10 +1755,40 @@
                 'or this section has no items / no detail markup yet.');
             return;
         }
-        withViewTransition(() => {
+        // v0.27.10 — THE ORDERING FIX, and it is the jerk itself rather than
+        // a polish item. This flip is what unhides the panel. It used to go
+        // through withViewTransition(), whose callback ran ~150 ms after it was
+        // requested at 390 under 4x CPU — so the box began opening at 116 ms
+        // with every panel still hidden and the text appeared at 156 ms, a hard
+        // pop 40 ms into a 250 ms animation. On the popup path it is now
+        // synchronous, so the content is in place before the first frame of the
+        // grow. The other reveal modes keep the view transition: they have no
+        // grow animation to be out of step with, and the whole-page cross-fade
+        // is the only thing they have.
+        const willGrow = shouldUseDetailModal(root);
+        // Measured BEFORE `.is-detail` goes on: that class hides .dccgg-menu,
+        // and a tile inside a display:none menu measures 0x0.
+        const openState = root.__dccggModal;
+        // `!closeTimer` is load-bearing. `.is-modal-open` is deliberately NOT
+        // removed until the close teardown runs, so a popup caught mid-close
+        // still carries it — and treating that as a re-open would slide a panel
+        // inside a frame still holding the shrunk clip from the close that was
+        // just cancelled, i.e. an invisible popup. Mid-close means grow again.
+        const reopening = !!(willGrow && openState && openState.stage
+            && !openState.closeTimer
+            && openState.stage.classList.contains('is-modal-open'));
+        const growFrom = (willGrow && !reopening) ? tileRectFor(root, key) : null;
+        const navDir = root.__dccggNavDir || 0;
+        root.__dccggNavDir = 0;
+        // Captured BEFORE the flip hides it — it has to stay on screen for the
+        // length of the slide or the stage is blank for a frame.
+        const outgoing = reopening && portaledStage
+            ? portaledStage.querySelector('.dccgg-detail:not([hidden])') : null;
+        const flipPanels = () => {
             details.forEach(d => { d.hidden = (d.dataset.key !== key); });
             root.classList.add('is-detail');
-        });
+        };
+        if (willGrow) { flipPanels(); } else { withViewTransition(flipPanels); }
         // v0.4 fix: zero the progress bar of the newly visible detail and
         // clear any stale search highlights from a prior visit. v0.6: also
         // strip .is-shrunk from every detail so a previously-scrolled
@@ -1354,8 +1798,9 @@
             if (typeof clearHighlights === 'function') clearHighlights(activeDetail);
         }
 
-        if (shouldUseDetailModal(root)) {
-            showDetailModal(root);
+        if (willGrow) {
+            showDetailModal(root, { from: growFrom, navDir: navDir, reopening: reopening,
+                outgoing: outgoing });
         } else if (activeDetail && typeof activeDetail.scrollIntoView === 'function') {
             activeDetail.scrollIntoView({ block: 'start', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
         } else {
@@ -1396,7 +1841,12 @@
         if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
         if (typeof root.__dccggHideSecrets === 'function') root.__dccggHideSecrets();
         const wasModal = !!root.__dccggModal;
-        withViewTransition(() => root.classList.remove('is-detail'));
+        // v0.27.10: synchronous on the popup path, and the order is the point —
+        // the hub has to be back on screen and laid out before the popup can
+        // shrink into the tile it came from, because `.is-detail` is what hides
+        // .dccgg-menu and a tile inside a display:none menu measures 0x0.
+        if (wasModal) { root.classList.remove('is-detail'); }
+        else { withViewTransition(() => root.classList.remove('is-detail')); }
         if (wasModal) hideDetailModal(root);
         setTimeout(() => {
             root.querySelectorAll('.dccgg-detail').forEach(d => {
@@ -1482,7 +1932,7 @@
         return Math.max(0, Math.round(max));
     }
 
-    function showDetailModal(root) {
+    function showDetailModal(root, anim) {
         const stage = root.querySelector('.dccgg-stage')
             || (root.__dccggModal && root.__dccggModal.stage);
         if (!stage) {
@@ -1538,13 +1988,19 @@
                 // its sticky header. Snapshot the current values onto
                 // stage.style at portal time so variable-based overrides
                 // continue to apply post-portal.
+                // v0.27.10: this loop is 26.2 ms of the tap at 390 under 4x
+                // CPU — walking 567 computed properties to find 23 — and it is
+                // the largest single item in the open path. It does not need to
+                // run there: the root's custom properties are settled long
+                // before anyone taps, so cacheCustomProps() takes the snapshot
+                // once at init, off the critical path, and this applies it.
+                // The live read stays as the fallback, so a root that was never
+                // initialised through init() still portals correctly.
                 try {
-                    const rootStyle = getComputedStyle(root);
-                    for (let i = 0; i < rootStyle.length; i++) {
-                        const name = rootStyle[i];
-                        if (name.indexOf('--dccgg-') === 0) {
-                            const val = rootStyle.getPropertyValue(name);
-                            if (val) stage.style.setProperty(name, val);
+                    const snap = root.__dccggVarSnapshot || readCustomProps(root);
+                    for (const name in snap) {
+                        if (Object.prototype.hasOwnProperty.call(snap, name)) {
+                            stage.style.setProperty(name, snap[name]);
                         }
                     }
                 } catch (_) { /* getComputedStyle is universally supported; defensive only */ }
@@ -1580,13 +2036,39 @@
         }
         document.documentElement.classList.add('dccgg-detail-open');
         document.body.classList.add('dccgg-detail-open');
-        // Force a layout flush so the closed-state CSS commits before we
-        // add .is-modal-open in the next frame — without this, the browser
-        // collapses the closed→open paints into a single tick and the
-        // transition doesn't animate.
-        void state.stage.offsetWidth;
+        // v0.27.10: the popup is in its open state NOW, in the same frame as
+        // the portal and the dim, and the grow animation reveals it. What used
+        // to be here was a `void state.stage.offsetWidth` forced reflow (7.5 ms
+        // on the tap) followed by adding the class in the NEXT frame — which at
+        // 390 under 4x CPU was 46.2 ms later, because the frame it was waiting
+        // for had just been blown by the work above. Nothing needs a flush any
+        // more: a Web Animation establishes its own start value.
+        const growing = typeof state.stage.animate === 'function';
+        // v0.27.10: tells the stylesheet to LEAVE THE HUB ON SCREEN behind the
+        // dim, so the popup grows out of a tile the guest can still see. Added
+        // in the same task as `.is-detail`, before any style flush, so the
+        // tiles never blink.
+        root.classList.add('is-modal');
+        state.stage.classList.add('is-modal-open');
+        {
+            const panel = activePanel(state.stage, root.__dccggActiveKey || '');
+            if (anim && anim.reopening) {
+                // An arrow or a swipe inside an already-open popup: the panel
+                // slides, the frame stays where it is. The frame must be
+                // carrying no clip of its own — a close that was cancelled a
+                // moment ago would have left one.
+                growStop(state.stage);
+                state.stage.classList.remove('dccgg-growing');
+                growSlideSwap(state.stage, anim.outgoing, panel, anim.navDir);
+            } else {
+                if (growing) { state.stage.classList.add('dccgg-growing'); }
+                growClip(state.stage, anim && anim.from, {
+                    duration: GROW_OPEN_MS, content: panel,
+                    onDone: () => state.stage.classList.remove('dccgg-growing'),
+                });
+            }
+        }
         requestAnimationFrame(() => {
-            state.stage.classList.add('is-modal-open');
             // v0.12.0: expose the open popup as a modal dialog named after
             // its section. Focus restore already existed (state.lastTrigger);
             // this adds the role and, in onKey below, keeps Tab inside.
@@ -1721,15 +2203,46 @@
         }
         state.onKey = null;
         state.onOverlayClick = null;
-        // v0.9.7: trigger the close transition (opacity → 0, transform back
-        // to scale 0.96 / translateY(100%)) by removing the open class.
+        // v0.27.10: the close is the open read backwards — the popup shrinks
+        // into the same tile over GROW_CLOSE_MS, and the class that would make
+        // the old opacity/scale transition run is NOT removed until the
+        // animation has finished and the teardown below hides the stage. Every
+        // way out of a popup arrives here (the X, Back, Esc, the swipe-down,
+        // the browser's back gesture and the app shell's tab bar), so there is
+        // one close animation rather than one per entry point.
+        let closeWait = 280;
         if (state.stage) {
-            state.stage.classList.remove('is-modal-open');
+            if (typeof state.stage.animate === 'function') {
+                const key = root.__dccggActiveKey || '';
+                const back = tileRectFor(root, key);
+                state.stage.classList.add('dccgg-growing');
+                closeWait = growClip(state.stage, back, {
+                    duration: GROW_CLOSE_MS, reverse: true,
+                    content: activePanel(state.stage, key),
+                }) + 20;
+            } else {
+                state.stage.classList.remove('is-modal-open');
+            }
+            // The dim lifts WITH the shrink. It used to hold full strength for
+            // the whole close and then vanish when the teardown set [hidden],
+            // which read as the screen snapping back rather than the popup
+            // going away.
+            growFade(state.overlay, true, null, closeWait - 20);
             state.stage.removeAttribute('role');
             state.stage.removeAttribute('aria-modal');
             state.stage.removeAttribute('aria-label');
         }
         state.closeTimer = setTimeout(() => {
+            if (state.stage) {
+                state.stage.classList.remove('is-modal-open');
+                // Hidden first, THEN the composited clip is released: the other
+                // order paints one frame of the full-size popup.
+                growStop(state.stage);
+                // `dccgg-growing` comes off at the very END of this teardown,
+                // not here — it is what suppresses the header's 300ms padding
+                // transition, and `dccgg-detail-open` is removed a few lines
+                // down, which is the change that would otherwise start one.
+            }
             document.documentElement.classList.remove('dccgg-detail-open');
             document.body.classList.remove('dccgg-detail-open');
             // Unpin and put the page back exactly where the guest left it —
@@ -1747,7 +2260,10 @@
             try { window.scrollTo({ top: lockedScrollY, left: 0, behavior: 'instant' }); }
             catch (_) { window.scrollTo(0, lockedScrollY); }
             de.style.scrollBehavior = prevBehavior;
-            if (state.overlay) state.overlay.hidden = true;
+            if (state.overlay) {
+                growStop(state.overlay);
+                state.overlay.hidden = true;
+            }
             if (state.stageMarker && state.stageMarker.parentNode) {
                 state.stageMarker.parentNode.insertBefore(state.stage, state.stageMarker);
                 state.stageMarker.parentNode.removeChild(state.stageMarker);
@@ -1756,6 +2272,8 @@
                 state.overlayMarker.parentNode.insertBefore(state.overlay, state.overlayMarker);
                 state.overlayMarker.parentNode.removeChild(state.overlayMarker);
             }
+            if (state.stage) { state.stage.classList.remove('dccgg-growing'); }
+            root.classList.remove('is-modal');
             const lastTrigger = state.lastTrigger;
             root.__dccggModal = null;
             if (lastTrigger && typeof lastTrigger.focus === 'function') {
@@ -1763,7 +2281,7 @@
                     try { lastTrigger.focus(); } catch (_) {}
                 }
             }
-        }, 280);
+        }, closeWait);
     }
 
     function wireBack(root, config) {
@@ -3463,7 +3981,8 @@
      * The iframe is created on FIRST open and kept alive afterwards, so a
      * reopen costs nothing. There is deliberately no "destroy on close".
      */
-    const mapLayer = { el: null, frame: null, title: null, opener: null, pushed: false, src: null };
+    const mapLayer = { el: null, frame: null, title: null, opener: null, pushed: false,
+        src: null, card: null, hideTimer: null };
 
     function buildMapLayer() {
         if (mapLayer.el) return mapLayer.el;
@@ -3538,6 +4057,11 @@
         // on the way back — nor is the section heading, which is what had
         // focus when the sheet was opened by touch (v0.24.4).
         mapLayer.opener = card.querySelector('.dccgg-mapcard-open') || document.activeElement;
+        // v0.27.10: the card is kept so the layer can shrink back into it.
+        mapLayer.card = card;
+        // A close animation may still be playing out; it must not hide the
+        // layer we are about to show.
+        if (mapLayer.hideTimer) { clearTimeout(mapLayer.hideTimer); mapLayer.hideTimer = null; }
         mapLayer.title.textContent = label;
         mapLayer.closeBtn.setAttribute('aria-label', 'Close ' + label);
         el.setAttribute('aria-label', label);
@@ -3559,6 +4083,14 @@
         }
         el.hidden = false;
         document.documentElement.classList.add('dccgg-map-open');
+        // v0.27.10: the layer grows out of the preview card the guest tapped,
+        // on exactly the mechanism the section popups use. The iframe is NOT
+        // touched — a clip-path is a paint-time mask, so the map does not
+        // reload, which is the whole reason the layer lives on <body> and is
+        // built once (v0.27.8).
+        growClip(el, card.getBoundingClientRect(), {
+            duration: GROW_OPEN_MS, content: mapLayer.frame,
+        });
         try {
             history.pushState({ dccggMap: 1 }, '');
             mapLayer.pushed = true;
@@ -3572,8 +4104,21 @@
     function closeMapLayer() {
         const el = mapLayer.el;
         if (!el || el.hidden) return;
-        el.hidden = true;
-        document.documentElement.classList.remove('dccgg-map-open');
+        // v0.27.10: shrink back into the card, then hide. `dccgg-map-open`
+        // comes off only with the hide, because it is what keeps the page
+        // behind from scrolling and the layer is still on screen until then.
+        const card = mapLayer.card;
+        const into = (card && card.isConnected) ? card.getBoundingClientRect() : null;
+        const wait = growClip(el, into, {
+            duration: GROW_CLOSE_MS, reverse: true, content: mapLayer.frame,
+        });
+        if (mapLayer.hideTimer) clearTimeout(mapLayer.hideTimer);
+        mapLayer.hideTimer = setTimeout(() => {
+            mapLayer.hideTimer = null;
+            growStop(el);
+            el.hidden = true;
+            document.documentElement.classList.remove('dccgg-map-open');
+        }, wait + 20);
         if (mapLayer.pushed) {
             mapLayer.pushed = false;
             try { history.back(); } catch (_) {}
@@ -3735,6 +4280,12 @@
                 if (btn.hasAttribute('disabled')) return;
                 const key = btn.dataset.targetKey || '';
                 if (!key) return;
+                // v0.27.10, Rob's pick: NEXT slides in from the right,
+                // PREVIOUS from the left. The direction is set here rather
+                // than worked out from the key order, because the key order is
+                // the host's section order and a disabled arrow at either end
+                // would make it ambiguous.
+                root.__dccggNavDir = btn.classList.contains('dccgg-section-next') ? 1 : -1;
                 openDetail(root, key);
                 hapticPulse(root, 20);
             });

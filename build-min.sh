@@ -78,7 +78,12 @@ src = re.sub(r'/\*[\s\S]*?\*/', '', src)
 # but an Emergency section whose audience is `both` still renders its contact
 # strip on the public guide, and that strip needs its CSS in core.
 GUEST = re.compile(r'\.dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel)[-a-z]*')
-NESTED = re.compile(r'^@(media|supports|layer|container)\b', re.I)
+# v0.27.10: `starting-style` added. It is a NESTING at-rule — its body holds
+# ordinary rules — and without it here the whole block fell through to the
+# "not audience-specific" branch and shipped a .dccgg-report-dialog rule in the
+# PUBLIC bundle. Caught by public-mode.test.php's audience check, which is why
+# that check is written against the built files rather than the source.
+NESTED = re.compile(r'^@(media|supports|layer|container|starting-style)\b', re.I)
 
 def split_top(css):
     i, n, parts = 0, len(css), []

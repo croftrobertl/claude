@@ -596,8 +596,35 @@
     transition: opacity var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-.dccgg-root.is-detail .dccgg-menu {
+/* v0.27.10: `:not(.is-modal)`, and this is what makes the grow read as a grow.
+   In MODAL mode the popup is portaled to <body> and the hub sits behind the dim
+   overlay, so hiding it buys nothing — and now that the panel flip is
+   synchronous, hiding it happens ~150ms BEFORE the popup is visible. Measured
+   at 390 under 4x CPU: the tiles vanished, the screen went grey, and a white
+   box then grew out of a tile that was no longer there. Caught in the frame
+   strip, not in a test — it is the kind of fault only a picture shows.
+   The inline reveal modes (accordion, flip, split-pane, the Elementor editor)
+   never get .is-modal and still hide the menu, which they must: their stage
+   takes the menu's place in normal flow. */
+.dccgg-root.is-detail:not(.is-modal) .dccgg-menu {
     display: none;
+}
+/* And the same thing said POSITIVELY, which is the half that actually holds.
+   `:not(.is-modal)` only stops THIS file hiding the hub; it cannot stop a
+   stale copy of the old `.dccgg-root.is-detail .dccgg-menu {display:none}`
+   at (0,2,0) from doing it. That is not hypothetical — it is exactly what
+   the frame strip caught, because the live page serves the previous release's
+   combined stylesheet and the working copy is appended after it. SpeedyCache
+   rebuilds that bundle on upgrade, but there is a window, and a guest in it
+   would get the grey. (0,4,0), and (0,5,0) for the carousel, so the hub is
+   restored whatever an older stylesheet still says. */
+.dccgg-root.is-detail.is-modal .dccgg-menu {
+    display: grid;
+}
+@media (max-width: 768px) {
+    .dccgg-layout-carousel .dccgg-root.is-detail.is-modal .dccgg-menu {
+        display: flex;
+    }
 }
 
 /* v0.9.7.24: Elementor editor preview — reveal the clicked section's
@@ -767,7 +794,12 @@ body.dccgg-detail-open .dccgg-scrollrail { display: block; }
 .dccgg-scrollrail-thumb {
     min-height: 28px;
     background: rgba(0, 0, 0, 0.38);
-    will-change: transform, height;
+    /* v0.27.10: `will-change: transform, height` used to sit here permanently.
+       The brief for this release is that will-change goes on for an animation
+       and comes off after, and a standing hint is the opposite of that: it
+       holds a compositor layer for a 5px-wide bar for as long as a popup is
+       open, in exchange for nothing — the thumb is moved from a rAF on scroll
+       and a 5x28px translate needs no promotion. Removed, not relocated. */
 }
 
 .dccgg-detail-overlay {
@@ -776,7 +808,13 @@ body.dccgg-detail-open .dccgg-scrollrail { display: block; }
     background: rgba(0, 0, 0, 0.45);
     z-index: 10009;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    /* v0.27.10: 0.25s, matching GROW_OPEN_MS, so the page behind dims over
+       exactly the time the popup takes to grow. It is also now started in the
+       SAME frame as the grow: the old order portaled and un-hid the overlay at
+       34ms and only added the open class at 116ms, so the screen went dark and
+       the popup arrived 80ms later. The close fades it from JS, over the
+       shrink, rather than letting the teardown snap it off at the end. */
+    transition: opacity 0.25s ease;
 }
 .dccgg-detail-overlay:not([hidden]) {
     opacity: 1;
@@ -1125,11 +1163,16 @@ body.dccgg-detail-open {
    there is nothing of the host's to contest; and were the host to set a tile
    border later, their rule would tie at (0,5,0) and win on order.
 
-   No .dccgg-stage arm, deliberately, and this one was measured rather than
-   assumed: the tiles live inside the stage, which is portaled to <body> when
-   a section opens — but .dccgg-menu is display:none in that state and the
-   tiles report getClientRects().length === 0, so there is nothing visible for
-   a stage arm to style. The app-shell rule above is the same shape. */
+   No .dccgg-stage arm, deliberately. The reason written here in v0.27.7 was
+   that .dccgg-menu is display:none while a section is open, so a tile has no
+   box for a stage arm to style — and v0.27.10 made that FALSE: the hub now
+   stays on screen behind the dim so the popup can grow out of a tile the
+   guest can still see. The conclusion is unchanged, for a better reason: the
+   hub's tiles are in .dccgg-menu inside .dccgg-root, and the ROOT is not what
+   gets portaled — only .dccgg-stage is. So this rule reaches them wherever
+   the stage has gone, and the only tile inside the stage is the popup
+   header's mini tile, which is not supposed to wear a card.
+   The app-shell rule above is the same shape. */
 .dccgg-root.dccgg-root:not(.dccgg-app-shell) .dccgg-tile.dccgg-tile {
     border: 1px solid var(--dccgg-tile-border);
     border-radius: 16px;
@@ -6306,5 +6349,125 @@ html.dccgg-map-open, html.dccgg-map-open body {
     .dccgg-root.dccgg-root .dccgg-rev-card.dccgg-rev-card:hover .dccgg-rev-mark,
     .dccgg-stage.dccgg-stage .dccgg-rev-card.dccgg-rev-card:hover .dccgg-rev-mark {
         transform: scale(1.12);
+    }
+}
+
+/* ==========================================================================
+   v0.27.10 — THE POPUP GROWS OUT OF THE TILE
+
+   Rob: tapping a tile to open its popup was "visually jerky". The engine is in
+   widget.js (see the GROW_* block there for the trace that named the cause);
+   what lives here is only what CSS has to stop doing while it plays, plus the
+   reduced-motion answer.
+   ========================================================================== */
+
+/* While a grow or a shrink is in flight the stage's OWN opacity/transform
+   transition must not also run. That transition is the scale(0.96 -> 1) Rob
+   objected to — it stretches every glyph and the 16px corner for the whole
+   250ms — and two animations on one element is how a 250ms open becomes a
+   250ms open that also drifts.
+
+   (0,3,1): a doubled class on a body-scoped host. The rule it has to beat is
+   `body.dccgg-detail-open .dccgg-stage` at (0,2,1), which is where the
+   transition is declared. The open-state transform is NOT touched here: with
+   the transition gone, `.is-modal-open`'s own transform simply applies, which
+   is right at every width — the desktop card needs translate(-50%, -50%) and
+   the mobile sheet needs translateY(0), and neither is this file's business
+   twice over. */
+body.dccgg-detail-open .dccgg-stage.dccgg-growing.dccgg-growing {
+    transition: none;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* THE HEADER'S PADDING, which was animating all four sides for 300ms across
+   the whole grow — found by enumerating document.getAnimations() during an
+   open rather than by looking at the code, which is the only way it shows up.
+
+   The trigger is not the shrink-on-scroll feature. `body.dccgg-detail-open
+   .dccgg-detail-header` (line ~721) gives the header its full-bleed modal
+   padding, and `.dccgg-detail-header` carries
+   `transition: padding var(--dccgg-transition-duration)`. So the moment the
+   popup opens, the padding changes and transitions — four LAYOUT properties,
+   inside the box that is mid-animation, for longer than the animation lasts.
+
+   Suppressed while growing, and also while the stage is closed, so the revert
+   at teardown does not animate either. The shrink-on-scroll transition still
+   works normally once the popup is open and settled, which is the only time a
+   guest can see it. */
+body.dccgg-detail-open .dccgg-stage.dccgg-growing .dccgg-detail-header,
+body.dccgg-detail-open .dccgg-stage:not(.is-modal-open) .dccgg-detail-header {
+    transition: none;
+}
+
+/* The full-screen map layer, same treatment. It carries no transition today,
+   so this is a guard against one being added later rather than a fix. */
+.dccgg-maplayer.dccgg-growing.dccgg-growing {
+    transition: none;
+}
+
+/* ---- Reduced motion: plain quick fades, no growing and no sliding --------
+   THE PORTAL AGAIN, and this one has been live since v0.9.5. The reduced-motion
+   block up at line ~2278 is scoped to `.dccgg-root *` — and `.dccgg-stage` is
+   moved to <body> when a section opens, so the one popup a reduced-motion guest
+   actually sees was the single element that rule could never reach. Measured in
+   Chromium with prefers-reduced-motion emulated, 2026-11-06: the popup kept
+   scaling 0.96 -> 1 on desktop and sliding up from translateY(100%) on a phone.
+
+   The JS path never animates a clip or a slide when the preference is set
+   (growClip returns growFade), so this is belt and braces for an engine without
+   the Web Animations API — and it is also what actually fixes the pre-existing
+   scale. `!important` because the rules being corrected carry the same
+   specificity and sit earlier in the file. */
+@media (prefers-reduced-motion: reduce) {
+    body.dccgg-detail-open .dccgg-stage,
+    body.dccgg-detail-open .dccgg-stage.is-modal-open {
+        /* Desktop/tablet: centred. Not `none` — that would un-centre the card. */
+        transform: translate(-50%, -50%) !important;
+        transition: opacity 0.12s linear !important;
+    }
+    .dccgg-maplayer { transition: none !important; }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 600px) {
+    /* The bottom sheet is bottom-anchored and full-width, so its open state is
+       translateY(0) — i.e. no transform at all. The 600px bound is the same one
+       the sheet layout itself uses; a different number here would leave a band
+       where the sheet is centred like a card. */
+    body.dccgg-detail-open .dccgg-stage,
+    body.dccgg-detail-open .dccgg-stage.is-modal-open {
+        transform: none !important;
+    }
+}
+
+/* ---- The Front Desk form ------------------------------------------------
+   A <dialog> closed with .close() leaves the top layer in the same tick, so it
+   cannot be held open for a 200ms shrink without delaying the guest's own Send.
+   It therefore GROWS out of the control that opened it (from the guest bundle,
+   through DCCGG_CORE.growClip) and fades on the way out, through the discrete
+   transitions the platform provides for exactly this. Chromium on this host
+   reports `transition-behavior: allow-discrete` supported, checked rather than
+   assumed; an engine without it gets today's instant close and nothing worse.
+
+   `.dccgg-report-dialog` must NOT share an :is() with a public class: the
+   audience split in build-min.sh moves any selector matching
+   .dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel) into the guest
+   bundle and counts `:is(a, b)` as ONE selector. */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog {
+    opacity: 0;
+    transition: opacity 0.18s ease,
+                overlay 0.18s ease allow-discrete,
+                display 0.18s ease allow-discrete;
+}
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog[open] {
+    opacity: 1;
+}
+@starting-style {
+    .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog[open] {
+        opacity: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog {
+        transition-duration: 0.1s;
     }
 }

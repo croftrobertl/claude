@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.9
+Stable tag: 0.27.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,14 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.10 =
+* The popup now grows out of the tile you tapped, instead of appearing all at once.
+* Closing it shrinks it back into the same tile; if that tile has scrolled away, it fades out instead.
+* The arrows inside a popup slide the next section in from the right and the previous one from the left.
+* Faster to open: the work that used to happen on the tap is done ahead of time, and the words are in place before the first frame rather than appearing part-way through.
+* The full-screen Property Map and the Front Desk form open the same way.
+* If your phone or computer is set to reduce motion, everything is a short fade instead — which also fixes a popup that had been animating for reduced-motion guests since v0.9.5.
 
 = 0.27.9 =
 * Review Us now offers three places to leave a review — Google,

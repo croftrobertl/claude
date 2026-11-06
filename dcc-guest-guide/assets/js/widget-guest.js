@@ -221,8 +221,26 @@
             sendBtn.textContent = STR.send || 'Send report';
             const errEl = d.querySelector('.dccgg-report-error');
             if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+            // v0.27.10: the form grows out of the control that opened it, on
+            // the same engine the section popups use — core owns the clip
+            // maths, this asks for it. Measured BEFORE showModal(), because
+            // the opener may be inside a section popup whose own layout the
+            // dialog is about to sit on top of.
+            const fromRect = (d.__dccggOpener && d.__dccggOpener.isConnected
+                && typeof d.__dccggOpener.getBoundingClientRect === 'function')
+                ? d.__dccggOpener.getBoundingClientRect() : null;
             if (typeof d.showModal === 'function') d.showModal();
             else d.setAttribute('open', '');
+            // After showModal, because a dialog has no box until it is in the
+            // top layer — and in the SAME tick, so the inline start clip is in
+            // place before anything paints. The close is a discrete-transition
+            // fade in widget.css: a <dialog> leaves the top layer the instant
+            // .close() is called, and holding it open for a 200ms shrink would
+            // delay the guest's own Send.
+            if (CORE && typeof CORE.growClip === 'function') {
+                try { CORE.growClip(d, fromRect, { duration: CORE.GROW_OPEN_MS }); }
+                catch (_) { /* never let an animation stop the form opening */ }
+            }
             // v0.24.5: land on the dialog's own heading, not on a field.
             //
             // It used to focus the Name input, which did two things wrong: it
