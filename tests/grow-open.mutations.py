@@ -103,6 +103,16 @@ MUTANTS = [
         el.__dccggSwapOut = null;
 """, """"""),
 
+    # ---- v0.27.11: the first painted frame ---------------------------
+    ('the start rect goes back to plain pixels, so a box change resizes it', J,
+     """        const r = CALC_INSET_OK
+            ? 'calc(100% - ' + px(left) + ' - ' + px(box.width - left - right) + ')'
+            : px(right);
+        const b = CALC_INSET_OK
+            ? 'calc(100% - ' + px(top) + ' - ' + px(box.height - top - bottom) + ')'
+            : px(bottom);""",
+     """        const r = px(right);
+        const b = px(bottom);"""),
     # ---- the rest of the contract ------------------------------------
     ('the content stops fading in late and pops in as before', J,
      """                  delay: reverse ? 0 : Math.round(ms * 0.30),""",
@@ -154,6 +164,18 @@ MUTANTS = [
 ]
 
 EQUIVALENT = [
+    ('the origin is not re-measured in the stage\'s own coordinate space',
+     'equivalent IN THIS ENVIRONMENT, and it was expected to be — it survived a real run and '
+     'is recorded rather than given a test that could not fail. v0.27.11 re-measures the tile '
+     'inside growClip so the opener and the popup are read in the same coordinate space at the '
+     'same moment; before, the tile was measured before the scroll lock '
+     '(`body { position: fixed; top: -scrollY }`) and the stage after it. Chromium puts the two '
+     'in the same place: measured on the live page at scroll offsets 0, 300 and 1200, the tile\'s '
+     'viewport rect before and after pinning differs by (0.0, 0.0) every time, so removing the '
+     're-measure changes nothing any test here can see. It is kept because an engine whose '
+     'visual viewport moves under a pinned body would put them in DIFFERENT places, and that '
+     'engine — iOS Safari — cannot be installed in this container. Claiming a kill for it would '
+     'be claiming to have tested the thing that cannot be tested here.'),
     ('the hub is still hidden when the close measures the tile '
      '(hideDetailModal before the .is-detail removal)',
      'equivalent since the hub stopped being hidden, and it was NOT when this mutant was '

@@ -179,14 +179,49 @@ async function tapTile(page, width, index = 0) {
     }, { i: index });
 }
 
-/** inset(top right bottom left round …) -> the four numbers. */
-function parseInset(s) {
-    const m = /inset\(([^)]*)\)/.exec(s || '');
+/**
+ * inset(top right bottom left round …) -> the four numbers, in pixels.
+ *
+ * Since v0.27.11 the right and bottom sides are written as
+ * `calc(100% - Apx - Bpx)` so the revealed rectangle cannot change size when
+ * the element's box does — see insetFor() for the measurement that forced it.
+ * They are resolved here against the box the caller passes, so the assertions
+ * below still compare plain pixels. A parser that silently returned NaN for
+ * the calc form would have turned this release into four green ticks that
+ * measured nothing.
+ */
+function parseInset(str, box) {
+    const m = /inset\((.*?)(?:\s+round\s+.*)?\)\s*$/.exec(String(str || '').trim());
     if (!m) return null;
-    const nums = m[1].split('round')[0].trim().split(/\s+/).map(parseFloat);
-    if (nums.some(isNaN)) return null;
-    const [a, b = a, c = a, d = b] = nums;
-    return { top: a, right: b, bottom: c, left: d };
+    // Split on top-level spaces only: calc(...) contains spaces of its own.
+    const parts = [];
+    let buf = '', depth = 0;
+    for (const ch of m[1]) {
+        if (ch === '(') depth++;
+        else if (ch === ')') depth--;
+        if (/\s/.test(ch) && depth === 0) { if (buf) { parts.push(buf); buf = ''; } }
+        else buf += ch;
+    }
+    if (buf) parts.push(buf);
+    if (!parts.length) return null;
+    const [a, b = a, c = a, d = b] = parts;
+    const resolve = (v, dim) => {
+        const plain = /^(-?[\d.]+)px$/.exec(v);
+        if (plain) return parseFloat(plain[1]);
+        const calc = /^calc\(100%\s*(.*)\)$/.exec(v);
+        if (calc && typeof dim === 'number') {
+            let out = dim;
+            const re = /([+-])\s*([\d.]+)px/g;
+            let t, seen = false;
+            while ((t = re.exec(calc[1]))) { seen = true; out += (t[1] === '-' ? -1 : 1) * parseFloat(t[2]); }
+            if (seen) return out;
+        }
+        return NaN;
+    };
+    const W = box && box.w, H = box && box.h;
+    const out = { top: resolve(a, H), right: resolve(b, W),
+        bottom: resolve(c, H), left: resolve(d, W) };
+    return Object.values(out).some(isNaN) ? null : out;
 }
 
 async function run() {
@@ -225,7 +260,11 @@ async function run() {
                 JSON.stringify((w.anims || []).map((a) => a.target + ':' + a.props.join('+'))));
             check(`${width}: the open lasts ~250ms`, !!clipAnim && clipAnim.duration === 250,
                 clipAnim && String(clipAnim.duration));
-            const start = clipAnim && parseInset(clipAnim.first && clipAnim.first.clipPath);
+            const geoEarly = await page.evaluate(() => {
+                const b = document.querySelector('.dccgg-stage').getBoundingClientRect();
+                return { w: b.width, h: b.height };
+            });
+            const start = clipAnim && parseInset(clipAnim.first && clipAnim.first.clipPath, geoEarly);
             check(`${width}: it starts as an inset(), not a scale`, !!start,
                 clipAnim && String(clipAnim.first && clipAnim.first.clipPath));
             check(`${width}: the start rectangle has a rounded corner`,
@@ -378,7 +417,11 @@ async function run() {
             check('the close lasts ~200ms', !!rev && rev.duration === 200, rev && String(rev.duration));
             check('the hub is back on screen BEFORE the shrink, so there is a tile to shrink into',
                 closing.isDetail === false && closing.menuShown === true, JSON.stringify(closing));
-            const end = rev && parseInset(rev.last && rev.last.clipPath);
+            const endBox = await page.evaluate(() => {
+                const b = document.querySelector('.dccgg-stage').getBoundingClientRect();
+                return { w: b.width, h: b.height };
+            });
+            const end = rev && parseInset(rev.last && rev.last.clipPath, endBox);
             const want = await page.evaluate(({ key }) => {
                 const t = document.querySelector('.dccgg-tile[data-key="' + key + '"]');
                 const s = document.querySelector('.dccgg-stage');
@@ -742,6 +785,92 @@ async function run() {
             }
             await ctx.close();
         }
+        // ====== I : the start rect survives the box changing ==========
+        //
+        // v0.27.11, and this is Rob's "glitchy first frame" as a measurement.
+        // An inset() in plain pixels describes a rectangle by its distance from
+        // each EDGE, so if the element's box changes size between being
+        // measured and being painted, the revealed rectangle changes with it.
+        // The sheet's height is `calc(100svh - env(safe-area-inset-top) - 8px)`
+        // — bound to the viewport, which is what iOS Safari's dynamic toolbar
+        // moves. On the live page at 390 the old pixel clip revealed the tile
+        // at the measured box, 174.5x180.5 if the box grew 60px and 174.5x240.5
+        // if it grew 120px: a blank white card up to twice the tile's height.
+        //
+        // The box is changed here for real and the clip re-resolved against it.
+        console.log('\nI · the start rectangle is pinned to the tile, not to the box');
+        for (const width of [390, 1440]) {
+            const { ctx, page } = await openGuide(browser, width);
+            const t = await tapTile(page, width);
+            const got = await page.evaluate(({ grow }) => {
+                const stage = document.querySelector('.dccgg-stage');
+                const anim = document.getAnimations()
+                    .find((a) => a.effect && a.effect.target === stage
+                        && a.effect.getKeyframes().some((k) => 'clipPath' in k));
+                if (!anim) return { none: true };
+                anim.pause();
+                anim.currentTime = 0;
+                const read = () => {
+                    const b = stage.getBoundingClientRect();
+                    return { clip: getComputedStyle(stage).clipPath, w: b.width, h: b.height };
+                };
+                const before = read();
+                // The toolbar appearing: the sheet's cap moves, so its box does.
+                stage.style.maxHeight = (before.h + grow) + 'px';
+                stage.style.minHeight = (before.h + grow) + 'px';
+                const after = read();
+                stage.style.maxHeight = '';
+                stage.style.minHeight = '';
+                return { before: before, after: after };
+            }, { grow: 90 });
+
+            // The TILE CLIPPED TO THE SHEET, not the raw tile. On a phone the
+            // sheet is bottom-anchored and its top edge sits below the top of
+            // the screen, so a tile higher up is partly outside it — the clip
+            // clamps per side, by design, and the revealed rectangle is the
+            // overlap. Measured at 390 in this fixture: the tile is 148.5 tall
+            // and 143.9 of it is inside the sheet. Comparing with the raw tile
+            // would fail on correct behaviour.
+            const want = await page.evaluate(() => {
+                const s2 = document.querySelector('.dccgg-stage').getBoundingClientRect();
+                const t2 = Array.from(document.querySelectorAll('.dccgg-root .dccgg-tile'))
+                    .filter((x) => x.getClientRects().length)[0].getBoundingClientRect();
+                const w = Math.max(0, Math.min(s2.right, t2.right) - Math.max(s2.left, t2.left));
+                const h = Math.max(0, Math.min(s2.bottom, t2.bottom) - Math.max(s2.top, t2.top));
+                return { w: +w.toFixed(1), h: +h.toFixed(1) };
+            });
+            if (got.none) { check(`${width}: there is a clip animation to inspect`, false); }
+            else {
+                const revealed = (r) => {
+                    const i = parseInset(r.clip, { w: r.w, h: r.h });
+                    return i ? { w: +(r.w - i.left - i.right).toFixed(1),
+                        h: +(r.h - i.top - i.bottom).toFixed(1), top: +i.top.toFixed(1),
+                        left: +i.left.toFixed(1) } : null;
+                };
+                const a = revealed(got.before), b = revealed(got.after);
+                check(`${width}: the box really did change for this test`,
+                    Math.abs(got.after.h - got.before.h - 90) < 1,
+                    `${got.before.h} -> ${got.after.h}`);
+                check(`${width}: frame 1 reveals exactly the tapped tile`,
+                    !!a && near(a.w, want.w, 2) && near(a.h, want.h, 2),
+                    `revealed ${JSON.stringify(a)} want ${JSON.stringify(want)}`);
+                check(`${width}: and STILL exactly the tile after the box grows 90px`,
+                    !!b && near(b.w, want.w, 2) && near(b.h, want.h, 2),
+                    `revealed ${JSON.stringify(b)} want ${JSON.stringify(want)}`);
+                check(`${width}: byte for byte the same reveal at both box sizes`,
+                    !!a && !!b && near(a.w, b.w, 0.5) && near(a.h, b.h, 0.5),
+                    `${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+                check(`${width}: it has not drifted from the tile's corner either`,
+                    !!a && !!b && near(a.top, b.top, 2) && near(a.left, b.left, 2),
+                    `${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+                check(`${width}: no frame reveals a box larger than the tile`,
+                    !!a && !!b && a.w <= want.w + 2 && a.h <= want.h + 2
+                    && b.w <= want.w + 2 && b.h <= want.h + 2,
+                    `${JSON.stringify([a, b])} want ${JSON.stringify(want)}`);
+            }
+            await ctx.close();
+        }
+
         // ============ H : the PUBLIC guide (/explore/) ================
         //
         // Named in the brief, and worth its own section rather than an

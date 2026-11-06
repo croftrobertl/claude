@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.10
+Stable tag: 0.27.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,9 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.27.11 =
+* Fixes the first frame of the opening popup: it now starts exactly at the tile you tapped, every time. On an iPhone it could briefly show a blank white card bigger than the tile before settling.
 
 = 0.27.10 =
 * The popup now grows out of the tile you tapped, instead of appearing all at once.

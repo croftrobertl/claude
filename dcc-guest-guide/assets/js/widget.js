@@ -202,6 +202,14 @@
         }
     }
 
+    // Can this engine express an inset() side as calc(100% - …)? Checked once.
+    // See insetFor() for why it matters.
+    const CALC_INSET_OK = (function () {
+        try { return !!(window.CSS && CSS.supports
+            && CSS.supports('clip-path', 'inset(10px calc(100% - 20px) 10px 10px round 4px)')); }
+        catch (_) { return false; }
+    }());
+
     /** Is any part of this rectangle on screen? */
     function rectOnScreen(r) {
         if (!r || !(r.width > 0) || !(r.height > 0)) return false;
@@ -285,8 +293,43 @@
             const k = box.width / (left + right);
             left *= k; right *= k;
         }
-        return 'inset(' + top.toFixed(1) + 'px ' + right.toFixed(1) + 'px '
-            + bottom.toFixed(1) + 'px ' + left.toFixed(1) + 'px round ' + radii + ')';
+        // v0.27.11 — THE RIGHT AND BOTTOM INSETS ARE EXPRESSED AGAINST 100%,
+        // not as the pixel numbers that came out of the measurement, and this
+        // is the whole of Rob's "glitchy first frame".
+        //
+        // An inset() in plain pixels describes a rectangle by its distance from
+        // each EDGE of the element. So if the element's box changes size
+        // between the moment it is measured and the moment it is painted, the
+        // revealed rectangle changes size with it. On a phone the sheet is
+        // capped at `calc(100svh - env(safe-area-inset-top) - 8px)` — its
+        // height is bound to the viewport, which is exactly what iOS Safari's
+        // dynamic toolbar moves. Measured here on the live page at 390:
+        //
+        //     start clip   inset(286.2px 197.5px 361.5px 18px)
+        //     at the measured box      reveals 174.5 x 120.5  (the tile)
+        //     if the box is 60px taller        174.5 x 180.5
+        //     if the box is 120px taller       174.5 x 240.5
+        //
+        // i.e. a blank card up to twice the tile's height, still anchored at
+        // the tile's top-left — "a white rectangle, larger than the tile, not
+        // anchored to it", which is what Rob's recording shows in frame 1.
+        //
+        // Written as calc(100% - left - width) the revealed rectangle keeps its
+        // position AND its size at any box size. Verified: the same string
+        // resolves identically at box heights 844 and 904, and it interpolates
+        // (at 50% it is `inset(143.1px calc(50% - 96.25px) …)`).
+        //
+        // The pixel form is kept for an engine that cannot parse the calc one;
+        // there, growClip's one-frame re-measure is what catches a box change.
+        const px = (v) => v.toFixed(1) + 'px';
+        const r = CALC_INSET_OK
+            ? 'calc(100% - ' + px(left) + ' - ' + px(box.width - left - right) + ')'
+            : px(right);
+        const b = CALC_INSET_OK
+            ? 'calc(100% - ' + px(top) + ' - ' + px(box.height - top - bottom) + ')'
+            : px(bottom);
+        return 'inset(' + px(top) + ' ' + r + ' ' + b + ' ' + px(left)
+            + ' round ' + radii + ')';
     }
 
     /**
@@ -403,6 +446,17 @@
         growStop(el);
         if (REDUCED_MOTION) { return growFade(el, reverse, o.content); }
         if (typeof el.animate !== 'function') { return 0; }
+        // v0.27.11: the origin is re-measured HERE when the caller can say
+        // which element it is, so the opener and the popup are measured in the
+        // same coordinate space at the same moment. They used to be measured in
+        // different places either side of the scroll lock — the tile before
+        // `body { position: fixed; top: -scrollY }` went on and the stage after
+        // — and two measurements taken either side of a layout change are two
+        // measurements that can disagree. They agree in Chromium at every
+        // scroll offset (checked: delta 0,0), so this is not the fault Rob
+        // reported; it is one less way for the start rect to be wrong on an
+        // engine this container cannot run.
+        if (typeof o.origin === 'function') { from = o.origin() || from; }
         const box = el.getBoundingClientRect();
         if (!(box.width > 0) || !(box.height > 0) || !rectOnScreen(from)) {
             return growFadeDrop(el, reverse, o.content);
@@ -419,6 +473,24 @@
                                      : [{ clipPath: small }, { clipPath: full }],
             { duration: ms, easing: reverse ? GROW_EASE_IN : GROW_EASE_OUT, fill: 'both' });
         growTrack(el, a, { reverse: reverse, duration: ms, onDone: o.onDone });
+        // The pixel fallback cannot pin the rectangle, so it is checked once on
+        // the next frame instead: if the box has changed size since it was
+        // measured, the clip is recomputed and the animation restarted from
+        // where it had got to. Never runs when calc() is available, which is
+        // everywhere this container can test.
+        if (!CALC_INSET_OK && !reverse) {
+            requestAnimationFrame(() => {
+                if (a.playState !== 'running' || el.__dccggGrowAnims === null) return;
+                const now = el.getBoundingClientRect();
+                if (Math.abs(now.width - box.width) < 1 && Math.abs(now.height - box.height) < 1) return;
+                const t = a.currentTime || 0;
+                const fixed = insetFor(now, from, radii);
+                try { a.cancel(); } catch (_) {}
+                const b2 = el.animate([{ clipPath: fixed }, { clipPath: full }],
+                    { duration: Math.max(0, ms - t), easing: GROW_EASE_OUT, fill: 'both' });
+                growTrack(el, b2, { reverse: false, duration: ms, onDone: o.onDone });
+            });
+        }
         // The content fades in over the LAST part of the open, so the text is
         // already in place behind the growing edge rather than arriving after
         // it. On the close it goes first, so the box shrinks empty.
@@ -2071,6 +2143,11 @@
                 if (growing) { state.stage.classList.add('dccgg-growing'); }
                 growClip(state.stage, anim && anim.from, {
                     duration: GROW_OPEN_MS, content: panel,
+                    // Re-measured inside growClip, after the portal, the scroll
+                    // lock and .is-modal-open — the same moment the stage's own
+                    // box is read. The rect measured in openDetailImpl stays as
+                    // the fallback for a hub that cannot be measured again.
+                    origin: () => tileRectFor(root, root.__dccggActiveKey || ''),
                     onDone: () => state.stage.classList.remove('dccgg-growing'),
                 });
             }
