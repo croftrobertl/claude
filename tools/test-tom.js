@@ -1,9 +1,9 @@
 'use strict';
 /**
- * DCC Seasons — 4.13.2, the strutting tom and his poults, in the engine:
+ * DCC Seasons — 4.13.2, the strutting tom (alone since 4.17.0), in the engine:
  * he steps (a planted foot never slides), stops only with both feet down,
  * feeds 2.1-3.3 s without moving (4.15.2: three feeds, never one twice running), walks on; he walks along the bottom of
- * the screen with his feet showing; all 45 poses are pre-drawn after load
+ * the header picture's foot (4.17.0); all 14 poses are pre-drawn after load
  * in idle time; and the check link (?dcc_scene=now) plays the scene at once
  * and again after each one, outside the moments queue, and only when asked.
  *
@@ -28,6 +28,8 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
     try {
       await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state, null, { timeout: 20000 });
       await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 20000 });
+      /* his first fit plan is made in idle time: wait for it before the mocked clock takes over */
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.calm.tom[0] && window.DCCSeasonsEngine._state.calm.tom[0].fk != null, null, { timeout: 20000 });
       const r = await ses.page.evaluate(() => {
         const s = window.DCCSeasonsEngine._state; s.manual(true);
         const out = [];
@@ -36,13 +38,14 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
           const t = s.parts.find(q => !q.dormant && q.b === 'forage');
           if (t) { out.push({ hl: t.hl, x: t.x, y: t.y, fs: t.fs, sv: t.sv, a: t.alpha, sc: t.sc }); }
         }
-        return { out, vh: s.vh, vw: s.vw };
+        const pic = document.querySelector('#header-image-main-inside');
+        return { out, vh: pic.clientHeight, vw: pic.clientWidth };
       });
       const fr = r.out.filter(f => f.hl);
       ok(fr.length > 30 * 100, `he is on the page (${fr.length} of 3600 frames)`, r.out.length);
       const xs = [...new Set(fr.map(f => f.x))], ys = [...new Set(fr.map(f => f.y))];
       ok(xs.length === 1 && xs[0] > r.vw * 0.5 && xs[0] < r.vw, `he never walks: one x for the whole visit (${xs.map(x => x.toFixed(1)).join(', ')}), right of centre`, JSON.stringify(xs.slice(0, 5)));
-      ok(ys.length === 1 && ys[0] > r.vh - 40 && ys[0] + 10 * fr[0].sc < r.vh, `and stands at the foot of the screen, feet showing (${ys[0]} of ${r.vh})`, JSON.stringify(ys.slice(0, 5)));
+      ok(ys.length === 1 && ys[0] === r.vh, `and stands on the header picture's foot (${ys[0]} of its ${r.vh} px)`, JSON.stringify(ys.slice(0, 5)));
       const fade = r.out.filter(f => f.hl).slice(0, 40).map(f => f.a);
       ok(fade[0] < 0.1 && fade.every((a, i) => i === 0 || a >= fade[i - 1]), 'he fades in where he stands (never walks or pops in)', JSON.stringify(fade.slice(0, 6)));
       const both = fr.filter(f => f.sv >= 0 && f.fs === 1).length;
@@ -50,14 +53,15 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
       /* the motions: runs of frames */
       const runs = []; let cur = null;
       for (const f of fr) { const m = f.sv >= 0 ? 'rattle' : f.fs === 1 ? 'feed' : 'hold'; if (!cur || cur.m !== m) { cur = { m, n: 0 }; runs.push(cur); } cur.n++; }
-      const rat = runs.filter(q => q.m === 'rattle'), fed = runs.filter(q => q.m === 'feed'), holds = runs.filter(q => q.m === 'hold').slice(1, -1);
+      const whole = runs.slice(0, -1);   /* the last run is cut off by the end of the 120 s */
+      const rat = whole.filter(q => q.m === 'rattle'), fed = whole.filter(q => q.m === 'feed'), holds = runs.filter(q => q.m === 'hold').slice(1, -1);
       ok(rat.length >= 1 && rat.every(q => Math.abs(q.n / 30 - 0.9) < 0.07), `the fan rattles now and then (${rat.length} in 120 s), 0.9 s each`, JSON.stringify(rat));
       ok(fed.every(q => q.n / 30 >= 1.9 && q.n / 30 <= 3.2), `each feed lasts ${fed.map(q => (q.n / 30).toFixed(1)).join(', ') || '-'} s`, JSON.stringify(fed));
       ok(holds.every(q => q.n / 30 >= 4.9), `he holds his strut at least 5 s between motions (shortest ${holds.length ? (Math.min(...holds.map(q => q.n)) / 30).toFixed(1) : '-'} s)`, JSON.stringify(holds));
     } finally { await ses.close(); }
   }
 
-  console.log('\n  --- the pre-draw: 45 poses after load, in idle time ---');
+  console.log('\n  --- the pre-draw: 14 poses after load, in idle time ---');
   {
     const cfg = base(); cfg.vigFirst = 1e9;
     const ses = await open(fixture({ kind: 'bravada', config: cfg, banner: true }), { viewport: { width: 390, height: 700 }, dsf: 3 });
@@ -66,12 +70,12 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
       const t0 = await ses.page.evaluate(() => performance.now());
       await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 20000 });
       const r = await ses.page.evaluate(() => ({ t: performance.now(), tom: window.DCCSeasonsEngine._state.tom }));
-      ok(r.tom.cached === 45 && r.tom.done, `16 walk frames, 5 feeding poses and 8 of the fan's rattle for him, 12 + 4 for a poult: ${r.tom.cached} pre-drawn`, JSON.stringify(r.tom));
+      ok(r.tom.cached === 14 && r.tom.done, `standing, 5 feeding poses and 8 of the fan's rattle (no walk frames: he never walks; no poult): ${r.tom.cached} pre-drawn`, JSON.stringify(Object.keys(r.tom.cache || {})));
       ok(r.tom.mainBuilt === 0, 'all drawn in a worker (OffscreenCanvas), none on the page\'s thread', JSON.stringify(r.tom));
       console.log(`          (done ${((r.t - t0) / 1000).toFixed(1)} s after the engine started)`);
     } finally { await ses.close(); }
     /* the fallback (no Worker, as on browsers without OffscreenCanvas): all
-     * 45 on the page's thread, one per scroll-quiet idle moment */
+     * 14 on the page's thread, one per scroll-quiet idle moment */
     const fb = base(); fb.vigFirst = 1e9;
     const s3 = await open(fixture({ kind: 'bravada', config: fb, banner: true }), { viewport: { width: 1440, height: 800 }, init: 'delete window.Worker;' + SEED });   /* 1440: he is always in the mix */
     try {
@@ -81,7 +85,7 @@ const SEED = `(() => { let a = 7; Math.random = function () { a |= 0; a = a + 0x
       ok(early.done === false && early.x !== null && (early.a === 0 || early.x < 0 || early.x > early.vw), `before his poses are ready he is not drawn (alpha ${early.a}, x ${early.x === null ? '-' : early.x.toFixed(0)})`, JSON.stringify(early));
       await s3.page.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000 });
       const t3 = await s3.page.evaluate(() => window.DCCSeasonsEngine._state.tom);
-      ok(t3.mainBuilt === 45 && t3.cached === 45, 'with no Worker the fallback draws all 45 on the page\'s thread', JSON.stringify(t3));
+      ok(t3.mainBuilt === 14 && t3.cached === 14, 'with no Worker the fallback draws all 14 on the page\'s thread', JSON.stringify({ mainBuilt: t3.mainBuilt, cached: t3.cached }));
     } finally { await s3.close(); }
     const c2 = config(['--theme=halloween', '--placement=content', '--layering=front', '--density=16', '--diag']);
     const s2 = await open(fixture({ kind: 'bravada', config: c2, banner: true }), { viewport: { width: 390, height: 700 } });

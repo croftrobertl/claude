@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.16.1
+Stable tag: 4.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,17 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.17.0 =
+Thanksgiving's tom, from Rob.
+* The tom now stands on the bottom edge of the header photo, like the
+  heron and the seaplane, and scrolls away with the page. His toes are on
+  the photo's edge at every width, whatever the phone's toolbar does.
+* He stands alone: the poults are gone, and their drawings with them.
+* His size stays random, but a draw that would come within 8 px of the
+  header's words or buttons is drawn just small enough to clear them.
+* Still fully opaque, twice the size on a desktop-wide window, never in
+  the way of a tap. A page without a header photo shows no tom.
 
 = 4.16.1 =
 Four fixes from Rob.

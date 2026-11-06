@@ -14,16 +14,15 @@
  *  2. NO PAUSE (4.15.2, Rob: occlusion alone): a focused, typed-into field,
  *     a .dccs-modal, [data-dcc-seasons-busy] and the quiz all leave the
  *     pieces drawing as before.
- *  3. WALKERS (Thanksgiving's tom, 390 and 1440): enters from an edge, turns
- *     about a third of the way in, through a squeeze (never a flip-cut),
- *     standing still with his poults, walks back off the side he came from
- *     and stays gone; a .dccs-modal does not hold him off or send him back.
- *     Feeding stops: few (at most one per 15 s of walking, after the first)
- *     and never the same feed twice running, read from the jabs he DRAWS.
- *     Time on screen reported.
+ *  3. THE TOM (4.17.0, Rob: on the header photo's bottom edge, alone): his
+ *     size (2x from 1024, phones as 4.16.0), sharp, fully opaque, one place,
+ *     his toes on the picture's foot (0 device px) with the toolbar out and
+ *     in, scrolling away with the picture, nothing drawn but him (no poult),
+ *     8 px or more clear of the header's words at his largest size, and
+ *     Rob's A: a word put next to him makes him smaller, just enough.
  *
  *   node tools/test-calm.js [--only=occ|pause|walk]
- *   DCC_CALM_MUT=mask|click|onex|phone|inherit|early|slide|cross|order|two (a copy of the engine, one line broken)
+ *   DCC_CALM_MUT=mask|click|onex|phone|inherit|early|slide|two|gap|screen|collide|poult (a copy of the engine, one line broken)
  */
 const fs = require('fs');
 const os = require('os');
@@ -50,9 +49,12 @@ if (MUT) {
     inherit: ["cx.globalAlpha = b === 'forage' ? clamp(p.alpha, 0, 1) :", "cx.globalAlpha = b === 'forage' ? alphaBase * clamp(p.alpha, 0, 1) :"],
     early: ["if (gtN >= 8 || t - gt0 > 5000) { gtOpen = t; }", "if (gtN >= 0 || t - gt0 > 5000) { gtOpen = t; }"],
     slide: ["p.alpha = mn(1, p.alpha + dt / 1.2);", "p.alpha = mn(1, p.alpha + dt / 1.2); p.x -= 2 * dt;"],
-    cross: ["hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R]", "hi: [p.x - tw / 2 - G - E + R + tw * 0.5, p.x + tw / 2 + G + E + R]"],
-    order: ["var L = [[0, -1], [g.kg[0], 0], [g.kg[1], 1]].sort(function (a, b) { return a[0] - b[0]; });", "var L = [[g.kg[0], 0], [0, -1], [g.kg[1], 1]];"],
     two: ["else { p.fs = 1; p.fv = tkNextV(p.fv);", "else { p.sv = 0; p.fs = 1; p.fv = tkNextV(p.fv);"],
+    /* 4.17.0 */
+    gap: ["cx.drawImage(tf.c, -tf.w * ts / 2, -tf.h * ts * TK_SOLEF, tf.w * ts, tf.h * ts);", "cx.drawImage(tf.c, -tf.w * ts / 2, -tf.h * ts * TK_SOLEF - 3, tf.w * ts, tf.h * ts);"],
+    screen: ["c.style.cssText = 'position:absolute;right:0;bottom:0;width:1px;height:1px;", "c.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;"],
+    collide: ["if (!N || !hits(1)) { return 1; }", "return 1;"],
+    poult: ["cx.drawImage(tf.c, -tf.w * ts / 2, -tf.h * ts * TK_SOLEF, tf.w * ts, tf.h * ts);", "cx.drawImage(tf.c, -tf.w * ts / 2, -tf.h * ts * TK_SOLEF, tf.w * ts, tf.h * ts); cx.drawImage(tf.c, -tf.w * ts * 1.4, -tf.h * ts * 0.4 * TK_SOLEF, tf.w * ts * 0.4, tf.h * ts * 0.4);"],
   }[MUT];
   if (!M || !e.includes(M[0])) { throw new Error('mutation does not apply: ' + MUT); }
   fs.writeFileSync(path.join(d, 'engine.js'), e.replace(M[0], M[1]));
@@ -160,14 +162,15 @@ async function inkRun(pg, n) {
         for (let i = 0; i < 6; i++) { const b = document.createElement('button'); b.textContent = 'Book'; b.style.cssText = 'flex:1;margin:4px'; bar.appendChild(b); }
         document.body.appendChild(bar);
         const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
-        const cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype;
+        const cvs = [document.querySelector('canvas.dcc-seasons-canvas')], P = CanvasRenderingContext2D.prototype;
+        const mine = c => { if (cvs.length < 2) { const gc = document.querySelector('canvas.dcc-seasons-ground'); if (gc) { cvs.push(gc); } } return cvs.indexOf(c) >= 0; };
         const o = { save: P.save, restore: P.restore, clip: P.clip, di: P.drawImage };
         let stack = [], cur = false; const st = { walkerDraws: 0, walkerClipped: 0, pieceDraws: 0, pieceClipped: 0 };
-        P.save = function () { if (this.canvas === cv) { stack.push(cur); } return o.save.apply(this, arguments); };
-        P.restore = function () { if (this.canvas === cv) { cur = stack.length ? stack.pop() : false; } return o.restore.apply(this, arguments); };
-        P.clip = function () { if (this.canvas === cv) { cur = true; } return o.clip.apply(this, arguments); };
+        P.save = function () { if (mine(this.canvas)) { stack.push(cur); } return o.save.apply(this, arguments); };
+        P.restore = function () { if (mine(this.canvas)) { cur = stack.length ? stack.pop() : false; } return o.restore.apply(this, arguments); };
+        P.clip = function () { if (mine(this.canvas)) { cur = true; } return o.clip.apply(this, arguments); };
         P.drawImage = function (src, x, y, ww, hh) {
-          if (this.canvas === cv && ww !== undefined) { if (key.get(src)) { st.walkerDraws++; if (cur) { st.walkerClipped++; } } else { st.pieceDraws++; if (cur) { st.pieceClipped++; } } }
+          if (mine(this.canvas) && ww !== undefined) { if (key.get(src)) { st.walkerDraws++; if (cur) { st.walkerClipped++; } } else { st.pieceDraws++; if (cur) { st.pieceClipped++; } } }
           return o.di.apply(this, arguments);
         };
         for (let f = 0; f < 30 * 60; f++) { S.tick(1000 / 30, 1); }
@@ -239,81 +242,90 @@ async function inkRun(pg, n) {
   }
 
   if (!ONLY || ONLY === 'walk') {
-    console.log('\n  --- 3. (4.16.0, Rob) the tom holds his strut; each poult steps and pecks on its own ground line ---');
-    for (const w of [390, 1023, 1440, 1920]) {
-      const ses = await boot(o => rt.page(o), w, 'thanksgiving', { opacity: 0.7 }, 14), pg = ses.page;   /* live's sprite opacity */
-      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
-      let r = await pg.evaluate(w => {
+    console.log('\n  --- 3. (4.17.0, Rob) the tom alone, on the header photo\'s bottom edge ---');
+    for (const w of [320, 390, 1023, 1440, 1920]) {
+      const H = w < 768 ? 844 : 900;
+      const ses = await boot(o => rt.page(o), w, 'thanksgiving', { opacity: 0.7, gate: false }, 14), pg = ses.page;   /* live's sprite opacity */
+      await pg.waitForFunction(() => window.DCCSeasonsEngine._state.tom.done && window.DCCSeasonsEngine._state.calm.tom[0].hl, null, { timeout: 40000, polling: 200 });
+      /* every draw on his canvas, in the picture's px; the pieces' opacity on the page canvas */
+      const run = (n, opt) => pg.evaluate(({ n, opt }) => {
         const S = window.DCCSeasonsEngine._state; S.manual(true);
         const key = new Map(); const C = S.tom.cache; for (const k in C) { key.set(C[k].c, k); }
-        const cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype, di = P.drawImage;
-        let draws = []; const pieceA = [];
+        const gc = document.querySelector('canvas.dcc-seasons-ground'), cv = document.querySelector('canvas.dcc-seasons-canvas'), P = CanvasRenderingContext2D.prototype, di = P.drawImage;
+        let draws = [], other = 0; const pieceA = [];
         P.drawImage = function (src, x, y, ww, hh) {
-          const k = key.get(src);
-          if (k && this.canvas === cv && ww !== undefined) {
-            const m = this.getTransform(), z = cv.width / cv.getBoundingClientRect().width;
+          if (this.canvas === gc && ww !== undefined) {
+            const k = key.get(src), m = this.getTransform(), z = gc.width / gc.getBoundingClientRect().width;
             const xs = [x, x + ww].map(a => (m.a * a + m.e) / z), ys = [y, y + hh].map(a => (m.d * a + m.f) / z);
-            draws.push({ k, L: Math.min(...xs), R: Math.max(...xs), T: Math.min(...ys), B: Math.max(...ys), o: m.e / z, a: this.globalAlpha });
-          } else if (this.canvas === cv && ww !== undefined && !k && src instanceof HTMLImageElement) { pieceA.push(this.globalAlpha);   /* a falling piece: an SVG sprite */
-          }
+            draws.push({ k, L: Math.min(...xs), R: Math.max(...xs), T: Math.min(...ys), B: Math.max(...ys), a: this.globalAlpha });
+          } else if (this.canvas === cv && ww !== undefined && src instanceof HTMLImageElement) { pieceA.push(this.globalAlpha); }
           return di.apply(this, arguments);
         };
         const fr = [];
-        for (let f = 0; f < 30 * 90; f++) {
+        for (let f = 0; f < n; f++) {
           draws = []; S.tick(1000 / 30, 1);
           const t = S.calm.tom[0]; if (!t || !t.hl) { continue; }
-          fr.push({ f, t, d: draws.slice() });
+          let low = -1;
+          if (opt.ink && (f % 15 === 0 || f === n - 1)) { const d = gc.getContext('2d').getImageData(0, 0, gc.width, gc.height).data; for (let y = gc.height - 1; y >= 0 && low < 0; y--) { for (let x = 0; x < gc.width; x++) { if (d[(y * gc.width + x) * 4 + 3] > 8) { low = y; break; } } } }
+          fr.push({ x: t.x, fk: t.fk, sv: t.sv, fs: t.fs, g: t.geo, size: t.size, sc: t.sc, d: draws.slice(), gap: low >= 0 ? gc.height - 1 - low : null });
         }
         P.drawImage = di;
-        const out = fr.map(e => ({ x: e.t.x, y: e.t.y, sv: e.t.sv, fs: e.t.fs, kx: e.t.kx, ks: e.t.ks, kd: e.t.kd, g: e.t.geo, d: e.d, size: e.t.size, sc: e.t.sc }));
-        out.pieceA = pieceA.slice(0, 400); out.cacheH = S.tom.cache.w0.c.height; out.dpr = Math.min(devicePixelRatio || 1, 2);
-        return { out, pieceA: out.pieceA, cacheH: out.cacheH, dpr: out.dpr };
-      }, w);
-      const rr = r; r = rr.out;
-      const g = r[0].g;
-      /* 4.16.1: his size — twice on a desktop-wide window, exactly 4.16.0 below 1024 */
-      const K = w >= 1024 ? 2 : 1, th1 = (107 + 16) * r[0].size * 1.3 * 1.55 * r[0].sc / 107;
-      const tomDraw = r.map(e => e.d.find(q => !/^k/.test(q.k))).filter(Boolean);
-      const dh = tomDraw.length ? tomDraw[tomDraw.length - 1].B - tomDraw[tomDraw.length - 1].T : 0;
-      ok(Math.abs(g.th - K * th1) < 0.01 && Math.abs(dh - g.th) < 1, `${w}: he is drawn ${K === 2 ? 'TWICE' : 'exactly'} the 4.16.0 size (${dh.toFixed(1)} px tall; 4.16.0: ${th1.toFixed(1)})`, JSON.stringify({ th: g.th, th1, dh }));
+        const pic = document.querySelector('#header-image-main-inside').getBoundingClientRect(), cr = gc.getBoundingClientRect();
+        return { fr, pieceA: pieceA.slice(0, 400), cacheH: S.tom.cache.w0.c.height, dpr: Math.min(devicePixelRatio || 1, 2), picB: pic.bottom, picR: pic.right, cB: cr.bottom, cR: cr.right, cL: cr.left, cT: cr.top, fixed: getComputedStyle(gc).position };
+      }, { n, opt: opt || {} });
+      const rr = await run(30 * 60, { ink: 1 }), r = rr.fr, g = r[0].g;
+      /* his size: twice on a desktop-wide window, exactly 4.16.0 below 1024 (fk 1: nothing near him here) */
+      const K = w >= 1024 ? 2 : 1, th1 = (107 + 16) * r[0].size * 1.3 * 1.55 * r[0].sc / 107, last = r[r.length - 1].d[0], dh = last ? last.B - last.T : 0;
+      ok(r[0].fk === 1 && Math.abs(g.th - K * th1) < 0.01 && Math.abs(dh - g.th) < 1, `${w}: he is drawn ${K === 2 ? 'TWICE' : 'exactly'} the 4.16.0 size (${dh.toFixed(1)} px tall; 4.16.0: ${th1.toFixed(1)}; fit ${r[0].fk})`, JSON.stringify({ th: g.th, th1, dh, fk: r[0].fk }));
       ok(rr.cacheH >= dh * rr.dpr - 1, `${w}: sharp: his poses are drawn at ${rr.cacheH} px for ${(dh * rr.dpr).toFixed(0)} device px on screen (never scaled up)`, JSON.stringify({ cacheH: rr.cacheH, need: dh * rr.dpr }));
-      /* 4.16.1: fully opaque once faded in (the falling pieces keep their opacity) */
       const wa = [...new Set(r.slice(40).flatMap(e => e.d.map(q => +q.a.toFixed(3))))];
-      ok(wa.length === 1 && wa[0] === 1 && rr.pieceA.length && rr.pieceA.every(a => a < 1), `${w}: the tom and both poults are fully opaque (${wa.join(', ')}); the pieces stay see-through (${Math.max(...rr.pieceA).toFixed(2)} at most)`, JSON.stringify({ wa, pa: rr.pieceA.slice(0, 5) }));
-      /* the tom: one place, one image box */
-      const tomBoxes = r.map(e => e.d.find(q => !/^k/.test(q.k))).filter(Boolean);
-      const tL = new Set(tomBoxes.map(b => b.L.toFixed(2)));
-      ok(r.length > 2000 && tL.size === 1, `${w}: the tom never moves sideways: one left edge in ${tomBoxes.length} draws (${[...tL].join(', ')})`, JSON.stringify([...tL].slice(0, 6)));
-      /* the poults: never over his box, and on their own ground lines */
-      let over = 0, ordBad = 0, groundBad = 0; const feetY = [new Set(), new Set()];
-      for (const e of r) {
-        const tb = e.d.find(q => !/^k/.test(q.k)), pb = e.d.filter(q => /^k/.test(q.k));
-        if (!tb || pb.length !== 2) { continue; }
-        for (const b of pb) { if (b.R > tb.L && b.L < tb.R) { over++; } }
-        /* draw order: each draw's foot line, which must not go up the screen */
-        const order = e.d.map(q => /^k/.test(q.k) ? q.B : tb.B);
-        const feet = e.d.map(q => q === tb ? 0 : (q.L + q.R) / 2 < (tb.L + tb.R) / 2 ? g.kg[0] : g.kg[1]);
-        for (let i = 1; i < feet.length; i++) { if (feet[i] < feet[i - 1] - 1e-6) { ordBad++; } }
+      ok(wa.length === 1 && wa[0] === 1 && rr.pieceA.length && rr.pieceA.every(a => a < 1), `${w}: the tom is fully opaque (${wa.join(', ')}); the pieces stay see-through (${Math.max(...rr.pieceA).toFixed(2)} at most)`, JSON.stringify({ wa, pa: rr.pieceA.slice(0, 5) }));
+      ok(r.length > 1500 && r.every(e => e.d.length === 1 && e.d[0].k), `${w}: only the tom is drawn, once a frame: no poult (${Math.max(...r.map(e => e.d.length))} draw a frame at most)`, JSON.stringify(r.find(e => e.d.length !== 1) || {}).slice(0, 200));
+      const tL = new Set(r.map(e => e.d[0] && e.d[0].L.toFixed(2)));
+      ok(tL.size === 1, `${w}: the tom never moves sideways: one left edge in ${r.length} draws (${[...tL].slice(0, 6).join(', ')})`, '');
+      /* his feet on the picture's foot: the canvas's foot IS the picture's, and his toes are its last row */
+      const gaps = r.map(e => e.gap).filter(v => v != null);
+      ok(rr.fixed === 'absolute' && Math.abs(rr.cB - rr.picB) < 0.5 && gaps.length > 50 && Math.max(...gaps) === 0, `${w}: his toes on the header photo's bottom edge: 0 device px of gap in ${gaps.length} samples, every pose (canvas foot ${rr.cB.toFixed(2)}, photo ${rr.picB.toFixed(2)})`, JSON.stringify({ max: Math.max(...gaps), cB: rr.cB, picB: rr.picB, pos: rr.fixed }));
+      ok(Math.abs(rr.cL + last.R - (rr.picR - 8)) < 1, `${w}: his box 8 px in from the photo's right edge (${(rr.picR - rr.cL - last.R).toFixed(1)} px)`, JSON.stringify({ cL: rr.cL, R: last.R, picR: rr.picR }));
+      ok(r.every(e => !(e.sv >= 0 && e.fs === 1)), `${w}: never two idle motions at once`, '');
+      /* the mobile toolbar: the window taller and shorter, mid-visit; and a scroll: he moves with the photo */
+      const at0 = await pg.evaluate(() => { const c = document.querySelector('canvas.dcc-seasons-ground').getBoundingClientRect(), p = document.querySelector('#header-image-main-inside').getBoundingClientRect(); return [c.bottom - p.bottom, c.right - p.right, p.bottom]; });
+      const moves = [];
+      for (const [hh, sy] of [[H + 88, 0], [H, 120], [H + 88, 260], [H - 60, 60]]) {
+        await pg.setViewportSize({ width: w, height: hh });
+        await pg.evaluate(sy => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo({ top: sy, behavior: 'instant' }); }, sy);
+        await pg.waitForTimeout(120);
+        const q = await run(12, { ink: 1 });
+        const e = q.fr[q.fr.length - 1];
+        moves.push({ hh, sy, foot: +(q.cB - q.picB).toFixed(2), gap: e.gap, photoMoved: +(at0[2] - q.picB).toFixed(1) });
       }
-      ok(over === 0, `${w}: neither poult ever overlaps the tom's drawing (they never pass in front of or behind him)`, over);
-      ok(ordBad === 0, `${w}: drawn by ground line every frame: the higher poult, then the tom, then the lower poult`, ordBad);
-      ok(g.kg[0] > 0.5 && g.kg[1] < -0.5, `${w}: each poult has its own ground line, never his (${g.kg[0].toFixed(1)} px below and ${(-g.kg[1]).toFixed(1)} px above his)`, JSON.stringify(g.kg));
-      ok(r.every(e => e.kx[0] <= g.hi[0] + 1e-6 && e.kx[1] >= g.lo[1] - 1e-6 && g.hi[0] < e.x - g.tw / 2 && g.lo[1] > e.x + g.tw / 2), `${w}: each poult keeps to its own spot, on its own side of him`, '');
-      /* they step: each moves some, in whole steps, both directions over the visit */
-      for (const c of [0, 1]) {
-        const xs = r.map(e => e.kx[c]), walked = r.filter(e => e.ks[c] === 1).length, pecked = r.filter(e => e.ks[c] === 2).length, turned = r.filter(e => e.ks[c] === 3).length;
-        ok(Math.max(...xs) - Math.min(...xs) > 5 && walked > 30 && pecked > 30, `${w}: poult ${c + 1} steps (${(walked / 30).toFixed(1)} s), pecks (${(pecked / 30).toFixed(1)} s) and turns (${(turned / 30).toFixed(1)} s) on its own spot (moved over ${(Math.max(...xs) - Math.min(...xs)).toFixed(0)} px)`, '');
-      }
-      /* a poult's feet (its draw's origin) move only by its steps: never a jump, turns included */
-      let fj = 0;
-      for (let i = 1; i < r.length; i++) {
-        const A = r[i - 1].d.filter(q => /^k/.test(q.k)).map(q => q.o).sort((a, b) => a - b), B = r[i].d.filter(q => /^k/.test(q.k)).map(q => q.o).sort((a, b) => a - b);
-        if (A.length === 2 && B.length === 2) { fj = Math.max(fj, Math.abs(A[0] - B[0]), Math.abs(A[1] - B[1])); }
-      }
-      ok(fj <= g.kc * 1.5 / 30 + 0.01, `${w}: a poult's feet never jump, turning included (largest step ${fj.toFixed(2)} px, a stride frame is ${(g.kc * 1.5 / 30).toFixed(2)})`, fj);
-      const sameT = r.filter(e => e.ks[0] === 1 && e.ks[1] === 1).length / Math.max(1, r.filter(e => e.ks[0] === 1 || e.ks[1] === 1).length);
-      ok(sameT < 0.6, `${w}: each on its own timing (both stepping together ${(sameT * 100).toFixed(0)}% of the stepping time)`, sameT);
-      ok(r.every(e => !(e.sv >= 0 && e.fs === 1)), `${w}: the tom: never two idle motions at once`, '');
+      ok(moves.every(m => Math.abs(m.foot) < 0.5 && m.gap === 0 && Math.abs(m.photoMoved - m.sy) < 1), `${w}: with the toolbar out and in and scrolled, still on the photo's foot and moving with it (${moves.map(m => `${m.hh}px/${m.sy}: ${m.foot}, gap ${m.gap}`).join(' · ')})`, JSON.stringify(moves));
+      await pg.setViewportSize({ width: w, height: H }); await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(150);
+      /* clear of the header's words at his LARGEST size, and Rob's A when something is near him */
+      const kc = await rt.keepClear(pg);
+      const clr = await pg.evaluate(async ({ kc, w }) => {
+        const S = window.DCCSeasonsEngine._state, p = S.parts.find(q => q.b === 'forage');
+        const measure = R => { let worst = 1e9; for (let f = 0; f < 30 * 40; f++) { S.tick(1000 / 30, 1); if (f < 45 || f % 15) { continue; }
+            const c = document.querySelector('canvas.dcc-seasons-ground'), cr = c.getBoundingClientRect(), k = c.width / cr.width, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            for (let y = 0; y < c.height; y++) { for (let x = 0; x < c.width; x++) { if (d[(y * c.width + x) * 4 + 3] < 24) { continue; } const vx = cr.left + x / k, vy = cr.top + y / k;
+              for (const b of R) { const dd = Math.max(b[0] - vx, 0, vx - b[2], b[1] - vy, vy - b[3]); if (dd < worst) { worst = dd; } } } } }
+          return worst; };
+        const big = async () => { p.size = 32; p.sc = 1.4; p.hl = 0; p.fk = null; p.fkT = null; S.tick(33, 1); await new Promise(r => setTimeout(r, 400)); };
+        await big();
+        const words = measure(Object.values(kc).flat()), fk1 = p.fk;
+        /* a line of the header's text put right where his fan stands */
+        const pic = document.querySelector('#header-image-main-inside'), pr = pic.getBoundingClientRect(), t = document.createElement('p');
+        t.setAttribute('data-dcc-keep-clear-text', ''); t.textContent = 'Book a cottage';
+        t.style.cssText = `position:absolute;margin:0;right:${Math.round(w * 0.06)}px;bottom:${Math.round(p.size * 1.4 * (w >= 1024 ? 2 : 1) * 1.3 * 1.55 * 1.15 * 0.6)}px;font:600 18px sans-serif;color:#fff;z-index:2`;
+        pic.appendChild(t);
+        await big();
+        const tr = [...(() => { const rg = document.createRange(); rg.selectNodeContents(t.firstChild); return rg.getClientRects(); })()].map(r => [r.left, r.top, r.right, r.bottom]);
+        const near = measure(tr), fk2 = p.fk;
+        t.remove();
+        return { words: Math.round(words), fk1, near: Math.round(near), fk2: +fk2.toFixed(3) };
+      }, { kc, w });
+      ok(clr.fk1 === 1 && clr.words >= 8, `${w}: at his largest size, ${clr.words} px clear of the header's words (bar 8), full size`, JSON.stringify(clr));
+      ok(clr.fk2 < 1 && clr.fk2 >= 0.4 && clr.near >= 8, `${w}: Rob's A: a line of text put where his fan stands makes him ${Math.round((1 - clr.fk2) * 100)}% smaller, just enough: ${clr.near} px clear`, JSON.stringify(clr));
       await ses.close();
     }
   }

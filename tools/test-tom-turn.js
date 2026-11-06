@@ -10,8 +10,8 @@
  *     cornucopia) and walk back, so no tom or poult PIXEL BOX ever meets
  *     the accent's real box (.dcc-seasons-accent), feeding stops included,
  *     at 390, 768 and 1440, on the fixture and on the real page;
- *  3. at a turn the poults stay where they stand (no jump across him) and
- *     fall in behind him again once he has passed.
+ *  3. (4.17.0: the poults are gone; he stands on the header picture's
+ *     foot and never turns.)
  * Every draw of a tom or poult canvas is caught (drawImage) and mapped to
  * page px through the context's own transform, so this measures what is
  * painted, not what the engine thinks it painted.
@@ -41,13 +41,13 @@ function watch(secs) {
   const s = window.DCCSeasonsEngine._state, cache = s.tom.cache, tomC = new Set(), kC = new Set();
   for (const k in cache) { (k.charAt(0) === 'k' ? kC : tomC).add(cache[k].c); }
   const acc = document.querySelector('.dcc-seasons-accent'), ar = acc && acc.getBoundingClientRect();
-  const cv = document.querySelector('canvas.dcc-seasons-canvas');
+  const cvs = [...document.querySelectorAll('canvas.dcc-seasons-canvas, canvas.dcc-seasons-ground')];   /* 4.17.0: he is on the header picture's own canvas */
   const P = CanvasRenderingContext2D.prototype, di = P.drawImage;
   let frame = [], worst = -1e9, near = 1e9, hits = 0, draws = 0;
   P.drawImage = function (src, x, y, w, h) {
     const isT = tomC.has(src), isK = kC.has(src);
-    if ((isT || isK) && this.canvas === cv && w !== undefined) {
-      const m = this.getTransform(), cr = cv.getBoundingClientRect(), k = cv.width / cr.width;
+    if ((isT || isK) && cvs.indexOf(this.canvas) >= 0 && w !== undefined) {
+      const cv = this.canvas, m = this.getTransform(), cr = cv.getBoundingClientRect(), k = cv.width / cr.width;
       const pts = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([a, b]) => [(m.a * a + m.c * b + m.e) / k + cr.left, (m.b * a + m.d * b + m.f) / k + cr.top]);
       const L = Math.min(...pts.map(p => p[0])), R = Math.max(...pts.map(p => p[0])), T = Math.min(...pts.map(p => p[1])), B = Math.max(...pts.map(p => p[1]));
       draws++;
@@ -89,7 +89,7 @@ function watch(secs) {
 }
 
 (async () => {
-  console.log('\n  --- no corner accent since 4.14.4; he and his poults walk smoothly (180 s each) ---');
+  console.log('\n  --- no corner accent since 4.14.4; he stands alone, never turning (180 s each) ---');
   for (const real of [false, true]) {
     for (const w of [390, 768, 1440]) {
       for (const seed of [3, 11]) {
@@ -97,14 +97,13 @@ function watch(secs) {
         const ses = await open(html, { viewport: { width: w, height: w < 768 ? 844 : 900 }, init: seedInit(seed), ...(real ? rt.opts(w) : {}) });
         try {
           await ses.page.addStyleTag({ content: '.dcc-wx-banner{display:none!important}' });
-          await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done, null, { timeout: 30000 });
+          await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done && window.DCCSeasonsEngine._state.calm.tom[0] && window.DCCSeasonsEngine._state.calm.tom[0].hl, null, { timeout: 30000 });
           await ses.page.evaluate(() => window.DCCSeasonsEngine._state.manual(true));
           const r = await ses.page.evaluate(watch, 180);
           const tag = `${real ? 'real page' : 'fixture'} ${w}px seed ${seed}`;
           /* 4.14.4 (Rob): the cornucopia falls with the pieces; nothing stands in his way */
           /* 4.15.0 (Rob's pick B): no corner accent, and ONE turn — his turn-back a third of the way in */
           ok(!r.ar && r.draws > 1000 && r.turns <= 1, `${tag}: no corner accent, and at most his one turn-back (${r.turns}; ${r.draws} draws)`, JSON.stringify(r));
-          ok(r.jump < 3, `${tag}: a poult never jumps between frames (largest step ${r.jump} px)`, JSON.stringify(r));
           ok(r.maxToms === 1, `${tag}: one tom, never two`, JSON.stringify(r));
         } finally { await ses.close(); }
       }
@@ -118,7 +117,7 @@ function watch(secs) {
     for (let v = 1; v <= VISITS; v++) {
       const ses = await open(rt.page({ config: cfgOf() }), { viewport: { width: w, height: w < 768 ? 844 : 900 }, init: seedInit(v * 7919), ...rt.opts(w) });
       try {
-        await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done, null, { timeout: 30000 });
+        await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done && window.DCCSeasonsEngine._state.calm.tom[0] && window.DCCSeasonsEngine._state.calm.tom[0].hl, null, { timeout: 30000 });
         const r = await ses.page.evaluate(() => { const s = window.DCCSeasonsEngine._state; s.manual(true); let on = 0, mx = 0;
           for (let i = 0; i < 1800; i++) { s.tick(1000 / 30, 1); const t = s.parts.filter(q => !q.dormant && q.b === 'forage' && q.alpha > 0); mx = Math.max(mx, t.length); if (t[0] && t[0].x > -20 && t[0].x < s.vw + 20) { on++; } } return { on: on / 1800, mx }; });   /* a real minute: one engine step is capped at 50 ms, so 500 ms ticks simulated only 6 s */
         if (r.on > 0) { seen++; } if (r.mx > 1) { two++; } cover += r.on;

@@ -1,5 +1,5 @@
 /* DCC Seasons — Thanksgiving's art (4.13.4): its falling pieces, the
- * cornucopia, and the strutting tom with his poults, moved out of engine.js
+ * cornucopia, and the strutting tom (his poults left in 4.17.0), moved out of engine.js
  * so a visit outside November does not fetch them. The loader fetches this
  * file only for Thanksgiving (CFG.art), before the engine, which reads
  * window.DCCSeasonsArt when it runs. Unchanged drawing for drawing: every
@@ -140,7 +140,7 @@
 	/* tkMod: the tom's painters in ONE function with nothing outside it but
 	 * Math, so the pre-draw can hand its own source to a worker (4.13.2) */
 	function tkMod() {
-	/* TK_START — 4.13.2 Thanksgiving's strutting wild TOM and his poults,
+	/* TK_START — 4.13.2 Thanksgiving's strutting wild TOM,
 	 * drawn in code like the heron (Rob, 2026-10-27: "the big fanned-out
 	 * tail"). The whole tom is traced from ONE photograph, "Strutting Turkey
 	 * at Gavins Point NFH" (USFWS, Sam Stukel, public domain): the fan, its
@@ -512,156 +512,27 @@
 	 * engine keeps his size by the old box's height (TK_REF). */
 	var TK_BOX = [-3, -16, 134, 107];
 
-	/* A POULT, traced from the front poult of "Wild turkeys" (NPS,
-	 * Shenandoah, Luca Pfeiffer, public domain), in that photo's pixels / 10
-	 * (origin 1850, 1550): a small round head with a big dark eye, a thin
-	 * pale downy neck, a mottled brown body whose feathers are edged buff,
-	 * buff-barred wing coverts, and long pinkish legs that bend at the
-	 * intertarsal joint, as photographed. Faces RIGHT, feet on y = 66.
-	 * kpPaint(g, ph, d): ph = walk phase 0-1 (< 0 stands), d = feeding. */
-	var KP = { edge: 'rgba(214,180,130,.8)', neck: '#B4A796', face: '#C4B8A8', eye: '#120C0A', beak: '#B39478', leg: '#C2A49C', leg2: '#9C8680' };
-	var KP_STRIDE = 24, KP_GROUND = 65;
-	/* a fuzzy edge: short down strokes standing out from a curve, so an
-	 * outline reads soft and a little ragged, as a poult's does */
-	function kpFuzz(g, P, out, n, col, len, seed) {
-		var i;
-		g.strokeStyle = col; g.lineWidth = 0.45; g.lineCap = 'round';
-		for (i = 0; i < n; i++) {
-			var u = i / (n - 1) * (P.length - 1), j = Math.min(P.length - 2, Math.floor(u)), f = u - j, x = P[j][0] + (P[j + 1][0] - P[j][0]) * f, y = P[j][1] + (P[j + 1][1] - P[j][1]) * f;
-			var tx = P[j + 1][0] - P[j][0], ty = P[j + 1][1] - P[j][1], tl = Math.sqrt(tx * tx + ty * ty) || 1, nx = -ty / tl * out, ny = tx / tl * out, l = len * (0.5 + tkJ(seed + i) * 0.8);
-			g.beginPath(); g.moveTo(x - nx * 0.6, y - ny * 0.6); g.quadraticCurveTo(x + nx * l * 0.6 + tx / tl * 0.5, y + ny * l * 0.6 + ty / tl * 0.5, x + nx * l + tx / tl * (tkJ(seed + i + 3) - 0.3), y + ny * l + ty / tl * (tkJ(seed + i + 3) - 0.3)); g.stroke();
-		}
-		g.lineCap = 'butt';
-	}
-	/* a leg with a hip, the backward-bending intertarsal joint and the
-	 * foot, solved from the two bone lengths: gray-pink and scaly, the
-	 * shin thicker, the bare tarsus slimmer below a clear
-	 * joint, three toes ending in small dark claws, curled as it lifts */
-	function kpLeg(g, H, F, sw, col, a, b, sc) {
-		var dx = F[0] - H[0], dy = F[1] - H[1], D = Math.min(a + b - 0.01, Math.sqrt(dx * dx + dy * dy)), ang = Math.atan2(dy, dx);
-		var k = Math.acos(Math.max(-1, Math.min(1, (a * a + D * D - b * b) / (2 * a * D)))), K = [H[0] + Math.cos(ang + k) * a, H[1] + Math.sin(ang + k) * a];
-		var ux = (F[0] - K[0]) / b, uy = (F[1] - K[1]) / b, i;
-		g.lineCap = 'round';
-		/* the drumstick: feathered, tapering to the joint */
-		/* the shin, thicker than the tarsus, running up into the belly's down */
-		g.strokeStyle = col; g.lineWidth = 2.6 * sc; g.beginPath(); g.moveTo(H[0], H[1]); g.lineTo(K[0], K[1]); g.stroke();
-		g.strokeStyle = col; g.lineWidth = 1.9 * sc; g.beginPath(); g.moveTo(K[0], K[1]); g.lineTo(F[0], F[1]); g.stroke();
-		g.fillStyle = col; g.beginPath(); g.ellipse(K[0], K[1], 1.45 * sc, 1.25 * sc, ang, 0, Math.PI * 2); g.fill();   /* the joint */
-		g.strokeStyle = 'rgba(110,82,76,.55)'; g.lineWidth = 0.25 * sc;
-		for (i = 1; i < 8; i++) { var sx = K[0] + (F[0] - K[0]) * i / 8, sy = K[1] + (F[1] - K[1]) * i / 8; g.beginPath(); g.moveTo(sx - uy * 0.9 * sc, sy + ux * 0.9 * sc); g.quadraticCurveTo(sx + ux * 0.4, sy + uy * 0.4, sx + uy * 0.9 * sc, sy - ux * 0.9 * sc); g.stroke(); }
-		var cu = sw * 1.25, toes = [[6.5, -0.03], [5, 0.25], [4.6, -0.28]];
-		for (i = 0; i < 3; i++) {
-			var t = toes[i][1] + cu, l = toes[i][0] * sc, ex = F[0] + l * Math.cos(t), ey = F[1] + l * Math.sin(t);
-			g.strokeStyle = col; g.lineWidth = 0.95 * sc; g.beginPath(); g.moveTo(F[0], F[1]); g.quadraticCurveTo(F[0] + l * 0.6 * Math.cos(t * 0.6), F[1] + l * 0.6 * Math.sin(t * 0.6), ex, ey); g.stroke();
-			g.strokeStyle = '#3A2A24'; g.lineWidth = 0.6 * sc; g.beginPath(); g.moveTo(ex, ey); g.lineTo(ex + Math.cos(t + 0.5) * 1.1, ey + Math.sin(t + 0.5) * 1.1); g.stroke();   /* the claw */
-		}
-		g.strokeStyle = col; g.lineWidth = 0.8 * sc; g.beginPath(); g.moveTo(F[0], F[1]); g.lineTo(F[0] - 2.4 * sc, F[1] + 0.3 * sc - sw * 1.6 * sc); g.stroke();
-		g.lineCap = 'butt';
-	}
-	function kpFoot(ph, hx) {
-		ph = ((ph % 1) + 1) % 1;
-		if (ph < TK_STANCE) { return [hx + KP_STRIDE / 2 - KP_STRIDE * ph / TK_STANCE, KP_GROUND - 0.5, 0]; }
-		var u = (ph - TK_STANCE) / (1 - TK_STANCE), e = u * u * (3 - 2 * u);
-		return [hx - KP_STRIDE / 2 + KP_STRIDE * e, KP_GROUND - 0.5 - 6 * Math.sin(Math.PI * u), Math.sin(Math.PI * u)];
-	}
-	function kpPaint(g, ph, d) {
-		var walk = ph >= 0, bob = walk ? -0.8 * Math.cos(ph * Math.PI * 4) : 0, i;
-		var h2 = walk ? (ph * 2) % 1 : 0, hb = walk ? (h2 < 0.6 ? 2.4 - 4.8 * h2 / 0.6 : -2.4 + 4.8 * (h2 - 0.6) / 0.4) : 0;
-		/* the hips and stride as the photo's front poult steps */
-		var fA = walk ? kpFoot(ph + 0.5, 11) : [9, KP_GROUND - 0.5, 0], fB = walk ? kpFoot(ph, 25) : [27, KP_GROUND - 0.5, 0];
-		kpLeg(g, [11, 39 + bob], fA, fA[2], KP.leg2, 11, 14, 1);
-		g.save(); g.translate(22, 40); g.rotate(d * 0.55); g.translate(-22, -40 + bob);
-		/* the short tail, then the body */
-		g.fillStyle = '#4A3626'; g.beginPath(); tkPath(g, [[7, 16], [-2, 19], [-4, 25], [4, 27]], true); g.fill();
-		var B = [[10, 14], [18, 13], [30, 13.5], [40, 15], [42.5, 19], [42.5, 25], [40.5, 31], [36, 36.5], [30, 40], [24, 41.2], [17, 41], [10, 39.4], [5, 34], [3, 25], [5, 17]];
-		var bg = g.createLinearGradient(0, 12, 0, 42); bg.addColorStop(0, '#4E3A28'); bg.addColorStop(0.55, '#5C4836'); bg.addColorStop(1, '#7A6C5E');
-		g.beginPath(); tkPath(g, B, true); g.fillStyle = bg; g.fill();
-		g.save(); g.beginPath(); tkPath(g, B, true); g.clip();
-		/* the back and shoulders: the tom's own shingled rows, small, each
-		 * feather dark-centered and edged buff, flowing from the neck to the
-		 * tail, as photographed (approved in round 4) */
-		tkShingles(g, [46, 4], 8, 46, 1.55, 3.05, 2.5, 900, true);
-		var dg = g.createLinearGradient(0, 30, 0, 42); dg.addColorStop(0, 'rgba(120,104,88,0)'); dg.addColorStop(1, 'rgba(178,162,142,.85)');
-		g.fillStyle = dg; g.fillRect(0, 28, 46, 16);
-		g.restore();
-		/* the downy belly's edge: soft and irregular, not an oval's line */
-		kpFuzz(g, [[38, 34], [33, 38.6], [26, 41], [18, 41.2], [10, 39.6], [5.5, 35]], -1, 30, 'rgba(176,160,140,.5)', 1.1, 960);
-		kpFuzz(g, [[5, 18], [3.2, 24], [4, 31]], -1, 7, 'rgba(110,90,70,.45)', 0.9, 975);
-		/* the folded wing: separate long feathers, each shaded darker along
-		 * its shaft, edged pale, overlapping the one below, the tips
-		 * staggered back toward the tail */
-		var WG = [[34, 20], [24, 19], [12, 19.5], [3, 22.5], [1, 27], [8, 31.5], [20, 32.5], [30, 30], [36, 25]];
-		g.fillStyle = '#5E4F43'; g.beginPath(); tkPath(g, WG, true); g.fill();
-		for (i = 6; i >= 0; i--) {
-			var y0 = 21 + i * 1.6, x0 = 32 - i * 1.5, tx = 1 + i * 1.15 + (tkJ(i + 990) - 0.5) * 1.4, ty = y0 + 2.4 - i * 0.2, wd = 1.35 + tkJ(i + 995) * 0.3;
-			var fg2 = g.createLinearGradient(0, y0 - wd, 0, y0 + wd * 1.4); fg2.addColorStop(0, '#9A8A78'); fg2.addColorStop(0.45, '#6A5A4C'); fg2.addColorStop(1, '#4A3E34');
-			g.save(); g.shadowColor = 'rgba(20,14,10,.5)'; g.shadowBlur = 0.8 * (g.getTransform ? Math.abs(g.getTransform().a) : 4); g.shadowOffsetY = 0.25 * (g.getTransform ? Math.abs(g.getTransform().a) : 4);
-			g.fillStyle = fg2; g.beginPath(); g.moveTo(x0, y0 - wd); g.quadraticCurveTo((x0 + tx) / 2, y0 - wd * 1.1, tx + 0.6, ty - 0.5);
-			g.quadraticCurveTo(tx - 0.6, ty + 0.4, tx + 0.8, ty + 0.9); g.quadraticCurveTo((x0 + tx) / 2, y0 + wd * 1.3, x0, y0 + wd); g.closePath(); g.fill(); g.restore();
-			g.strokeStyle = 'rgba(222,208,186,' + (0.6 + tkJ(i + 999) * 0.3).toFixed(2) + ')'; g.lineWidth = 0.42;
-			g.beginPath(); g.moveTo(x0 - 3, y0 - wd * 0.95); g.quadraticCurveTo((x0 + tx) / 2, y0 - wd * 1.08, tx + 0.6, ty - 0.5); g.quadraticCurveTo(tx - 0.5, ty + 0.3, tx + 0.8, ty + 0.9); g.stroke();
-		}
-		/* the coverts over the wing's front: buff-tipped */
-		g.save(); g.beginPath(); tkPath(g, [[37, 18.5], [28, 18], [21, 21], [25, 26.5], [35, 25.5]], true); g.fillStyle = '#4A3828'; g.fill(); g.clip();
-		tkShingles(g, [40, 12], 4, 18, 1.8, 2.9, 2.2, 940, true); g.restore();
-		/* the neck and head: upright, bobbing; to feed, the body tips
-		 * forward and the short neck curves down out of the breast */
-		var t = Math.min(1, d), hx = 51 + hb * (1 - t) - t * 2, hy = 3 + t * 42, nb = [39 + 2 * t, 17 + 7 * t];   /* the neck shortens as the body tips: it comes out of the breast */
-		var c1x = nb[0] + 4 + t * 9, c1y = nb[1] - 7 + t * 8, NL = [], NR = [];
-		for (i = 0; i <= 8; i++) {
-			var u = i / 8, q = 1 - u, px = q * q * nb[0] + 2 * q * u * c1x + u * u * hx, py = q * q * nb[1] + 2 * q * u * c1y + u * u * hy;
-			var ddx = 2 * q * (c1x - nb[0]) + 2 * u * (hx - c1x), ddy = 2 * q * (c1y - nb[1]) + 2 * u * (hy - c1y), dl = Math.sqrt(ddx * ddx + ddy * ddy) || 1, wv = 3.4 - 1.7 * u;   /* thicker at the body */
-			NL.push([px - ddy / dl * wv, py + ddx / dl * wv]); NR.push([px + ddy / dl * wv, py - ddx / dl * wv]);
-		}
-		var ng = g.createLinearGradient(nb[0], nb[1], hx, hy); ng.addColorStop(0, '#8C7C68'); ng.addColorStop(0.5, KP.neck); ng.addColorStop(1, '#C2B6A6');
-		g.fillStyle = ng; g.beginPath(); tkPath(g, NL.concat(NR.slice().reverse()), true); g.fill();
-		/* fine down streaks along it, and a ragged edge */
-		g.strokeStyle = 'rgba(110,92,74,.32)'; g.lineWidth = 0.22;
-		for (i = 0; i < 22; i++) { var su = tkJ(i + 1010), sv = tkJ(i + 1030) * 2 - 1, j2 = Math.min(7, Math.floor(su * 8)), xa = NL[j2][0] + (NR[j2][0] - NL[j2][0]) * (0.5 + sv * 0.4), ya = NL[j2][1] + (NR[j2][1] - NL[j2][1]) * (0.5 + sv * 0.4), xb = NL[j2 + 1][0] + (NR[j2 + 1][0] - NL[j2 + 1][0]) * (0.5 + sv * 0.4), yb = NL[j2 + 1][1] + (NR[j2 + 1][1] - NL[j2 + 1][1]) * (0.5 + sv * 0.4);
-			g.beginPath(); g.moveTo(xa, ya); g.lineTo(xa + (xb - xa) * 0.6, ya + (yb - ya) * 0.6); g.stroke(); }
-		kpFuzz(g, NL, -1, 14, 'rgba(190,178,162,.55)', 0.8, 1050); kpFuzz(g, NR, 1, 14, 'rgba(150,134,116,.5)', 0.8, 1070);
-		g.save(); g.translate(hx, hy); g.rotate(t * 1.0);
-		g.fillStyle = KP.face; g.beginPath(); g.ellipse(0, 0, 4.4, 3.9, 0, 0, Math.PI * 2); g.fill();
-		kpFuzz(g, [[-4, 1.5], [-3.4, -2.2], [0, -3.9], [3.2, -2.6]], -1, 10, 'rgba(176,160,140,.55)', 0.7, 1090);
-		/* the crown: buff-brown, speckled dark */
-		g.fillStyle = 'rgba(132,104,78,.7)'; g.beginPath(); g.ellipse(-1, -2.3, 3.4, 1.6, 0, 0, Math.PI * 2); g.fill();
-		g.fillStyle = 'rgba(70,52,38,.75)';
-		for (i = 0; i < 9; i++) { g.beginPath(); g.arc(-3.4 + tkJ(i + 1110) * 5, -3.2 + tkJ(i + 1120) * 1.8, 0.22 + tkJ(i + 1130) * 0.2, 0, Math.PI * 2); g.fill(); }
-		/* the bill, its nostril, its darker tip */
-		g.fillStyle = KP.beak; g.beginPath(); g.moveTo(3.6, -0.2); g.quadraticCurveTo(6.4, 0.6, 7.6, 2); g.quadraticCurveTo(5.6, 2, 3.4, 1.8); g.closePath(); g.fill();
-		g.fillStyle = '#7A6250'; g.beginPath(); g.moveTo(6.6, 1.1); g.quadraticCurveTo(7.2, 1.5, 7.6, 2); g.lineTo(6.8, 1.95); g.closePath(); g.fill();
-		g.strokeStyle = 'rgba(80,60,46,.6)'; g.lineWidth = 0.3; g.beginPath(); g.moveTo(4.6, 0.5); g.lineTo(5.6, 0.8); g.stroke();
-		/* the eye in its pale ring */
-		g.fillStyle = '#E8DED2'; g.beginPath(); g.arc(1.4, -0.4, 1.8, 0, Math.PI * 2); g.fill();
-		g.fillStyle = KP.eye; g.beginPath(); g.arc(1.4, -0.4, 1.35, 0, Math.PI * 2); g.fill();
-		g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(1.9, -0.9, 0.35, 0, Math.PI * 2); g.fill();
-		g.restore();
-		g.restore();
-		kpLeg(g, [25, 39 + bob], fB, fB[2], KP.leg, 11, 14, 1);
-	}
-	var KP_BOX = [-6, -3, 66, 69];
 	/* one pre-drawn pose into c (a canvas, or an OffscreenCanvas in the
 	 * worker), mirrored to face LEFT as every walker's art does. o: H his
-	 * height at the largest size the theme draws him, k a poult's share of
-	 * it, fr / kfr the walk frames, dpr. Keys: 'w0'-'w15' the walk,
-	 * 'p1'-'p4' the head lowering to feed, 'pj' the jab, 'rLP' the fan's
-	 * rattle at level L (1, 2) and phase P (0-3), standing as in 'w0'; 'k…'
-	 * a poult. */
+	 * height at the largest size the theme draws him, fr the walk frames,
+	 * dpr. Keys: 'w0'-'w15' the walk, 'p1'-'p4' the head lowering to feed,
+	 * 'pj' the jab, 'rLP' the fan's rattle at level L (1, 2) and phase P
+	 * (0-3), standing as in 'w0'. (4.17.0: the poults are gone, Rob.) */
 	function tkDraw(c, key, o) {
-		var poult = key.charAt(0) === 'k', b = poult ? KP_BOX : TK_BOX, k2 = poult ? key.slice(1) : key;
-		var u = o.H * (poult ? o.k : 1) / (b[3] - b[1]), s2 = u * o.dpr, g;
+		var b = TK_BOX, k2 = key;
+		var u = o.H / (b[3] - b[1]), s2 = u * o.dpr, g;
 		c.width = Math.ceil((b[2] - b[0]) * s2); c.height = Math.ceil((b[3] - b[1]) * s2);
 		g = o.sw ? c.getContext('2d', { willReadFrequently: true }) : c.getContext('2d');   /* 4.16.1: o.sw, software (see the engine's TK_DESK) */
 		if (g) {
 			g.setTransform(-s2, 0, 0, s2, b[2] * s2, -b[1] * s2);
-			var ph = k2.charAt(0) === 'w' ? +k2.slice(1) / (poult ? o.kfr : o.fr) : 0, d = k2.charAt(0) === 'p' ? (k2 === 'pj' ? 1 : +k2.slice(1) / 4) : 0;
+			var ph = k2.charAt(0) === 'w' ? +k2.slice(1) / o.fr : 0, d = k2.charAt(0) === 'p' ? (k2 === 'pj' ? 1 : +k2.slice(1) / 4) : 0;
 			var sh = k2.charAt(0) === 'r' ? [+k2.charAt(1) * 0.012, +k2.charAt(2) / 4] : null;
-			if (poult) { kpPaint(g, ph, d); } else { tkPaint(g, ph, d, k2 === 'pj' ? 1 : 0, sh); }
+			tkPaint(g, ph, d, k2 === 'pj' ? 1 : 0, sh);
 		}
 		return { w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u, u: u };
 	}
 	/* TK_END */
-	return [tkPaint, tkDraw, TK_BOX, KP_BOX, TK_STRIDE, TK_GROUND, TK_STANCE, KP_STRIDE, KP_GROUND];   /* an array: its names minify (the worker reads [1]) */
+	return [tkPaint, tkDraw, TK_BOX];   /* an array: its names minify (the worker reads [1]) */
 	}
 	var S = {
 		turkey: '1 1|',   /* 4.13.2: the tom is drawn in code (TK_ above); this key names him */

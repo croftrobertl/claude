@@ -193,8 +193,7 @@
 	}
 	/* Thanksgiving's tom (art-thanksgiving.js): his painters, or nothing on
 	 * any other day; his walk is never started without them (tkSz) */
-	var TKM = ART.tk ? ART.tk() : [], tkPaint = TKM[0], tkDraw = TKM[1], TK_BOX = TKM[2], KP_BOX = TKM[3],
-		TK_STRIDE = TKM[4], TK_GROUND = TKM[5], TK_STANCE = TKM[6], KP_STRIDE = TKM[7], KP_GROUND = TKM[8];
+	var TKM = ART.tk ? ART.tk() : [], tkPaint = TKM[0], tkDraw = TKM[1], TK_BOX = TKM[2];
 
 	var PAL = {"a":"#F1C40F","b":"#343A40","c":"#2B8A3E","d":"#F1F3F5","e":"#E03131","f":"#B8860B","g":"#212529","h":"#495057","i":"#6F4E37","j":"#2F9E44","k":"#FFD43B","l":"#7C3AED","m":"#1864AB","n":"#C92A2A","o":"#DEE2E6","p":"#8B5A2B","q":"#E9ECEF","r":"#E8590C","s":"#F783AC","t":"#ADB5BD","u":"#E64980","v":"#4A6B8A","w":"#E8890C","x":"#2C3E50"};
 	function svgDoc(raw) {
@@ -3299,7 +3298,7 @@
 				p.vx = p.dir * (b === 'hop' ? rnd(40, 80) : b === 'chatter' ? rnd(50, 90) : rnd(15, 30));
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
-				/* forage: Thanksgiving's tom and poults (4.16.0: tomHoldStep) */
+				/* forage: Thanksgiving's tom (4.16.0: tomHoldStep) */
 				if (b === 'forage') { p.hl = 0; p.alpha = 0; p.dir = -1; p.x = vw + p.size * 4.6; p.y = ground; p.vx = 0; }   /* 4.16.0: placed and faded in by tomHoldStep */
 			}
 			if (b === 'dart') {
@@ -3696,44 +3695,32 @@
 		}
 
 		/* 4.16.0 (Rob: the still picture "looks great. It's the movement that's
-		 * screwy"): the tom does NOT walk. He holds his strut in one place at
-		 * the foot of the screen, near the right edge, facing in; now and then,
-		 * ONE thing at a time, he gives the fan a short rattle (0.9 s, the
-		 * real display shiver) or feeds (his approved feed). His two poults
-		 * each have their OWN spot and ground line, never his: the near one
-		 * on his head side, a little lower (drawn after him), the far one on
-		 * his tail side, a little higher (drawn before him). Their ranges never
-		 * reach his box, so nothing passes in front of or behind anything. Each
-		 * takes a few short steps on its own timing (its walk phase advances by
-		 * the ground it covers, so a planted foot never slides), pauses, pecks,
-		 * and turns about its own feet when it reaches the end of its spot. */
-		var KP_FX = 18 + KP_STRIDE * (0.5 - 0.25 / TK_STANCE);   /* a poult's feet at rest, in its rig's units */
-		/* 4.16.1 (Rob): twice the size on a desktop-wide window (1024 and up),
-		 * same corner, same ground line; phones and tablets below unchanged */
+		 * screwy"): the tom does NOT walk. He holds his strut in one place,
+		 * facing in; now and then, ONE thing at a time, he gives the fan a
+		 * short rattle (0.9 s, the real display shiver) or feeds (his approved
+		 * feed). 4.17.0 (Rob, 2026-11-06): he stands ALONE (the poults are
+		 * gone) on the header picture's foot, 8 px in from its right edge. */
+		/* 4.16.1 (Rob): twice the size on a desktop-wide window (1024 and up);
+		 * phones and tablets below unchanged */
 		function tkK() { return (W.innerWidth || vw) >= 1024 ? 2 : 1; }
+		/* his drawn size: the visit's random size, x2 on a desktop, x p.fk
+		 * (4.17.0, Rob's A: only a draw that would come within 8 px of the
+		 * header's words is drawn smaller, just enough to clear; tkFitPlan) */
 		function tomGeom(p) {
-			var K = tkK(), tu = p.size * 1.3 * TK_H * p.sc * K / TK_REF, ku = KP_K * TK_REF * tu / (KP_BOX[3] - KP_BOX[1]);
-			var fxC = KP_BOX[2] - KP_FX, kw = KP_BOX[2] - KP_BOX[0], E = mx2(KP_BOX[2] - KP_FX, KP_FX - KP_BOX[0]) * ku;
-			var tw = (TK_BOX[2] - TK_BOX[0]) * tu, th = (TK_BOX[3] - TK_BOX[1]) * tu, R = mx2(24 * K, kw * ku * 1.3), G = 6 * K;
-			return { tu: tu, ku: ku, kc: KP_STRIDE / TK_STANCE * ku, tw: tw, th: th, E: E, R: R, G: G, fxC: fxC,
-				kg: [0, 0],   /* 4.17.0: all three stand on the header picture's foot (4.16.0's lower/higher ground lines would put a foot under the edge or a gap above it) */
-				lo: [p.x - tw / 2 - G - E - R, p.x + tw / 2 + G + E], hi: [p.x - tw / 2 - G - E, p.x + tw / 2 + G + E + R] };
+			var tu = p.size * 1.3 * TK_H * p.sc * tkK() * (p.fk == null ? 1 : p.fk) / TK_REF;
+			return { tu: tu, tw: (TK_BOX[2] - TK_BOX[0]) * tu, th: (TK_BOX[3] - TK_BOX[1]) * tu };
 		}
+		function tomPlace(p) { var g = tomGeom(p); p.x = vw - 8 - g.tw / 2; p.hw = vw; p.hk = p.fk; }
 		function tomHoldStep(p, dt) {
-			var g, c;
 			p.y = ground; p.rot = 0; p.vx = 0;
-			if (p.hl && p.hw !== vw) {   /* a real resize: his place moves with the edge, the poults with him */
-				g = tomGeom(p); var dx = vw - 8 - (g.G + 2 * g.E + g.R) - g.tw / 2 - p.x;
-				p.x += dx; p.kx[0] += dx; p.kx[1] += dx; p.hw = vw;
-			}
+			/* his fit: set at once while he is unseen, eased once he is up (a
+			 * re-measure that finds new words never makes him pop) */
+			if (p.fkT != null) { p.fk = p.fk == null || p.alpha <= 0 ? p.fkT : p.fk + (p.fkT - p.fk) * mn(1, dt * 3); }
 			if (!p.hl) {
-				p.x = 0; g = tomGeom(p);
-				p.x = vw - 8 - (g.G + 2 * g.E + g.R) - g.tw / 2;
-				g = tomGeom(p);
-				p.hl = 1; p.hw = vw; p.alpha = 0; p.sv = -1; p.fs = 0; p.fv = -1; p.tt = rnd(3, 6);
-				p.kx = [rnd(g.lo[0], g.hi[0]), rnd(g.lo[1], g.hi[1])]; p.kd = [sgn(), sgn()];
-				p.kq = [0, 0.5]; p.kf = [0, 0]; p.ks = [0, 0]; p.kt = [rnd(0.4, 1.6), rnd(1.4, 3)]; p.kz = [0, 0]; p.ke = [0, 0];
-			}
+				if (p.fk == null) { return; }   /* waits for his first fit plan */
+				tomPlace(p);
+				p.hl = 1; p.alpha = 0; p.sv = -1; p.fs = 0; p.fv = -1; p.tt = rnd(3, 6);
+			} else if (p.hw !== vw || p.hk !== p.fk) { tomPlace(p); }   /* a resize or a new fit: the right edge stays his */
 			p.alpha = mn(1, p.alpha + dt / 1.2);   /* he fades in where he stands: never walks or pops in */
 			/* his idle motions: one at a time, then a hold */
 			if (p.sv >= 0) { p.sv += dt; if (p.sv >= 0.9) { p.sv = -1; p.tt = rnd(5, 11); } }
@@ -3742,55 +3729,14 @@
 				if (rand() < 0.65) { p.sv = 0; }
 				else { p.fs = 1; p.fv = tkNextV(p.fv); p.ft = p.ftS = tkFeedEnd(p.fv) + 0.4 + rnd(0.3, 0.7); }
 			}
-			g = tomGeom(p);
-			for (c = 0; c < 2; c++) {
-				var st = p.ks[c];
-				if (st === 0) {
-					if ((p.kt[c] -= dt) <= 0) {
-						if (rand() < 0.45) { p.ks[c] = 2; p.kf[c] = 0; }
-						else {
-							var n = 1 + MT.floor(rand() * 3), to = p.kx[c] + p.kd[c] * n * 0.5 * g.kc;
-							if (to < g.lo[c] || to > g.hi[c]) {
-								var back = p.kx[c] - p.kd[c] * n * 0.5 * g.kc;
-								if (back >= g.lo[c] && back <= g.hi[c]) { p.ks[c] = 3; p.kz[c] = 0; continue; }   /* turn first, about its own feet */
-								while (n > 0 && (to < g.lo[c] || to > g.hi[c])) { n--; to = p.kx[c] + p.kd[c] * n * 0.5 * g.kc; }
-								if (!n) { p.ks[c] = 2; p.kf[c] = 0; continue; }
-							}
-							p.ks[c] = 1; p.ke[c] = p.kq[c] + n * 0.5;
-						}
-					}
-				} else if (st === 1) {
-					var dq = mn(dt * 1.5, p.ke[c] - p.kq[c]);
-					p.kq[c] += dq; p.kx[c] += p.kd[c] * g.kc * dq;
-					if (p.kq[c] >= p.ke[c] - 1e-9) { p.kq[c] = p.ke[c]; p.ks[c] = 0; p.kt[c] = rand() < 0.5 ? rnd(0.3, 0.9) : rnd(1.4, 3.2); }   /* both feet down */
-				} else if (st === 2) {
-					if ((p.kf[c] += dt) >= 1.9) { p.kf[c] = 0; p.ks[c] = 0; p.kt[c] = rnd(1, 3); }
-				} else {
-					var z0 = p.kz[c]; p.kz[c] += dt / 0.6;
-					if (z0 < 0.5 && p.kz[c] >= 0.5) { p.kd[c] = -p.kd[c]; }   /* the mirror at its narrowest */
-					if (p.kz[c] >= 1) { p.kz[c] = 0; p.ks[c] = 0; p.kt[c] = rnd(0.2, 0.6); }
-				}
-				p.kx[c] = clamp(p.kx[c], g.lo[c], g.hi[c]);
-			}
 		}
 		function tomHold(p, s) {
-			var key = p.sv >= 0 ? 'r' + (p.sv < 0.15 || p.sv > 0.75 ? 1 : 2) + (MT.floor(p.sv * 24) % 4) : p.fs === 1 ? tkPose(0, TK_FR, 1, p.ftS - p.ft, false, p.fv) : 'w0';
+			var key = p.sv >= 0 ? 'r' + (p.sv < 0.15 || p.sv > 0.75 ? 1 : 2) + (MT.floor(p.sv * 24) % 4) : p.fs === 1 ? tkPose(p.ftS - p.ft, p.fv) : 'w0';
 			var tf = tkGet(key); if (!tf) { return; }
-			var g = tomGeom(p), ts = (p.size * 1.3 * s * tkK() * TK_H * TK_R) / tf.h, tw = tf.w * ts, th = tf.h * ts;
-			/* 4.17.0: every drawing's lowest painted row (its toes) on p.y, the
-			 * header picture's foot; drawn far poult, tom, near poult */
-			var L = [[g.kg[1], 1], [0, -1], [g.kg[0], 0]];
-			for (var i = 0; i < 3; i++) {
-				var c = L[i][1];
-				if (c < 0) { cx.drawImage(tf.c, -tw / 2, -th * TK_SOLEF, tw, th); continue; }
-				var f = tkGet(p.ks[c] === 2 ? tkPose(p.kq[c], KP_FR, 1, p.kf[c] + 0.3, true) : tkPose(p.kq[c], KP_FR, 0, 0, true));
-				if (!f) { continue; }
-				var pw = f.w * ts, ph = f.h * ts, py = L[i][0] - ph * KP_SOLEF + ph / 2;
-				var sx = (p.kd[c] > 0 ? -1 : 1) * (p.ks[c] === 3 ? 0.3 + 0.7 * abs(cos(MT.PI * p.kz[c])) : 1);
-				cx.save(); cx.translate(p.kx[c] - p.x, 0); cx.scale(sx, 1);
-				cx.drawImage(f.c, -g.fxC * f.u * ts, py - ph / 2, pw, ph);   /* its feet on x = 0, so a turn pivots on them */
-				cx.restore();
-			}
+			var ts = tomGeom(p).th / tf.h;
+			/* 4.17.0: his lowest painted row (his toes) on p.y, the header
+			 * picture's foot */
+			cx.drawImage(tf.c, -tf.w * ts / 2, -tf.h * ts * TK_SOLEF, tf.w * ts, tf.h * ts);
 		}
 
 		/* Sprite draw extras: smoke, glint sweep, tree lights, balloon
@@ -3909,7 +3855,7 @@
 			var layerA = p.far ? 0.6 : 1;
 			var layerS = p.far ? 0.6 : 1;
 			cx.save();
-			/* 4.16.1 (Rob): the tom and his poults are as opaque as the scenes and
+			/* 4.16.1 (Rob): the tom is as opaque as the scenes and
 			 * flyers (only their own fade-in); the falling pieces keep the
 			 * sprite opacity */
 			cx.globalAlpha = b === 'forage' ? clamp(p.alpha, 0, 1) : alphaBase * clamp(p.alpha, 0, 1) * layerA * (evening ? 0.9 : 1) * (p.yl == null ? 1 : p.yl);
@@ -3977,7 +3923,7 @@
 				cx.font = MT.round(p.size * 0.7) + FT;
 				cx.fillText(drawable('🪱') ? '🪱' : '~', 0, p.size * 0.8);
 			} else if (b === 'forage') {
-				if (p.hl) { tomHold(p, s); }   /* 4.16.0: the tom and his poults, each in its own place */
+				if (p.hl) { tomHold(p, s); }   /* 4.16.0: the tom, holding his strut */
 			} else {
 				drawGlyph(p, s, flip, t);
 			}
@@ -4184,19 +4130,23 @@
 				cv = o[0]; cx = o[1]; vw = o[2]; vh = o[3]; waterY = o[4]; ground = o[5]; lastDpr = o[6]; cvOX = o[7]; cvOY = o[8]; cvUX = o[9]; cvUY = o[10];
 			}
 		}
-		/* 4.17.0 (Rob, every screen size): the tom and his poults stand on the
-		 * BOTTOM EDGE OF THE HEADER PICTURE, like the hero's own heron and
-		 * seaplane, and scroll away with the page. They have their own small
-		 * canvas inside the picture, at its bottom right, sized to the group
-		 * (never the whole picture: it is redrawn at the sprites' 30 fps for
-		 * the whole visit), above the sky canvas, pointer-events none. It is
-		 * placed by CSS (right 0, bottom 0), so its foot IS the picture's
-		 * foot whatever the toolbar does: nothing follows the viewport, and
-		 * nothing is read or written on scroll. Each drawing's lowest painted
-		 * row (TK_SOLEF / KP_SOLEF: the toes, measured from the pre-drawn
-		 * poses at 416 and 145 px, the same at 208 and 73) lands on that foot.
-		 * No picture (or one too short for him and the title), no tom. */
-		var TK_SOLEF = 0.9664, KP_SOLEF = 0.9655, gnd = null;
+		/* 4.17.0 (Rob, every screen size): the tom stands on the BOTTOM EDGE
+		 * OF THE HEADER PICTURE, like the hero's own heron and seaplane, and
+		 * scrolls away with the page. He has his own small canvas inside the
+		 * picture, at its bottom right, sized to him (never the whole picture:
+		 * it is redrawn at the sprites' 30 fps for the whole visit), above the
+		 * sky canvas, pointer-events none. It is placed by CSS (right 0,
+		 * bottom 0), so its foot IS the picture's foot whatever the toolbar
+		 * does: nothing follows the viewport, and nothing is read or written
+		 * on scroll. His lowest painted row (TK_SOLEF: his toes, measured from
+		 * the pre-drawn poses at 416 px, the same at 208) lands on that foot.
+		 * No picture, no tom; nor where even his fitted size would be too
+		 * small or reach above the picture's middle. */
+		var TK_SOLEF = 0.9664, gnd = null;
+		/* the top of his ink in 24 columns across his box, as a share of its
+		 * height, the highest over every pose he takes (standing, the four
+		 * feeding poses and the jab, the rattle): tkFitPlan's outline */
+		var TK_TOP = [0.721, 0.541, 0.442, 0.351, 0.303, 0.274, 0.223, 0.137, 0.094, 0.055, 0.041, 0.034, 0.014, 0.014, 0.024, 0.038, 0.046, 0.065, 0.101, 0.11, 0.147, 0.173, 0.207, 0.32];   /* measured from the 14 pre-drawn poses at 416 px, rounded up by 2 rows (tools/tom-top.js) */
 		function gndEnsure() {
 			if (!skyPic) { return null; }
 			if (!gnd) {
@@ -4207,33 +4157,92 @@
 				var g = c.getContext('2d');
 				if (!g) { return null; }
 				if (W.getComputedStyle(skyPic).position === 'static') { skyPic.style.position = 'relative'; }
-				gnd = { c: c, g: g, pw: 0, ph: 0, cw: 0, ch: 0, dpr: 0, resized: true, at: 0, ok: true };
-				if (W.ResizeObserver) { new W.ResizeObserver(function () { gnd.resized = true; }).observe(skyPic); }
+				gnd = { c: c, g: g, pw: 0, ph: 0, cw: 0, ch: 0, dpr: 0, resized: true, at: 0, ok: true, q: 0 };
+				if (W.ResizeObserver) { new W.ResizeObserver(function () { gnd.resized = true; gnd.at = 0; }).observe(skyPic); }
 			}
 			if (!gnd.c.isConnected) { skyPic.appendChild(gnd.c); gnd.resized = true; }
 			if (gnd.resized) { gnd.resized = false; gnd.pw = mx2(1, skyPic.clientWidth); gnd.ph = mx2(1, skyPic.clientHeight); }
 			return gnd;
 		}
-		/* the group's box in the picture's px, from its geometry: the far end
-		 * of the left poult's range to the picture's right edge, his height */
-		function gndBox(p) {
-			var g = tomGeom(p);
-			return [mn(g.lo[0], g.lo[1]) - g.E - 2, gnd.ph - g.th - 2, gnd.pw, gnd.ph];
+		/* Rob's A (2026-11-06): his size stays the visit's random size, but a
+		 * draw that would come within 8 px of the header's words or buttons
+		 * is drawn just small enough to clear them. Measured in IDLE time,
+		 * never in a frame: the title's and tagline's letters (Range rects,
+		 * KC_TEXT), the keep-clear boxes (KC_BOX) and every link, button or
+		 * field inside the picture, in the picture's px, against his outline
+		 * (TK_TOP) standing 8 px in from its right edge on its foot. Anything
+		 * fixed or sticky is left out (scrolled, a pinned menu bar would sit
+		 * over the picture's foot). Returns the largest share (<= 1) of his
+		 * size that clears. */
+		var TK_KEEP = 'a, button, input, select, textarea, [role="button"]';
+		function tkFitPlan(p) {
+			var pr = skyPic.getBoundingClientRect(), R = [], i, j;
+			function pinned(el) {
+				for (var e = el; e && e !== D.body; e = e.parentElement) { var ps = W.getComputedStyle(e).position; if (ps === 'fixed' || ps === 'sticky') { return true; } }
+				return false;
+			}
+			function seen(el) { var cs = W.getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity !== 0; }
+			function add(r) { if (r.width > 0 && r.height > 0) { R.push([r.left - pr.left - 8, r.top - pr.top - 8, r.right - pr.left + 8, r.bottom - pr.top + 8]); } }
+			var te = [], be = [], bt = [];
+			try { te = KC_TEXT ? D.querySelectorAll(KC_TEXT) : []; } catch (e) { te = []; }
+			try { be = KC_BOX ? D.querySelectorAll(KC_BOX) : []; } catch (e) { be = []; }
+			try { bt = skyPic.querySelectorAll(TK_KEEP); } catch (e) { bt = []; }
+			for (i = 0; i < te.length; i++) {
+				if (pinned(te[i])) { continue; }
+				var tw = D.createTreeWalker(te[i], 4, null), tn;
+				while ((tn = tw.nextNode())) {
+					if (!/\S/.test(tn.nodeValue) || !tn.parentElement || !seen(tn.parentElement)) { continue; }
+					var rg = D.createRange(); rg.selectNodeContents(tn);
+					var cr = rg.getClientRects();
+					for (j = 0; j < cr.length; j++) { add(cr[j]); }
+				}
+			}
+			for (i = 0; i < be.length; i++) { if (seen(be[i]) && !pinned(be[i])) { add(be[i].getBoundingClientRect()); } }
+			for (i = 0; i < bt.length; i++) { if (seen(bt[i]) && !pinned(bt[i])) { add(bt[i].getBoundingClientRect()); } }
+			var fk0 = p.fk; p.fk = 1; var g = tomGeom(p); p.fk = fk0;
+			var pw = skyPic.clientWidth, ph = skyPic.clientHeight, N = TK_TOP.length;
+			function hits(k) {
+				var w = g.tw * k, h = g.th * k, x0 = pw - 8 - w, top = ph - h * TK_SOLEF, r, q;
+				for (q = 0; q < R.length; q++) {
+					r = R[q];
+					if (r[1] >= ph) { continue; }
+					for (i = 0; i < N; i++) {
+						if (x0 + w * (i + 1) / N > r[0] && x0 + w * i / N < r[2] && top + h * TK_TOP[i] < r[3]) { return true; }
+					}
+				}
+				return false;
+			}
+			if (!N || !hits(1)) { return 1; }
+			var lo = 0, hi = 1;
+			for (i = 0; i < 14; i++) { var m = (lo + hi) / 2; if (hits(m)) { hi = m; } else { lo = m; } }
+			return lo;
 		}
-		/* step and draw the group on its canvas: the picture's px, so every
-		 * placement rule (8 px in from the right edge, the poults' spots) is
-		 * the one it was, measured against the picture instead of the screen */
+		/* the plan in idle time: first as soon as he could stand, then after a
+		 * resize, a scroll-settled moment every 10 s (late fonts, a title that
+		 * wraps) */
+		function gndPlan(p) {
+			if (gnd.q || (p.fkT != null && gnd.at && nowMs() - gnd.at < 10000)) { return; }
+			gnd.q = 1;
+			var run = function () { gnd.q = 0; gnd.at = nowMs(); p.fkT = tkFitPlan(p); };
+			if (W.requestIdleCallback) { W.requestIdleCallback(run, { timeout: 1000 }); } else { setTimeout(run, 60); }
+		}
+		/* step and draw him on his canvas: the picture's px, so his placement
+		 * rule (8 px in from the right edge) is the one it was, measured
+		 * against the picture instead of the screen */
 		function gndFrame(dt, t) {
 			var G = null, k, p, o;
 			for (k = 0; k < parts.length; k++) { if (parts[k].b === 'forage' && !parts[k].dormant) { G = G || gndEnsure(); p = parts[k]; } }
 			if (!p || !G) { return; }
+			if (tkDone) { gndPlan(p); }
 			o = [cv, cx, vw, vh, ground];
 			cv = G.c; cx = G.g; vw = G.pw; vh = G.ph; ground = G.ph;
 			try {
 				if (tkDone) { tomHoldStep(p, dt); }
-				var dpr = mn(W.devicePixelRatio || 1, 2), b = p.hl ? gndBox(p) : [vw - 1, vh - 1, vw, vh];
-				/* too short a picture for him (he would reach the title): not drawn */
-				G.ok = !p.hl || tomGeom(p).th <= G.ph * 0.5;
+				var dpr = mn(W.devicePixelRatio || 1, 2), gm = p.hl ? tomGeom(p) : null;
+				var b = gm ? [vw - 8 - gm.tw - 2, vh - gm.th - 2, vw, vh] : [vw - 1, vh - 1, vw, vh];
+				/* fitted so small he would look lost, or a picture too short for
+				 * him: not drawn */
+				G.ok = !gm || (p.fk >= 0.4 && gm.th <= G.ph * 0.5);
 				var cw = MT.ceil(b[2] - b[0]), ch = MT.ceil(b[3] - b[1]);
 				if (cw !== G.cw || ch !== G.ch || dpr !== G.dpr) {
 					G.cw = cw; G.ch = ch; G.dpr = dpr;
@@ -4308,12 +4317,12 @@
 			return (hnCache[key] = { c: c, x: b[0] * u, y: b[1] * u, w: (b[2] - b[0]) * u, h: (b[3] - b[1]) * u, bob: key === 's' ? 0 : hnPose(key).bob * u });
 		}
 		function hnGet(key) { return hnCache[key] || hnBuild(key); }
-		/* 4.13.2: Thanksgiving's tom and his poults, pre-drawn once after load
-		 * in idle time (TK_ above), mirrored to face LEFT as every walker's
-		 * art does, at the largest size the theme draws him and min(DPR, 2).
-		 * Keys: 'w0'-'w15' the walk, 'p0'-'p4' the head lowering to feed,
-		 * 'pj' the jab; 'k…' the same for a poult. */
-		var TK_FR = 16, KP_FR = 12, TK_H = 1.55, KP_K = 0.4, tkCache = {}, tkN = 0, tkSz = 0;
+		/* 4.13.2: Thanksgiving's tom, pre-drawn once after load in idle time
+		 * (TK_ above), mirrored to face LEFT, at the largest size the theme
+		 * draws him and min(DPR, 2). Keys: 'w0' standing (since 4.16.0 he
+		 * never walks, so 4.17.0 draws no walk frames), 'p1'-'p4' the head
+		 * lowering to feed, 'pj' the jab, 'rLP' the fan's rattle. */
+		var TK_H = 1.55, tkCache = {}, tkN = 0, tkSz = 0;
 		/* 4.14.4: his size is set by 4.14.3's box (107 units tall, 133 wide),
 		 * so the box can grow to his real extent without shrinking him */
 		var TK_REF = 107, TK_REFW = 133, TK_R = TK_BOX ? (TK_BOX[3] - TK_BOX[1]) / TK_REF : 1;
@@ -4325,7 +4334,7 @@
 		 * that can show a desktop-wide window draws them at the 2x size, so
 		 * nothing is scaled up. A phone keeps his 4.16.0 size. */
 		var TK_DESK = mx2((W.screen && W.screen.width) || 0, (W.screen && W.screen.height) || 0, W.innerWidth || 0) >= 1024;
-		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R * (TK_DESK ? 2 : 1), k: KP_K / TK_R, fr: TK_FR, kfr: KP_FR, dpr: mn(W.devicePixelRatio || 1, 2), sw: true };   /* software everywhere (Rob, 2026-11-05: Android's Chrome stalls too); the 2x cache on a desktop only */
+		var tkO = { H: tkSz * 1.3 * 1.4 * TK_H * TK_R * (TK_DESK ? 2 : 1), fr: 16, dpr: mn(W.devicePixelRatio || 1, 2), sw: true };   /* software everywhere (Rob, 2026-11-05: Android's Chrome stalls too); the 2x cache on a desktop only */
 		function tkBuild(key) {
 			var c = D.createElement('canvas'), m = tkDraw(c, key, tkO);
 			m.c = c; tkN++;
@@ -4341,9 +4350,7 @@
 			var tkIn = function () { tkQuiet = nowMs(); };
 			['scroll', 'touchmove', 'wheel'].forEach(function (n) { W.addEventListener(n, tkIn, { passive: true, capture: true }); });
 			var tkTodo = [], tkJ2;
-			for (tkJ2 = 0; tkJ2 < TK_FR; tkJ2++) { tkTodo.push('w' + tkJ2); }
-			for (tkJ2 = 0; tkJ2 < KP_FR; tkJ2++) { tkTodo.push('kw' + tkJ2); }
-			tkTodo.push('p1', 'p2', 'p3', 'p4', 'pj', 'kp1', 'kp2', 'kp3', 'kp4');
+			tkTodo.push('w0', 'p1', 'p2', 'p3', 'p4', 'pj');
 			for (tkJ2 = 0; tkJ2 < 8; tkJ2++) { tkTodo.push('r' + (1 + (tkJ2 >> 2)) + (tkJ2 & 3)); }   /* 4.16.0: the fan's rattle */
 			var tkLater = function (f) { if (W.requestIdleCallback) { W.requestIdleCallback(f, { timeout: 2000 }); } else { setTimeout(f, 50); } };
 			/* the scroll-quiet idle moment the pre-draw's last step (and the
@@ -4401,13 +4408,14 @@
 		function tkFeed(v) { return [[[0.8, 1.0], [1.25, 1.45], 1.6], [[0.85, 1.05], 1.25], [[0.8, 0.95], [1.1, 1.25], [1.4, 1.55], 1.75]][v]; }
 		function tkFeedEnd(v) { var F = tkFeed(v); return F[F.length - 1]; }
 		function tkNextV(v) { return v < 0 ? MT.floor(rand() * 3) % 3 : (v + 1 + MT.floor(rand() * 2)) % 3; }
-		function tkPose(ph, n, fs, fe, poult, v) {
-			if (fs !== 1) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }
-			var F = tkFeed(poult || !(v >= 0) ? 0 : v), up = F[F.length - 1], jab = false, i;
+		/* his feed's pose at fe seconds into feed v: standing ('w0'), the head
+		 * lowering ('p1'-'p4') or the jab ('pj') */
+		function tkPose(fe, v) {
+			var F = tkFeed(v >= 0 ? v : 0), up = F[F.length - 1], jab = false, i;
 			var d = fe < 0.3 ? 0 : fe < 0.7 ? (fe - 0.3) / 0.4 : fe < up ? 1 : fe < up + 0.4 ? 1 - (fe - up) / 0.4 : 0;
 			for (i = 0; i < F.length - 1; i++) { if (fe > F[i][0] && fe < F[i][1]) { jab = true; } }
-			if (d <= 0) { return (poult ? 'kw' : 'w') + (MT.floor(ph * n + 0.5) % n); }   /* standing as it stopped, mid-stride (4.14.4) */
-			return (poult ? 'k' : '') + (jab && !poult ? 'pj' : 'p' + mx2(1, MT.round(d * 4)));
+			if (d <= 0) { return 'w0'; }
+			return jab ? 'pj' : 'p' + mx2(1, MT.round(d * 4));
 		}
 		if (FX.heroes && heroPool.indexOf('heron') >= 0 && !heronOff()) {
 			var hnTodo = ['s', 'f'], hnI;
@@ -7541,7 +7549,7 @@
 					if (p.dormant || p.far || p.b === 'forage') { continue; }
 					drawP(p, t);
 				}
-				/* 4.17.0: the tom and his poults, on the header picture's foot */
+				/* 4.17.0: the tom, on the header picture's foot */
 				gndFrame(pdt, t);
 			}
 			vt += dt * VT_X;   /* the heroes' visible-time clock, once per frame */
@@ -7684,7 +7692,7 @@
 				foreM: function (el) { fgMemo = null; var sv = el.ownerSVGElement; while (sv && sv.ownerSVGElement) { sv = sv.ownerSVGElement; } var b = fgSvgM(sv), r = fgInv(fgM6(sv.getScreenCTM())); return fgAff(fgAff(b, r), fgM6(el.getScreenCTM())); },
 				get witch() { return { stats: wcStats, frames: wcFrames.filter(Boolean).length, moon: !!moonC, hdr: hdr ? { n: hdr.n, x: hdr.x, y: hdr.y, w: hdr.w, h: hdr.h, fixed: hdr.fixed, c: hdr.c } : null, cuts: hdrCuts, canvas: sky ? sky.c : cv }; },
 				get anniv() { return { plan: adPlan, done: !!(adS && adS.done), worker: !!(adS && adS.worker), ms: adS ? adS.ms : 0, bytes: adS ? adS.bytes : 0, H: adS ? adS.H : 0, frames: adS ? Object.keys(adS.cache).length : 0, keys: adK ? { done: adK.done, n: Object.keys(adK.cache).length, bytes: adK.bytes } : null, cap: adCap }; },
-				get calm() { return { on: CALM, occOn: false, vis: [], tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, size: p.size, sc: p.sc, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, kx: p.kx && p.kx.slice(), kd: p.kd && p.kd.slice(), ks: p.ks && p.ks.slice(), kq: p.kq && p.kq.slice(), geo: p.hl ? tomGeom(p) : null }; }) }; },
+				get calm() { return { on: CALM, occOn: false, vis: [], tom: parts.filter(function (p) { return p.b === 'forage'; }).map(function (p) { return { hl: p.hl, x: p.x, y: p.y, size: p.size, sc: p.sc, dir: p.dir, alpha: p.alpha, fs: p.fs, fv: p.fv, sv: p.sv, fk: p.fk, fkT: p.fkT, geo: p.hl ? tomGeom(p) : null, ok: gnd ? gnd.ok : null, plan: gnd && p.hl ? tkFitPlan(p) : null }; }) }; },
 				occBuild: function () {},
 				get gate() { return { on: CFG.gate !== false, a: gtA, open: gtOpen, t0: gt0, n: gtN, desk: TK_DESK, K: tkK() }; },
 				get tom() { return { mainBuilt: tkN, cached: Object.keys(tkCache).length, todo: tkSz ? tkTodo.length : -1, done: tkDone, sceneNow: sceneNow, cache: tkCache }; },

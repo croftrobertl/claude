@@ -137,12 +137,12 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
       ok(r.b.key === 'leafbg' && r.b.on && r.b.n >= 3, `${w}: the background is the drawn leaves, ${r.b.n} of them`, JSON.stringify({ key: r.b.key, n: r.b.n }));
       ok(r.b.pos.every(p => p.r >= 12 && p.r <= 16), `${w}: small, 12–16 px`, JSON.stringify(r.b.pos.map(p => p.r)));
       ok(JSON.stringify(r.a.pos) !== JSON.stringify(r.b.pos), `${w}: and falling`, 'pos');
-      ok(r.turkey, `${w}: the tom still walks`, 'turkey');
+      ok(r.turkey, `${w}: the tom is still there`, 'turkey');
       ok(!errs.length, `${w}: no page errors`, errs.join(' | '));
     } finally { await ses.close(); }
   }
 
-  console.log("\n  --- the tom's fan is never clipped, and every foot is planted (real page, 390) ---");
+  console.log("\n  --- the tom's fan is never clipped, and no poult (real page, 390) ---");
   {
     /* every pose's real extent (painted at a big margin) lies inside the
      * box its cache canvas is made from */
@@ -175,60 +175,22 @@ const inter = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
       init: 'Math.random = (() => { let a = 14; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();' });
     try {
       await ses.page.waitForFunction(() => window.DCCSeasonsEngine && window.DCCSeasonsEngine._state && window.DCCSeasonsEngine._state.tom.done, null, { timeout: 40000, polling: 200 });
-      const r = await ses.page.evaluate(([KS, KB, KG, TS, TB, TG, TST]) => {
+      /* 4.17.0: he stands alone on the header picture's foot and never
+       * walks (test-calm.js holds his place and his toes on the edge): here,
+       * every pose drawn over 40 s is one of HIS, on his own canvas, and
+       * nothing of a poult is drawn anywhere */
+      await ses.page.waitForFunction(() => window.DCCSeasonsEngine._state.calm.tom[0] && window.DCCSeasonsEngine._state.calm.tom[0].hl, null, { timeout: 20000, polling: 200 });
+      const r = await ses.page.evaluate(() => {
         const S = window.DCCSeasonsEngine._state; S.manual(true);
         const cache = S.tom.cache, key = new Map(); for (const k in cache) { key.set(cache[k].c, k); }
-        const dpr = Math.min(devicePixelRatio || 1, 2), cv = document.querySelector('canvas.dcc-seasons-canvas');
-        function foot(ph, hx, st, gr, lift) { ph = ((ph % 1) + 1) % 1; return ph < TST ? [hx + st / 2 - st * ph / TST, 0] : [0, 1]; }
-        const P = CanvasRenderingContext2D.prototype, di = P.drawImage; let fr = [];
-        P.drawImage = function (src, x, y, w, h) {
-          const k = key.get(src);
-          if (k && this.canvas === cv && w !== undefined) {
-            const m = this.getTransform(), cr = cv.getBoundingClientRect(), z = cv.width / cr.width, poult = k[0] === 'k', b = poult ? KB : TB;
-            const s2 = src.width / (b[2] - b[0]);
-            /* a unit point (fx, ground) to page x, through the cache's mirror and this draw */
-            const px = fx => { const cx = (b[2] - fx) * s2, cy = ((poult ? KG : TG) - b[1]) * s2; const X = x + cx / src.width * w, Y = y + cy / src.height * h; return (m.a * X + m.c * Y + m.e) / z + cr.left; };
-            fr.push({ k, px });
-          }
-          return di.apply(this, arguments);
-        };
-        const track = {}, spread = { tom: 0, poult: 0 }, back = { tom: 0, poult: 0 }, last = {};
-        let steps = 0, feeds = 0;
-        for (let i = 0; i < 30 * 40; i++) {
-          fr = []; S.tick(1000 / 30, 1);
-          /* 4.15.0: his turn is a turn in place, not a walk: its frames are
-           * proven by tools/test-calm.js (his feet and the poults stay put) */
-          const tl = S.calm && S.calm.tom[0];
-          if (tl && tl.leg === 1) { for (const k in track) { delete track[k]; } continue; }
-          /* 4.16.0: a poult turning in place pivots on its feet (test-calm.js holds them) */
-          const turnK = tl && tl.ks ? [tl.ks[0] === 3 ? 'k1' : null, tl.ks[1] === 3 ? 'k2' : null] : [];
-          /* draw order: far poult, the tom, near poult */
-          const who = fr.map((d, j) => d.k[0] === 'k' ? (j === 0 ? 'k2' : 'k1') : 't');
-          fr.forEach((d, j) => {
-            const id = who[j], poult = id !== 't', n = poult ? 12 : 16;
-            if (turnK.indexOf(id) >= 0) { delete track[id + 'A']; delete track[id + 'B']; return; }
-            if (!/^k?w\d+$/.test(d.k)) { delete track[id + 'A']; delete track[id + 'B']; if (poult && /kp/.test(d.k)) { feeds++; } return; }
-            const f = +d.k.replace(/\D/g, '');
-            if (last[id] != null) { const dd = (f - last[id] + n) % n; if (dd > n / 2) { back[poult ? 'poult' : 'tom']++; } }
-            last[id] = f;
-            const ph = f / n, feet = poult ? [[ph + 0.5, 11, 'A'], [ph, 25, 'B']] : [[ph + 0.5, 74, 'A'], [ph, 81, 'B']];
-            feet.forEach(([q, hx, nm]) => {
-              const ft = foot(q, hx, poult ? KS : TS), tag = id + nm;
-              if (ft[1]) { delete track[tag]; return; }   /* lifted */
-              const X = d.px(ft[0]);
-              if (!track[tag]) { track[tag] = [X, X]; steps++; } else { track[tag][0] = Math.min(track[tag][0], X); track[tag][1] = Math.max(track[tag][1], X); }
-              const k = poult ? 'poult' : 'tom'; spread[k] = Math.max(spread[k], track[tag][1] - track[tag][0]);
-            });
-          });
-        }
+        const P = CanvasRenderingContext2D.prototype, di = P.drawImage, seen = {}, where = {};
+        P.drawImage = function (src) { const k = key.get(src); if (k) { seen[k] = (seen[k] || 0) + 1; where[this.canvas.className] = 1; } return di.apply(this, arguments); };
+        for (let i = 0; i < 30 * 40; i++) { S.tick(1000 / 30, 1); }
         P.drawImage = di;
-        return { spread, back, steps, feeds };
-      }, [M[7], M[3], M[8], M[4], M[2], M[5], M[6]]);
-      ok(r.steps > 20, `${r.steps} planted steps watched over 40 s`, String(r.steps));
-      ok(r.spread.poult <= 1.5, `a poult's planted foot holds within ${r.spread.poult.toFixed(2)} px while it is down (the drawn frames step; no slide)`, JSON.stringify(r.spread));
-      ok(r.spread.tom <= 1.5, `and the tom's within ${r.spread.tom.toFixed(2)} px`, JSON.stringify(r.spread));
-      ok(!r.back.poult && !r.back.tom, 'no walk cycle ever steps backward', JSON.stringify(r.back));
-      ok(r.feeds > 0, 'the poults still feed beside him', String(r.feeds));
+        return { keys: Object.keys(cache), seen, where: Object.keys(where) };
+      });
+      ok(r.keys.every(k => !/^k/.test(k)) && Object.keys(r.seen).every(k => !/^k/.test(k)), `no poult: ${r.keys.length} poses pre-drawn, all his (${r.keys.join(' ')})`, JSON.stringify(r));
+      ok(r.where.length === 1 && r.where[0] === 'dcc-seasons-ground' && (r.seen.w0 || 0) > 100, `he is drawn on his own canvas on the header picture only (${r.where.join(', ')}), standing in ${r.seen.w0 || 0} frames`, JSON.stringify(r));
     } finally { await ses.close(); }
   }
 

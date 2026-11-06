@@ -37,7 +37,7 @@ const CASES = JSON.parse(arg('cases')), DIR = arg('dir'), TAG = arg('tag', 'stil
       return Math.round(worst); }, { kc, sc });
     const pic = await pg.evaluate(() => { const r = document.querySelector('#header-image-main-inside').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; });
     const cw = w < 768 ? w : Math.min(w, 820), clip = { x: pic[2] - cw, y: w < 768 ? 240 : 120, width: cw, height: pic[3] - (w < 768 ? 240 : 120) + 12 };
-    const file = path.join(DIR, `${TAG}_${title.replace(/\W+/g, '')}_${w}.jpg`);
+    const file = path.join(DIR, `${TAG}_${title.replace(/\W+/g, '')}_${w}_${sc}.jpg`);
     await pg.screenshot({ path: file, clip, type: 'jpeg', quality: 86 });
     out.push({ title, w, sc, gap, file: path.basename(file) }); console.log(JSON.stringify(out[out.length - 1]));
     await ses.close();

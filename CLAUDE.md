@@ -1559,6 +1559,54 @@ Rob sees it (the overlay rows; sources named on the sheets).
      records the start from Chromium's screencast at its real timing;
      `trace-startup.js` reports `firstMotion` (the first frame that can be
      seen) and the frames dropped in the 5 s after it.
+- **4.17.0 (Rob, 2026-11-06): the tom ALONE, on the header photo's
+  bottom edge.** Built on 4.16.1 (live). Rollback: 4.16.1.
+  1. **On the header photo's foot, scrolling away with it** (Rob's
+     decision; his three phone issues: a gap of a few px under the feet,
+     the poults' flat turn, and the group jumping with the toolbar). The
+     tom has his own canvas `canvas.dcc-seasons-ground` inside `skyPic`
+     (`#header-image-main-inside`), `position:absolute; right:0; bottom:0`,
+     sized to him, z FRONT_Z + 1 (above the sky canvas), pointer-events
+     none, stepped and drawn by `gndFrame` at the page canvas's pace (the
+     forage particle is skipped in the page loop and in `scaleXY`). His
+     lowest painted row (`TK_SOLEF` 0.9664, measured) lands on the
+     picture's foot: 0 device px of gap at 320-1920, with the window 88 px
+     taller or 60 shorter and scrolled. No picture: no tom. The cause of
+     the 4.16.1 gap: he stood on `ground = vh - 16` and was drawn `10 * sc`
+     lower, so 2-9 px were left; the jump was the fixed full-screen canvas
+     re-fitted only after iOS's toolbar settled.
+  2. **The poults are GONE** (Rob, on the turn options: "Both of those look
+     kind of like an arcade game level animation ... they don't really add
+     anything"). Their painter, legs, boxes and the pack's KP exports are
+     deleted (`tkMod` now returns [tkPaint, tkDraw, TK_BOX]); the turn
+     drawings made for the review were never shipped. Since he never walks
+     (4.16.0), the 15 walk frames are no longer pre-drawn: 14 poses (`w0`,
+     `p1`-`p4`, `pj`, 8 rattle): the pose cache 22.6 -> 10.3 MB at 1440 DPR 2, 5.7 -> 2.6 MB at 390 DPR 3.
+  3. **His place: 8 px in from the photo's right edge** (`tomPlace`), the
+     4.16.0 corner rule measured against the picture.
+  4. **Rob's size pick A: shrink only when needed.** His size stays the
+     visit's random one; `tkFitPlan` (IDLE time only: first as soon as his
+     poses are ready, then after a resize and every 10 s) measures the
+     title's and tagline's letters (KC_TEXT), the keep-clear boxes (KC_BOX)
+     and every link/button/field inside the picture, skipping anything
+     fixed or sticky, against his outline `TK_TOP` (the top of his ink in
+     24 columns over every pose, `tools/tom-top.js`) with 8 px clear, and
+     returns the largest share (<= 1) of his size that clears (`p.fkT`;
+     `p.fk` eased toward it once he is up, set at once while unseen). He
+     waits unseen until the first plan. On the three live pages alone at
+     the right edge he clears at every width even at his largest size
+     (tightest 9 px, home at 320), so the rule never fires there;
+     test-calm proves it fires (a line of text put where his fan stands).
+     Not drawn if fitted under 0.4 or taller than half the picture.
+  5. **LCP unaffected**: the engine loads after the window load event;
+     on the live site with this build swapped in, every Seasons canvas
+     was inserted after the header photo's LCP in 16 of 16 cold runs.
+  - Tests: `test-calm.js` 3 (size 2x / phone, sharp, opaque, only the tom
+    drawn, one place, toes on the foot, 8 px from the right edge, toolbar
+    and scroll, clear of the words at his largest size, the fit rule);
+    mutations `gap|screen|collide|poult` added (with `mask|click|onex|
+    phone|inherit|early|slide|two`). `tools/hero-scroll-reel.js` (the 390
+    scroll with the toolbar emulated), `tools/tom-hero-stills.js`.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1991,7 +2039,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.16.0 for 4.16.1 and 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.16.1 for 4.17.0, 4.16.0 for 4.16.1 and 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on

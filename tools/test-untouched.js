@@ -35,7 +35,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BASE = 'bc9ca56';   /* 4.16.0, live (4.16.0's run: BASE ea416ea) */
+const BASE = '84f6281';   /* 4.16.1, live (4.16.1's run: BASE bc9ca56) */
 const NEW = ['thanksgiving'];   /* 4.16.1: the tom 2x on a desktop and fully opaque */
 /* 4.15.0 (Calmer Seasons) changes the ENGINE: the occluders, the pause and
  * the walkers' turn-back, all behind CFG.calm, plus the removal of the

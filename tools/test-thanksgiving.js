@@ -94,7 +94,7 @@ const APPROVED = ['leafo', 'leafc', 'leafm', 'leafm2', 'leafs',
     const bad7 = Object.entries(RE7).filter(([k, id]) => !spr(k).includes(id)).map(([k]) => k);
     if (!cornSrc || !/tgKernels\(\)/.test(cornSrc) || !/dccTgC1/.test(cornSrc)) { bad7.push('corn'); }
     ok(!bad7.length, 'the seven photo redraws are 4.13.1\'s', bad7.join(' ') || 'all seven');
-    ok(spr('turkey') === '1 1|' && /function tkPaint\(/.test(src) && /function kpPaint\(/.test(src), 'the turkey key names the drawn tom (tkPaint) and his poults (kpPaint), not a picture', spr('turkey').slice(0, 20));
+    ok(spr('turkey') === '1 1|' && /function tkPaint\(/.test(src) && !/function kpPaint\(|KP_BOX/.test(src), 'the turkey key names the drawn tom (tkPaint), not a picture; no poult painter (4.17.0: Rob removed the poults)', spr('turkey').slice(0, 20));
     /* the pie in its tin, from the USDA photo, and nothing rising off it */
     const pf = src.slice(src.indexOf('function tgPie'), src.indexOf('function tgNest'));
     ok(/\n\t\tpie: function \(\) \{ return tgPie\(\); \}/.test(src) && pf.includes('dccTgI1p') && pf.includes('dccTgI1s') && !/steam/i.test(pf.replace('No steam', '')),
