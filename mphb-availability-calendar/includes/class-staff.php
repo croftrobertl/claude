@@ -258,15 +258,11 @@ final class Staff
             wp_send_json_error(['message' => __('Could not load bookings. Please try again.', 'mphb-availability-calendar')], 500);
             return [];
         }
-        // THE CLEANING DOTS (0.48.0) ride on every board answer, so the
-        // 3-minute refresh brings a new checkout's red dot and another phone's
-        // Ready. A failed read leaves the field out: the board keeps the dots
-        // it has, rather than wiping them as if nobody had checked out.
-        try {
-            $data['turnover'] = Staff_Ready::state();
-        } catch (Staff_Read_Failed $e) {
-            // logged where it failed
-        }
+        // THE COTTAGE STATUSES (0.48.0) ride on every board answer, so the
+        // 3-minute refresh brings another phone's tap. Since 0.58.0 they are
+        // the stored taps alone — read from the plugin's own options, never
+        // from bookings or dates.
+        $data['turnover'] = Staff_Ready::state();
         return $data;
     }
 
@@ -277,7 +273,7 @@ final class Staff
      * with an empty body and nothing is read or written — then POST only. It
      * writes the plugin's own option (Staff_Ready), never MotoPress's bookings
      * or their meta. `seen` is the state time the page last showed: a cottage
-     * whose state is newer (another phone's mark, a new checkout) is refused
+     * whose status is newer (another phone's tap) is refused
      * as "changed" — 409, nothing written, the signs as they are now. Answers
      * every cottage's sign, so the board shows exactly what is stored.
      */
@@ -297,7 +293,7 @@ final class Staff
             wp_send_json_error(['message' => __('Could not save. Please try again.', 'mphb-availability-calendar')], 400);
         }
         try {
-            // 'occupied' (0.52.0): clear the mark — only while a guest is in.
+            // 'occupied' (0.52.0): the check-in record; any cottage, any time (0.58.0).
             $saved = $ready === 'occupied'
                 ? Staff_Ready::clear($type_id, (int) $seen)
                 : Staff_Ready::save($type_id, $ready === '1', (int) $seen);
@@ -308,7 +304,7 @@ final class Staff
             return;
         }
         if ($saved === null) {
-            // CHANGED SINCE THE PAGE SAW IT (another phone, a new checkout):
+            // CHANGED SINCE THE PAGE SAW IT (another phone tapped first):
             // nothing written; the board takes the signs as they are now.
             wp_send_json_error(['message' => __('This cottage was just changed. Please check it and try again.', 'mphb-availability-calendar'),
                 'changed' => true, 'turnover' => $state], 409);

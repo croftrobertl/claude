@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.57.1
+Stable tag: 0.58.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.58.0 =
+* **A cottage's status changes only when staff tap it (Rob).** "Ready", "Not Ready" and "Occupied" on the staff calendar are now exactly what was last tapped. Nothing changes them automatically: not at midnight before a check-in, not at the check-in time, not at checkout. Tapping Occupied is the check-in record. Removed: the gray Occupied worked out from a guest's stay, the red Not Ready worked out from a checkout (and its 14-day clear), and the check-in time rule.
+* **The popup offers every status but the one shown:** two buttons on a tapped cottage, all three on one never tapped. Occupied can be tapped on any cottage, guest in or not. Still one tap, no dialog; the same refusal when another phone changed the cottage first.
+* **On upgrade nothing is reset or cleaned.** Every stored tap stays exactly as it is and is read in the same shape as 0.57.1 stored it. A cottage whose sign 0.57.1 worked out from dates shows its last tap instead (or no sign). The Daily list and Stats' In House list booked guests as before; they never read a status. No timestamps, reminders, emails or notifications were added. Read-only on MotoPress; nothing is written on install, activation or upgrade.
 
 = 0.57.1 =
 * **Stats compare like with like while a period is under way (Rob's pick).** Until a month (or any period) is over, every ▲▼ (the six tiles, the headline pill and Nights by Cottage) compares with what was on the books for the same dates on this date last year, and says so: "▲10 vs this date last year", with the tips naming the date. A finished period still compares final with final ("vs Oct 2025").

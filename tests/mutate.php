@@ -3451,26 +3451,6 @@ $mutations = [
 
     // ---- 0.48.0 (Rob: the cleaning dot) — the rule's own mutations were
     // rewritten for 0.50.0's (any cottage, any time), below ----
-    ["0.48.0 dot: pending and cancelled bookings light it (any status)", 'class-staff-ready.php',
-     "                  AND bk.post_status = 'confirmed'\n",
-     "",
-     'ready-0500-test.php'],
-    ["0.48.0 dot: dock blocks light it", 'class-staff-ready.php',
-     "            if (Staff_Data::is_dock_block((int) \$r->booking_id)) {\n                continue;\n            }",
-     "",
-     'ready-0500-test.php'],
-    ["0.48.0 dot: tomorrow's checkout lights it today", 'class-staff-ready.php',
-     "                  AND co.meta_value <= %s\n",
-     "                  AND co.meta_value <= DATE(%s, '+1 day')\n",
-     'ready-0500-test.php'],
-    ["0.48.0 dot: the oldest checkout, not the latest", 'class-staff-ready.php',
-     "                ORDER BY co.meta_value DESC, bk.ID DESC\";",
-     "                ORDER BY co.meta_value ASC, bk.ID DESC\";",
-     'ready-0500-test.php'],
-    ["0.48.0 read: a failed checkout read answered as \"nobody checked out\"", 'class-staff-ready.php',
-     "            throw new Staff_Read_Failed('staff checkout query failed');",
-     "            return [];",
-     'ready-0500-test.php'],
     ["0.48.0 gate: the save endpoint skips the gate", 'class-staff.php',
      "    public static function handle_ready(): void\n    {\n        self::require_authorization();",
      "    public static function handle_ready(): void\n    {",
@@ -3479,10 +3459,53 @@ $mutations = [
      "        foreach (['month', 'booking', 'photo', 'search', 'ready'] as \$ep) {",
      "        foreach (['month', 'booking', 'photo', 'search'] as \$ep) {",
      'staff-gate-test.php'],
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.48.0 board: the dots not sent with the month", 'class-staff.php',
-     "            \$data['turnover'] = Staff_Ready::state();",
-     "            \$data['turnover_'] = Staff_Ready::state();",
+     "        \$data['turnover'] = Staff_Ready::state();\n        return \$data;",
+     "        \$data['turnover_'] = Staff_Ready::state();\n        return \$data;",
      'ready-0500-test.js'],
+    // RETIRED IN 0.58.0 (Rob, FINAL: a status changes only when staff tap it).
+    // These guarded the automatic rules 0.58.0 removes — the Not Ready worked
+    // out of a checkout, the Occupied worked out of a stay and the check-in
+    // time, and the `stay` flag. The code they mutated no longer exists; the
+    // 0.58.0 entries below guard its absence instead:
+    //   - 0.48.0 dot: pending and cancelled bookings light it (any status)
+    //   - 0.48.0 dot: dock blocks light it
+    //   - 0.48.0 dot: tomorrow's checkout lights it today
+    //   - 0.48.0 dot: the oldest checkout, not the latest
+    //   - 0.48.0 read: a failed checkout read answered as "nobody checked out"
+    //   - 0.50.0 rule: the OLDER event wins (a checkout overrides a newer mark)
+    //   - 0.50.0 rule: a mark always wins, even over a newer checkout
+    //   - 0.50.0 rule: a manual mark expires after RED_DAYS like the automatic one
+    //   - 0.50.0 rule: the automatic Not Ready never clears
+    //   - 0.50.0 rule: the automatic Not Ready kept 15 days, not 14
+    //   - 0.50.0 rule: dock blocks turn a cottage Not Ready
+    //   - 0.50.0 rule: pending and cancelled bookings count
+    //   - 0.50.0 rule: the checkout's time is the end of its day (a same-day mark loses)
+    //   - 0.51.0 occupied: never shown (the stay ignored)
+    //   - 0.51.0 occupied: a turnover day shows gray (the checkout does not govern it)
+    //   - 0.51.0 occupied: every arrival day left to the checkout rule (gray from the next morning)
+    //   - 0.51.0 occupied: a mark always beats gray (made before the stay or not)
+    //   - 0.51.0 occupied: gray beats every mark, even one made during the stay
+    //   - 0.51.0 occupied: the checkout day counted as occupied (co >= today)
+    //   - 0.51.0 occupied: the arrival day not counted (ci < today)
+    //   - 0.51.0 occupied: cancelled bookings count (no status filter)
+    //   - 0.51.0 occupied: dock blocks count
+    //   - 0.51.0 occupied: pending stays the calendar draws do not count (confirmed only)
+    //   - 0.51.0 occupied: no new time at the turnover morning (a stale page not caught)
+    //   - 0.51.0 check-in: a mark compared with the arrival day's MIDNIGHT (check-in time ignored)
+    //   - 0.51.0 check-in: a mark AT the check-in time counts (>= for >)
+    //   - 0.51.0 check-in: compared with the CHECKOUT (the previous guest) instead
+    //   - 0.51.0 check-in: MotoPress's setting ignored (always 11:00)
+    //   - 0.51.0 check-in: the minutes of the setting dropped
+    //   - 0.51.0 occupied: a mark made during the stay read as its opposite
+    //   - 0.52.0 clear: allowed with no guest in
+    //   - 0.52.0 rule: the stay flag never set (Occupied never offered)
+    //   - 0.52.0 rule: a mid-stay mark not flagged as in a stay
+    //   - 0.52.0 rule: the stay flag set with no guest in
+    //   - 0.52.0 page: Occupied offered with no guest in
+    //   - 0.52.0 page: Occupied never offered
+    //   - 0.52.0 page: the stay flag dropped from the board's state
     ["0.48.0 board: a refresh's dots ignored (the page keeps its first)", 'assets/js/staff.js',
      "                adoptTurnover(json.data.turnover);          // the cleaning dots (0.48.0)",
      "",
@@ -3532,41 +3555,10 @@ $mutations = [
 
     // ---- 0.50.0 (Rob: any cottage, any time; the popup on <body>) ----
     // THE STATE RULE
-    ["0.50.0 rule: the OLDER event wins (a checkout overrides a newer mark)", 'class-staff-ready.php',
-     "        if (\$man_at !== null && (\$auto_at === null || \$man_at >= \$auto_at)) {",
-     "        if (\$man_at !== null && (\$auto_at === null || \$man_at < \$auto_at)) {",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: a mark always wins, even over a newer checkout", 'class-staff-ready.php',
-     "        if (\$man_at !== null && (\$auto_at === null || \$man_at >= \$auto_at)) {",
-     "        if (\$man_at !== null) {",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: a manual mark expires after RED_DAYS like the automatic one", 'class-staff-ready.php',
-     "        if (\$man_at !== null && (\$auto_at === null || \$man_at >= \$auto_at)) {",
-     "        if (\$man_at !== null && \$man_at >= Data_Provider::today()->modify('-' . (self::RED_DAYS - 1) . ' days')->getTimestamp() && (\$auto_at === null || \$man_at >= \$auto_at)) {",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: the automatic Not Ready never clears", 'class-staff-ready.php',
-     "            if (\$checkout >= \$red_from) {\n                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => \$at, 'stay' => false];",
-     "            if (true) {\n                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => \$at, 'stay' => false];",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: the automatic Not Ready kept 15 days, not 14", 'class-staff-ready.php',
-     "            \$red_from = Data_Provider::today()->modify('-' . (self::RED_DAYS - 1) . ' days')->format('Y-m-d');",
-     "            \$red_from = Data_Provider::today()->modify('-' . self::RED_DAYS . ' days')->format('Y-m-d');",
-     'ready-0500-test.php'],
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.50.0 rule: a manual mark read as its opposite", 'class-staff-ready.php',
-     "            return ['state' => !empty(\$manual['ready']) ? self::READY : self::NOT_READY, 'source' => 'manual', 'at' => \$at, 'stay' => false];",
-     "            return ['state' => !empty(\$manual['ready']) ? self::NOT_READY : self::READY, 'source' => 'manual', 'at' => \$at, 'stay' => false];",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: dock blocks turn a cottage Not Ready", 'class-staff-ready.php',
-     "            if (Staff_Data::is_dock_block((int) \$r->booking_id)) {\n                continue;\n            }",
-     "",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: pending and cancelled bookings count", 'class-staff-ready.php',
-     "                  AND bk.post_status = 'confirmed'\n",
-     "",
-     'ready-0500-test.php'],
-    ["0.50.0 rule: the checkout's time is the end of its day (a same-day mark loses)", 'class-staff-ready.php',
-     "        \$auto_at = \$checkout !== null ? (new \\DateTimeImmutable(\$checkout, \$tz))->getTimestamp() : null;",
-     "        \$auto_at = \$checkout !== null ? (new \\DateTimeImmutable(\$checkout . ' 23:59:59', \$tz))->getTimestamp() : null;",
+     "            return ['state' => !empty(\$manual['ready']) ? self::READY : self::NOT_READY, 'source' => 'manual', 'at' => \$at];",
+     "            return ['state' => !empty(\$manual['ready']) ? self::NOT_READY : self::READY, 'source' => 'manual', 'at' => \$at];",
      'ready-0500-test.php'],
     ["0.50.0 rule: an old 0.48 Not Ready (an undo) read as a manual Not Ready", 'class-staff-ready.php',
      "        return ['v' => 2, 'manual' => \$last && \$last[1] === 1 ? ['ready' => true, 'at' => \$last[0]] : null, 'log' => \$log, 'cleared' => 0];",
@@ -3637,16 +3629,18 @@ $mutations = [
      "            if (st.state === 'none') {\n                label.classList.remove('has-ready'); label.removeAttribute('role'); label.removeAttribute('tabindex');\n                if (dot) dot.parentNode.removeChild(dot);",
      'ready-0500-test.js'],
     // Retargeted in 0.52.0: the choices are one loop over the three states.
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.50.0 popup: offers the state it already shows", 'assets/js/staff.js',
-     "                if (k !== st.state && (k !== 'occupied' || st.stay)) popBtns.appendChild(button(k));",
-     "                if (k !== 'occupied' || st.stay) popBtns.appendChild(button(k));",
+     "                if (k !== st.state) popBtns.appendChild(button(k));",
+     "                popBtns.appendChild(button(k));",
      'ready-0500-test.js'],
     ["0.50.0 popup: Not Ready never offered", 'assets/js/staff.js',
      "            ['ready', 'notready', 'occupied'].forEach(function (k) {",
      "            ['ready', 'occupied'].forEach(function (k) {",
      'ready-0500-test.js'],
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.50.0 ui: no optimistic change (waits for the server)", 'assets/js/staff.js',
-     "            ready.map[id] = { state: want, at: was.at, stay: was.stay };   // shown at once\n            ready.saving[id] = (ready.saving[id] || 0) + 1;\n            paintDots();",
+     "            ready.map[id] = { state: want, at: was.at };   // shown at once\n            ready.saving[id] = (ready.saving[id] || 0) + 1;\n            paintDots();",
      "            ready.saving[id] = (ready.saving[id] || 0) + 1;",
      'ready-0500-test.js'],
     ["0.50.0 ui: a failed save says nothing", 'assets/js/staff.js',
@@ -3674,71 +3668,7 @@ $mutations = [
 
     // ---- 0.51.0 (Rob: Occupied, the gray sign) ----
     // THE OCCUPANCY RULE
-    ["0.51.0 occupied: never shown (the stay ignored)", 'class-staff-ready.php',
-     "            \$out[(string) \$id] = self::decide(\$checkouts[\$id] ?? null, \$rec['manual'], \$stays[\$id] ?? null, \$checkin, \$rec['cleared']);",
-     "            \$out[(string) \$id] = self::decide(\$checkouts[\$id] ?? null, \$rec['manual'], null, \$checkin, \$rec['cleared']);",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: a turnover day shows gray (the checkout does not govern it)", 'class-staff-ready.php',
-     "            \$occ_from = (\$checkout === \$stay_in) ? \$arrival->modify('+1 day') : \$arrival;",
-     "            \$occ_from = \$arrival;",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: every arrival day left to the checkout rule (gray from the next morning)", 'class-staff-ready.php',
-     "            \$occ_from = (\$checkout === \$stay_in) ? \$arrival->modify('+1 day') : \$arrival;",
-     "            \$occ_from = \$arrival->modify('+1 day');",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: a mark always beats gray (made before the stay or not)", 'class-staff-ready.php',
-     "                if (\$man_at !== null && \$man_at > \$stay_start) {",
-     "                if (\$man_at !== null) {",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: gray beats every mark, even one made during the stay", 'class-staff-ready.php',
-     "                if (\$man_at !== null && \$man_at > \$stay_start) {",
-     "                if (false) {",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: the checkout day counted as occupied (co >= today)", 'class-staff-ready.php',
-     "                  AND co.meta_value > %s\n                ORDER BY ci.meta_value DESC",
-     "                  AND co.meta_value >= %s\n                ORDER BY ci.meta_value DESC",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: the arrival day not counted (ci < today)", 'class-staff-ready.php',
-     "                  AND ci.meta_value <= %s\n                  AND co.meta_value > %s",
-     "                  AND ci.meta_value < %s\n                  AND co.meta_value > %s",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: cancelled bookings count (no status filter)", 'class-staff-ready.php',
-     "                  AND bk.post_status IN (\$ph)\n                  AND ci.meta_value <= %s",
-     "                  AND (bk.post_status IN (\$ph) OR 1 = 1)\n                  AND ci.meta_value <= %s",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: dock blocks count", 'class-staff-ready.php',
-     "            if (\$type_id <= 0 || isset(\$out[\$type_id]) || Staff_Data::is_dock_block((int) \$r->booking_id)) {",
-     "            if (\$type_id <= 0 || isset(\$out[\$type_id])) {",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: pending stays the calendar draws do not count (confirmed only)", 'class-staff-ready.php',
-     "        \$statuses = (array) apply_filters('mphbac_staff_statuses', Staff::VISIBLE_STATUSES);\n        \$statuses = array_values(array_filter(array_map('strval', \$statuses), static fn(\$s) => \$s !== '' && \$s !== 'cancelled'));",
-     "        \$statuses = ['confirmed'];",
-     'ready-0510-test.php'],
-    ["0.51.0 occupied: no new time at the turnover morning (a stale page not caught)", 'class-staff-ready.php',
-     "                \$at = max(\$at, \$occ_from->getTimestamp());",
-     "",
-     'ready-0510-test.php'],
     // THE "MADE AFTER CHECK-IN TIME" COMPARISON
-    ["0.51.0 check-in: a mark compared with the arrival day's MIDNIGHT (check-in time ignored)", 'class-staff-ready.php',
-     "                \$stay_start = \$arrival->getTimestamp() + \$checkin_secs;",
-     "                \$stay_start = \$arrival->getTimestamp();",
-     'ready-0510-test.php'],
-    ["0.51.0 check-in: a mark AT the check-in time counts (>= for >)", 'class-staff-ready.php',
-     "                if (\$man_at !== null && \$man_at > \$stay_start) {",
-     "                if (\$man_at !== null && \$man_at >= \$stay_start) {",
-     'ready-0510-test.php'],
-    ["0.51.0 check-in: compared with the CHECKOUT (the previous guest) instead", 'class-staff-ready.php',
-     "                \$stay_start = \$arrival->getTimestamp() + \$checkin_secs;",
-     "                \$stay_start = (int) \$auto_at;",
-     'ready-0510-test.php'],
-    ["0.51.0 check-in: MotoPress's setting ignored (always 11:00)", 'class-staff-ready.php',
-     "        \$h = max(0, min(23, (int) (\$parts[0] ?? 11)));",
-     "        \$h = 11; \$parts = [11, 0];",
-     'ready-0510-test.php'],
-    ["0.51.0 check-in: the minutes of the setting dropped", 'class-staff-ready.php',
-     "        return \$h * 3600 + \$m * 60;",
-     "        return \$h * 3600;",
-     'ready-0510-test.php'],
     // THE PAGE
     ["0.51.0 page: Occupied drawn as Not Ready (no gray)", 'assets/js/staff.js',
      "            dot.classList.toggle('is-occupied', st.state === 'occupied');",
@@ -3757,26 +3687,20 @@ $mutations = [
      "    background: #5f6368; --was: url(\"data:image/svg+xml,",
      'ready-0500-test.js'],
 
-    ["0.51.0 occupied: a mark made during the stay read as its opposite", 'class-staff-ready.php',
-     "                    \$during = !empty(\$manual['ready']) ? self::READY : self::NOT_READY;",
-     "                    \$during = !empty(\$manual['ready']) ? self::NOT_READY : self::READY;",
-     'ready-0510-test.php'],
     // ---- 0.52.0 (Rob: the Occupied button) ----
     ["0.52.0 clear: Occupied tapped keeps the mark (manual not cleared)", 'class-staff-ready.php',
      "        \$rec['manual'] = null;\n        \$rec['cleared'] = \$now;",
      "        \$rec['cleared'] = \$now;",
      'ready-0510-test.php'],
-    ["0.52.0 clear: allowed with no guest in", 'class-staff-ready.php',
-     "        if (\$current === null || empty(\$current['stay']) || \$current['at'] > \$seen) {",
-     "        if (\$current === null || \$current['at'] > \$seen) {",
-     'ready-0510-test.php'],
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.52.0 clear: a stale page may clear a newer mark", 'class-staff-ready.php',
-     "        if (\$current === null || empty(\$current['stay']) || \$current['at'] > \$seen) {",
-     "        if (\$current === null || empty(\$current['stay'])) {",
+     "        if (\$current === null || \$current['at'] > \$seen) {\n            return null;\n        }\n        \$rec = self::record(\$type_id);\n        \$now = max(time(), \$current['at'] + 1);\n        \$rec['manual'] = null;",
+     "        if (\$current === null) {\n            return null;\n        }\n        \$rec = self::record(\$type_id);\n        \$now = max(time(), \$current['at'] + 1);\n        \$rec['manual'] = null;",
      'ready-0510-test.php'],
+    // Retargeted in 0.58.0 (the rule is the stored tap alone).
     ["0.52.0 clear: the clearing time not counted (a page that saw the old mark is not stale)", 'class-staff-ready.php',
-     "        \$at = max((int) \$auto_at, (int) \$man_at, \$cleared_at);",
-     "        \$at = max((int) \$auto_at, (int) \$man_at);",
+     "        \$at = max(\$man_at, \$cleared_at);",
+     "        \$at = \$man_at;",
      'ready-0510-test.php'],
     ["0.52.0 clear: not logged", 'class-staff-ready.php',
      "        \$rec['log'] = array_slice(array_merge(\$rec['log'], [[\$now, 2]]), -self::LOG_MAX);",
@@ -3786,18 +3710,6 @@ $mutations = [
      "'cleared' => (int) (\$v['cleared'] ?? 0)];",
      "'cleared' => 0];",
      'ready-0510-test.php'],
-    ["0.52.0 rule: the stay flag never set (Occupied never offered)", 'class-staff-ready.php',
-     "                return ['state' => self::OCCUPIED, 'source' => 'occupied', 'at' => \$at, 'stay' => true];",
-     "                return ['state' => self::OCCUPIED, 'source' => 'occupied', 'at' => \$at, 'stay' => false];",
-     'ready-0510-test.php'],
-    ["0.52.0 rule: a mid-stay mark not flagged as in a stay", 'class-staff-ready.php',
-     "                    return ['state' => \$during, 'source' => 'manual', 'at' => \$at, 'stay' => true];",
-     "                    return ['state' => \$during, 'source' => 'manual', 'at' => \$at, 'stay' => false];",
-     'ready-0510-test.php'],
-    ["0.52.0 rule: the stay flag set with no guest in", 'class-staff-ready.php',
-     "                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => \$at, 'stay' => false];",
-     "                return ['state' => self::NOT_READY, 'source' => 'auto', 'at' => \$at, 'stay' => true];",
-     'ready-0510-test.php'],
     ["0.52.0 endpoint: \"occupied\" refused as bad input", 'class-staff.php',
      "|| !in_array(\$ready, ['0', '1', 'occupied'], true)",
      "|| !in_array(\$ready, ['0', '1'], true)",
@@ -3805,18 +3717,6 @@ $mutations = [
     ["0.52.0 endpoint: \"occupied\" saved as Not Ready", 'class-staff.php',
      "            \$saved = \$ready === 'occupied'\n                ? Staff_Ready::clear(",
      "            \$saved = false\n                ? Staff_Ready::clear(",
-     'ready-0500-test.js'],
-    ["0.52.0 page: Occupied offered with no guest in", 'assets/js/staff.js',
-     "                if (k !== st.state && (k !== 'occupied' || st.stay)) popBtns.appendChild(button(k));",
-     "                if (k !== st.state) popBtns.appendChild(button(k));",
-     'ready-0500-test.js'],
-    ["0.52.0 page: Occupied never offered", 'assets/js/staff.js',
-     "                if (k !== st.state && (k !== 'occupied' || st.stay)) popBtns.appendChild(button(k));",
-     "                if (k !== st.state && k !== 'occupied') popBtns.appendChild(button(k));",
-     'ready-0500-test.js'],
-    ["0.52.0 page: the stay flag dropped from the board's state", 'assets/js/staff.js',
-     "at: parseInt(v.at, 10) || 0, stay: !!v.stay };",
-     "at: parseInt(v.at, 10) || 0 };",
      'ready-0500-test.js'],
     ["0.52.0 page: the Occupied tap sends Not Ready", 'assets/js/staff.js',
      "want === 'notready' ? '0' : 'occupied', seen:",
@@ -4317,6 +4217,56 @@ $mutations = [
      "@media (max-width: 340px) {\n    .mphbac-staff .mphbac-staff-percot.mphbac-staff-percot { column-gap: 2px; }\n}",
      "",
      'stats-0571-test.js'],
+
+    // --- 0.58.0: a status changes only when staff tap it (Rob, FINAL) ---
+    ["0.58.0 rob: an automatic MIDNIGHT FLIP restored (a guest's arrival day shows Occupied from 00:00)", 'class-staff-ready.php',
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);",
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);\n            global \$wpdb; \$d = Data_Provider::today()->format('Y-m-d');\n            \$n = \$wpdb->get_var(\$wpdb->prepare(\"SELECT COUNT(*) FROM {\$wpdb->posts} rr INNER JOIN {\$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id' INNER JOIN {\$wpdb->posts} bk ON bk.ID = rr.post_parent INNER JOIN {\$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date' INNER JOIN {\$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date' INNER JOIN {\$wpdb->postmeta} rt ON rt.post_id = CAST(rid.meta_value AS UNSIGNED) AND rt.meta_key = 'mphb_room_type_id' WHERE rr.post_type = 'mphb_reserved_room' AND bk.post_status = 'confirmed' AND rt.meta_value = %d AND ci.meta_value = %s\", \$id, \$d));\n            if ((int) \$n > 0) { \$out[(string) \$id] = ['state' => self::OCCUPIED, 'source' => 'manual', 'at' => \$out[(string) \$id]['at']]; }",
+     'ready-0580-test.php'],
+    ["0.58.0 rob: a CHECKOUT AUTO-FLIP restored (a checkout today turns the cottage Not Ready)", 'class-staff-ready.php',
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);",
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);\n            global \$wpdb; \$d = Data_Provider::today()->format('Y-m-d');\n            \$n = \$wpdb->get_var(\$wpdb->prepare(\"SELECT COUNT(*) FROM {\$wpdb->posts} rr INNER JOIN {\$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id' INNER JOIN {\$wpdb->posts} bk ON bk.ID = rr.post_parent INNER JOIN {\$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date' INNER JOIN {\$wpdb->postmeta} rt ON rt.post_id = CAST(rid.meta_value AS UNSIGNED) AND rt.meta_key = 'mphb_room_type_id' WHERE rr.post_type = 'mphb_reserved_room' AND bk.post_status = 'confirmed' AND rt.meta_value = %d AND co.meta_value = %s\", \$id, \$d));\n            if ((int) \$n > 0) { \$out[(string) \$id] = ['state' => self::NOT_READY, 'source' => 'manual', 'at' => \$out[(string) \$id]['at']]; }",
+     'ready-0580-test.php'],
+    ["0.58.0 rob: the midnight flip restored, seen on the page (the walk)", 'class-staff-ready.php',
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);",
+     "            \$out[(string) \$id] = self::decide(\$rec['manual'], \$rec['cleared']);\n            global \$wpdb; \$d = Data_Provider::today()->format('Y-m-d');\n            \$n = \$wpdb->get_var(\$wpdb->prepare(\"SELECT COUNT(*) FROM {\$wpdb->posts} rr INNER JOIN {\$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id' INNER JOIN {\$wpdb->posts} bk ON bk.ID = rr.post_parent INNER JOIN {\$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date' INNER JOIN {\$wpdb->postmeta} rt ON rt.post_id = CAST(rid.meta_value AS UNSIGNED) AND rt.meta_key = 'mphb_room_type_id' WHERE rr.post_type = 'mphb_reserved_room' AND bk.post_status = 'confirmed' AND rt.meta_value = %d AND ci.meta_value = %s\", \$id, \$d));\n            if ((int) \$n > 0) { \$out[(string) \$id] = ['state' => self::OCCUPIED, 'source' => 'manual', 'at' => \$out[(string) \$id]['at']]; }",
+     'ready-0580-test.js'],
+    ["0.58.0 rob: a DERIVED OCCUPIED read from dates on the board (a stay over today paints gray)", 'assets/js/staff.js',
+     "                adoptTurnover(json.data.turnover);          // the cleaning dots (0.48.0)",
+     "                (function (t) { (json.data.bookings || []).forEach(function (b) { if (!b.notStay && b.status !== 'cancelled' && b.checkin <= config.today && b.checkout > config.today) (b.cottages || []).forEach(function (c) { t[c.roomTypeId] = { state: 'occupied', at: (t[c.roomTypeId] || {}).at || 0 }; }); }); adoptTurnover(t); })(json.data.turnover || {});",
+     'ready-0580-test.js'],
+    ["0.58.0 rob: a derived Occupied added to the board's answer on the server (dates, not taps)", 'class-staff.php',
+     "        \$data['turnover'] = Staff_Ready::state();\n        return \$data;",
+     "        \$data['turnover'] = Staff_Ready::state();\n        \$d = Data_Provider::today()->format('Y-m-d');\n        foreach ((array) (\$data['bookings'] ?? []) as \$b) { if (empty(\$b['notStay']) && (\$b['checkin'] ?? '') <= \$d && (\$b['checkout'] ?? '') > \$d) { foreach ((array) (\$b['cottages'] ?? []) as \$c) { if (isset(\$data['turnover'][(string) \$c['roomTypeId']])) { \$data['turnover'][(string) \$c['roomTypeId']]['state'] = 'occupied'; } } } }\n        return \$data;",
+     'ready-0580-test.js'],
+    ["0.58.0 rule: an Occupied tap read as no sign", 'class-staff-ready.php',
+     "        if (\$cleared_at > 0) {\n            return ['state' => self::OCCUPIED",
+     "        if (false) {\n            return ['state' => self::OCCUPIED",
+     'ready-0510-test.php'],
+    ["0.58.0 rule: an Occupied tap never replaced by a later Ready (Occupied always wins)", 'class-staff-ready.php',
+     "        if (\$manual !== null && \$man_at >= \$cleared_at) {",
+     "        if (\$manual !== null && \$cleared_at === 0) {",
+     'ready-0510-test.php'],
+    ["0.58.0 clear: Occupied refused on a cottage with no sign (a stay still required, in effect)", 'class-staff-ready.php',
+     "        if (\$current === null || \$current['at'] > \$seen) {\n            return null;\n        }\n        \$rec = self::record(\$type_id);\n        \$now = max(time(), \$current['at'] + 1);\n        \$rec['manual'] = null;",
+     "        if (\$current === null || \$current['state'] === self::NONE || \$current['at'] > \$seen) {\n            return null;\n        }\n        \$rec = self::record(\$type_id);\n        \$now = max(time(), \$current['at'] + 1);\n        \$rec['manual'] = null;",
+     'ready-0510-test.php'],
+    ["0.58.0 page: Occupied withheld from a cottage never tapped (the 0.52.0 offer)", 'assets/js/staff.js',
+     "                if (k !== st.state) popBtns.appendChild(button(k));",
+     "                if (k !== st.state && (k !== 'occupied' || st.state !== 'none')) popBtns.appendChild(button(k));",
+     'ready-0500-test.js'],
+    ["0.58.0 upgrade: a stored status rewritten on read (a migration)", 'class-staff-ready.php',
+     "            \$rec = self::record(\$id);\n            \$out[(string) \$id] = self::decide(",
+     "            \$rec = self::record(\$id);\n            update_option(self::option_name(\$id), \$rec, false);\n            \$out[(string) \$id] = self::decide(",
+     'ready-0580-test.php'],
+    ["0.58.0 upgrade: an old Occupied tap (0.52.0's shape) dropped on read", 'class-staff-ready.php',
+     "'log' => is_array(\$v['log'] ?? null) ? \$v['log'] : [], 'cleared' => (int) (\$v['cleared'] ?? 0)];",
+     "'log' => is_array(\$v['log'] ?? null) ? \$v['log'] : [], 'cleared' => 0];",
+     'ready-0580-test.php'],
+    ["0.58.0 rule: the check-in time read again (a tap before it does not count)", 'class-staff-ready.php',
+     "        \$man_at = \$manual !== null ? (int) \$manual['at'] : 0;",
+     "        \$man_at = \$manual !== null ? (int) \$manual['at'] : 0;\n        \$cs = explode(':', (string) get_option('mphb_check_in_time', '11:00')); if (\$manual !== null && (int) date('G', \$man_at) * 60 < (int) \$cs[0] * 60 - 600) { \$manual = null; }",
+     'ready-0510-test.php'],
 ];
 
 $originals = [];

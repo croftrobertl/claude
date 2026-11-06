@@ -148,18 +148,17 @@
             return S.error || 'Could not load bookings.';
         }
 
-        // ---- the cleaning sign (0.48.0; any cottage, any time 0.50.0, Rob) ----
-        // Red X = Not Ready, green check = Ready, gray person = Occupied (a
-        // guest in, 0.51.0), nothing = never marked and no recent checkout. The server decides each cottage's state —
-        // the NEWER of its latest checkout (automatic Not Ready) and its last
-        // manual mark (Staff_Ready) — and sends every cottage's with each
-        // board answer, with `at`, the time of the event behind it. A long
-        // press, a long click, a right-click or Enter on ANY cottage's name
-        // opens the popup: the cottage's name, then the opposite of its state
-        // (both, when it has none). The sign changes the moment it is tapped;
-        // if the save fails it goes back and says so; if the cottage changed
-        // first (another phone, a new checkout) the server refuses, and the
-        // board shows the state as it now is.
+        // ---- the cottage status (0.48.0; only staff change it, 0.58.0, Rob) ----
+        // Red X = Not Ready, green check = Ready, gray person = Occupied,
+        // nothing = never tapped. Each is exactly what staff last tapped
+        // (Staff_Ready): never worked out from bookings, dates or the clock,
+        // here or on the server, which sends every cottage's with each board
+        // answer, with `at`, the time of the tap behind it. A long press, a
+        // long click, a right-click or Enter on ANY cottage's name opens the
+        // popup: the cottage's name, then every status but the one it shows.
+        // The sign changes the moment it is tapped; if the save fails it goes
+        // back and says so; if another phone tapped first the server refuses,
+        // and the board shows the status as it now is.
         var ready = { map: {}, saving: {} };          // type id -> { state, at }
         var LONG_PRESS_MS = 500;
 
@@ -169,7 +168,7 @@
             Object.keys(t).forEach(function (k) {
                 var v = t[k];
                 if (v && (v.state === 'ready' || v.state === 'notready' || v.state === 'occupied' || v.state === 'none')) {
-                    next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0, stay: !!v.stay };
+                    next[String(k)] = { state: v.state, at: parseInt(v.at, 10) || 0 };
                 }
             });
             // A save still on its way keeps the state it showed until it answers.
@@ -182,13 +181,12 @@
             [].forEach.call(gridEl.querySelectorAll('.mphbac-staff-rowlabel[data-type]'), paintDot);
         }
 
-        function stateOf(id) { return ready.map[id] || { state: 'none', at: 0, stay: false }; }
+        function stateOf(id) { return ready.map[id] || { state: 'none', at: 0 }; }
 
         function paintDot(label) {
             var st = stateOf(label.getAttribute('data-type'));
             var dot = label.querySelector('.mphbac-staff-ready');
-            // Every cottage name can be held and marked, sign or no sign. On an
-            // Occupied cottage the popup offers both, as with no sign.
+            // Every cottage name can be held and tapped, sign or no sign.
             label.classList.add('has-ready');
             label.setAttribute('tabindex', '0');
             label.setAttribute('role', 'button');
@@ -208,7 +206,7 @@
                 : st.state === 'occupied' ? (S.dotOccupied || 'Occupied')
                 : (S.dotRed || 'Not ready');
             dot.classList.toggle('is-ready', st.state === 'ready');
-            // OCCUPIED (0.51.0): a guest is in — the gray sign.
+            // OCCUPIED: staff checked the guest in (0.58.0) — the gray sign.
             dot.classList.toggle('is-occupied', st.state === 'occupied');
             dot.setAttribute('aria-label', words);
             label.setAttribute('aria-label', (label.getAttribute('data-name') || '') + ': ' + words);
@@ -252,12 +250,10 @@
             pop.__seen = st.at;
             popName.textContent = label.getAttribute('data-short') || label.getAttribute('data-name') || '';
             popBtns.textContent = '';
-            // The choices it is not showing now, from Ready · Not Ready ·
-            // Occupied — Occupied only while a guest is in (0.52.0). Always
-            // two (one outside a stay): the state shown is always one of
-            // the three, and a guest in never leaves it with none.
+            // Every status it is not showing now, from Ready · Not Ready ·
+            // Occupied (0.58.0): two, or all three on a cottage never tapped.
             ['ready', 'notready', 'occupied'].forEach(function (k) {
-                if (k !== st.state && (k !== 'occupied' || st.stay)) popBtns.appendChild(button(k));
+                if (k !== st.state) popBtns.appendChild(button(k));
             });
             popBtns.classList.remove('is-stacked');
             pop.setAttribute('aria-label', (S.readyPop || 'Cleaning for {cottage}').replace('{cottage}', label.getAttribute('data-name') || ''));
@@ -313,7 +309,7 @@
             closeReady(false);
             if (!id) return;
             var was = stateOf(id);
-            ready.map[id] = { state: want, at: was.at, stay: was.stay };   // shown at once
+            ready.map[id] = { state: want, at: was.at };   // shown at once
             ready.saving[id] = (ready.saving[id] || 0) + 1;
             paintDots();
             var settle = function () { if (--ready.saving[id] <= 0) delete ready.saving[id]; };

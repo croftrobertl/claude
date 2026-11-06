@@ -33,7 +33,9 @@ $f_db->create_blocks_table();
 $f_db->create_custom_rules_table();
 
 $f_tz = new DateTimeZone('America/New_York');
-$f_today = new DateTimeImmutable('today', $f_tz);
+// MPHBAC_SHIFT_DAYS=n (0.58.0's clock walk): every booking n days EARLIER,
+// which to the code under test is the clock n days later.
+$f_today = (new DateTimeImmutable('today', $f_tz))->modify(sprintf('%+d days', -(int) getenv('MPHBAC_SHIFT_DAYS')));
 $f_d = static fn(int $n): string => $f_today->modify(($n >= 0 ? '+' : '') . $n . ' days')->format('Y-m-d');
 
 $f_n = 0;
@@ -76,7 +78,15 @@ foreach (array_keys($cottages) as $f_type) {
 //   1607 Coconut     a PENDING booking out today          → no dot
 //   1740 Blue Heron  out 15 days ago, never marked        → no dot (let go)
 //   1742 Sunshine    out tomorrow                          → no dot yet
-if ($f_mode === 'staff') {
+// Mode "checkin" (0.58.0): the "staff" bookings plus three arrivals TODAY —
+// Rob's check-in day. 1071 a turnover (Ann out, Bea in), 1604 the 2 PM
+// arrival whose cottage still needs work, 1740 one that is ready.
+if ($f_mode === 'checkin') {
+    $f_book(1071, 0, 4, 'confirmed', false, 'Bea', 'Arriving');
+    $f_book(1604, 0, 3, 'confirmed', false, 'Cal', 'Arriving');
+    $f_book(1740, 0, 2, 'confirmed', false, 'Dee', 'Arriving');
+}
+if ($f_mode === 'staff' || $f_mode === 'checkin') {
     $f_book(1071, -4, 0, 'confirmed', false, 'Ann', 'Direct');
     $f_book(1069, -6, 0, 'confirmed', true, 'Air', 'Guest');
     $f_book(1067, -25, -20, 'confirmed', false, 'Real', 'Stay');
