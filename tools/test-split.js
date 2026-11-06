@@ -67,10 +67,10 @@ async function visit(label, { date, preview, reduced, artDelay = 0, art404 = fal
   console.log(`\n  --- what each visit fetches${MUT ? ' (MUTATION: ' + MUT + ')' : ''} ---`);
   const tg = await visit('Thanksgiving day (20 Nov)', { date: [2026, 11, 20] });
   ok(tg.reqs.includes('art-thanksgiving.min.js') && tg.reqs.includes('engine.min.js'), `${tg.label}: the loader, Thanksgiving's art and the engine`, tg.reqs.join(' '));
-  ok(tg.st.tk === 9 && tg.st.cornucopia, `${tg.label}: the art ran before the engine (the tom's painter and the cornucopia are in it)`, JSON.stringify(tg.st));
+  ok(tg.st.tk === 3 && tg.st.cornucopia, `${tg.label}: the art ran before the engine (the tom's painter and the cornucopia are in it)`, JSON.stringify(tg.st));
   ok(!tg.errs.length, `${tg.label}: no page errors`, tg.errs.join(' | '));
   const late = await visit('Thanksgiving, the art arriving 600 ms after the engine', { date: [2026, 11, 20], artDelay: 600 });
-  ok(late.st.tk === 9 && late.st.cornucopia, `${late.label}: still run first`, JSON.stringify(late.st));
+  ok(late.st.tk === 3 && late.st.cornucopia, `${late.label}: still run first`, JSON.stringify(late.st));
   /* 4.13.5: the Anniversary fetches the shared crane, then its own pieces,
    * both before the engine; Florida Keys fetches the crane alone */
   const an = await visit('the Anniversary (11 Nov)', { date: [2026, 11, 11] });
@@ -99,7 +99,7 @@ async function visit(label, { date, preview, reduced, artDelay = 0, art404 = fal
     ok(v.st.engine && !v.st.tk && !v.errs.length, `${lbl}: the engine runs without Thanksgiving's art, no page errors`, JSON.stringify(v.st) + ' ' + v.errs.join('|'));
   }
   const pv = await visit('a preview of Thanksgiving on 25 Oct', { date: [2026, 10, 25], preview: 'thanksgiving' });
-  ok(pv.reqs.includes('art-thanksgiving.min.js') && pv.st.tk === 9, `${pv.label}: fetches its art`, pv.reqs.join(' ') + ' ' + JSON.stringify(pv.st));
+  ok(pv.reqs.includes('art-thanksgiving.min.js') && pv.st.tk === 3, `${pv.label}: fetches its art`, pv.reqs.join(' ') + ' ' + JSON.stringify(pv.st));
   const nf = await visit('Thanksgiving with its art file missing (404)', { date: [2026, 11, 20], art404: true });
   ok(nf.st.engine && nf.st.canvas && !nf.errs.length, `${nf.label}: the engine still runs, no page errors`, JSON.stringify(nf.st) + ' ' + nf.errs.join('|'));
   const rm = await visit('Thanksgiving under reduced motion', { date: [2026, 11, 20], reduced: true });

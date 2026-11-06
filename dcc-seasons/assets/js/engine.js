@@ -4223,8 +4223,28 @@
 		function gndPlan(p) {
 			if (gnd.q || (p.fkT != null && gnd.at && nowMs() - gnd.at < 10000)) { return; }
 			gnd.q = 1;
-			var run = function () { gnd.q = 0; gnd.at = nowMs(); p.fkT = tkFitPlan(p); };
+			var run = function () {
+				gnd.q = 0; gnd.at = nowMs(); var first = p.fkT == null; p.fkT = tkFitPlan(p);
+				/* before he first shows: his canvas made its full size and drawn
+				 * on once (then cleared), here in idle time, so neither the
+				 * resize nor the first draw lands in a frame */
+				if (first && tkCache.w0) {
+					var k0 = p.fk; p.fk = p.fkT; var gm = tomGeom(p); p.fk = k0;
+					gndSize(MT.ceil(gm.tw + 10), MT.ceil(gm.th + 2));
+					gnd.g.setTransform(gnd.dpr, 0, 0, gnd.dpr, 0, 0);
+					gnd.g.drawImage(tkCache.w0.c, 0, 0, gm.tw, gm.th); gnd.g.clearRect(0, 0, gnd.cw, gnd.ch);
+				}
+			};
 			if (W.requestIdleCallback) { W.requestIdleCallback(run, { timeout: 1000 }); } else { setTimeout(run, 60); }
+		}
+		/* his canvas's size (a write to its width clears and reallocates it:
+		 * only when the size really changes) */
+		function gndSize(cw, ch) {
+			var dpr = mn(W.devicePixelRatio || 1, 2);
+			if (cw === gnd.cw && ch === gnd.ch && dpr === gnd.dpr) { return; }
+			gnd.cw = cw; gnd.ch = ch; gnd.dpr = dpr;
+			gnd.c.width = MT.round(cw * dpr); gnd.c.height = MT.round(ch * dpr);
+			gnd.c.style.width = cw + 'px'; gnd.c.style.height = ch + 'px';
 		}
 		/* step and draw him on his canvas: the picture's px, so his placement
 		 * rule (8 px in from the right edge) is the one it was, measured
@@ -4244,11 +4264,7 @@
 				 * him: not drawn */
 				G.ok = !gm || (p.fk >= 0.4 && gm.th <= G.ph * 0.5);
 				var cw = MT.ceil(b[2] - b[0]), ch = MT.ceil(b[3] - b[1]);
-				if (cw !== G.cw || ch !== G.ch || dpr !== G.dpr) {
-					G.cw = cw; G.ch = ch; G.dpr = dpr;
-					G.c.width = MT.round(cw * dpr); G.c.height = MT.round(ch * dpr);
-					G.c.style.width = cw + 'px'; G.c.style.height = ch + 'px';
-				}
+				gndSize(cw, ch);
 				G.g.setTransform(dpr, 0, 0, dpr, 0, 0);
 				G.g.clearRect(0, 0, cw, ch);
 				/* the picture's px: its foot is the canvas's last row */

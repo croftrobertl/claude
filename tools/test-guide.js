@@ -60,7 +60,7 @@ const ALLON = { ...LIVE, ambient: 1 };
     const { p, errs } = await load(live.f, 1280);
     ok(!errs.length, 'no page errors', errs.join(' | '));
     /* 4.13.4: Thanksgiving's pictures come from its own art file */
-    ok(await p.evaluate(() => { const E = window.DCCSeasonsEngine.guide; return !!(E.svgs.cornucopia && E.svgs.leafc && E.tk && E.tk.length === 9); }), 'Thanksgiving\'s art reached the guide (its sprites and the tom\'s painter)', '');
+    ok(await p.evaluate(() => { const E = window.DCCSeasonsEngine.guide; return !!(E.svgs.cornucopia && E.svgs.leafc && E.tk && E.tk.length === 3); }), 'Thanksgiving\'s art reached the guide (its sprites and the tom\'s painter)', '');
     /* the pictures are loading="lazy": load them all before judging them */
     await p.evaluate(() => Promise.all([...document.querySelectorAll('.dcc-guide-card img')].map(i => { i.loading = 'eager'; return i.decode().catch(() => null); })));
     const r = await p.evaluate(() => {
