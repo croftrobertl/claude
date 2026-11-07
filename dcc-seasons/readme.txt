@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.17.0
+Stable tag: 4.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,25 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.18.0 =
+The settings page, redesigned from Rob's picks. Nothing on the site changes.
+* Schedule: one year ribbon instead of the 28-row table. Every theme is a
+  coloured band, one-day holidays sit as pills above the season they
+  override, and a Today line shows what is live. Tap a band to edit its row
+  in a side sheet; drag a band's end to move a date (a holiday end moves
+  its ± days). Arrow keys move between bands. 2026 / 2027 toggle; a month
+  list on a phone.
+* A save bar appears at the bottom the moment anything changes, with the
+  count, Discard and Save, and the page warns before leaving unsaved work.
+  The cache-purge notice shows as a toast.
+* Six tabs: Schedule, Where, Look, Easter Egg, Theme Guide, Preview.
+* Show On is a set of chips with search, "All Cottage Pages" and "Policy
+  Pages"; pages that are never decorated show locked, with the reason.
+* Every explanation is behind an ⓘ next to its control, word for word.
+  Sliders and steppers mark their defaults.
+* The stored settings keep their exact shape: a save stores the same bytes
+  the old page did.
 
 = 4.17.0 =
 Thanksgiving's tom, from Rob.

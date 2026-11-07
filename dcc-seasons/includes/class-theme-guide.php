@@ -52,14 +52,23 @@ final class Theme_Guide {
         return $row && isset($themes[$row['theme']]) ? (string) $row['theme'] : (string) array_key_first($themes);
     }
 
-    /** Settings | Theme guide tabs. */
+    /**
+     * The six tabs (4.18.0, Rob's pick 3): Schedule, Where, Look and Easter
+     * Egg are panels of ONE form, switched in the page so nothing unsaved
+     * is lost; the Theme Guide and the Preview are their own pages. Each
+     * link is a real URL (?tab=), so a bookmark or a reload lands on it.
+     */
     public static function tabs(): void {
         $base = admin_url('admin.php?page=' . Settings::SLUG);
-        $cur  = self::is_tab() ? self::tab() : '';
-        echo '<nav class="nav-tab-wrapper dcc-seasons-tabs" aria-label="' . esc_attr__('Seasons sections', 'dcc-seasons') . '">';
-        foreach (['' => __('Settings', 'dcc-seasons'), self::TAB => __('Theme guide', 'dcc-seasons'), self::TAB_PREVIEW => __('Preview', 'dcc-seasons')] as $t => $label) {
-            $on = $cur === $t;
-            echo '<a href="' . esc_url($t === '' ? $base : add_query_arg('tab', $t, $base)) . '" class="nav-tab' . ($on ? ' nav-tab-active' : '') . '"' . ($on ? ' aria-current="page"' : '') . '>' . esc_html($label) . '</a>';
+        $cur  = self::is_tab() ? self::tab() : Settings::panel();
+        echo '<nav class="nav-tab-wrapper dcc-seasons-tabs dcc-tabs" aria-label="' . esc_attr__('Seasons sections', 'dcc-seasons') . '">';
+        foreach (Settings::tab_labels() as $t => $label) {
+            $on    = $cur === $t;
+            $panel = in_array($t, Settings::PANELS, true);
+            $url   = $t === 'schedule' ? $base : add_query_arg('tab', $t, $base);
+            echo '<a href="' . esc_url($url) . '" id="dcc-tab-' . esc_attr($t) . '" class="nav-tab dcc-tab' . ($on ? ' nav-tab-active' : '') . '"'
+                . ($panel ? ' data-panel="' . esc_attr($t) . '" aria-controls="dcc-panel-' . esc_attr($t) . '"' : '')
+                . ($on ? ' aria-current="page"' : '') . '>' . esc_html($label) . '</a>';
         }
         echo '</nav>';
     }

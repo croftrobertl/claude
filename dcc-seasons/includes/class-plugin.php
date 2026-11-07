@@ -719,6 +719,44 @@ final class Plugin {
             return true;
         }
 
+        [$page_ids, $slugs] = self::booking_pages();
+        if ($page_ids && is_page($page_ids)) {
+            return true;
+        }
+        return $slugs && is_page($slugs);
+    }
+
+    /** The Guest Guide: a utility guests read, not a surface to decorate. */
+    private function is_guest_guide(): bool {
+        [$ids, $slugs] = self::guide_pages();
+        if ($ids && is_page($ids)) {
+            return true;
+        }
+        return $slugs && is_page($slugs);
+    }
+
+    /**
+     * The Guest Guide's page IDs and slugs (public since 4.18.0, for the
+     * Show On chips).
+     *
+     * @return array{0:int[],1:string[]}
+     */
+    public static function guide_pages(): array {
+        /** @param int[] $ids */
+        $ids = apply_filters('dcc_seasons_guide_page_ids', [4645]);
+        /** @param string[] $slugs */
+        $slugs = apply_filters('dcc_seasons_guide_page_slugs', ['guest', 'guest-guide']);
+        return [array_map('intval', (array) $ids), array_map('strval', (array) $slugs)];
+    }
+
+    /**
+     * The booking flow's page IDs and slugs, as is_booking_flow() reads
+     * them. Public since 4.18.0 so the settings page's Show On chips can
+     * lock exactly the pages the front end never decorates.
+     *
+     * @return array{0:int[],1:string[]}
+     */
+    public static function booking_pages(): array {
         // IDs MotoPress reports for itself.
         $page_ids = [];
         if (function_exists('MPHB')) {
@@ -756,10 +794,6 @@ final class Plugin {
             623,  // Cancel Booking
         ])));
 
-        if ($page_ids && is_page($page_ids)) {
-            return true;
-        }
-
         /**
          * Filter the page slugs treated as the booking flow. Slugs survive
          * an ID change; IDs survive a slug change. Both are cheap.
@@ -772,19 +806,7 @@ final class Plugin {
             'booking-submitted', 'cancel-booking',
         ]);
 
-        return $slugs && is_page($slugs);
-    }
-
-    /** The Guest Guide: a utility guests read, not a surface to decorate. */
-    private function is_guest_guide(): bool {
-        /** @param int[] $ids */
-        $ids = apply_filters('dcc_seasons_guide_page_ids', [4645]);
-        if ($ids && is_page($ids)) {
-            return true;
-        }
-        /** @param string[] $slugs */
-        $slugs = apply_filters('dcc_seasons_guide_page_slugs', ['guest', 'guest-guide']);
-        return $slugs && is_page($slugs);
+        return [array_map('intval', (array) $page_ids), array_map('strval', (array) $slugs)];
     }
 
     /**

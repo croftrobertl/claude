@@ -155,6 +155,8 @@ const ALLON = { ...LIVE, ambient: 1 };
   console.log('\n  --- assets: the guide tab only ---');
   {
     const s = render('settings', LIVE).html, g = live.html;
+    /* 4.18.0: the preview links moved to the Preview tab */
+    const pv = render('preview', LIVE).html;
     ok(/theme-guide\.js/.test(g) && /theme-guide\.css/.test(g) && /engine\.min\.js/.test(g), 'guide tab loads theme-guide.js, theme-guide.css and the engine', '');
     ok(!/theme-guide|DCCSeasonsGuideData|engine(\.min)?\.js/.test(s), 'settings tab loads none of them', '');
     /* 4.13.4: every season's own art file, loaded BEFORE the engine reads it */
@@ -162,12 +164,12 @@ const ALLON = { ...LIVE, ambient: 1 };
     ok(ia >= 0 && ia < ie, 'guide tab loads Thanksgiving\'s art file before the engine', `art at ${ia}, engine at ${ie}`);
     const plugin = fs.readFileSync(path.join(ROOT, 'dcc-seasons/includes/class-plugin.php'), 'utf8');
     ok(!/theme-guide|Theme_Guide::enqueue/.test(plugin), 'the front end never enqueues the guide', '');
-    const links = [...s.matchAll(/<a href="([^"]+)" target="_blank" rel="noopener">([^<]+)<span class="screen-reader-text">/g)];
+    const links = [...pv.matchAll(/<a href="([^"]+)" target="_blank" rel="noopener">([^<]+)<span class="screen-reader-text">/g)];
     const keys = Object.keys(JSON.parse(execFileSync('php', [path.join(__dirname, 'gen-config.php')], { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 << 20 })).themes);
     const want = new Set([...keys, 'off', 'halloween'].map(k => `https://doracanalcourt.com/?dcc_season=${k}`));
     const got = new Set(links.map(m => m[1]));
     ok(links.every(m => m[1] === m[2]) && [...want].every(u => got.has(u)), `preview table + description: full new-tab links for every theme and "off" (${links.length} links)`, [...want].filter(u => !got.has(u)).join(' '));
-    ok(!/<code>\?dcc_season=/.test(s), 'no bare ?dcc_season= text cells left', '');
+    ok(!/<code>\?dcc_season=/.test(pv) && !/<code>\?dcc_season=/.test(s), 'no bare ?dcc_season= text cells left', '');
   }
 
   await b.close();

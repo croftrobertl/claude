@@ -70,7 +70,7 @@ function get_posts($a = []) {
 if (!function_exists('get_post')) { function get_post($id) { foreach (get_pages() as $p) { if ($p->ID === (int) $id) { $p->post_status = 'publish'; return $p; } } return null; } }
 if (!function_exists('get_page_by_path')) { function get_page_by_path($s) { foreach (get_pages() as $p) { if ($p->post_name === $s) { return $p; } } return null; } }
 function update_option($k, $v, $a = null) { $GLOBALS['OPTIONS'][$k] = $v; return true; }
-function get_transient($k) { return false; } function delete_transient($k) { return true; }
+function get_transient($k) { $v = getenv('DCC_TRANSIENT'); return $v ? json_decode($v, true) : false; }   /* DCC_TRANSIENT: the purge notice's value (4.18.0 toast test) */ function delete_transient($k) { return true; }
 function current_user_can($c) { return true; }
 function current_time($f) { return $f === 'Y' ? (getenv('DCC_YEAR') ?: date('Y')) : date($f); }
 function date_i18n($f, $ts = null) { return date($f, $ts ?? time()); }
@@ -85,7 +85,7 @@ function add_query_arg($k, $v = null, $u = null) {
 function wp_nonce_url($u) { return $u; }
 function checked($a, $b = true, $e = true) { $r = ((string) $a === (string) $b) ? ' checked="checked"' : ''; if ($e) { echo $r; } return $r; }
 function selected($a, $b = true, $e = true) { $r = ((string) $a === (string) $b) ? ' selected="selected"' : ''; if ($e) { echo $r; } return $r; }
-function settings_fields($g) { echo '<input type="hidden" name="option_page" value="' . esc_attr($g) . '">'; }
+function settings_fields($g) { echo '<input type="hidden" name="option_page" value="' . esc_attr($g) . '"><input type="hidden" name="_wp_http_referer" value="/wp-admin/admin.php?page=dcc-seasons">'; }
 function submit_button() { echo '<p class="submit"><input type="submit" class="button button-primary" value="Save Changes"></p>'; }
 function wp_json_encode($v, $f = 0) { return json_encode($v, $f | JSON_UNESCAPED_SLASHES); }
 function wp_enqueue_style($h, $src = '') { $GLOBALS['ENQ']['style'][$h] = $src; }
@@ -94,10 +94,11 @@ function wp_add_inline_script($h, $js, $pos = 'after') { $GLOBALS['ENQ']['inline
 function get_current_screen() { return (object) ['id' => 'dcc_page_dcc-seasons', 'base' => 'dcc_page_dcc-seasons']; }
 function number_format_i18n($n) { return number_format($n); }
 
-foreach (['class-menu', 'class-plugin', 'class-schedule', 'class-themes', 'class-settings', 'class-theme-guide', 'class-preview'] as $f) {
+foreach (['class-menu', 'class-cache-purge', 'class-plugin', 'class-schedule', 'class-themes', 'class-settings', 'class-theme-guide', 'class-preview'] as $f) {
     if (is_file("$ROOT/includes/$f.php")) { require "$ROOT/includes/$f.php"; }
 }
 use DCC_Seasons\Settings;
+if (getenv('DCC_STUBS_ONLY')) { return; }   /* tools/admin-post.php: the stubs and classes only */
 
 /* the page hook, as add_submenu_page would set it */
 $rp = new ReflectionProperty(Settings::class, 'hook');
@@ -109,6 +110,7 @@ ob_start();
 /* WordPress prints admin_notices above the page content. */
 echo '<div class="dcc-admin-notices">';
 do_action('admin_notices');
+if (getenv('DCC_TRANSIENT')) { Settings::purge_notice(); }   /* the purge notice after a save (4.18.0 toast test) */
 echo '</div>';
 Settings::render_page();
 $body = ob_get_clean();

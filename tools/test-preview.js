@@ -80,7 +80,7 @@ function front(url) {
       tabs: [...document.querySelectorAll('.dcc-seasons-tabs a')].map(a => a.textContent + (a.classList.contains('nav-tab-active') ? '*' : '')),
     }));
     ok(ui.title === 'Preview a Whole Theme' && ui.ta === 'center', 'the tab is titled, centered, in Title Case', JSON.stringify([ui.title, ui.ta]));
-    ok(ui.tabs.join() === 'Settings,Theme guide,Preview*', 'a third tab, Preview, beside Settings and the Theme guide', ui.tabs.join());
+    ok(ui.tabs.join() === 'Schedule,Where,Look,Easter Egg,Theme Guide,Preview*', 'the Preview tab, after the four settings tabs and the Theme Guide (4.18.0)', ui.tabs.join());
     ok(ui.sel === 'christmas' && ui.opts >= 28, `the theme picker: every theme (${ui.opts}), Christmas chosen`, JSON.stringify([ui.sel, ui.opts]));
     ok(ui.widths.join() === '390 px,768 px,1440 px', 'the three widths', ui.widths.join());
     const kinds = ui.buttons.map(b => b.split('|')[0]);

@@ -1607,6 +1607,26 @@ Rob sees it (the overlay rows; sources named on the sheets).
     mutations `gap|screen|collide|poult` added (with `mask|click|onex|
     phone|inherit|early|slide|two`). `tools/hero-scroll-reel.js` (the 390
     scroll with the toolbar emulated), `tools/tom-hero-stills.js`.
+- **4.18.0 (Rob, 2026-11-06): the settings page, redesigned (Admin UI
+  round 1).** Built on 4.17.0. Rollback: 4.17.0. No front-end change: every
+  front-end script and pack is byte-identical to 4.17.0 and the Untouched
+  test runs against it with nothing exempt.
+  1. **Year ribbon** replaces the schedule table and the Resolved dates
+     table: one band per row instance (lanes widest at the bottom, spans of
+     3 days or fewer as pills above), a Today line, 2026/2027 toggle, a
+     month list at ≤600 px; tap = side sheet (theme, start, end, label,
+     one-off year, Delete), "+ Add" opens the same sheet; drag ends, arrow
+     keys between bands, Tab to a band's handles, arrows ±1 day,
+     Shift ±7. "Live today" is the SAVED schedule's winner.
+  2. **Sticky save bar**: "N Unsaved Changes · Discard · Save", counted per
+     setting (a schedule row, a chip, a field), the leave warning, Ctrl/Cmd+S;
+     the purge notice is a toast (`.dcc-toast-src`).
+  3. **Six tabs** (`Settings::tab_labels()`, `Settings::panel()`).
+  4. **Show On chips** with search, All Cottage Pages, Policy Pages, locks.
+  5. **ⓘ popovers** for every explanation; sliders and steppers mark their
+     default (a crimson tick).
+  The look: navy #0B2A5B, blue #0F6DBF, crimson #BC003E, Raleway, white
+  16 px cards with a 1.5 px #C9D5E6 border, centred Title Case headings.
 - **Calendar far future:** the tie rule (the UPCOMING holiday wins an exact
   distance tie) decides nothing in 2027–2036. Same-day clashes decades out
   (Fat Tuesday = Valentine's 2040/2051, Easter = Earth Day 2057/2068) need no
@@ -1942,19 +1962,44 @@ Rob sees it (the overlay rows; sources named on the sheets).
   that window and it fails. Measured: 2 failures in 9 runs under concurrent
   load, 0 in 6 when alternated against the previous build on an idle machine
   (which was also 0/5). Re-run it alone before treating it as a regression.
-- **The Schedule settings UI has two layouts and one markup.** Above 782px it
-  is the six-column table the owner approved in 3.16.1 — treat that rendering
-  as frozen and prove it with a pixel diff of the 1280px screenshot
-  (the scratchpad render/shot pair did not survive; rebuild under `tools/` first) before shipping
-  any change to `class-settings.php` or `admin.css`. At 782px and below the
-  same rows become cards, driven entirely by CSS plus the `data-dcc-label`
-  attribute each cell carries (its own column heading, inert on the table).
-  Two traps: `td:nth-child(n)` column widths are MORE specific than a
-  `tbody td` reset, so the card rules must name them to undo them; and the
-  offset/unit and month/day pairs are nowrap spans on purpose — the original
-  complaint was "days" wrapping below the box it labels. Keep the 66 `name=`
-  attributes byte-identical; that diff is what guarantees no saved schedule
-  data moves.
+- **The settings page is a layer over the SAME form fields (4.18.0, Rob's
+  Admin UI round 1; the 3.16.1 table and its "frozen 1280px" rule are
+  retired by his pick).** The year ribbon, the side sheet, the chips, the
+  sliders and steppers all edit the inputs the old page posted, with the
+  same `name=`s, so a save stores the same bytes: `tools/test-admin.js`
+  posts the new page AND the 4.17.0 page (from git) for one option and
+  requires identical `Settings::sanitize()` output (`tools/admin-post.php`),
+  a fixed point on a second save, and the ribbon's dates equal to the old
+  "Resolved dates" table cell for cell. Rules that keep that true:
+  - A schedule row is a `div.dcc-row` in `#dcc-rows` (hidden). Opening the
+    sheet MOVES the row into it and leaves a comment placeholder; closing,
+    Delete and submit put it back there. Never append it to the end: row
+    ORDER is stored, and `active()` breaks ties by order.
+  - The ribbon's resolver in `admin.js` is `resolve`/`resolveRow` copied
+    from ambient.js; keep all three (PHP, ambient, admin) in step.
+  - A drag on a FIXED end writes month/day (keeping its ± days); on a
+    HOLIDAY end it writes ± days, clamped to ±60 as `sanitize_rule` clamps.
+    Handles sit INSIDE their band's end so two bands that meet never stack
+    one handle over the other (the first build dragged Christmas when it
+    meant Thanksgiving).
+  - Tabs: Schedule, Where, Look and Easter Egg are panels of ONE form
+    (switched in place; `?tab=` and `_wp_http_referer` follow), so nothing
+    unsaved is lost; Theme Guide and Preview are their own pages. Every old
+    field id is kept so old anchors land on their panel. The theme preview
+    links and the check link moved to the Preview tab; the check key is
+    still created by any view of the settings page.
+  - Locked chips are `aria-disabled`, never `disabled` (a disabled checkbox
+    would drop a stored ID from the save). The lock lists come from
+    `Plugin::booking_pages()`/`guide_pages()`, the same ones the front end
+    reads; `admin.js` repeats `Settings::page_lock()` live.
+  - "Policy Pages" = WordPress's privacy page plus a slug/title match
+    (`is_policy_page`, filter `dcc_seasons_policy_page_ids`); on the stub
+    that is Privacy, Terms and Accessibility — check it on live.
+  - Raleway is BUNDLED (`assets/fonts/`, OFL): the page makes no external
+    request. Band colours (`Settings::theme_colors()`) all pass AA with
+    white text (lowest 5.3:1); a new theme needs a colour.
+  - Every old explanation is in an ⓘ popover word for word (test-admin
+    reads every `.description` of the 4.17.0 page and finds it).
 - **Decorations live in the FOOTER by default, and never on a word.** The
   owner's "it only appears over my About Us text, which blocks exactly the
   stuff I want guests to read" is settled by `placement` (Settings: footer |
@@ -2039,7 +2084,7 @@ Rob sees it (the overlay rows; sources named on the sheets).
   `test-heroes.js`, `test-scenes.js`, `php tools/test-settings.php`,
   `php tools/test-rules.php`, `php tools/test-scope.php`,
   `node tools/test-scope-browser.js`, `node tools/test-moments.js`, `node tools/test-moments-browser.js`,
-  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-untouched.js` (against the release before: 4.16.1 for 4.17.0, 4.16.0 for 4.16.1 and 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
+  `node tools/test-loader.js`, `php tools/test-config-themes.php`, `node tools/test-thanksgiving.js`, `node tools/test-holidays.js`, `node tools/test-tom.js`, `node tools/test-tom-turn.js`, `node tools/test-quiet.js`, `node tools/test-admin.js` (DCC_ADMIN_MUT=offbyone|droprow), `node tools/test-untouched.js` (against the release before: 4.17.0 for 4.18.0, nothing exempt; 4.16.1 for 4.17.0, 4.16.0 for 4.16.1 and 4.15.2 for 4.16.0, occClip off; 4.15.1 for 4.15.2, calm on; 4.14.5 for 4.15.0, calm:false), `node tools/test-calm.js`, `php tools/test-purge.php`, `node tools/test-anniversary.js`, `node tools/test-split.js`, `node tools/crane-build.js --check`, `node tools/anniv-build.js --check`, `php tools/test-check-key.php`, `node tools/test-christmas.js`, `node tools/test-wreath.js`, `node tools/test-preview.js`,
   `node tools/test-sprite-rate.js`,
   `php tools/test-upgrade.php`, `php tools/test-upgrade-request.php`, `node tools/test-guide.js`, `node tools/test-accents.js`, `node tools/test-foreground.js`, `node tools/test-sky.js`, `node tools/test-frame-pacing.js`, `node tools/test-switches.js`, `node tools/test-pacing.js`, `node tools/test-timing.js` (and `--width=1280`), `node tools/validate-paths.js --strict`.
   `tools/scene-reel.js` renders any scene or hero from the real engine on
